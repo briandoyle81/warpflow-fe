@@ -5,11 +5,7 @@ import MusicPlayer from "./MusicPlayer";
 import Connect from "./Connect";
 import PayButton from "./PayButton";
 
-interface HeaderProps {
-  operators?: unknown[]; // We only need this for type checking, not actual usage
-}
-
-const Header: React.FC<HeaderProps> = ({ operators }) => {
+const Header: React.FC = () => {
   const account = useAccount();
   const { disconnect } = useDisconnect();
   const { data: balance } = useBalance({ address: account.address });

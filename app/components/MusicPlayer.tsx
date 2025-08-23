@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo, useState } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { useMusicPlayer } from "../providers/MusicPlayerContext";
 
 let globalAudioRef: HTMLAudioElement | null = null;
@@ -20,45 +20,44 @@ const MusicPlayer: React.FC = () => {
   } = useMusicPlayer();
 
   const playlist = useMemo(
-    () => [
-      "/music/lady-of-the-80x27s-128379.mp3",
-      "/music/chill-synthwave-211190.mp3",
-      "/music/dark-synth-wave-221328.mp3",
-      "/music/night-221519.mp3",
-      "/music/synthwave-80s-robot-swarm-218092.mp3",
-    ],
+    () => ["/music/synthwave-80s-robot-swarm-218092.mp3"],
     []
   );
 
   // Initialize audio only once
   useEffect(() => {
     if (!audioRef.current) {
-      const audioElement = new Audio(playlist[currentTrackIndex]);
+      const audioElement = new Audio();
+      audioElement.preload = "auto";
+      audioElement.src = playlist[currentTrackIndex];
+
       const savedCurrentTime = parseFloat(
         localStorage.getItem("currentTime") || "0"
       );
       audioElement.currentTime = savedCurrentTime;
 
+      // Set up event listeners
+      const handleEnded = () => nextTrack();
+      const handleError = (error: Event) => {
+        console.error("Audio error:", error);
+        pauseMusic();
+      };
+
+      audioElement.addEventListener("ended", handleEnded);
+      audioElement.addEventListener("error", handleError);
+
       audioRef.current = audioElement;
       globalAudioRef = audioElement; // Store reference globally
 
-      const handleEnded = () => nextTrack();
-      audioElement.addEventListener("ended", handleEnded);
-
       return () => {
         audioElement.removeEventListener("ended", handleEnded);
+        audioElement.removeEventListener("error", handleError);
       };
     } else {
       audioRef.current.src = playlist[currentTrackIndex];
-      if (isPlaying) {
-        audioRef.current
-          .play()
-          .catch((error) => console.error("Error playing audio:", error));
-      } else {
-        audioRef.current.pause();
-      }
+      // Don't auto-play when changing tracks, let user control it
     }
-  }, [currentTrackIndex, isPlaying, nextTrack, playlist]);
+  }, [currentTrackIndex, nextTrack, playlist, pauseMusic]);
 
   // Handle time update for saving current time to localStorage
   useEffect(() => {
@@ -81,16 +80,38 @@ const MusicPlayer: React.FC = () => {
   }, []);
 
   const handlePlayPause = () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current) {
+      console.warn("Audio element not initialized");
+      return;
+    }
 
     if (isPlaying) {
       audioRef.current.pause();
       pauseMusic();
     } else {
-      audioRef.current
-        .play()
-        .catch((error) => console.error("Error playing audio:", error));
-      playMusic();
+      // Ensure audio is loaded before playing
+      if (audioRef.current.readyState >= 2) {
+        // HAVE_CURRENT_DATA or higher
+        audioRef.current.play().catch((error) => {
+          console.error("Error playing audio:", error);
+          // Reset the playing state if play fails
+          pauseMusic();
+        });
+        playMusic();
+      } else {
+        // Wait for audio to be ready
+        audioRef.current.addEventListener(
+          "canplay",
+          () => {
+            audioRef.current?.play().catch((error) => {
+              console.error("Error playing audio:", error);
+              pauseMusic();
+            });
+            playMusic();
+          },
+          { once: true }
+        );
+      }
     }
   };
 
