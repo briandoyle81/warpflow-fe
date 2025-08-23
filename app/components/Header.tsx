@@ -51,7 +51,7 @@ const Header: React.FC = () => {
   return (
     <header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-b-2 border-cyan-400 shadow-lg shadow-cyan-400/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-between py-4 gap-4">
+        <div className="flex flex-wrap items-center justify-between py-2 gap-4">
           {/* Left side - Logo and Title */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
