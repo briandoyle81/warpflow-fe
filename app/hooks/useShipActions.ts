@@ -2,6 +2,7 @@ import { useAccount } from "wagmi";
 import { useShipsWrite } from "./useShipsContract";
 import { useOwnedShips } from "./useOwnedShips";
 import { toast } from "react-hot-toast";
+import { CONTRACT_ADDRESSES } from "../config/contracts";
 
 export function useShipActions() {
   const { address } = useAccount();
@@ -17,7 +18,7 @@ export function useShipActions() {
 
     try {
       await writeContract({
-        address: "0xe55177350359D70F9906585AD9d93954fF212Cb7" as `0x${string}`,
+        address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: [
           {
             inputs: [{ internalType: "uint256", name: "_id", type: "uint256" }],
@@ -49,7 +50,7 @@ export function useShipActions() {
 
     try {
       await writeContract({
-        address: "0xe55177350359D70F9906585AD9d93954fF212Cb7" as `0x${string}`,
+        address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: [
           {
             inputs: [],
@@ -85,7 +86,7 @@ export function useShipActions() {
 
     try {
       await writeContract({
-        address: "0xe55177350359D70F9906585AD9d93954fF212Cb7" as `0x${string}`,
+        address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: [
           {
             inputs: [

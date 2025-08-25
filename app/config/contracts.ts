@@ -1,18 +1,32 @@
 import ShipsContract from "../contracts/DeployModule#Ships.json";
+import deployedAddresses from "../contracts/deployed_addresses.json";
 
 // Contract addresses from deployed_addresses.json
 export const CONTRACT_ADDRESSES = {
-  SHIPS: "0xe55177350359D70F9906585AD9d93954fF212Cb7",
-  FLEETS: "0x8B05189fD42749e5CFD3F988d02E87708B6970A5",
-  LOBBIES: "0x0069915431aCD8d9834C7246Bbc9FC96f01271fE",
-  GAME: "0x83209b5766220ba9Fc0116CCeA99f0Ff1753f998",
-  UNIVERSAL_CREDITS: "0x173f2552EA5437A24BE43DFf274BF4224D8CBE66",
-  SHIP_PURCHASER: "0xC5014C4fA7896A0160d0a80502642DcB95207656",
+  SHIPS: deployedAddresses["DeployModule#Ships"],
+  FLEETS: deployedAddresses["DeployModule#Fleets"],
+  LOBBIES: deployedAddresses["DeployModule#Lobbies"],
+  GAME: deployedAddresses["DeployModule#Game"],
+  UNIVERSAL_CREDITS: deployedAddresses["DeployModule#UniversalCredits"],
+  SHIP_PURCHASER: deployedAddresses["DeployModule#ShipPurchaser"],
 } as const;
 
 // Contract ABIs
 export const CONTRACT_ABIS = {
   SHIPS: ShipsContract.abi,
+} as const;
+
+// Hard-coded ship purchase tiers (from Ships contract)
+export const SHIP_PURCHASE_TIERS = {
+  tiers: [1, 2, 3, 4, 5],
+  shipsPerTier: [5, 11, 28, 60, 125],
+  prices: [
+    BigInt("4990000000000000000"), // 4.99 FLOW
+    BigInt("9990000000000000000"), // 9.99 FLOW
+    BigInt("24990000000000000000"), // 24.99 FLOW
+    BigInt("49990000000000000000"), // 49.99 FLOW
+    BigInt("99990000000000000000"), // 99.99 FLOW
+  ],
 } as const;
 
 // Contract types for wagmi
