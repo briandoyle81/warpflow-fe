@@ -36,7 +36,7 @@ export function useContractEvents() {
     }
 
     try {
-      // Listen to Transfer events (when ships are constructed)
+      // Use a more defensive approach with error handling
       const unwatch = publicClient.watchContractEvent({
         address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: [
@@ -68,6 +68,11 @@ export function useContractEvents() {
         ],
         eventName: "Transfer",
         onLogs: (logs) => {
+          // Defensive null check with early return
+          if (!logs || !Array.isArray(logs) || logs.length === 0) {
+            return;
+          }
+
           try {
             // Check if any of the events involve our address
             const relevantLogs = logs.filter((log) => {
@@ -87,12 +92,15 @@ export function useContractEvents() {
         },
         onError: (error) => {
           console.error("Error listening to ship construction events:", error);
+          // Try to recover by refetching data anyway
+          setTimeout(() => refetch(), 5000);
         },
       });
 
       return unwatch;
     } catch (error) {
       console.error("Error setting up ship construction listener:", error);
+      return undefined;
     }
   }, [address, publicClient, refetch]);
 
@@ -148,6 +156,11 @@ export function useContractEvents() {
         ],
         eventName: "ShipsRecycled",
         onLogs: (logs) => {
+          // Defensive null check with early return
+          if (!logs || !Array.isArray(logs) || logs.length === 0) {
+            return;
+          }
+
           try {
             // Check if any of the events involve our address
             const relevantLogs = logs.filter((log) => {
@@ -167,6 +180,8 @@ export function useContractEvents() {
         },
         onError: (error) => {
           console.error("Error listening to ship recycling events:", error);
+          // Try to recover by refetching data anyway
+          setTimeout(() => refetch(), 5000);
         },
       });
 
@@ -207,8 +222,18 @@ export function useContractEvents() {
         }
 
         if (address) {
-          unwatchConstruction = await listenToShipConstruction();
-          unwatchRecycling = await listenToShipRecycling();
+          // Wrap in try-catch to handle individual listener failures
+          try {
+            unwatchConstruction = await listenToShipConstruction();
+          } catch (error) {
+            console.error("Failed to setup construction listener:", error);
+          }
+
+          try {
+            unwatchRecycling = await listenToShipRecycling();
+          } catch (error) {
+            console.error("Failed to setup recycling listener:", error);
+          }
         }
       } catch (error) {
         console.error("Error setting up contract event listeners:", error);
