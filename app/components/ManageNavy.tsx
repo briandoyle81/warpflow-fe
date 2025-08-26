@@ -4,14 +4,14 @@ import {
   useShipDetails,
   useShipActions,
   useContractEvents,
-  useFleetAnalytics,
-  useFleetOptimization,
+  useNavyAnalytics,
+  useNavyOptimization,
 } from "../hooks";
 import { useAccount } from "wagmi";
 import { Ship } from "../types/types";
 import ShipPurchaseInterface from "./ShipPurchaseInterface";
 
-const ManageFleet: React.FC = () => {
+const ManageNavy: React.FC = () => {
   const { address } = useAccount();
   const { ships, isLoading, error, hasShips, shipCount } = useOwnedShips();
   const { fleetStats } = useShipDetails();
@@ -21,18 +21,18 @@ const ManageFleet: React.FC = () => {
   // Phase 3: Real-time updates and analytics
   const { isListening } = useContractEvents();
   const {
-    fleetComposition,
-    fleetPerformance,
+    navyComposition: fleetComposition,
+    navyPerformance: fleetPerformance,
     optimizationSuggestions,
-    fleetTiers,
-  } = useFleetAnalytics();
+    navyTiers: fleetTiers,
+  } = useNavyAnalytics();
   const {
     searchTerm,
     handleSearchChange,
     searchResults,
     performanceMetrics,
     cleanup,
-  } = useFleetOptimization();
+  } = useNavyOptimization();
 
   // Cleanup optimization resources on unmount
   React.useEffect(() => {
@@ -133,10 +133,10 @@ const ManageFleet: React.FC = () => {
     return (
       <div className="text-cyan-300 font-mono text-center">
         <h3 className="text-2xl font-bold mb-6 tracking-wider">
-          [MANAGE FLEET]
+          [MANAGE NAVY]
         </h3>
         <p className="text-lg opacity-80">
-          Please connect your wallet to view your fleet
+          Please connect your wallet to view your navy
         </p>
       </div>
     );
@@ -146,11 +146,11 @@ const ManageFleet: React.FC = () => {
     return (
       <div className="text-cyan-300 font-mono text-center">
         <h3 className="text-2xl font-bold mb-6 tracking-wider">
-          [MANAGE FLEET]
+          [MANAGE NAVY]
         </h3>
         <div className="flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
-          <span className="ml-3">Loading fleet data...</span>
+          <span className="ml-3">Loading navy data...</span>
         </div>
       </div>
     );
@@ -160,10 +160,10 @@ const ManageFleet: React.FC = () => {
     return (
       <div className="text-cyan-300 font-mono text-center">
         <h3 className="text-2xl font-bold mb-6 tracking-wider">
-          [MANAGE FLEET]
+          [MANAGE NAVY]
         </h3>
         <p className="text-red-400 text-lg">
-          Error loading fleet: {error.message}
+          Error loading navy: {error.message}
         </p>
       </div>
     );
@@ -172,7 +172,7 @@ const ManageFleet: React.FC = () => {
   return (
     <div className="text-cyan-300 font-mono">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-2xl font-bold tracking-wider">[MANAGE FLEET]</h3>
+        <h3 className="text-2xl font-bold tracking-wider">[MANAGE NAVY]</h3>
 
         {/* Real-time Status & Search */}
         <div className="flex items-center gap-4">
@@ -204,7 +204,7 @@ const ManageFleet: React.FC = () => {
         </div>
       </div>
 
-      {/* Fleet Statistics */}
+      {/* Navy Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="border border-cyan-400 bg-black/40 rounded-lg p-4 text-center">
           <h4 className="text-lg font-bold text-cyan-400 mb-2">
@@ -232,7 +232,7 @@ const ManageFleet: React.FC = () => {
         </div>
       </div>
 
-      {/* Enhanced Fleet Analysis */}
+      {/* Enhanced Navy Analysis */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="border border-yellow-400 bg-black/40 rounded-lg p-4">
           <h4 className="text-lg font-bold text-yellow-400 mb-3 text-center">
@@ -247,15 +247,15 @@ const ManageFleet: React.FC = () => {
                 ? `${(
                     (fleetStats.shinyShips / fleetStats.totalShips) *
                     100
-                  ).toFixed(1)}% of fleet`
-                : "0% of fleet"}
+                  ).toFixed(1)}% of navy`
+                : "0% of navy"}
             </p>
           </div>
         </div>
 
         <div className="border border-blue-400 bg-black/40 rounded-lg p-4">
           <h4 className="text-lg font-bold text-blue-400 mb-3 text-center">
-            🎯 FLEET READINESS
+            🎯 NAVY READINESS
           </h4>
           <div className="text-center">
             <p className="text-3xl font-bold text-blue-400">
@@ -287,14 +287,14 @@ const ManageFleet: React.FC = () => {
         </div>
       </div>
 
-      {/* Advanced Fleet Analytics */}
+      {/* Advanced Navy Analytics */}
       <div className="bg-black/40 border border-purple-400 rounded-lg p-6 mb-8">
         <h4 className="text-xl font-bold text-purple-400 mb-4 text-center">
-          [ADVANCED FLEET ANALYTICS]
+          [ADVANCED NAVY ANALYTICS]
         </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Fleet Performance */}
+          {/* Navy Performance */}
           <div className="space-y-3">
             <h5 className="text-lg font-bold text-purple-400 text-center">
               🎯 PERFORMANCE
@@ -327,16 +327,16 @@ const ManageFleet: React.FC = () => {
               <div className="flex justify-between">
                 <span>Efficiency:</span>
                 <span className="text-cyan-300">
-                  {fleetPerformance.fleetEfficiency.toFixed(1)}%
+                  {fleetPerformance.navyEfficiency.toFixed(1)}%
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Fleet Tiers */}
+          {/* Navy Tiers */}
           <div className="space-y-3">
             <h5 className="text-lg font-bold text-purple-400 text-center">
-              🏆 FLEET TIERS
+              🏆 NAVY TIERS
             </h5>
             <div className="space-y-2 text-sm">
               {Object.entries(fleetTiers).map(([tier, count]) => (
@@ -608,9 +608,7 @@ const ManageFleet: React.FC = () => {
       {/* Ships Display */}
       {!hasShips ? (
         <div className="text-center">
-          <p className="text-lg opacity-80 mb-4">
-            No ships found in your fleet
-          </p>
+          <p className="text-lg opacity-80 mb-4">No ships found in your navy</p>
           <p className="text-sm opacity-60">Purchase ships to get started</p>
         </div>
       ) : (
@@ -746,4 +744,4 @@ const ManageFleet: React.FC = () => {
   );
 };
 
-export default ManageFleet;
+export default ManageNavy;

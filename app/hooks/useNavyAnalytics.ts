@@ -2,19 +2,19 @@ import { useMemo } from "react";
 import { useOwnedShips } from "./useOwnedShips";
 import { Ship } from "../types/types";
 
-export interface FleetComposition {
+export interface NavyComposition {
   weaponTypes: Record<number, number>;
   armorTypes: Record<number, number>;
   shieldTypes: Record<number, number>;
   specialTypes: Record<number, number>;
 }
 
-export interface FleetPerformance {
+export interface NavyPerformance {
   averageAccuracy: number;
   averageHull: number;
   averageSpeed: number;
   totalCombatPower: number;
-  fleetEfficiency: number;
+  navyEfficiency: number;
 }
 
 export interface OptimizationSuggestion {
@@ -25,10 +25,10 @@ export interface OptimizationSuggestion {
   action: string;
 }
 
-export function useFleetAnalytics() {
+export function useNavyAnalytics() {
   const { ships, isLoading } = useOwnedShips();
 
-  // Fleet composition analysis
+  // Navy composition analysis
   const fleetComposition = useMemo(() => {
     if (!ships || ships.length === 0) {
       return {
@@ -39,7 +39,7 @@ export function useFleetAnalytics() {
       };
     }
 
-    const composition: FleetComposition = {
+    const composition: NavyComposition = {
       weaponTypes: {},
       armorTypes: {},
       shieldTypes: {},
@@ -67,7 +67,7 @@ export function useFleetAnalytics() {
     return composition;
   }, [ships]);
 
-  // Fleet performance metrics
+  // Navy performance metrics
   const fleetPerformance = useMemo(() => {
     if (!ships || ships.length === 0) {
       return {
@@ -75,7 +75,7 @@ export function useFleetAnalytics() {
         averageHull: 0,
         averageSpeed: 0,
         totalCombatPower: 0,
-        fleetEfficiency: 0,
+        navyEfficiency: 0,
       };
     }
 
@@ -87,7 +87,7 @@ export function useFleetAnalytics() {
         averageHull: 0,
         averageSpeed: 0,
         totalCombatPower: 0,
-        fleetEfficiency: 0,
+        navyEfficiency: 0,
       };
     }
 
@@ -117,7 +117,7 @@ export function useFleetAnalytics() {
       return sum + combatPower;
     }, 0);
 
-    // Calculate fleet efficiency (how well-balanced the fleet is)
+    // Calculate navy efficiency (how well-balanced the navy is)
     const efficiencyScores = constructedShips.map((ship) => {
       const statVariance =
         Math.abs(ship.traits.accuracy - averageAccuracy) +
@@ -126,7 +126,7 @@ export function useFleetAnalytics() {
       return Math.max(0, 100 - statVariance);
     });
 
-    const fleetEfficiency =
+    const navyEfficiency =
       efficiencyScores.reduce((sum, score) => sum + score, 0) /
       efficiencyScores.length;
 
@@ -135,7 +135,7 @@ export function useFleetAnalytics() {
       averageHull,
       averageSpeed,
       totalCombatPower,
-      fleetEfficiency,
+      navyEfficiency,
     };
   }, [ships]);
 
@@ -155,12 +155,12 @@ export function useFleetAnalytics() {
         type: "construction",
         priority: unconstructedShips.length > 5 ? "high" : "medium",
         message: `${unconstructedShips.length} ships ready for construction`,
-        impact: "Increase fleet combat power",
+        impact: "Increase navy combat power",
         action: "Construct all ships",
       });
     }
 
-    // Fleet balance suggestions
+    // Navy balance suggestions
     if (constructedShips.length > 0) {
       const { averageAccuracy, averageHull, averageSpeed } = fleetPerformance;
 
@@ -171,8 +171,8 @@ export function useFleetAnalytics() {
         suggestions.push({
           type: "balance",
           priority: "medium",
-          message: "Fleet stats are imbalanced",
-          impact: "Reduce fleet efficiency",
+          message: "Navy stats are imbalanced",
+          impact: "Reduce navy efficiency",
           action: "Consider recycling imbalanced ships",
         });
       }
@@ -190,7 +190,7 @@ export function useFleetAnalytics() {
         type: "recycling",
         priority: "low",
         message: `${lowValueShips.length} low-value ships detected`,
-        impact: "Free up fleet slots and earn UC",
+        impact: "Free up navy slots and earn UC",
         action: "Recycle low-value ships",
       });
     }
@@ -213,7 +213,7 @@ export function useFleetAnalytics() {
     });
   }, [ships, fleetPerformance]);
 
-  // Fleet tier analysis
+  // Navy tier analysis
   const fleetTiers = useMemo(() => {
     if (!ships || ships.length === 0) return {};
 
@@ -238,10 +238,10 @@ export function useFleetAnalytics() {
   }, [ships]);
 
   return {
-    fleetComposition,
-    fleetPerformance,
+    navyComposition: fleetComposition,
+    navyPerformance: fleetPerformance,
     optimizationSuggestions,
-    fleetTiers,
+    navyTiers: fleetTiers,
     isLoading,
   };
 }

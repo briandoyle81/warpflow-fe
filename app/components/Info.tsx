@@ -16,7 +16,7 @@ const Info: React.FC = () => {
         <div className="border border-green-400 bg-black/40 rounded-lg p-4">
           <h4 className="text-lg font-bold text-green-400">📖 TUTORIAL</h4>
           <p className="text-sm opacity-80">
-            Learn the basics of fleet management and combat
+            Learn the basics of navy management and combat
           </p>
         </div>
         <div className="border border-blue-400 bg-black/40 rounded-lg p-4">

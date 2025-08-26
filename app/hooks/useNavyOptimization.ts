@@ -8,11 +8,11 @@ export interface VirtualScrollConfig {
   overscan: number;
 }
 
-export function useFleetOptimization() {
+export function useNavyOptimization() {
   const { ships } = useOwnedShips();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debounced search
   const handleSearchChange = useCallback((value: string) => {
@@ -48,45 +48,38 @@ export function useFleetOptimization() {
     });
   }, [ships, debouncedSearchTerm]);
 
-  // Virtual scrolling for large fleets
-  const useVirtualScroll = useCallback(
-    (config: VirtualScrollConfig) => {
-      const [scrollTop, setScrollTop] = useState(0);
-      const containerRef = useRef<HTMLDivElement>(null);
+  // Virtual scrolling state
+  const [scrollTop, setScrollTop] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-      const visibleRange = useMemo(() => {
-        const start = Math.floor(scrollTop / config.itemHeight);
-        const end = Math.min(
-          start +
-            Math.ceil(config.containerHeight / config.itemHeight) +
-            config.overscan,
-          searchResults?.length || 0
-        );
+  const visibleRange = useMemo(() => {
+    const start = Math.floor(scrollTop / 50); // Default item height
+    const end = Math.min(
+      start + Math.ceil(400 / 50) + 5, // Default container height + overscan
+      searchResults?.length || 0
+    );
 
-        return {
-          start: Math.max(0, start - config.overscan),
-          end,
-        };
-      }, [scrollTop, config, searchResults]);
+    return {
+      start: Math.max(0, start - 5),
+      end,
+    };
+  }, [scrollTop, searchResults]);
 
-      const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-        setScrollTop(e.currentTarget.scrollTop);
-      }, []);
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  }, []);
 
-      const totalHeight = (searchResults?.length || 0) * config.itemHeight;
-      const offsetY = visibleRange.start * config.itemHeight;
+  const totalHeight = (searchResults?.length || 0) * 50; // Default item height
+  const offsetY = visibleRange.start * 50;
 
-      return {
-        containerRef,
-        handleScroll,
-        visibleRange,
-        totalHeight,
-        offsetY,
-        scrollTop,
-      };
-    },
-    [searchResults]
-  );
+  const virtualScrollData = {
+    containerRef,
+    handleScroll,
+    visibleRange,
+    totalHeight,
+    offsetY,
+    scrollTop,
+  };
 
   // Performance monitoring
   const performanceMetrics = useMemo(() => {
@@ -147,7 +140,7 @@ export function useFleetOptimization() {
     debouncedSearchTerm,
     handleSearchChange,
     searchResults,
-    useVirtualScroll,
+    virtualScrollData,
     performanceMetrics,
     batchOperations,
     cleanup,

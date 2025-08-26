@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Header from "./components/Header";
-import ManageFleet from "./components/ManageFleet";
+import ManageNavy from "./components/ManageNavy";
 
 import Lobbies from "./components/Lobbies";
 import Games from "./components/Games";
@@ -10,7 +10,7 @@ import Profile from "./components/Profile";
 import Info from "./components/Info";
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState("Manage Fleet");
+  const [activeTab, setActiveTab] = useState("Manage Navy");
   return (
     <div className="font-sans grid grid-rows-[auto_1fr_20px] min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <Header />
@@ -18,7 +18,7 @@ export default function Home() {
         {/* Game Tabs */}
         <div className="w-full">
           <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {["Manage Fleet", "Lobbies", "Games", "Profile", "Info"].map(
+            {["Manage Navy", "Lobbies", "Games", "Profile", "Info"].map(
               (tab) => (
                 <button
                   key={tab}
@@ -37,7 +37,7 @@ export default function Home() {
 
           {/* Tab Content */}
           <div className="bg-black/40 border border-cyan-400 rounded-lg p-8 shadow-lg shadow-cyan-400/20">
-            {activeTab === "Manage Fleet" && <ManageFleet />}
+            {activeTab === "Manage Navy" && <ManageNavy />}
             {activeTab === "Lobbies" && <Lobbies />}
             {activeTab === "Games" && <Games />}
             {activeTab === "Profile" && <Profile />}

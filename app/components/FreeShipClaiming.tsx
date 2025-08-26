@@ -42,7 +42,7 @@ const FreeShipClaiming: React.FC = () => {
 
         <div className="mb-6">
           <p className="text-lg text-green-300 mb-2">
-            Claim your free ships and expand your fleet!
+            Claim your free ships and expand your navy!
           </p>
           <p className="text-sm text-green-400/80">
             You&apos;re eligible for {freeShipCount.toString()} free ships
@@ -94,7 +94,7 @@ const FreeShipClaiming: React.FC = () => {
             <li>• {freeShipCount.toString()} ships generated on-chain</li>
             <li>• Unique stats and equipment combinations</li>
             <li>• Ships start unconstructed (need to be built)</li>
-            <li>• Great way to expand your fleet</li>
+            <li>• Great way to expand your navy</li>
             <li>• One-time claim per wallet address</li>
           </ul>
         </div>
