@@ -8,11 +8,13 @@ import {
   useNavyOptimization,
 } from "../hooks";
 import { useAccount } from "wagmi";
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { Ship } from "../types/types";
 import ShipPurchaseInterface from "./ShipPurchaseInterface";
 
 const ManageNavy: React.FC = () => {
-  const { address } = useAccount();
+  const { address, chain, isConnected } = useAccount();
+  const { primaryWallet, user } = useDynamicContext();
   const { ships, isLoading, error, hasShips, shipCount } = useOwnedShips();
   const { fleetStats } = useShipDetails();
   const { constructShip, constructAllShips, recycleShips, isPending } =
@@ -129,7 +131,21 @@ const ManageNavy: React.FC = () => {
     }
   };
 
-  if (!address) {
+  // Debug connection state
+  console.log("ManageNavy Debug:", {
+    wagmiAddress: address,
+    dynamicWallet: primaryWallet?.address,
+    dynamicUser: user,
+    isConnected: !!address || !!(primaryWallet && user),
+  });
+
+  console.log("Address", address);
+  console.log("Chain", chain);
+  console.log("Is Connected", isConnected);
+  console.log("Primary Wallet", primaryWallet);
+  console.log("User", user);
+
+  if (!address && !(primaryWallet && user)) {
     return (
       <div className="text-cyan-300 font-mono text-center">
         <h3 className="text-2xl font-bold mb-6 tracking-wider">
@@ -138,6 +154,11 @@ const ManageNavy: React.FC = () => {
         <p className="text-lg opacity-80">
           Please connect your wallet to view your navy
         </p>
+        <div className="mt-4 text-sm text-cyan-400">
+          <p>Wagmi Address: {address || "undefined"}</p>
+          <p>Dynamic Wallet: {primaryWallet?.address || "undefined"}</p>
+          <p>Dynamic User: {user ? "connected" : "undefined"}</p>
+        </div>
       </div>
     );
   }
