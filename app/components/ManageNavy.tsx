@@ -6,6 +6,7 @@ import {
   useContractEvents,
   useNavyAnalytics,
   useNavyOptimization,
+  useFreeShipClaiming,
 } from "../hooks";
 import { useAccount } from "wagmi";
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
@@ -19,6 +20,14 @@ const ManageNavy: React.FC = () => {
   const { fleetStats } = useShipDetails();
   const { constructShip, constructAllShips, recycleShips, isPending } =
     useShipActions();
+
+  // Free ship claiming functionality
+  const {
+    isEligible,
+    hasCheckedEligibility,
+    claimFreeShips,
+    isPending: isClaiming,
+  } = useFreeShipClaiming();
 
   // Phase 3: Real-time updates and analytics
   const { isListening } = useContractEvents();
@@ -226,7 +235,7 @@ const ManageNavy: React.FC = () => {
       </div>
 
       {/* Navy Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <div className="border border-cyan-400 bg-black/40 rounded-lg p-4 text-center">
           <h4 className="text-lg font-bold text-cyan-400 mb-2">
             🚀 TOTAL SHIPS
@@ -250,6 +259,25 @@ const ManageNavy: React.FC = () => {
             💎 TOTAL COST
           </h4>
           <p className="text-2xl font-bold">{fleetStats.totalCost}</p>
+        </div>
+        <div className="border border-green-400 bg-black/40 rounded-lg p-4 text-center">
+          <h4 className="text-lg font-bold text-green-400 mb-2">
+            🎁 FREE SHIPS
+          </h4>
+          <p className="text-2xl font-bold">
+            {!hasCheckedEligibility
+              ? "..."
+              : isEligible
+              ? "AVAILABLE"
+              : "CLAIMED"}
+          </p>
+          <p className="text-sm opacity-80 mt-1">
+            {!hasCheckedEligibility
+              ? "Checking..."
+              : isEligible
+              ? "Ready to claim"
+              : "Already claimed"}
+          </p>
         </div>
       </div>
 
@@ -518,6 +546,25 @@ const ManageNavy: React.FC = () => {
         >
           [BUY NEW SHIPS]
         </button>
+
+        {/* Free Ship Claiming Button */}
+        {!hasCheckedEligibility && (
+          <button
+            disabled
+            className="px-6 py-3 rounded-lg border-2 border-gray-400 text-gray-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
+          >
+            [CHECKING ELIGIBILITY...]
+          </button>
+        )}
+        {hasCheckedEligibility && isEligible && (
+          <button
+            onClick={claimFreeShips}
+            disabled={isClaiming}
+            className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isClaiming ? "[CLAIMING...]" : "[CLAIM FREE SHIPS]"}
+          </button>
+        )}
 
         {selectedShips.size > 0 && (
           <button

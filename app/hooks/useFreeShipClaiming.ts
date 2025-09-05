@@ -1,134 +1,110 @@
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
-import { CONTRACT_ADDRESSES } from "../config/contracts";
+import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
-
-// Free ship claiming ABI - this would need to be added to the contract
-const freeShipClaimingABI = [
-  {
-    inputs: [],
-    name: "claimFreeShips",
-    outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "user", type: "address" }],
-    name: "hasClaimedFreeShips",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getFreeShipCount",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-] as const;
-
-// Alternative: Use the ShipPurchaser with 0 cost for free ships
-const shipPurchaserABI = [
-  {
-    inputs: [
-      { internalType: "uint256", name: "_count", type: "uint256" },
-      { internalType: "uint256", name: "_seed", type: "uint256" },
-    ],
-    name: "purchaseShips",
-    outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getFreeShipCount",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "user", type: "address" }],
-    name: "canClaimFreeShips",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-] as const;
+import { useState, useEffect } from "react";
 
 export function useFreeShipClaiming() {
   const { address } = useAccount();
   const { refetch } = useOwnedShips();
 
-  // Check if user can claim free ships
-  const { data: canClaimFreeShips, isLoading: isLoadingClaimStatus } =
-    useReadContract({
-      address: CONTRACT_ADDRESSES.SHIP_PURCHASER as `0x${string}`,
-      abi: shipPurchaserABI,
-      functionName: "canClaimFreeShips",
-      args: address ? [address] : undefined,
-    });
+  // Cache for eligibility status to avoid repeated checks
+  const [eligibilityCache, setEligibilityCache] = useState<{
+    [key: string]: { eligible: boolean; timestamp: number; checked: boolean };
+  }>({});
 
-  // Get number of free ships available
-  const { data: freeShipCount, isLoading: isLoadingFreeShipCount } =
+  // Check if user can claim free ships
+  const { data: hasClaimedFreeShips, isLoading: isLoadingClaimStatus } =
     useReadContract({
-      address: CONTRACT_ADDRESSES.SHIP_PURCHASER as `0x${string}`,
-      abi: shipPurchaserABI,
-      functionName: "getFreeShipCount",
+      address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+      abi: CONTRACT_ABIS.SHIPS,
+      functionName: "hasClaimedFreeShips",
+      args: address ? [address] : undefined,
     });
 
   // Write contract for claiming
   const { writeContract, isPending, error } = useWriteContract();
 
+  // Update cache when eligibility status changes
+  useEffect(() => {
+    if (address && hasClaimedFreeShips !== undefined) {
+      setEligibilityCache((prev) => ({
+        ...prev,
+        [address]: {
+          eligible: !hasClaimedFreeShips,
+          timestamp: Date.now(),
+          checked: true,
+        },
+      }));
+    }
+  }, [address, hasClaimedFreeShips]);
+
+  // Refetch eligibility status after transaction completion
+  useEffect(() => {
+    if (address && !isPending && eligibilityCache[address]?.eligible) {
+      // If we were previously eligible and the transaction is no longer pending,
+      // clear the cache to force a refetch of eligibility status
+      const timer = setTimeout(() => {
+        setEligibilityCache((prev) => {
+          const newCache = { ...prev };
+          delete newCache[address];
+          return newCache;
+        });
+        // Also refetch the ships data to show the newly claimed ships
+        refetch();
+      }, 3000); // Wait 3 seconds for the transaction to be mined
+
+      return () => clearTimeout(timer);
+    }
+  }, [address, isPending, eligibilityCache, refetch]);
+
+  // Check if user is eligible (from cache or contract)
+  const isEligible = address
+    ? eligibilityCache[address]?.eligible ?? !hasClaimedFreeShips
+    : false;
+
+  // Check if we've already determined eligibility for this user
+  const hasCheckedEligibility = address
+    ? eligibilityCache[address]?.checked ?? false
+    : false;
+
   // Claim free ships function
-  const claimFreeShips = async (seed?: number) => {
+  const claimFreeShips = async () => {
     if (!address) {
       toast.error("Please connect your wallet");
       return;
     }
 
-    if (!canClaimFreeShips) {
-      toast.error("You have already claimed your free ships");
-      return;
-    }
-
-    if (!freeShipCount || freeShipCount === BigInt(0)) {
-      toast.error("No free ships available");
+    if (!isEligible) {
+      toast.error(
+        "You are not eligible for free ships or have already claimed them"
+      );
       return;
     }
 
     try {
-      // Call the smart contract to generate and mint free ships on-chain
-      await writeContract({
-        address: CONTRACT_ADDRESSES.SHIP_PURCHASER as `0x${string}`,
-        abi: shipPurchaserABI,
-        functionName: "purchaseShips",
-        args: [freeShipCount, BigInt(seed || Date.now())],
-        value: BigInt(0), // 0 cost for free ships
+      // Call the smart contract to claim free ships
+      writeContract({
+        address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+        abi: CONTRACT_ABIS.SHIPS,
+        functionName: "claimFreeShips",
       });
 
-      toast.success(`Claimed ${freeShipCount.toString()} free ships!`);
-
-      // Refetch ships data after successful on-chain generation
-      setTimeout(() => refetch(), 3000);
+      toast.success("Transaction submitted! Waiting for confirmation...");
     } catch (err) {
       console.error("Error claiming free ships:", err);
       toast.error("Failed to claim free ships");
     }
   };
 
-  // Check if user has already claimed their free ships
-  const hasClaimed = !canClaimFreeShips;
-
   return {
     // Data
-    canClaimFreeShips: canClaimFreeShips || false,
-    freeShipCount: freeShipCount || BigInt(0),
-    hasClaimed,
+    isEligible,
+    hasCheckedEligibility,
+    hasClaimed: !isEligible,
 
     // Loading states
     isLoadingClaimStatus,
-    isLoadingFreeShipCount,
 
     // Actions
     claimFreeShips,
