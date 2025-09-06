@@ -1,12 +1,9 @@
 import { useAccount, useBalance, useWriteContract } from "wagmi";
-import {
-  CONTRACT_ADDRESSES,
-  CONTRACT_ABIS,
-  SHIP_PURCHASE_TIERS,
-} from "../config/contracts";
+import { CONTRACT_ADDRESSES, SHIP_PURCHASE_TIERS } from "../config/contracts";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
 import { flowTestnet } from "viem/chains";
+import { useEffect } from "react";
 
 // Ships contract ABI for purchasing with FLOW
 const shipsContractABI = [
@@ -35,6 +32,25 @@ export function useShipPurchasing() {
 
   // Write contract for purchasing
   const { writeContract, isPending, error } = useWriteContract();
+
+  // Handle write contract errors (including user rejection)
+  useEffect(() => {
+    if (error) {
+      console.error("Write contract error:", error);
+
+      // Check if the error is due to user rejection
+      const errorMessage = error.message || "";
+      if (
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("User denied") ||
+        errorMessage.includes("rejected")
+      ) {
+        toast.error("Transaction declined by user");
+      } else {
+        toast.error("Transaction failed: " + errorMessage);
+      }
+    }
+  }, [error]);
 
   // Use hard-coded tier information
   const { tiers, shipsPerTier, prices } = SHIP_PURCHASE_TIERS;
@@ -79,9 +95,20 @@ export function useShipPurchasing() {
 
       // Refetch ships data after successful purchase
       setTimeout(() => refetch(), 3000);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error purchasing ships:", err);
-      toast.error("Failed to purchase ships");
+
+      // Check if the error is due to user rejection
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("User denied") ||
+        errorMessage.includes("rejected")
+      ) {
+        toast.error("Transaction declined by user");
+      } else {
+        toast.error("Failed to purchase ships");
+      }
     }
   };
 

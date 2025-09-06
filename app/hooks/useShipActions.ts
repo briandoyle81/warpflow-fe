@@ -3,11 +3,31 @@ import { useShipsWrite } from "./useShipsContract";
 import { useOwnedShips } from "./useOwnedShips";
 import { toast } from "react-hot-toast";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
+import { useEffect } from "react";
 
 export function useShipActions() {
   const { address } = useAccount();
   const { refetch } = useOwnedShips();
   const { writeContract, isPending, error } = useShipsWrite();
+
+  // Handle write contract errors (including user rejection)
+  useEffect(() => {
+    if (error) {
+      console.error("Write contract error:", error);
+
+      // Check if the error is due to user rejection
+      const errorMessage = error.message || "";
+      if (
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("User denied") ||
+        errorMessage.includes("rejected")
+      ) {
+        toast.error("Transaction declined by user");
+      } else {
+        toast.error("Transaction failed: " + errorMessage);
+      }
+    }
+  }, [error]);
 
   // Construct a single ship
   const constructShip = async (shipId: bigint) => {
@@ -35,9 +55,20 @@ export function useShipActions() {
       toast.success("Ship construction started!");
       // Refetch ships data after successful transaction
       setTimeout(() => refetch(), 2000);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error constructing ship:", err);
-      toast.error("Failed to construct ship");
+
+      // Check if the error is due to user rejection
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("User denied") ||
+        errorMessage.includes("rejected")
+      ) {
+        toast.error("Transaction declined by user");
+      } else {
+        toast.error("Failed to construct ship");
+      }
     }
   };
 
@@ -66,9 +97,20 @@ export function useShipActions() {
 
       toast.success("Bulk ship construction started!");
       setTimeout(() => refetch(), 2000);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error constructing all ships:", err);
-      toast.error("Failed to construct ships");
+
+      // Check if the error is due to user rejection
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("User denied") ||
+        errorMessage.includes("rejected")
+      ) {
+        toast.error("Transaction declined by user");
+      } else {
+        toast.error("Failed to construct ships");
+      }
     }
   };
 
@@ -108,9 +150,20 @@ export function useShipActions() {
 
       toast.success(`Recycling ${shipIds.length} ships for UC tokens!`);
       setTimeout(() => refetch(), 2000);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error recycling ships:", err);
-      toast.error("Failed to recycle ships");
+
+      // Check if the error is due to user rejection
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("User denied") ||
+        errorMessage.includes("rejected")
+      ) {
+        toast.error("Transaction declined by user");
+      } else {
+        toast.error("Failed to recycle ships");
+      }
     }
   };
 

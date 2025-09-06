@@ -159,7 +159,7 @@ const Header: React.FC = () => {
                 {/* Flow Balance and Chain indicator */}
                 <div className="flex items-center gap-2">
                   {/* Flow Balance */}
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-green-400 shadow-lg shadow-green-400/30 h-8 w-32 justify-center">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-green-400 shadow-lg shadow-green-400/30 h-8 w-40 justify-center">
                     <span className="text-green-400 text-xs font-mono font-bold tracking-wider">
                       {balance?.value
                         ? `${parseFloat(balance.formatted).toFixed(2)} FLOW`
@@ -179,7 +179,7 @@ const Header: React.FC = () => {
                 {/* UTC Balance and Address */}
                 <div className="flex items-center gap-2">
                   {/* UTC Balance */}
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-yellow-400 shadow-lg shadow-yellow-400/30 h-8 w-32 justify-center">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-yellow-400 shadow-lg shadow-yellow-400/30 h-8 w-40 justify-center">
                     <span className="text-yellow-400 text-xs font-mono font-bold tracking-wider">
                       0.00 UTC
                     </span>

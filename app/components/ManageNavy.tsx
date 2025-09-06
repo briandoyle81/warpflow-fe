@@ -4,8 +4,6 @@ import {
   useShipDetails,
   useShipActions,
   useContractEvents,
-  useNavyAnalytics,
-  useNavyOptimization,
   useFreeShipClaiming,
 } from "../hooks";
 import { useAccount } from "wagmi";
@@ -25,31 +23,12 @@ const ManageNavy: React.FC = () => {
     claimFreeShips,
     isPending: isClaiming,
     error: freeShipError,
+    claimStatusError,
     isLoadingClaimStatus,
   } = useFreeShipClaiming();
 
-  // Phase 3: Real-time updates and analytics
+  // Phase 3: Real-time updates
   const { isListening } = useContractEvents();
-  const {
-    navyComposition: fleetComposition,
-    navyPerformance: fleetPerformance,
-    optimizationSuggestions,
-    navyTiers: fleetTiers,
-  } = useNavyAnalytics();
-  const {
-    searchTerm,
-    handleSearchChange,
-    searchResults,
-    performanceMetrics,
-    cleanup,
-  } = useNavyOptimization();
-
-  // Cleanup optimization resources on unmount
-  React.useEffect(() => {
-    return () => {
-      cleanup();
-    };
-  }, [cleanup]);
 
   // State for ship selection and filtering
   const [selectedShips, setSelectedShips] = React.useState<Set<string>>(
@@ -64,9 +43,9 @@ const ManageNavy: React.FC = () => {
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
   const [showShipPurchase, setShowShipPurchase] = React.useState(false);
 
-  // Filter and sort ships (with search integration)
+  // Filter and sort ships
   const filteredAndSortedShips = React.useMemo(() => {
-    let filtered = searchResults || ships;
+    let filtered = ships;
 
     // Apply status filter
     if (filterStatus === "constructed") {
@@ -108,7 +87,7 @@ const ManageNavy: React.FC = () => {
         return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
       }
     });
-  }, [ships, searchResults, filterStatus, sortBy, sortOrder]);
+  }, [ships, filterStatus, sortBy, sortOrder]);
 
   // Handle ship selection
   const toggleShipSelection = (shipId: string) => {
@@ -198,7 +177,7 @@ const ManageNavy: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-2xl font-bold tracking-wider">[MANAGE NAVY]</h3>
 
-        {/* Real-time Status & Search */}
+        {/* Real-time Status */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div
@@ -210,328 +189,32 @@ const ManageNavy: React.FC = () => {
               {isListening ? "LIVE" : "OFFLINE"}
             </span>
           </div>
-
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search ships..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="bg-black/60 border border-cyan-400 text-cyan-300 px-3 py-1 rounded font-mono text-sm w-48 focus:outline-none focus:border-cyan-300"
-            />
-            {searchTerm && (
-              <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-cyan-400">
-                {searchResults?.length || 0}
-              </span>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* Navy Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        <div className="border border-cyan-400 bg-black/40 rounded-lg p-4 text-center">
-          <h4 className="text-lg font-bold text-cyan-400 mb-2">
-            🚀 TOTAL SHIPS
-          </h4>
-          <p className="text-2xl font-bold">{fleetStats.totalShips}</p>
+      {/* Navy Statistics - Condensed */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mb-6">
+        <div className="border border-cyan-400 bg-black/40 rounded p-2 text-center">
+          <h4 className="text-xs font-bold text-cyan-400 mb-1">🚀 TOTAL</h4>
+          <p className="text-lg font-bold">{fleetStats.totalShips}</p>
         </div>
-        <div className="border border-green-400 bg-black/40 rounded-lg p-4 text-center">
-          <h4 className="text-lg font-bold text-green-400 mb-2">
-            ⚡ CONSTRUCTED
-          </h4>
-          <p className="text-2xl font-bold">{fleetStats.constructedShips}</p>
+        <div className="border border-yellow-400 bg-black/40 rounded p-2 text-center">
+          <h4 className="text-xs font-bold text-yellow-400 mb-1">✨ SHINY</h4>
+          <p className="text-lg font-bold">{fleetStats.shinyShips}</p>
         </div>
-        <div className="border border-amber-400 bg-black/40 rounded-lg p-4 text-center">
-          <h4 className="text-lg font-bold text-amber-400 mb-2">
-            🛡️ UNCONSTRUCTED
-          </h4>
-          <p className="text-2xl font-bold">{fleetStats.unconstructedShips}</p>
+        <div className="border border-purple-400 bg-black/40 rounded p-2 text-center">
+          <h4 className="text-xs font-bold text-purple-400 mb-1">💎 COST</h4>
+          <p className="text-lg font-bold">{fleetStats.totalCost}</p>
         </div>
-        <div className="border border-purple-400 bg-black/40 rounded-lg p-4 text-center">
-          <h4 className="text-lg font-bold text-purple-400 mb-2">
-            💎 TOTAL COST
-          </h4>
-          <p className="text-2xl font-bold">{fleetStats.totalCost}</p>
+        <div className="border border-gray-400 bg-black/40 rounded p-2 text-center">
+          <h4 className="text-xs font-bold text-gray-400 mb-1">🛡️ UNBUILT</h4>
+          <p className="text-lg font-bold">{fleetStats.unconstructedShips}</p>
         </div>
-        <div className="border border-green-400 bg-black/40 rounded-lg p-4 text-center">
-          <h4 className="text-lg font-bold text-green-400 mb-2">
-            🎁 FREE SHIPS
-          </h4>
-          <p className="text-2xl font-bold">
-            {isLoadingClaimStatus
-              ? "..."
-              : freeShipError
-              ? "ERROR"
-              : isEligible
-              ? "AVAILABLE"
-              : "CLAIMED"}
-          </p>
-          <p className="text-sm opacity-80 mt-1">
-            {isLoadingClaimStatus
-              ? "Checking..."
-              : freeShipError
-              ? "Failed to check"
-              : isEligible
-              ? "Ready to claim"
-              : "Already claimed"}
-          </p>
-          {freeShipError && (
-            <p className="text-xs text-red-400 mt-1">
-              {freeShipError.message || "Contract error"}
-            </p>
-          )}
+        <div className="border border-red-400 bg-black/40 rounded p-2 text-center">
+          <h4 className="text-xs font-bold text-red-400 mb-1">💀 DEAD</h4>
+          <p className="text-lg font-bold">{fleetStats.destroyedShips}</p>
         </div>
       </div>
-
-      {/* Enhanced Navy Analysis */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="border border-yellow-400 bg-black/40 rounded-lg p-4">
-          <h4 className="text-lg font-bold text-yellow-400 mb-3 text-center">
-            ✨ SHINY SHIPS
-          </h4>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-yellow-400">
-              {fleetStats.shinyShips}
-            </p>
-            <p className="text-sm opacity-80 mt-1">
-              {fleetStats.totalShips > 0
-                ? `${(
-                    (fleetStats.shinyShips / fleetStats.totalShips) *
-                    100
-                  ).toFixed(1)}% of navy`
-                : "0% of navy"}
-            </p>
-          </div>
-        </div>
-
-        <div className="border border-blue-400 bg-black/40 rounded-lg p-4">
-          <h4 className="text-lg font-bold text-blue-400 mb-3 text-center">
-            🎯 NAVY READINESS
-          </h4>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-blue-400">
-              {fleetStats.totalShips > 0
-                ? `${(
-                    (fleetStats.constructedShips / fleetStats.totalShips) *
-                    100
-                  ).toFixed(0)}%`
-                : "0%"}
-            </p>
-            <p className="text-sm opacity-80 mt-1">
-              {fleetStats.constructedShips} of {fleetStats.totalShips} ready
-            </p>
-          </div>
-        </div>
-
-        <div className="border border-red-400 bg-black/40 rounded-lg p-4">
-          <h4 className="text-lg font-bold text-red-400 mb-3 text-center">
-            💀 DESTROYED
-          </h4>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-red-400">
-              {fleetStats.destroyedShips}
-            </p>
-            <p className="text-sm opacity-80 mt-1">
-              {fleetStats.totalShipsDestroyed} total kills
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Advanced Navy Analytics */}
-      <div className="bg-black/40 border border-purple-400 rounded-lg p-6 mb-8">
-        <h4 className="text-xl font-bold text-purple-400 mb-4 text-center">
-          [ADVANCED NAVY ANALYTICS]
-        </h4>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Navy Performance */}
-          <div className="space-y-3">
-            <h5 className="text-lg font-bold text-purple-400 text-center">
-              🎯 PERFORMANCE
-            </h5>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Avg Accuracy:</span>
-                <span className="text-cyan-300">
-                  {fleetPerformance.averageAccuracy.toFixed(1)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Avg Hull:</span>
-                <span className="text-cyan-300">
-                  {fleetPerformance.averageHull.toFixed(1)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Avg Speed:</span>
-                <span className="text-cyan-300">
-                  {fleetPerformance.averageSpeed.toFixed(1)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Combat Power:</span>
-                <span className="text-cyan-300">
-                  {fleetPerformance.totalCombatPower.toFixed(0)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Efficiency:</span>
-                <span className="text-cyan-300">
-                  {fleetPerformance.navyEfficiency.toFixed(1)}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Navy Tiers */}
-          <div className="space-y-3">
-            <h5 className="text-lg font-bold text-purple-400 text-center">
-              🏆 NAVY TIERS
-            </h5>
-            <div className="space-y-2 text-sm">
-              {Object.entries(fleetTiers).map(([tier, count]) => (
-                <div key={tier} className="flex justify-between">
-                  <span
-                    className={`font-bold ${
-                      tier === "S"
-                        ? "text-yellow-400"
-                        : tier === "A"
-                        ? "text-green-400"
-                        : tier === "B"
-                        ? "text-blue-400"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {tier} Tier:
-                  </span>
-                  <span className="text-cyan-300">{count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Equipment Composition */}
-          <div className="space-y-3">
-            <h5 className="text-lg font-bold text-purple-400 text-center">
-              ⚔️ EQUIPMENT
-            </h5>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Weapon Types:</span>
-                <span className="text-cyan-300">
-                  {Object.keys(fleetComposition.weaponTypes).length}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Armor Types:</span>
-                <span className="text-cyan-300">
-                  {Object.keys(fleetComposition.armorTypes).length}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Shield Types:</span>
-                <span className="text-cyan-300">
-                  {Object.keys(fleetComposition.shieldTypes).length}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Special Types:</span>
-                <span className="text-cyan-300">
-                  {Object.keys(fleetComposition.specialTypes).length}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Performance Metrics */}
-          <div className="space-y-3">
-            <h5 className="text-lg font-bold text-purple-400 text-center">
-              ⚡ PERFORMANCE
-            </h5>
-            <div className="space-y-2 text-sm">
-              {performanceMetrics && (
-                <>
-                  <div className="flex justify-between">
-                    <span>Processing:</span>
-                    <span
-                      className={`text-cyan-300 ${
-                        performanceMetrics.isOptimized
-                          ? "text-green-400"
-                          : "text-yellow-400"
-                      }`}
-                    >
-                      {performanceMetrics.processingTime}ms
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Ships/ms:</span>
-                    <span className="text-cyan-300">
-                      {performanceMetrics.shipsPerMs}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Status:</span>
-                    <span
-                      className={`text-xs px-2 py-1 rounded ${
-                        performanceMetrics.isOptimized
-                          ? "bg-green-400/20 text-green-400"
-                          : "bg-yellow-400/20 text-yellow-400"
-                      }`}
-                    >
-                      {performanceMetrics.isOptimized
-                        ? "OPTIMIZED"
-                        : "NEEDS OPTIMIZATION"}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Optimization Suggestions */}
-      {optimizationSuggestions.length > 0 && (
-        <div className="bg-black/40 border border-amber-400 rounded-lg p-4 mb-8">
-          <h4 className="text-lg font-bold text-amber-400 mb-3 text-center">
-            💡 OPTIMIZATION SUGGESTIONS
-          </h4>
-          <div className="space-y-2">
-            {optimizationSuggestions.slice(0, 3).map((suggestion, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-black/20 rounded border border-amber-400/30"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className={`text-xs px-2 py-1 rounded ${
-                        suggestion.priority === "high"
-                          ? "bg-red-400/20 text-red-400"
-                          : suggestion.priority === "medium"
-                          ? "bg-yellow-400/20 text-yellow-400"
-                          : "bg-blue-400/20 text-blue-400"
-                      }`}
-                    >
-                      {suggestion.priority.toUpperCase()}
-                    </span>
-                    <span className="font-bold">{suggestion.message}</span>
-                  </div>
-                  <div className="text-sm opacity-80">
-                    <span className="text-amber-400">Impact:</span>{" "}
-                    {suggestion.impact}
-                  </div>
-                </div>
-                <button className="px-3 py-1 border border-amber-400 text-amber-400 hover:border-amber-300 hover:text-amber-300 hover:bg-amber-400/10 rounded font-mono text-xs transition-all duration-200">
-                  {suggestion.action}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-4 mb-8 justify-center">
@@ -564,18 +247,41 @@ const ManageNavy: React.FC = () => {
             disabled
             className="px-6 py-3 rounded-lg border-2 border-red-400 text-red-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
           >
-            [ERROR CHECKING]
+            [ERROR CLAIMING]
           </button>
         )}
-        {!isLoadingClaimStatus && !freeShipError && isEligible && (
+        {!isLoadingClaimStatus && !freeShipError && claimStatusError && (
           <button
             onClick={claimFreeShips}
             disabled={isClaiming}
-            className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isClaiming ? "[CLAIMING...]" : "[CLAIM FREE SHIPS]"}
+            {isClaiming ? "[CLAIMING...]" : "[TRY CLAIM FREE SHIPS]"}
           </button>
         )}
+        {!isLoadingClaimStatus &&
+          !freeShipError &&
+          !claimStatusError &&
+          isEligible && (
+            <button
+              onClick={claimFreeShips}
+              disabled={isClaiming}
+              className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isClaiming ? "[CLAIMING...]" : "[CLAIM FREE SHIPS]"}
+            </button>
+          )}
+        {!isLoadingClaimStatus &&
+          !freeShipError &&
+          !claimStatusError &&
+          !isEligible && (
+            <button
+              disabled
+              className="px-6 py-3 rounded-lg border-2 border-gray-400 text-gray-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
+            >
+              [ALREADY CLAIMED]
+            </button>
+          )}
 
         {selectedShips.size > 0 && (
           <button

@@ -2,7 +2,7 @@ import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 // Cache expiration time (24 hours) - only for unclaimed addresses
 const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -43,17 +43,41 @@ export function useFreeShipClaiming() {
     args: address ? [address] : undefined,
   });
 
-  // Debug logging
-  console.log("Free Ship Claiming Debug:", {
-    address,
-    hasClaimedFreeShips,
-    isLoadingClaimStatus,
-    claimStatusError,
-    contractAddress: CONTRACT_ADDRESSES.SHIPS,
-  });
-
   // Write contract for claiming
   const { writeContract, isPending, error } = useWriteContract();
+
+  // Track if we should show the error (clear it after some time or on new attempts)
+  const [showError, setShowError] = useState(false);
+
+  // Handle write contract errors (including user rejection)
+  useEffect(() => {
+    if (error) {
+      console.error("Write contract error:", error);
+      setShowError(true);
+
+      // Check if the error is due to user rejection
+      const errorMessage = error.message || "";
+      if (
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("User denied") ||
+        errorMessage.includes("rejected")
+      ) {
+        toast.error("Transaction declined by user");
+      } else {
+        toast.error("Transaction failed: " + errorMessage);
+      }
+
+      // Clear error after 3 seconds
+      const timer = setTimeout(() => {
+        setShowError(false);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  // Track previous isPending state to detect when claiming completes
+  const prevIsPending = useRef(isPending);
 
   // Save cache to localStorage whenever it changes
   const saveCacheToStorage = useCallback((cache: typeof eligibilityCache) => {
@@ -88,54 +112,65 @@ export function useFreeShipClaiming() {
     return cleanedCache;
   }, []);
 
-  // Update cache when eligibility status changes
+  // Update cache when eligibility status changes (only on successful reads)
   useEffect(() => {
-    if (address && hasClaimedFreeShips !== undefined) {
-      const newCache = {
-        ...eligibilityCache,
-        [address]: {
-          eligible: !hasClaimedFreeShips,
-          timestamp: Date.now(),
-          checked: true,
-        },
-      };
-      const cleanedCache = cleanupExpiredCache(newCache);
-      setEligibilityCache(cleanedCache);
-      saveCacheToStorage(cleanedCache);
+    if (address && hasClaimedFreeShips !== undefined && !claimStatusError) {
+      setEligibilityCache((prevCache) => {
+        const newCache = {
+          ...prevCache,
+          [address]: {
+            eligible: !hasClaimedFreeShips,
+            timestamp: Date.now(),
+            checked: true,
+          },
+        };
+        const cleanedCache = cleanupExpiredCache(newCache);
+        saveCacheToStorage(cleanedCache);
+        return cleanedCache;
+      });
     }
   }, [
     address,
     hasClaimedFreeShips,
-    eligibilityCache,
+    claimStatusError,
     cleanupExpiredCache,
     saveCacheToStorage,
   ]);
 
   // Update cache after successful claiming
   useEffect(() => {
-    if (address && !isPending && eligibilityCache[address]?.eligible) {
-      // If we were previously eligible and the transaction is no longer pending,
-      // update the cache to mark them as permanently ineligible
-      const timer = setTimeout(() => {
-        setEligibilityCache((prev) => {
-          const newCache = {
-            ...prev,
-            [address]: {
-              eligible: false, // Now permanently ineligible
-              timestamp: Date.now(),
-              checked: true,
-            },
-          };
-          saveCacheToStorage(newCache);
-          return newCache;
-        });
-        // Also refetch the ships data to show the newly claimed ships
-        refetch();
-      }, 3000); // Wait 3 seconds for the transaction to be mined
+    // Check if isPending changed from true to false (claiming completed)
+    if (address && prevIsPending.current && !isPending) {
+      // Check if this address was previously eligible
+      const wasEligible = eligibilityCache[address]?.eligible;
 
-      return () => clearTimeout(timer);
+      if (wasEligible) {
+        // If we were previously eligible and the transaction just completed,
+        // update the cache to mark them as permanently ineligible
+        const timer = setTimeout(() => {
+          setEligibilityCache((prev) => {
+            const newCache = {
+              ...prev,
+              [address]: {
+                eligible: false, // Now permanently ineligible
+                timestamp: Date.now(),
+                checked: true,
+              },
+            };
+            saveCacheToStorage(newCache);
+            return newCache;
+          });
+          // Also refetch the ships data to show the newly claimed ships
+          refetch();
+        }, 3000); // Wait 3 seconds for the transaction to be mined
+
+        return () => clearTimeout(timer);
+      }
     }
-  }, [address, isPending, eligibilityCache, refetch, saveCacheToStorage]);
+
+    // Update the ref for next render
+    prevIsPending.current = isPending;
+  }, [address, isPending, refetch, saveCacheToStorage, eligibilityCache]);
 
   // Check if cache entry is still valid
   const isCacheValid = (cacheEntry: {
@@ -158,6 +193,11 @@ export function useFreeShipClaiming() {
           return cacheEntry.eligible;
         }
         // If cache is invalid or doesn't exist, fall back to contract data
+        // But only if there's no read error
+        if (claimStatusError) {
+          // If there's a read error, assume eligible (let them try)
+          return true;
+        }
         return hasClaimedFreeShips !== undefined ? !hasClaimedFreeShips : false;
       })()
     : false;
@@ -171,6 +211,17 @@ export function useFreeShipClaiming() {
           : false;
       })()
     : false;
+
+  // Debug logging
+  console.log("Free Ship Claiming Debug:", {
+    address,
+    hasClaimedFreeShips,
+    isLoadingClaimStatus,
+    claimStatusError,
+    isEligible,
+    eligibilityCache: address ? eligibilityCache[address] : null,
+    contractAddress: CONTRACT_ADDRESSES.SHIPS,
+  });
 
   // Claim free ships function
   const claimFreeShips = async () => {
@@ -186,6 +237,9 @@ export function useFreeShipClaiming() {
       return;
     }
 
+    // Clear any previous error when attempting a new claim
+    setShowError(false);
+
     try {
       // Call the smart contract to claim free ships
       writeContract({
@@ -195,9 +249,20 @@ export function useFreeShipClaiming() {
       });
 
       toast.success("Transaction submitted! Waiting for confirmation...");
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error claiming free ships:", err);
-      toast.error("Failed to claim free ships");
+
+      // Check if the error is due to user rejection
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("User denied") ||
+        errorMessage.includes("rejected")
+      ) {
+        toast.error("Transaction declined by user");
+      } else {
+        toast.error("Failed to claim free ships");
+      }
     }
   };
 
@@ -215,6 +280,7 @@ export function useFreeShipClaiming() {
 
     // Contract state
     isPending,
-    error: error || claimStatusError,
+    error: showError ? error : null, // Only show error when showError is true
+    claimStatusError, // Expose read contract error separately if needed
   };
 }
