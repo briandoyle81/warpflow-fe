@@ -1,193 +1,91 @@
-import React, { useState } from "react";
+import React from "react";
 import { useShipPurchasing } from "../hooks";
 import { useFreeShipClaiming } from "../hooks/useFreeShipClaiming";
+import { ShipPurchaseButton } from "./ShipPurchaseButton";
 
 interface ShipPurchaseInterfaceProps {
   onClose: () => void;
 }
 
-const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
-  onClose,
-}) => {
-  const [selectedTier, setSelectedTier] = useState(0);
+const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = () => {
+  const { tiers, prices, maxPerTier, flowBalance } = useShipPurchasing();
 
-  const {
-    tiers,
-    prices,
-    maxPerTier,
-    flowBalance,
-    canAfford,
-    purchaseShips,
-    isPending: isPurchasePending,
-  } = useShipPurchasing();
+  const { isEligible } = useFreeShipClaiming();
 
-  // Alias for better readability
-  const shipsPerTier = maxPerTier;
-
-  const {
-    canClaimFreeShips,
-    freeShipCount,
-    claimFreeShips,
-    isPending: isClaimPending,
-  } = useFreeShipClaiming();
-
-  const handlePurchase = () => {
-    purchaseShips(selectedTier);
+  // Get color classes based on tier
+  const getTierColors = (tier: number) => {
+    switch (tier) {
+      case 1:
+        return {
+          border: "border-gray-400",
+          text: "text-gray-400",
+          hoverBorder: "hover:border-gray-300",
+          hoverText: "hover:text-gray-300",
+          hoverBg: "hover:bg-gray-400/10",
+        };
+      case 2:
+        return {
+          border: "border-green-400",
+          text: "text-green-400",
+          hoverBorder: "hover:border-green-300",
+          hoverText: "hover:text-green-300",
+          hoverBg: "hover:bg-green-400/10",
+        };
+      case 3:
+        return {
+          border: "border-blue-400",
+          text: "text-blue-400",
+          hoverBorder: "hover:border-blue-300",
+          hoverText: "hover:text-blue-300",
+          hoverBg: "hover:bg-blue-400/10",
+        };
+      case 4:
+        return {
+          border: "border-purple-400",
+          text: "text-purple-400",
+          hoverBorder: "hover:border-purple-300",
+          hoverText: "hover:text-purple-300",
+          hoverBg: "hover:bg-purple-400/10",
+        };
+      default:
+        return {
+          border: "border-amber-400",
+          text: "text-amber-400",
+          hoverBorder: "hover:border-amber-300",
+          hoverText: "hover:text-amber-300",
+          hoverBg: "hover:bg-amber-400/10",
+        };
+    }
   };
 
-  const handleClaim = () => {
-    claimFreeShips();
-  };
-
-  const canAffordCurrent = canAfford(selectedTier, 1);
-
-  // If eligible for free ships, show claiming interface instead
-  if (canClaimFreeShips) {
-    return (
-      <div className="text-center">
-        <div className="mb-6">
-          <h5 className="text-lg font-bold text-green-400 mb-2">
-            🎁 FREE SHIP CLAIMING AVAILABLE!
-          </h5>
-          <p className="text-green-300">
-            You&apos;re eligible for {freeShipCount.toString()} free ships
-          </p>
-        </div>
-
-        {/* Claim Button */}
-        <button
-          onClick={handleClaim}
-          disabled={isClaimPending}
-          className="px-8 py-4 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-        >
-          {isClaimPending
-            ? "[CLAIMING...]"
-            : `[CLAIM ${freeShipCount.toString()} FREE SHIPS]`}
-        </button>
-
-        <div className="mt-4 text-xs text-yellow-400/80">
-          ⚠️ This is a one-time offer. Claim wisely!
-        </div>
-      </div>
-    );
-  }
-
-  // Regular purchase interface
+  // Simple tier-based purchase interface
   return (
-    <div className="space-y-6">
-      {/* Market Information */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="border border-cyan-400 bg-black/40 rounded-lg p-4 text-center">
-          <h5 className="text-lg font-bold text-cyan-400 mb-2">
-            💰 TIER {selectedTier} PRICE
-          </h5>
-          <p className="text-2xl font-bold">
-            {prices[selectedTier]
-              ? `${(Number(prices[selectedTier]) / 1e18).toFixed(2)} FLOW`
-              : "Loading..."}
-          </p>
-        </div>
-        <div className="border border-green-400 bg-black/40 rounded-lg p-4 text-center">
-          <h5 className="text-lg font-bold text-green-400 mb-2">
-            🎯 MAX PER TIER
-          </h5>
-          <p className="text-2xl font-bold">
-            {maxPerTier[selectedTier]?.toString() || "Loading..."}
-          </p>
-        </div>
-        <div className="border border-purple-400 bg-black/40 rounded-lg p-4 text-center">
-          <h5 className="text-lg font-bold text-purple-400 mb-2">
-            💎 YOUR FLOW BALANCE
-          </h5>
-          <p className="text-2xl font-bold">
-            {flowBalance
-              ? `${(Number(flowBalance.value) / 1e18).toFixed(2)} FLOW`
-              : "Loading..."}
-          </p>
-        </div>
-      </div>
+    <div className="flex flex-wrap gap-2">
+      {tiers.map((tier: number, index: number) => {
+        const price = prices[index];
+        const shipsCount = maxPerTier[index];
+        const priceInFlow = price ? (Number(price) / 1e18).toFixed(2) : "0.00";
+        const colors = getTierColors(tier);
 
-      {/* Tier Selection */}
-      <div className="flex items-center justify-center gap-4">
-        <label className="text-sm font-bold text-cyan-400">SELECT TIER:</label>
-        <select
-          value={selectedTier}
-          onChange={(e) => {
-            setSelectedTier(parseInt(e.target.value));
-          }}
-          className="bg-black/60 border border-cyan-400 text-cyan-300 px-3 py-2 rounded font-mono text-sm"
-        >
-          {tiers.map((tier: number, index: number) => (
-            <option key={index} value={index}>
-              TIER {tier} ({shipsPerTier[index]} ships)
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Purchase Controls */}
-      <div className="space-y-4">
-        {/* Cost and Affordability */}
-        <div className="text-center space-y-2">
-          <div className="flex justify-center items-center gap-4">
-            <span className="text-sm opacity-80">Tier Cost:</span>
-            <span className="text-lg font-bold text-amber-400">
-              {prices[selectedTier]
-                ? `${(Number(prices[selectedTier]) / 1e18).toFixed(2)} FLOW`
-                : "Loading..."}
-            </span>
-          </div>
-          <div className="flex justify-center items-center gap-4">
-            <span className="text-sm opacity-80">Can Afford:</span>
-            <span
-              className={`text-sm font-bold ${
-                canAffordCurrent ? "text-green-400" : "text-red-400"
-              }`}
-            >
-              {canAffordCurrent ? "YES" : "NO"}
-            </span>
-          </div>
-        </div>
-
-        {/* Purchase Button */}
-        <button
-          onClick={handlePurchase}
-          disabled={isPurchasePending || !canAffordCurrent}
-          className="w-full px-6 py-3 rounded-lg border-2 border-amber-400 text-amber-400 hover:border-amber-300 hover:text-amber-300 hover:bg-amber-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isPurchasePending
-            ? "[PURCHASING...]"
-            : `[PURCHASE TIER ${selectedTier} SHIPS]`}
-        </button>
-      </div>
-
-      {/* Quick Purchase Options */}
-      <div className="space-y-4">
-        <h5 className="text-lg font-bold text-amber-400 text-center">
-          QUICK PURCHASE
-        </h5>
-        <div className="grid grid-cols-2 gap-3">
-          {[1, 3, 5, 10].map((count) => (
-            <button
-              key={count}
-              onClick={() => purchaseShips(selectedTier)}
-              disabled={isPurchasePending || !canAfford(selectedTier, count)}
-              className="px-4 py-3 rounded-lg border border-amber-400 text-amber-400 hover:border-amber-300 hover:text-amber-300 hover:bg-amber-400/10 font-mono font-bold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="text-center">
-                <div className="font-bold">{count}</div>
-                <div className="text-xs opacity-80">
-                  {prices[selectedTier]
-                    ? `${(
-                        Number(prices[selectedTier] * BigInt(count)) / 1e18
-                      ).toFixed(2)} FLOW`
-                    : "FLOW"}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+        return (
+          <ShipPurchaseButton
+            key={index}
+            tier={tier}
+            price={price || BigInt(0)}
+            className={`flex-1 min-w-[200px] px-4 py-2 rounded-lg border-2 ${colors.border} ${colors.text} ${colors.hoverBorder} ${colors.hoverText} ${colors.hoverBg} font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+            onSuccess={() => {
+              // Refetch ships data after successful purchase
+              setTimeout(() => window.location.reload(), 2000);
+            }}
+          >
+            <div className="flex flex-col items-center space-y-1">
+              <span>TIER {tier}</span>
+              <span>{priceInFlow} FLOW</span>
+              <span>{shipsCount} SHIPS</span>
+            </div>
+          </ShipPurchaseButton>
+        );
+      })}
     </div>
   );
 };

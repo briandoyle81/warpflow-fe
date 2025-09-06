@@ -7,6 +7,7 @@ import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { flowTestnet } from "viem/chains";
 import { http } from "wagmi";
 import { MusicPlayerProvider } from "./providers/MusicPlayerContext";
+import { TransactionProvider } from "./providers/TransactionContext";
 import { type ReactNode, useEffect, useState } from "react";
 
 const config = getDefaultConfig({
@@ -35,7 +36,9 @@ export function Providers({ children }: { children: ReactNode }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
-          <MusicPlayerProvider>{children}</MusicPlayerProvider>
+          <TransactionProvider>
+            <MusicPlayerProvider>{children}</MusicPlayerProvider>
+          </TransactionProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

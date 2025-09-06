@@ -2,26 +2,24 @@ import React from "react";
 import {
   useOwnedShips,
   useShipDetails,
-  useShipActions,
   useContractEvents,
   useFreeShipClaiming,
 } from "../hooks";
 import { useAccount } from "wagmi";
 import { Ship } from "../types/types";
 import ShipPurchaseInterface from "./ShipPurchaseInterface";
+import { FreeShipClaimButton } from "./FreeShipClaimButton";
+import { ShipActionButton } from "./ShipActionButton";
 
 const ManageNavy: React.FC = () => {
   const { address, chain, isConnected } = useAccount();
   const { ships, isLoading, error, hasShips, shipCount } = useOwnedShips();
   const { fleetStats } = useShipDetails();
-  const { constructShip, constructAllShips, recycleShips, isPending } =
-    useShipActions();
+  // Note: Ship actions are now handled by ShipActionButton components
 
   // Free ship claiming functionality
   const {
     isEligible,
-    claimFreeShips,
-    isPending: isClaiming,
     error: freeShipError,
     claimStatusError,
     isLoadingClaimStatus,
@@ -100,13 +98,7 @@ const ManageNavy: React.FC = () => {
     setSelectedShips(newSelected);
   };
 
-  // Handle bulk actions
-  const handleBulkRecycle = () => {
-    if (selectedShips.size === 0) return;
-    const shipIds = Array.from(selectedShips).map((id) => BigInt(id));
-    recycleShips(shipIds);
-    setSelectedShips(new Set());
-  };
+  // Handle bulk actions - now handled by ShipActionButton components
 
   const handleSelectAll = () => {
     if (selectedShips.size === filteredAndSortedShips.length) {
@@ -218,13 +210,17 @@ const ManageNavy: React.FC = () => {
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-4 mb-8 justify-center">
-        <button
-          onClick={() => constructAllShips()}
-          disabled={isPending || fleetStats.unconstructedShips === 0}
+        <ShipActionButton
+          action="constructAll"
           className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={fleetStats.unconstructedShips === 0}
+          onSuccess={() => {
+            // Refetch ships data after successful construction
+            setTimeout(() => window.location.reload(), 2000);
+          }}
         >
-          {isPending ? "[CONSTRUCTING...]" : "[CONSTRUCT ALL SHIPS]"}
-        </button>
+          [CONSTRUCT ALL SHIPS]
+        </ShipActionButton>
 
         <button
           onClick={() => setShowShipPurchase(true)}
@@ -251,48 +247,46 @@ const ManageNavy: React.FC = () => {
           </button>
         )}
         {!isLoadingClaimStatus && !freeShipError && claimStatusError && (
-          <button
-            onClick={claimFreeShips}
-            disabled={isClaiming}
+          <FreeShipClaimButton
+            isEligible={true} // Allow trying even with read errors
             className="px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            onSuccess={() => {
+              // Refetch ships data after successful claim
+              setTimeout(() => window.location.reload(), 2000);
+            }}
           >
-            {isClaiming ? "[CLAIMING...]" : "[TRY CLAIM FREE SHIPS]"}
-          </button>
+            [TRY CLAIM FREE SHIPS]
+          </FreeShipClaimButton>
         )}
         {!isLoadingClaimStatus &&
           !freeShipError &&
           !claimStatusError &&
           isEligible && (
-            <button
-              onClick={claimFreeShips}
-              disabled={isClaiming}
+            <FreeShipClaimButton
+              isEligible={isEligible}
               className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              onSuccess={() => {
+                // Refetch ships data after successful claim
+                setTimeout(() => window.location.reload(), 2000);
+              }}
             >
-              {isClaiming ? "[CLAIMING...]" : "[CLAIM FREE SHIPS]"}
-            </button>
-          )}
-        {!isLoadingClaimStatus &&
-          !freeShipError &&
-          !claimStatusError &&
-          !isEligible && (
-            <button
-              disabled
-              className="px-6 py-3 rounded-lg border-2 border-gray-400 text-gray-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
-            >
-              [ALREADY CLAIMED]
-            </button>
+              [CLAIM FREE SHIPS]
+            </FreeShipClaimButton>
           )}
 
         {selectedShips.size > 0 && (
-          <button
-            onClick={handleBulkRecycle}
-            disabled={isPending}
+          <ShipActionButton
+            action="recycle"
+            shipIds={Array.from(selectedShips).map((id) => BigInt(id))}
             className="px-6 py-3 rounded-lg border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-200 disabled:cursor-not-allowed"
+            onSuccess={() => {
+              // Clear selection and refetch ships data after successful recycling
+              setSelectedShips(new Set());
+              setTimeout(() => window.location.reload(), 2000);
+            }}
           >
-            {isPending
-              ? "[RECYCLING...]"
-              : `[RECYCLE ${selectedShips.size} SHIPS]`}
-          </button>
+            {`[RECYCLE ${selectedShips.size} SHIPS]`}
+          </ShipActionButton>
         )}
       </div>
 
@@ -471,9 +465,6 @@ const ManageNavy: React.FC = () => {
                           {ship.shipData.shiny ? "SHINY ✨" : "COMMON"}
                         </span>
                       </div>
-                      <div className="text-xs opacity-60">
-                        SN: {ship.traits.serialNumber.toString()}
-                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
@@ -497,13 +488,17 @@ const ManageNavy: React.FC = () => {
                     </div>
 
                     <div className="mt-3 pt-3 border-t border-cyan-400/30">
-                      <button
-                        onClick={() => recycleShips([ship.id])}
-                        disabled={isPending}
+                      <ShipActionButton
+                        action="recycle"
+                        shipIds={[ship.id]}
                         className="w-full px-3 py-2 border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onSuccess={() => {
+                          // Refetch ships data after successful recycling
+                          setTimeout(() => window.location.reload(), 2000);
+                        }}
                       >
-                        {isPending ? "[RECYCLING...]" : "[RECYCLE FOR UC]"}
-                      </button>
+                        [RECYCLE FOR UC]
+                      </ShipActionButton>
                     </div>
                   </div>
                 ) : (
@@ -511,13 +506,17 @@ const ManageNavy: React.FC = () => {
                     <p className="text-sm opacity-80 mb-3">
                       Ship not yet constructed
                     </p>
-                    <button
-                      onClick={() => constructShip(ship.id)}
-                      disabled={isPending}
+                    <ShipActionButton
+                      action="construct"
+                      shipId={ship.id}
                       className="px-4 py-2 rounded border border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onSuccess={() => {
+                        // Refetch ships data after successful construction
+                        setTimeout(() => window.location.reload(), 2000);
+                      }}
                     >
-                      {isPending ? "[CONSTRUCTING...]" : "[CONSTRUCT]"}
-                    </button>
+                      [CONSTRUCT]
+                    </ShipActionButton>
                   </div>
                 )}
               </div>
