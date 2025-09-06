@@ -9,13 +9,11 @@ import {
   useFreeShipClaiming,
 } from "../hooks";
 import { useAccount } from "wagmi";
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { Ship } from "../types/types";
 import ShipPurchaseInterface from "./ShipPurchaseInterface";
 
 const ManageNavy: React.FC = () => {
   const { address, chain, isConnected } = useAccount();
-  const { primaryWallet, user } = useDynamicContext();
   const { ships, isLoading, error, hasShips, shipCount } = useOwnedShips();
   const { fleetStats } = useShipDetails();
   const { constructShip, constructAllShips, recycleShips, isPending } =
@@ -24,9 +22,10 @@ const ManageNavy: React.FC = () => {
   // Free ship claiming functionality
   const {
     isEligible,
-    hasCheckedEligibility,
     claimFreeShips,
     isPending: isClaiming,
+    error: freeShipError,
+    isLoadingClaimStatus,
   } = useFreeShipClaiming();
 
   // Phase 3: Real-time updates and analytics
@@ -143,18 +142,14 @@ const ManageNavy: React.FC = () => {
   // Debug connection state
   console.log("ManageNavy Debug:", {
     wagmiAddress: address,
-    dynamicWallet: primaryWallet?.address,
-    dynamicUser: user,
-    isConnected: !!address || !!(primaryWallet && user),
+    isConnected: isConnected,
   });
 
   console.log("Address", address);
   console.log("Chain", chain);
   console.log("Is Connected", isConnected);
-  console.log("Primary Wallet", primaryWallet);
-  console.log("User", user);
 
-  if (!address && !(primaryWallet && user)) {
+  if (!address || !isConnected) {
     return (
       <div className="text-cyan-300 font-mono text-center">
         <h3 className="text-2xl font-bold mb-6 tracking-wider">
@@ -164,9 +159,8 @@ const ManageNavy: React.FC = () => {
           Please connect your wallet to view your navy
         </p>
         <div className="mt-4 text-sm text-cyan-400">
-          <p>Wagmi Address: {address || "undefined"}</p>
-          <p>Dynamic Wallet: {primaryWallet?.address || "undefined"}</p>
-          <p>Dynamic User: {user ? "connected" : "undefined"}</p>
+          <p>Address: {address || "undefined"}</p>
+          <p>Connected: {isConnected ? "yes" : "no"}</p>
         </div>
       </div>
     );
@@ -265,19 +259,28 @@ const ManageNavy: React.FC = () => {
             🎁 FREE SHIPS
           </h4>
           <p className="text-2xl font-bold">
-            {!hasCheckedEligibility
+            {isLoadingClaimStatus
               ? "..."
+              : freeShipError
+              ? "ERROR"
               : isEligible
               ? "AVAILABLE"
               : "CLAIMED"}
           </p>
           <p className="text-sm opacity-80 mt-1">
-            {!hasCheckedEligibility
+            {isLoadingClaimStatus
               ? "Checking..."
+              : freeShipError
+              ? "Failed to check"
               : isEligible
               ? "Ready to claim"
               : "Already claimed"}
           </p>
+          {freeShipError && (
+            <p className="text-xs text-red-400 mt-1">
+              {freeShipError.message || "Contract error"}
+            </p>
+          )}
         </div>
       </div>
 
@@ -548,7 +551,7 @@ const ManageNavy: React.FC = () => {
         </button>
 
         {/* Free Ship Claiming Button */}
-        {!hasCheckedEligibility && (
+        {isLoadingClaimStatus && (
           <button
             disabled
             className="px-6 py-3 rounded-lg border-2 border-gray-400 text-gray-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
@@ -556,7 +559,15 @@ const ManageNavy: React.FC = () => {
             [CHECKING ELIGIBILITY...]
           </button>
         )}
-        {hasCheckedEligibility && isEligible && (
+        {!isLoadingClaimStatus && freeShipError && (
+          <button
+            disabled
+            className="px-6 py-3 rounded-lg border-2 border-red-400 text-red-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
+          >
+            [ERROR CHECKING]
+          </button>
+        )}
+        {!isLoadingClaimStatus && !freeShipError && isEligible && (
           <button
             onClick={claimFreeShips}
             disabled={isClaiming}
