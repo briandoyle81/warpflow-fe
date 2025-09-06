@@ -64,6 +64,7 @@ const ManageNavy: React.FC = () => {
     "id" | "cost" | "accuracy" | "hull" | "speed"
   >("id");
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
+  const [showDebugButtons, setShowDebugButtons] = React.useState(false);
 
   // State for starred ships
   const [starredShips, setStarredShips] = React.useState<Set<string>>(
@@ -235,7 +236,18 @@ const ManageNavy: React.FC = () => {
   return (
     <div className="text-cyan-300 font-mono">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-2xl font-bold tracking-wider">[MANAGE NAVY]</h3>
+        <div className="flex items-center gap-4">
+          <h3 className="text-2xl font-bold tracking-wider">[MANAGE NAVY]</h3>
+          <label className="flex items-center gap-2 text-sm text-cyan-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showDebugButtons}
+              onChange={(e) => setShowDebugButtons(e.target.checked)}
+              className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+            />
+            <span>Debug Mode</span>
+          </label>
+        </div>
 
         {/* Real-time Status */}
         <div className="flex items-center gap-4">
@@ -303,77 +315,81 @@ const ManageNavy: React.FC = () => {
           [BUY NEW SHIPS]
         </button>
 
-        {/* Debug button - remove in production */}
-        <button
-          onClick={() => {
-            const cleared = clearBrokenImageCache();
-            toast.success(`Cleared ${cleared} broken images from cache`);
-          }}
-          className="px-4 py-2 rounded-lg border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm transition-all duration-200"
-        >
-          [CLEAR BROKEN CACHE]
-        </button>
+        {/* Debug buttons - only show when debug mode is enabled */}
+        {showDebugButtons && (
+          <>
+            <button
+              onClick={() => {
+                const cleared = clearBrokenImageCache();
+                toast.success(`Cleared ${cleared} broken images from cache`);
+              }}
+              className="px-4 py-2 rounded-lg border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm transition-all duration-200"
+            >
+              [CLEAR BROKEN CACHE]
+            </button>
 
-        <button
-          onClick={() => {
-            const cleared = clearAllShipImageCache();
-            resetAllShipRequestStates();
-            clearAllShipRetryTimeouts();
-            toast.success(
-              `Cleared all ${cleared} images from cache and reset all states`
-            );
-            // Force refresh by reloading the page
-            window.location.reload();
-          }}
-          className="px-4 py-2 rounded-lg border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
-        >
-          [CLEAR ALL CACHE]
-        </button>
+            <button
+              onClick={() => {
+                const cleared = clearAllShipImageCache();
+                resetAllShipRequestStates();
+                clearAllShipRetryTimeouts();
+                toast.success(
+                  `Cleared all ${cleared} images from cache and reset all states`
+                );
+                // Force refresh by reloading the page
+                window.location.reload();
+              }}
+              className="px-4 py-2 rounded-lg border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
+            >
+              [CLEAR ALL CACHE]
+            </button>
 
-        <button
-          onClick={() => {
-            resetAllShipRequestStates();
-            toast.success(
-              `Reset all request states - try loading images again`
-            );
-          }}
-          className="px-4 py-2 rounded-lg border border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold text-sm transition-all duration-200"
-        >
-          [RESET REQUEST STATES]
-        </button>
+            <button
+              onClick={() => {
+                resetAllShipRequestStates();
+                toast.success(
+                  `Reset all request states - try loading images again`
+                );
+              }}
+              className="px-4 py-2 rounded-lg border border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold text-sm transition-all duration-200"
+            >
+              [RESET REQUEST STATES]
+            </button>
 
-        <button
-          onClick={() => {
-            restartQueueProcessing();
-            toast.success(`Restarted queue processing`);
-          }}
-          className="px-4 py-2 rounded-lg border border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm transition-all duration-200"
-        >
-          [RESTART QUEUE]
-        </button>
+            <button
+              onClick={() => {
+                restartQueueProcessing();
+                toast.success(`Restarted queue processing`);
+              }}
+              className="px-4 py-2 rounded-lg border border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm transition-all duration-200"
+            >
+              [RESTART QUEUE]
+            </button>
 
-        <button
-          onClick={() => {
-            const status = getQueueStatus();
-            console.log("📊 Queue Status:", status);
-            toast.success(
-              `Queue: ${status.queueLength} pending, ${status.activeRequests} active`
-            );
-          }}
-          className="px-4 py-2 rounded-lg border border-purple-400 text-purple-400 hover:border-purple-300 hover:text-purple-300 hover:bg-purple-400/10 font-mono font-bold text-sm transition-all duration-200"
-        >
-          [QUEUE STATUS]
-        </button>
+            <button
+              onClick={() => {
+                const status = getQueueStatus();
+                console.log("📊 Queue Status:", status);
+                toast.success(
+                  `Queue: ${status.queueLength} pending, ${status.activeRequests} active`
+                );
+              }}
+              className="px-4 py-2 rounded-lg border border-purple-400 text-purple-400 hover:border-purple-300 hover:text-purple-300 hover:bg-purple-400/10 font-mono font-bold text-sm transition-all duration-200"
+            >
+              [QUEUE STATUS]
+            </button>
 
-        <button
-          onClick={() => {
-            clearCacheOnLogout();
-            toast.success(`Cleared cache and stopped queue processing`);
-          }}
-          className="px-4 py-2 rounded-lg border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
-        >
-          [CLEAR ON LOGOUT]
-        </button>
+            <button
+              onClick={() => {
+                clearCacheOnLogout();
+                toast.success(`Cleared cache and stopped queue processing`);
+              }}
+              className="px-4 py-2 rounded-lg border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
+            >
+              [CLEAR ON LOGOUT]
+            </button>
+          </>
+        )}
 
         {/* Free Ship Claiming Button */}
         {isLoadingClaimStatus && (
