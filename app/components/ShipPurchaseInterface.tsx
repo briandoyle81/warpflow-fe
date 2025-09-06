@@ -1,6 +1,6 @@
 import React from "react";
 import { useShipPurchasing } from "../hooks";
-import { useFreeShipClaiming } from "../hooks/useFreeShipClaiming";
+import { useOwnedShips } from "../hooks/useOwnedShips";
 import { ShipPurchaseButton } from "./ShipPurchaseButton";
 
 interface ShipPurchaseInterfaceProps {
@@ -8,9 +8,8 @@ interface ShipPurchaseInterfaceProps {
 }
 
 const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = () => {
-  const { tiers, prices, maxPerTier, flowBalance } = useShipPurchasing();
-
-  const { isEligible } = useFreeShipClaiming();
+  const { tiers, prices, maxPerTier } = useShipPurchasing();
+  const { refetch } = useOwnedShips();
 
   // Get color classes based on tier
   const getTierColors = (tier: number) => {
@@ -75,7 +74,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = () => {
             className={`flex-1 min-w-[200px] px-4 py-2 rounded-lg border-2 ${colors.border} ${colors.text} ${colors.hoverBorder} ${colors.hoverText} ${colors.hoverBg} font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
             onSuccess={() => {
               // Refetch ships data after successful purchase
-              setTimeout(() => window.location.reload(), 2000);
+              setTimeout(() => refetch(), 2000);
             }}
           >
             <div className="flex flex-col items-center space-y-1">

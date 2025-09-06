@@ -52,7 +52,6 @@ export function TransactionProvider({
         }
 
         if (success) {
-          toast.success("Transaction completed successfully!");
           return {
             isPending: false,
             error: null,
@@ -74,7 +73,7 @@ export function TransactionProvider({
 
           return {
             isPending: false,
-            error,
+            error: error || null,
             activeTransactionId: null,
           };
         }

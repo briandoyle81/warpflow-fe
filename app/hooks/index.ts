@@ -21,6 +21,16 @@ export { useFreeShipClaiming } from "./useFreeShipClaiming";
 export {
   useShipImageCache,
   clearShipImageCache,
+  clearShipImageCacheForShip,
+  clearBrokenImageCache,
+  clearAllShipImageCache,
+  resetShipRequestState,
+  resetAllShipRequestStates,
+  clearShipRetryTimeout,
+  clearAllShipRetryTimeouts,
+  restartQueueProcessing,
+  getQueueStatus,
+  clearCacheOnLogout,
   getShipImageCacheStats,
 } from "./useShipImageCache";
 

@@ -1,11 +1,20 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   useOwnedShips,
   useShipDetails,
   useContractEvents,
   useFreeShipClaiming,
+  clearShipImageCacheForShip,
+  clearBrokenImageCache,
+  clearAllShipImageCache,
+  resetAllShipRequestStates,
+  clearAllShipRetryTimeouts,
+  restartQueueProcessing,
+  getQueueStatus,
+  clearCacheOnLogout,
 } from "../hooks";
 import { useAccount } from "wagmi";
+import { toast } from "react-hot-toast";
 import { Ship } from "../types/types";
 import ShipPurchaseInterface from "./ShipPurchaseInterface";
 import { FreeShipClaimButton } from "./FreeShipClaimButton";
@@ -20,7 +29,8 @@ import {
 
 const ManageNavy: React.FC = () => {
   const { address, chain, isConnected } = useAccount();
-  const { ships, isLoading, error, hasShips, shipCount } = useOwnedShips();
+  const { ships, isLoading, error, hasShips, shipCount, refetch } =
+    useOwnedShips();
   const { fleetStats } = useShipDetails();
   // Note: Ship actions are now handled by ShipActionButton components
 
@@ -35,18 +45,65 @@ const ManageNavy: React.FC = () => {
   // Phase 3: Real-time updates
   const { isListening } = useContractEvents();
 
+  // Clear cache when user disconnects
+  useEffect(() => {
+    if (!address) {
+      console.log("🚪 User disconnected, clearing cache");
+      clearCacheOnLogout();
+    }
+  }, [address]);
+
   // State for ship selection and filtering
   const [selectedShips, setSelectedShips] = React.useState<Set<string>>(
     new Set()
   );
   const [filterStatus, setFilterStatus] = React.useState<
-    "all" | "constructed" | "unconstructed"
+    "all" | "constructed" | "unconstructed" | "starred"
   >("all");
   const [sortBy, setSortBy] = React.useState<
     "id" | "cost" | "accuracy" | "hull" | "speed"
   >("id");
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
+
+  // State for starred ships
+  const [starredShips, setStarredShips] = React.useState<Set<string>>(
+    new Set()
+  );
   const [showShipPurchase, setShowShipPurchase] = React.useState(false);
+
+  // Load starred ships from localStorage on mount
+  React.useEffect(() => {
+    const saved = localStorage.getItem("warpflow-starred-ships");
+    if (saved) {
+      try {
+        const starredArray = JSON.parse(saved);
+        setStarredShips(new Set(starredArray));
+      } catch (error) {
+        console.error("Error loading starred ships:", error);
+      }
+    }
+  }, []);
+
+  // Save starred ships to localStorage when it changes
+  React.useEffect(() => {
+    localStorage.setItem(
+      "warpflow-starred-ships",
+      JSON.stringify(Array.from(starredShips))
+    );
+  }, [starredShips]);
+
+  // Toggle star status for a ship
+  const toggleStar = (shipId: string) => {
+    setStarredShips((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(shipId)) {
+        newSet.delete(shipId);
+      } else {
+        newSet.add(shipId);
+      }
+      return newSet;
+    });
+  };
 
   // Filter and sort ships
   const filteredAndSortedShips = React.useMemo(() => {
@@ -57,6 +114,10 @@ const ManageNavy: React.FC = () => {
       filtered = filtered.filter((ship) => ship.shipData.constructed);
     } else if (filterStatus === "unconstructed") {
       filtered = filtered.filter((ship) => !ship.shipData.constructed);
+    } else if (filterStatus === "starred") {
+      filtered = filtered.filter((ship) =>
+        starredShips.has(ship.id.toString())
+      );
     }
 
     // Apply sorting
@@ -92,7 +153,7 @@ const ManageNavy: React.FC = () => {
         return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
       }
     });
-  }, [ships, filterStatus, sortBy, sortOrder]);
+  }, [ships, filterStatus, sortBy, sortOrder, starredShips]);
 
   // Handle ship selection
   const toggleShipSelection = (shipId: string) => {
@@ -222,8 +283,14 @@ const ManageNavy: React.FC = () => {
           className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={fleetStats.unconstructedShips === 0}
           onSuccess={() => {
+            // Show success toast
+            toast.success("Ships constructed successfully!");
+            // Clear image cache for all ships to force refresh
+            ships.forEach((ship) => {
+              clearShipImageCacheForShip(ship.id.toString());
+            });
             // Refetch ships data after successful construction
-            setTimeout(() => window.location.reload(), 2000);
+            refetch();
           }}
         >
           [CONSTRUCT ALL SHIPS]
@@ -234,6 +301,78 @@ const ManageNavy: React.FC = () => {
           className="px-6 py-3 rounded-lg border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200"
         >
           [BUY NEW SHIPS]
+        </button>
+
+        {/* Debug button - remove in production */}
+        <button
+          onClick={() => {
+            const cleared = clearBrokenImageCache();
+            toast.success(`Cleared ${cleared} broken images from cache`);
+          }}
+          className="px-4 py-2 rounded-lg border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm transition-all duration-200"
+        >
+          [CLEAR BROKEN CACHE]
+        </button>
+
+        <button
+          onClick={() => {
+            const cleared = clearAllShipImageCache();
+            resetAllShipRequestStates();
+            clearAllShipRetryTimeouts();
+            toast.success(
+              `Cleared all ${cleared} images from cache and reset all states`
+            );
+            // Force refresh by reloading the page
+            window.location.reload();
+          }}
+          className="px-4 py-2 rounded-lg border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
+        >
+          [CLEAR ALL CACHE]
+        </button>
+
+        <button
+          onClick={() => {
+            resetAllShipRequestStates();
+            toast.success(
+              `Reset all request states - try loading images again`
+            );
+          }}
+          className="px-4 py-2 rounded-lg border border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold text-sm transition-all duration-200"
+        >
+          [RESET REQUEST STATES]
+        </button>
+
+        <button
+          onClick={() => {
+            restartQueueProcessing();
+            toast.success(`Restarted queue processing`);
+          }}
+          className="px-4 py-2 rounded-lg border border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm transition-all duration-200"
+        >
+          [RESTART QUEUE]
+        </button>
+
+        <button
+          onClick={() => {
+            const status = getQueueStatus();
+            console.log("📊 Queue Status:", status);
+            toast.success(
+              `Queue: ${status.queueLength} pending, ${status.activeRequests} active`
+            );
+          }}
+          className="px-4 py-2 rounded-lg border border-purple-400 text-purple-400 hover:border-purple-300 hover:text-purple-300 hover:bg-purple-400/10 font-mono font-bold text-sm transition-all duration-200"
+        >
+          [QUEUE STATUS]
+        </button>
+
+        <button
+          onClick={() => {
+            clearCacheOnLogout();
+            toast.success(`Cleared cache and stopped queue processing`);
+          }}
+          className="px-4 py-2 rounded-lg border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
+        >
+          [CLEAR ON LOGOUT]
         </button>
 
         {/* Free Ship Claiming Button */}
@@ -258,8 +397,10 @@ const ManageNavy: React.FC = () => {
             isEligible={true} // Allow trying even with read errors
             className="px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             onSuccess={() => {
+              // Show success toast
+              toast.success("Free ships claimed successfully!");
               // Refetch ships data after successful claim
-              setTimeout(() => window.location.reload(), 2000);
+              refetch();
             }}
           >
             [TRY CLAIM FREE SHIPS]
@@ -273,8 +414,10 @@ const ManageNavy: React.FC = () => {
               isEligible={isEligible}
               className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onSuccess={() => {
+                // Show success toast
+                toast.success("Free ships claimed successfully!");
                 // Refetch ships data after successful claim
-                setTimeout(() => window.location.reload(), 2000);
+                refetch();
               }}
             >
               [CLAIM FREE SHIPS]
@@ -287,9 +430,11 @@ const ManageNavy: React.FC = () => {
             shipIds={Array.from(selectedShips).map((id) => BigInt(id))}
             className="px-6 py-3 rounded-lg border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-200 disabled:cursor-not-allowed"
             onSuccess={() => {
+              // Show success toast
+              toast.success("Ships recycled successfully!");
               // Clear selection and refetch ships data after successful recycling
               setSelectedShips(new Set());
-              setTimeout(() => window.location.reload(), 2000);
+              refetch();
             }}
           >
             {`[RECYCLE ${selectedShips.size} SHIPS]`}
@@ -325,7 +470,11 @@ const ManageNavy: React.FC = () => {
               value={filterStatus}
               onChange={(e) =>
                 setFilterStatus(
-                  e.target.value as "all" | "constructed" | "unconstructed"
+                  e.target.value as
+                    | "all"
+                    | "constructed"
+                    | "unconstructed"
+                    | "starred"
                 )
               }
               className="bg-black/60 border border-cyan-400 text-cyan-300 px-3 py-1 rounded font-mono text-sm"
@@ -333,6 +482,7 @@ const ManageNavy: React.FC = () => {
               <option value="all">ALL SHIPS</option>
               <option value="constructed">CONSTRUCTED</option>
               <option value="unconstructed">UNCONSTRUCTED</option>
+              <option value="starred">STARRED</option>
             </select>
           </div>
 
@@ -407,14 +557,21 @@ const ManageNavy: React.FC = () => {
               <div
                 key={ship.id.toString()}
                 className={`border rounded-lg p-4 ${
-                  ship.shipData.constructed
+                  ship.shipData.timestampDestroyed > 0n
+                    ? "border-red-400 bg-black/60"
+                    : ship.shipData.constructed
                     ? "border-green-400 bg-black/40"
-                    : "border-amber-400 bg-black/60"
+                    : "border-gray-400 bg-black/60"
                 }`}
               >
                 {/* Ship Image - Bigger */}
                 <div className="mb-3">
                   <ShipImage
+                    key={`${ship.id.toString()}-${
+                      ship.shipData.constructed
+                        ? "constructed"
+                        : "unconstructed"
+                    }`}
                     ship={ship}
                     className="w-full h-48 rounded border border-gray-600"
                     showLoadingState={true}
@@ -423,12 +580,34 @@ const ManageNavy: React.FC = () => {
 
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedShips.has(ship.id.toString())}
-                      onChange={() => toggleShipSelection(ship.id.toString())}
-                      className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 rounded focus:ring-cyan-400 focus:ring-2"
-                    />
+                    {/* Star icon where checkbox used to be */}
+                    <button
+                      onClick={() => toggleStar(ship.id.toString())}
+                      className="p-1 hover:bg-yellow-400/10 rounded transition-all duration-200"
+                    >
+                      <svg
+                        className={`w-4 h-4 ${
+                          starredShips.has(ship.id.toString())
+                            ? "text-yellow-400 fill-yellow-400"
+                            : "text-yellow-400"
+                        }`}
+                        fill={
+                          starredShips.has(ship.id.toString())
+                            ? "currentColor"
+                            : "none"
+                        }
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                        />
+                      </svg>
+                    </button>
                     <h5 className="font-bold text-lg">
                       {ship.name || `Ship #${ship.id}`}
                     </h5>
@@ -444,62 +623,95 @@ const ManageNavy: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Compact Stats */}
+                {/* Compact Stats or Construction Message */}
                 <div className="space-y-2 text-sm">
-                  <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="opacity-60">Acc:</span>
-                      <span className="ml-2">{ship.traits.accuracy}</span>
+                  {ship.shipData.constructed ? (
+                    <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs relative">
+                      <div className="flex justify-between">
+                        <span className="opacity-60">Acc:</span>
+                        <span className="ml-2">{ship.traits.accuracy}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="opacity-60">Hull:</span>
+                        <span className="ml-2">{ship.traits.hull}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="opacity-60">Speed:</span>
+                        <span className="ml-2">{ship.traits.speed}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="opacity-60">Wpn:</span>
+                        <span className="ml-2">
+                          {getMainWeaponName(ship.equipment.mainWeapon)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="opacity-60">
+                          {ship.equipment.shields > 0 ? "Shd:" : "Arm:"}
+                        </span>
+                        <span className="ml-2">
+                          {ship.equipment.shields > 0
+                            ? getShieldName(ship.equipment.shields)
+                            : getArmorName(ship.equipment.armor)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="opacity-60">Cost:</span>
+                        <span className="ml-2">{ship.shipData.cost}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="opacity-60">Spc:</span>
+                        <span className="ml-2">
+                          {getSpecialName(ship.equipment.special)}
+                        </span>
+                      </div>
+                      {/* Recycle icon and checkbox in bottom right */}
+                      <div className="col-start-2 col-span-2 row-start-3 flex justify-end items-center gap-1">
+                        {/* Recycle icon */}
+                        <ShipActionButton
+                          action="recycle"
+                          shipIds={[ship.id]}
+                          className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onSuccess={() => {
+                            // Show success toast
+                            toast.success("Ship recycled successfully!");
+                            // Refetch ships data after successful recycling
+                            refetch();
+                          }}
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </ShipActionButton>
+                        {/* Checkbox for selection */}
+                        <input
+                          type="checkbox"
+                          checked={selectedShips.has(ship.id.toString())}
+                          onChange={() =>
+                            toggleShipSelection(ship.id.toString())
+                          }
+                          className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 rounded focus:ring-cyan-400 focus:ring-2"
+                        />
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-60">Hull:</span>
-                      <span className="ml-2">{ship.traits.hull}</span>
+                  ) : (
+                    <div className="text-center py-4 px-2">
+                      <div className="text-gray-400 text-sm font-mono font-bold">
+                        [CONSTRUCT SHIP]
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-60">Speed:</span>
-                      <span className="ml-2">{ship.traits.speed}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-60">Wpn:</span>
-                      <span className="ml-2">
-                        {getMainWeaponName(ship.equipment.mainWeapon)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-60">
-                        {ship.equipment.shields > 0 ? "Shd:" : "Arm:"}
-                      </span>
-                      <span className="ml-2">
-                        {ship.equipment.shields > 0
-                          ? getShieldName(ship.equipment.shields)
-                          : getArmorName(ship.equipment.armor)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-60">Cost:</span>
-                      <span className="ml-2">{ship.shipData.cost}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-60">Spc:</span>
-                      <span className="ml-2">
-                        {getSpecialName(ship.equipment.special)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-cyan-400/30">
-                    <ShipActionButton
-                      action="recycle"
-                      shipIds={[ship.id]}
-                      className="w-full px-3 py-2 border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onSuccess={() => {
-                        // Refetch ships data after successful recycling
-                        setTimeout(() => window.location.reload(), 2000);
-                      }}
-                    >
-                      [RECYCLE FOR UC]
-                    </ShipActionButton>
-                  </div>
+                  )}
                 </div>
               </div>
             ))}

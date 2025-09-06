@@ -62,12 +62,14 @@ export function useShipPurchasing() {
       return;
     }
 
-    if (tier < 0 || tier >= tiers.length) {
+    if (tier < 1 || tier > tiers.length) {
       toast.error("Invalid tier selected");
       return;
     }
 
-    const tierPrice = prices[tier] || BigInt(0);
+    // Convert 1-based tier to 0-based index for prices array
+    const tierIndex = tier - 1;
+    const tierPrice = prices[tierIndex] || BigInt(0);
     if (tierPrice === BigInt(0)) {
       toast.error("Invalid tier price");
       return;
@@ -80,7 +82,7 @@ export function useShipPurchasing() {
 
     // Fixed referral address
     const referralAddress =
-      "0x0000000000000000000000028134089B117d1663" as `0x${string}`;
+      "0xac5b774D7a700AcDb528048B6052bc1549cd73B9" as `0x${string}`;
 
     try {
       await writeContract({
@@ -118,10 +120,11 @@ export function useShipPurchasing() {
 
   // Calculate costs for different quantities in a tier
   const getPurchaseCosts = (tier: number, maxCount: number = 10) => {
-    if (!prices[tier]) return [];
+    const tierIndex = tier - 1; // Convert to 0-based index
+    if (!prices[tierIndex]) return [];
 
-    const tierPrice = prices[tier];
-    const shipsInTier = Number(shipsPerTier[tier] || 1);
+    const tierPrice = prices[tierIndex];
+    const shipsInTier = Number(shipsPerTier[tierIndex] || 1);
     const costs = [];
 
     for (let i = 1; i <= Math.min(maxCount, shipsInTier); i++) {
@@ -138,8 +141,9 @@ export function useShipPurchasing() {
 
   // Check if user can afford a certain quantity in a tier
   const canAfford = (tier: number, count: number) => {
-    if (!prices[tier] || !flowBalance) return false;
-    const tierPrice = prices[tier];
+    const tierIndex = tier - 1; // Convert to 0-based index
+    if (!prices[tierIndex] || !flowBalance) return false;
+    const tierPrice = prices[tierIndex];
     const totalCost = tierPrice * BigInt(count);
     return flowBalance.value >= totalCost;
   };

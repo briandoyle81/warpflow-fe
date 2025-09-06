@@ -59,13 +59,13 @@ export function ShipPurchaseButton({
     <TransactionButton
       transactionId={`purchase-ships-tier-${tier}-${address}`}
       contractAddress={CONTRACT_ADDRESSES.SHIPS as `0x${string}`}
-      abi={SHIP_PURCHASE_ABI}
+      abi={SHIP_PURCHASE_ABI as any}
       functionName="purchaseWithFlow"
       args={[
         address,
-        BigInt(tier),
-        "0x0000000000000000000000000000000000000000",
-      ]} // No referral
+        BigInt(tier - 1), // Convert to 0-based indexing for contract
+        "0xac5b774D7a700AcDb528048B6052bc1549cd73B9",
+      ]} // Referral address
       value={price}
       className={className}
       disabled={disabled}
