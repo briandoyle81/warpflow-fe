@@ -144,9 +144,9 @@ export function useFreeShipClaiming() {
       // Check if this address was previously eligible
       const wasEligible = eligibilityCache[address]?.eligible;
 
-      if (wasEligible) {
-        // If we were previously eligible and the transaction just completed,
-        // update the cache to mark them as permanently ineligible
+      if (wasEligible && !error) {
+        // Only update cache if we were previously eligible AND there's no error
+        // This means the transaction was successful
         const timer = setTimeout(() => {
           setEligibilityCache((prev) => {
             const newCache = {
@@ -170,7 +170,14 @@ export function useFreeShipClaiming() {
 
     // Update the ref for next render
     prevIsPending.current = isPending;
-  }, [address, isPending, refetch, saveCacheToStorage, eligibilityCache]);
+  }, [
+    address,
+    isPending,
+    error,
+    refetch,
+    saveCacheToStorage,
+    eligibilityCache,
+  ]);
 
   // Check if cache entry is still valid
   const isCacheValid = (cacheEntry: {
