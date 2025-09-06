@@ -1,23 +1,16 @@
 import React, { useEffect } from "react";
-import { useAccount, useBalance, useSwitchChain } from "wagmi";
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
-import { DynamicWidget } from "@dynamic-labs/sdk-react-core";
+import { useAccount, useBalance, useSwitchChain, useDisconnect } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { flowTestnet } from "viem/chains";
 import MusicPlayer from "./MusicPlayer";
 import PayButton from "./PayButton";
 import { toast } from "react-hot-toast";
 
 const Header: React.FC = () => {
-  const {
-    primaryWallet,
-    user,
-    handleUnlinkWallet,
-    handleLogOut,
-    setShowAuthFlow,
-  } = useDynamicContext();
   const account = useAccount();
   const { data: balance } = useBalance({ address: account.address });
   const { switchChain } = useSwitchChain();
+  const { disconnect } = useDisconnect();
 
   useEffect(() => {
     if (account.status === "connected" && account.chainId !== flowTestnet.id) {
@@ -58,26 +51,15 @@ const Header: React.FC = () => {
 
   const handleDisconnect = async () => {
     try {
-      // Try the primary disconnect method first
-      if (handleLogOut) {
-        await handleLogOut();
-        toast.success("Successfully disconnected!");
-      } else if (handleUnlinkWallet && primaryWallet?.key) {
-        // Fallback to unlink wallet if handleLogOut is not available
-        await handleUnlinkWallet(primaryWallet.key);
-        toast.success("Successfully disconnected!");
-      } else {
-        // If neither method is available, show error
-        toast.error("Disconnect method not available");
-        console.error("No disconnect method available");
-      }
+      disconnect();
+      toast.success("Successfully disconnected!");
     } catch (error) {
       console.error("Error disconnecting:", error);
       toast.error("Failed to disconnect. Please try again.");
     }
   };
 
-  const isConnected = primaryWallet && user;
+  const isConnected = account.isConnected;
 
   return (
     <header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-b-2 border-cyan-400 shadow-lg shadow-cyan-400/20">
@@ -109,12 +91,65 @@ const Header: React.FC = () => {
           {/* Right side - Wallet connection and info */}
           {!isConnected && (
             <div className="flex items-center">
-              <button
-                onClick={() => setShowAuthFlow(true)}
-                className="border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 px-6 py-2 rounded-lg font-mono font-bold tracking-wider transition-all duration-200 shadow-lg shadow-cyan-400/20 hover:shadow-cyan-400/40 bg-black/40"
-              >
-                [LOG IN]
-              </button>
+              <ConnectButton.Custom>
+                {({
+                  account,
+                  chain,
+                  openChainModal,
+                  openConnectModal,
+                  authenticationStatus,
+                  mounted,
+                }) => {
+                  const ready = mounted && authenticationStatus !== "loading";
+                  const connected =
+                    ready &&
+                    account &&
+                    chain &&
+                    (!authenticationStatus ||
+                      authenticationStatus === "authenticated");
+
+                  return (
+                    <div
+                      {...(!ready && {
+                        "aria-hidden": true,
+                        style: {
+                          opacity: 0,
+                          pointerEvents: "none",
+                          userSelect: "none",
+                        },
+                      })}
+                    >
+                      {(() => {
+                        if (!connected) {
+                          return (
+                            <button
+                              onClick={openConnectModal}
+                              type="button"
+                              className="border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 px-6 py-2 rounded-lg font-mono font-bold tracking-wider transition-all duration-200 shadow-lg shadow-cyan-400/20 hover:shadow-cyan-400/40 bg-black/40"
+                            >
+                              [LOG IN]
+                            </button>
+                          );
+                        }
+
+                        if (chain.unsupported) {
+                          return (
+                            <button
+                              onClick={openChainModal}
+                              type="button"
+                              className="border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 px-6 py-2 rounded-lg font-mono font-bold tracking-wider transition-all duration-200 shadow-lg shadow-red-400/20 hover:shadow-red-400/40 bg-black/40"
+                            >
+                              [WRONG NETWORK]
+                            </button>
+                          );
+                        }
+
+                        return null; // This case is handled in the connected section below
+                      })()}
+                    </div>
+                  );
+                }}
+              </ConnectButton.Custom>
             </div>
           )}
 
@@ -150,14 +185,14 @@ const Header: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Address and balance */}
+                  {/* Address */}
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-purple-400 shadow-lg shadow-purple-400/30 h-8 w-48 justify-center">
                     <span className="text-purple-400 text-xs font-mono font-bold tracking-wider">
-                      {formatAddress(primaryWallet.address)}
+                      {formatAddress(account.address || "")}
                     </span>
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(primaryWallet.address);
+                        navigator.clipboard.writeText(account.address || "");
                         toast.success("Address copied to clipboard!");
                       }}
                       className="text-purple-400 hover:text-purple-300 transition-all duration-200 p-1 hover:bg-purple-400/10 rounded"
@@ -178,7 +213,6 @@ const Header: React.FC = () => {
                         />
                       </svg>
                     </button>
-                    {renderBalance()}
                   </div>
                 </div>
               </div>
