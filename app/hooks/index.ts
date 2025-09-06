@@ -17,6 +17,13 @@ export { useNavyOptimization } from "./useNavyOptimization";
 export { useShipPurchasing } from "./useShipPurchasing";
 export { useFreeShipClaiming } from "./useFreeShipClaiming";
 
+// Ship Image Caching
+export {
+  useShipImageCache,
+  clearShipImageCache,
+  getShipImageCacheStats,
+} from "./useShipImageCache";
+
 // Types
 export type { ShipsReadFunction, ShipsWriteFunction } from "./useShipsContract";
 export type {

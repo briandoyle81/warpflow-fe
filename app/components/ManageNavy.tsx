@@ -10,6 +10,13 @@ import { Ship } from "../types/types";
 import ShipPurchaseInterface from "./ShipPurchaseInterface";
 import { FreeShipClaimButton } from "./FreeShipClaimButton";
 import { ShipActionButton } from "./ShipActionButton";
+import { ShipImage } from "./ShipImage";
+import {
+  getMainWeaponName,
+  getSpecialName,
+  getArmorName,
+  getShieldName,
+} from "../types/types";
 
 const ManageNavy: React.FC = () => {
   const { address, chain, isConnected } = useAccount();
@@ -405,7 +412,16 @@ const ManageNavy: React.FC = () => {
                     : "border-amber-400 bg-black/60"
                 }`}
               >
-                <div className="flex justify-between items-start mb-2">
+                {/* Ship Image - Bigger */}
+                <div className="mb-3">
+                  <ShipImage
+                    ship={ship}
+                    className="w-full h-48 rounded border border-gray-600"
+                    showLoadingState={true}
+                  />
+                </div>
+
+                <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -419,106 +435,72 @@ const ManageNavy: React.FC = () => {
                   </div>
                   <span
                     className={`text-xs px-2 py-1 rounded ${
-                      ship.shipData.constructed
-                        ? "bg-green-400/20 text-green-400"
-                        : "bg-amber-400/20 text-amber-400"
+                      ship.shipData.shiny
+                        ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
+                        : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
                     }`}
                   >
-                    {ship.shipData.constructed
-                      ? "CONSTRUCTED"
-                      : "UNCONSTRUCTED"}
+                    {ship.shipData.shiny ? "SHINY ✨" : "COMMON"}
                   </span>
                 </div>
 
-                {ship.shipData.constructed ? (
-                  <div className="space-y-2 text-sm">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <span className="opacity-60">Accuracy:</span>
-                        <span className="ml-2">{ship.traits.accuracy}</span>
-                      </div>
-                      <div>
-                        <span className="opacity-60">Hull:</span>
-                        <span className="ml-2">{ship.traits.hull}</span>
-                      </div>
-                      <div>
-                        <span className="opacity-60">Speed:</span>
-                        <span className="ml-2">{ship.traits.speed}</span>
-                      </div>
-                      <div>
-                        <span className="opacity-60">Cost:</span>
-                        <span className="ml-2">{ship.shipData.cost}</span>
-                      </div>
+                {/* Compact Stats */}
+                <div className="space-y-2 text-sm">
+                  <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Acc:</span>
+                      <span className="ml-2">{ship.traits.accuracy}</span>
                     </div>
-
-                    {/* Ship Rarity Indicator */}
-                    <div className="mt-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="opacity-60 text-xs">Rarity:</span>
-                        <span
-                          className={`text-xs px-2 py-1 rounded ${
-                            ship.shipData.shiny
-                              ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
-                              : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
-                          }`}
-                        >
-                          {ship.shipData.shiny ? "SHINY ✨" : "COMMON"}
-                        </span>
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Hull:</span>
+                      <span className="ml-2">{ship.traits.hull}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <span className="opacity-60">Weapon:</span>
-                        <span className="ml-2">
-                          {ship.equipment.mainWeapon}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="opacity-60">Armor:</span>
-                        <span className="ml-2">{ship.equipment.armor}</span>
-                      </div>
-                      <div>
-                        <span className="opacity-60">Shields:</span>
-                        <span className="ml-2">{ship.equipment.shields}</span>
-                      </div>
-                      <div>
-                        <span className="opacity-60">Special:</span>
-                        <span className="ml-2">{ship.equipment.special}</span>
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Speed:</span>
+                      <span className="ml-2">{ship.traits.speed}</span>
                     </div>
-
-                    <div className="mt-3 pt-3 border-t border-cyan-400/30">
-                      <ShipActionButton
-                        action="recycle"
-                        shipIds={[ship.id]}
-                        className="w-full px-3 py-2 border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        onSuccess={() => {
-                          // Refetch ships data after successful recycling
-                          setTimeout(() => window.location.reload(), 2000);
-                        }}
-                      >
-                        [RECYCLE FOR UC]
-                      </ShipActionButton>
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Wpn:</span>
+                      <span className="ml-2">
+                        {getMainWeaponName(ship.equipment.mainWeapon)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-60">
+                        {ship.equipment.shields > 0 ? "Shd:" : "Arm:"}
+                      </span>
+                      <span className="ml-2">
+                        {ship.equipment.shields > 0
+                          ? getShieldName(ship.equipment.shields)
+                          : getArmorName(ship.equipment.armor)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Cost:</span>
+                      <span className="ml-2">{ship.shipData.cost}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-60">Spc:</span>
+                      <span className="ml-2">
+                        {getSpecialName(ship.equipment.special)}
+                      </span>
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center">
-                    <p className="text-sm opacity-80 mb-3">
-                      Ship not yet constructed
-                    </p>
+
+                  <div className="mt-3 pt-3 border-t border-cyan-400/30">
                     <ShipActionButton
-                      action="construct"
-                      shipId={ship.id}
-                      className="px-4 py-2 rounded border border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      action="recycle"
+                      shipIds={[ship.id]}
+                      className="w-full px-3 py-2 border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       onSuccess={() => {
-                        // Refetch ships data after successful construction
+                        // Refetch ships data after successful recycling
                         setTimeout(() => window.location.reload(), 2000);
                       }}
                     >
-                      [CONSTRUCT]
+                      [RECYCLE FOR UC]
                     </ShipActionButton>
                   </div>
-                )}
+                </div>
               </div>
             ))}
           </div>

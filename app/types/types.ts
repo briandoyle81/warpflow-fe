@@ -64,6 +64,59 @@ export function tupleToShip(tuple: ShipTuple): Ship {
   };
 }
 
+// Equipment enum mappings based on actual contract enums
+export const MAIN_WEAPON_NAMES = {
+  0: "Laser",
+  1: "Railgun",
+  2: "Missile",
+  3: "Plasma",
+} as const;
+
+export const ARMOR_NAMES = {
+  0: "None",
+  1: "Light",
+  2: "Medium",
+  3: "Heavy",
+} as const;
+
+export const SHIELD_NAMES = {
+  0: "None",
+  1: "Basic",
+  2: "Enhanced",
+  3: "Advanced",
+} as const;
+
+export const SPECIAL_NAMES = {
+  0: "None",
+  1: "EMP",
+  2: "Repair",
+  3: "Flak",
+} as const;
+
+// Helper functions to get equipment names
+export function getMainWeaponName(value: number): string {
+  return (
+    MAIN_WEAPON_NAMES[value as keyof typeof MAIN_WEAPON_NAMES] ||
+    `Unknown (${value})`
+  );
+}
+
+export function getArmorName(value: number): string {
+  return ARMOR_NAMES[value as keyof typeof ARMOR_NAMES] || `Unknown (${value})`;
+}
+
+export function getShieldName(value: number): string {
+  return (
+    SHIELD_NAMES[value as keyof typeof SHIELD_NAMES] || `Unknown (${value})`
+  );
+}
+
+export function getSpecialName(value: number): string {
+  return (
+    SPECIAL_NAMES[value as keyof typeof SPECIAL_NAMES] || `Unknown (${value})`
+  );
+}
+
 // New types for Game and Lobbies contracts
 
 export enum LobbyStatus {
