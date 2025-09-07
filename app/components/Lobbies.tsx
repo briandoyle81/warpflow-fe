@@ -24,14 +24,25 @@ const Lobbies: React.FC = () => {
     createFleet,
     // quitWithPenalty,
     loadLobbies,
-    canCreateLobby,
-    needsPaymentForLobby,
   } = useLobbies();
 
   const { ships, isLoading: shipsLoading } = useOwnedShips();
 
   // Check if wallet is connecting
   const isConnecting = status === "connecting" || status === "reconnecting";
+
+  // Calculate player state from lobby list instead of blockchain
+  const playerLobbies = lobbyList.lobbies.filter(
+    (lobby) =>
+      lobby.basic.creator === address || lobby.players.joiner === address
+  );
+  const activeLobbiesCount = playerLobbies.length;
+  const hasActiveLobby = activeLobbiesCount > 0;
+
+  // Calculate lobby creation permissions
+  const canCreateLobby = !paused && isConnected;
+  const needsPaymentForLobby =
+    activeLobbiesCount >= Number(freeGamesPerAddress || 0n);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedLobby, setSelectedLobby] = useState<bigint | null>(null);
@@ -73,6 +84,7 @@ const Lobbies: React.FC = () => {
         creatorGoesFirst: false, // This will be set by who creates fleet first
         selectedMapId: BigInt(mapId),
         maxScore: BigInt(maxScore),
+        activeLobbiesCount: activeLobbiesCount, // Pass the calculated active lobbies count
       });
       setShowCreateForm(false);
     } catch (error) {
@@ -178,20 +190,16 @@ const Lobbies: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-gray-400">Active Lobbies:</span>
-              <span className="ml-2">
-                {playerState?.activeLobbiesCount?.toString() || "0"}
-              </span>
+              <span className="ml-2">{activeLobbiesCount.toString()}</span>
             </div>
             <div>
               <span className="text-gray-400">Has Active Lobby:</span>
               <span
                 className={`ml-2 ${
-                  playerState?.hasActiveLobby
-                    ? "text-green-400"
-                    : "text-red-400"
+                  hasActiveLobby ? "text-green-400" : "text-red-400"
                 }`}
               >
-                {playerState?.hasActiveLobby ? "YES" : "NO"}
+                {hasActiveLobby ? "YES" : "NO"}
               </span>
             </div>
             <div>
@@ -433,14 +441,16 @@ const Lobbies: React.FC = () => {
                 </div>
               </div>
 
-              {lobby.state.status === LobbyStatus.Open && (
-                <button
-                  onClick={() => handleJoinLobby(lobby.basic.id)}
-                  className="w-full px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200"
-                >
-                  JOIN LOBBY
-                </button>
-              )}
+              {lobby.state.status === LobbyStatus.Open &&
+                lobby.basic.creator !== address &&
+                lobby.players.joiner !== address && (
+                  <button
+                    onClick={() => handleJoinLobby(lobby.basic.id)}
+                    className="w-full px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200"
+                  >
+                    JOIN LOBBY
+                  </button>
+                )}
 
               {lobby.state.status === LobbyStatus.FleetSelection && (
                 <div className="space-y-2">

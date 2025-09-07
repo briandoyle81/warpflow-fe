@@ -51,17 +51,33 @@ export function useLobbies() {
   });
 
   // Create a new lobby
-  const createLobby = async (params: CreateLobbyParams) => {
+  const createLobby = async (
+    params: CreateLobbyParams & { activeLobbiesCount?: number }
+  ) => {
     if (!address) throw new Error("No wallet connected");
     if (paused) throw new Error("Lobby creation is currently paused");
 
     try {
       // Check if player needs to pay for additional lobbies
+      // Use passed activeLobbiesCount if available, otherwise fall back to blockchain data
+      const currentActiveLobbies =
+        params.activeLobbiesCount ??
+        (playerState?.activeLobbiesCount
+          ? Number(playerState.activeLobbiesCount)
+          : 0);
       const needsPayment =
-        playerState &&
-        playerState.activeLobbiesCount >= (freeGamesPerAddress || 0n);
+        currentActiveLobbies >= Number(freeGamesPerAddress || 0n);
 
-      const value = needsPayment ? additionalLobbyFee || 0n : 0n;
+      const value: bigint = needsPayment
+        ? (additionalLobbyFee as bigint) || 0n
+        : 0n;
+
+      console.log("=== Lobby Creation Debug ===");
+      console.log("Current active lobbies:", currentActiveLobbies);
+      console.log("Free games per address:", Number(freeGamesPerAddress || 0n));
+      console.log("Needs payment:", needsPayment);
+      console.log("Additional lobby fee:", additionalLobbyFee?.toString());
+      console.log("Value to send:", value.toString());
 
       await writeContract({
         ...lobbiesContractConfig,
@@ -75,6 +91,9 @@ export function useLobbies() {
         ],
         value,
       });
+
+      // Refresh the lobby list after creating a lobby
+      loadLobbies();
     } catch (error) {
       console.error("Failed to create lobby:", error);
       throw error;
@@ -91,6 +110,9 @@ export function useLobbies() {
         functionName: "joinLobby",
         args: [lobbyId],
       });
+
+      // Refresh the lobby list after joining a lobby
+      loadLobbies();
     } catch (error) {
       console.error("Failed to join lobby:", error);
       throw error;
@@ -191,7 +213,8 @@ export function useLobbies() {
     // Computed values
     canCreateLobby: !paused && address !== undefined,
     needsPaymentForLobby: playerState
-      ? playerState.activeLobbiesCount >= (freeGamesPerAddress || 0n)
+      ? Number(playerState.activeLobbiesCount) >=
+        Number(freeGamesPerAddress || 0n)
       : false,
   };
 }
