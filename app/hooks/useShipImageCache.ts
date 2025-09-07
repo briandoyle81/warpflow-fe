@@ -654,16 +654,18 @@ function stopQueueCheck() {
 // Start queue check
 startQueueCheck();
 
-// Clean up on page unload
-window.addEventListener("beforeunload", () => {
-  debugLog("🧹 Cleaning up cache system on page unload");
-  stopQueueCheck();
-  isProcessingQueue = false;
-  activeRequests = 0;
-  requestQueue.length = 0;
-  shipRequestStates.clear();
-  shipRetryTimeouts.clear();
-});
+// Clean up on page unload (only on client side)
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
+    debugLog("🧹 Cleaning up cache system on page unload");
+    stopQueueCheck();
+    isProcessingQueue = false;
+    activeRequests = 0;
+    requestQueue.length = 0;
+    shipRequestStates.clear();
+    shipRetryTimeouts.clear();
+  });
+}
 
 // Utility function to manually restart queue processing
 export function restartQueueProcessing() {

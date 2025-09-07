@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { useFreeShipClaiming } from "../hooks/useFreeShipClaiming";
 import { useAccount } from "wagmi";

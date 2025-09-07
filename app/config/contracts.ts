@@ -1,4 +1,7 @@
 import ShipsContract from "../contracts/DeployModule#Ships.json";
+import LobbiesContract from "../contracts/DeployModule#Lobbies.json";
+import FleetsContract from "../contracts/DeployModule#Fleets.json";
+import GameContract from "../contracts/DeployModule#Game.json";
 import deployedAddresses from "../contracts/deployed_addresses.json";
 
 // Contract addresses from deployed_addresses.json
@@ -14,6 +17,9 @@ export const CONTRACT_ADDRESSES = {
 // Contract ABIs
 export const CONTRACT_ABIS = {
   SHIPS: ShipsContract.abi,
+  LOBBIES: LobbiesContract.abi,
+  FLEETS: FleetsContract.abi,
+  GAME: GameContract.abi,
 } as const;
 
 // Hard-coded ship purchase tiers (from Ships contract)

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect } from "react";
 import {
   useOwnedShips,
@@ -28,11 +30,14 @@ import {
 } from "../types/types";
 
 const ManageNavy: React.FC = () => {
-  const { address, chain, isConnected } = useAccount();
+  const { address, chain, isConnected, status } = useAccount();
   const { ships, isLoading, error, hasShips, shipCount, refetch } =
     useOwnedShips();
   const { fleetStats } = useShipDetails();
   // Note: Ship actions are now handled by ShipActionButton components
+
+  // Check if wallet is connecting
+  const isConnecting = status === "connecting" || status === "reconnecting";
 
   // Free ship claiming functionality
   const {
@@ -229,6 +234,18 @@ const ManageNavy: React.FC = () => {
         <p className="text-red-400 text-lg">
           Error loading navy: {error.message}
         </p>
+      </div>
+    );
+  }
+
+  // Show loading state while wallet is connecting
+  if (isConnecting) {
+    return (
+      <div className="text-center text-cyan-400 font-mono">
+        <div className="text-xl mb-4">Connecting to wallet...</div>
+        <div className="text-sm text-cyan-400/60">
+          Please wait while we establish your connection
+        </div>
       </div>
     );
   }

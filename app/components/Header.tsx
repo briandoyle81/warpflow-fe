@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect } from "react";
 import { useAccount, useBalance, useSwitchChain, useDisconnect } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -12,38 +14,15 @@ const Header: React.FC = () => {
   const { switchChain } = useSwitchChain();
   const { disconnect } = useDisconnect();
 
+  // Check if wallet is connecting
+  const isConnecting =
+    account.status === "connecting" || account.status === "reconnecting";
+
   useEffect(() => {
     if (account.status === "connected" && account.chainId !== flowTestnet.id) {
       switchChain({ chainId: flowTestnet.id });
     }
   }, [account, switchChain]);
-
-  const renderBalance = () => {
-    if (!balance?.value) return null;
-
-    if (balance.value === BigInt(0)) {
-      return (
-        <div className="flex items-center gap-1 text-amber-400">
-          <span className="font-mono font-bold text-xs tracking-wider">
-            ⚠️ NEED FLOW ON {account.chain?.name?.toUpperCase()} ⚠️
-          </span>
-        </div>
-      );
-    }
-
-    const formattedBalance = balance.formatted
-      .split(".")
-      .map((part, i) => (i === 1 ? part.slice(0, 5) : part))
-      .join(".");
-
-    return (
-      <div className="flex items-center gap-1">
-        <span className="text-cyan-400 text-xs font-mono font-bold tracking-wider">
-          ⚡ {formattedBalance} FLOW ⚡
-        </span>
-      </div>
-    );
-  };
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -89,7 +68,15 @@ const Header: React.FC = () => {
           </div>
 
           {/* Right side - Wallet connection and info */}
-          {!isConnected && (
+          {isConnecting && (
+            <div className="flex items-center">
+              <div className="text-cyan-400/60 font-mono text-sm">
+                Connecting...
+              </div>
+            </div>
+          )}
+
+          {!isConnected && !isConnecting && (
             <div className="flex items-center">
               <ConnectButton.Custom>
                 {({
