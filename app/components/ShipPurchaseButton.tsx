@@ -59,6 +59,7 @@ export function ShipPurchaseButton({
     <TransactionButton
       transactionId={`purchase-ships-tier-${tier}-${address}`}
       contractAddress={CONTRACT_ADDRESSES.SHIPS as `0x${string}`}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       abi={SHIP_PURCHASE_ABI as any}
       functionName="purchaseWithFlow"
       args={[
