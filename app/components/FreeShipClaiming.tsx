@@ -1,22 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useFreeShipClaiming } from "../hooks/useFreeShipClaiming";
 import { useAccount } from "wagmi";
 
 const FreeShipClaiming: React.FC = () => {
   const { address } = useAccount();
   const {
-    canClaimFreeShips,
-    freeShipCount,
+    isEligible,
     hasClaimed,
     isLoadingClaimStatus,
-    isLoadingFreeShipCount,
     claimFreeShips,
     isPending,
   } = useFreeShipClaiming();
-
-  const [customSeed, setCustomSeed] = useState("");
 
   if (!address) {
     return null; // Don't show if not connected
@@ -26,13 +22,12 @@ const FreeShipClaiming: React.FC = () => {
     return null; // Don't show if already claimed
   }
 
-  if (!canClaimFreeShips) {
+  if (!isEligible) {
     return null; // Don't show if not eligible
   }
 
   const handleClaim = () => {
-    const seed = customSeed ? parseInt(customSeed) : undefined;
-    claimFreeShips(seed);
+    claimFreeShips();
   };
 
   return (
@@ -47,40 +42,21 @@ const FreeShipClaiming: React.FC = () => {
             Claim your free ships and expand your navy!
           </p>
           <p className="text-sm text-green-400/80">
-            You&apos;re eligible for {freeShipCount.toString()} free ships
-          </p>
-        </div>
-
-        {/* Custom Seed Input */}
-        <div className="mb-6">
-          <label className="block text-sm font-bold text-green-400 mb-2">
-            CUSTOM SEED (OPTIONAL)
-          </label>
-          <input
-            type="text"
-            placeholder="Random seed for ship generation"
-            value={customSeed}
-            onChange={(e) => setCustomSeed(e.target.value)}
-            className="bg-black/60 border border-green-400 text-green-300 px-4 py-2 rounded font-mono text-sm w-64 text-center focus:outline-none focus:border-green-300"
-          />
-          <p className="text-xs text-green-400/60 mt-1">
-            Use the same seed to get identical ships
+            You&apos;re eligible for free ships
           </p>
         </div>
 
         {/* Claim Button */}
         <button
           onClick={handleClaim}
-          disabled={isPending || isLoadingClaimStatus || isLoadingFreeShipCount}
+          disabled={isPending || isLoadingClaimStatus}
           className="px-8 py-4 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
         >
-          {isPending
-            ? "[CLAIMING...]"
-            : `[CLAIM ${freeShipCount.toString()} FREE SHIPS]`}
+          {isPending ? "[CLAIMING...]" : "[CLAIM FREE SHIPS]"}
         </button>
 
         {/* Loading States */}
-        {(isLoadingClaimStatus || isLoadingFreeShipCount) && (
+        {isLoadingClaimStatus && (
           <div className="mt-4 flex items-center justify-center">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-400"></div>
             <span className="ml-3 text-green-400">Checking eligibility...</span>
@@ -93,7 +69,7 @@ const FreeShipClaiming: React.FC = () => {
             ✨ WHAT YOU GET:
           </h4>
           <ul className="text-sm text-green-300 space-y-1 text-left max-w-md mx-auto">
-            <li>• {freeShipCount.toString()} ships generated on-chain</li>
+            <li>• Ships generated on-chain</li>
             <li>• Unique stats and equipment combinations</li>
             <li>• Ships start unconstructed (need to be built)</li>
             <li>• Great way to expand your navy</li>

@@ -68,27 +68,42 @@ export function useLobby(lobbyId: bigint) {
     lobby: data
       ? ({
           basic: {
-            id: data[0],
-            creator: data[1],
-            costLimit: data[3],
-            createdAt: data[5],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            id: (data as any)[0],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            creator: (data as any)[1],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            costLimit: (data as any)[3],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            createdAt: (data as any)[5],
           },
           players: {
-            joiner: data[2],
-            creatorFleetId: data[7],
-            joinerFleetId: data[8],
-            joinedAt: data[11],
-            joinerFleetSetAt: data[12],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            joiner: (data as any)[2],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            creatorFleetId: (data as any)[7],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            joinerFleetId: (data as any)[8],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            joinedAt: (data as any)[11],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            joinerFleetSetAt: (data as any)[12],
           },
           gameConfig: {
-            creatorGoesFirst: data[9],
-            turnTime: data[10],
-            selectedMapId: data[13],
-            maxScore: data[14],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            creatorGoesFirst: (data as any)[9],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            turnTime: (data as any)[10],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            selectedMapId: (data as any)[13],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            maxScore: (data as any)[14],
           },
           state: {
-            status: data[4],
-            gameStartedAt: data[6],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            status: (data as any)[4],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            gameStartedAt: (data as any)[6],
           },
         } as Lobby)
       : undefined,
@@ -105,11 +120,16 @@ export function usePlayerLobbyState(playerAddress: string) {
   return {
     playerState: data
       ? ({
-          activeLobbyId: data[0],
-          activeLobbiesCount: data[1],
-          hasActiveLobby: data[2],
-          kickCount: data[3],
-          lastKickTime: data[4],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          activeLobbyId: (data as any)[0],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          activeLobbiesCount: (data as any)[1],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          hasActiveLobby: (data as any)[2],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          kickCount: (data as any)[3],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          lastKickTime: (data as any)[4],
         } as PlayerLobbyState)
       : undefined,
     error,
