@@ -11,9 +11,9 @@ interface TransactionButtonProps {
 
   // Contract call configuration
   contractAddress: `0x${string}`;
-  abi: any[];
+  abi: readonly unknown[];
   functionName: string;
-  args?: any[];
+  args?: readonly unknown[];
   value?: bigint;
 
   // Button appearance

@@ -5,6 +5,8 @@ import { useAccount } from "wagmi";
 import { formatEther } from "viem";
 import { useLobbies } from "../hooks/useLobbies";
 import { useOwnedShips } from "../hooks/useOwnedShips";
+import { useFleetsRead } from "../hooks/useFleetsContract";
+import { useShipsRead } from "../hooks/useShipsContract";
 import { LobbyStatus } from "../types/types";
 import { ShipImage } from "./ShipImage";
 import {
@@ -56,6 +58,25 @@ const Lobbies: React.FC = () => {
   const [selectedShips, setSelectedShips] = useState<bigint[]>([]);
   const [showFleetConfirmation, setShowFleetConfirmation] = useState(false);
   const [isCreatingFleet, setIsCreatingFleet] = useState(false);
+  const [showFleetView, setShowFleetView] = useState(false);
+  const [viewingFleetId, setViewingFleetId] = useState<bigint | null>(null);
+  const [viewingFleetOwner, setViewingFleetOwner] = useState<string | null>(
+    null
+  );
+
+  // Fleet ship data fetching
+  const { data: fleetShipIds, isLoading: fleetShipIdsLoading } = useFleetsRead<
+    bigint[]
+  >("getFleetShipIds", viewingFleetId ? [viewingFleetId] : undefined);
+
+  const { data: fleetShips, isLoading: fleetShipsLoading } = useShipsRead<
+    unknown[]
+  >(
+    "getShipsByIds",
+    fleetShipIds && Array.isArray(fleetShipIds) && fleetShipIds.length > 0
+      ? [fleetShipIds]
+      : undefined
+  );
 
   // Fleet selection filters
   const [fleetFilters, setFleetFilters] = useState({
@@ -717,18 +738,96 @@ const Lobbies: React.FC = () => {
                         </span>
                       )}
                   </div>
-                  <p className="text-sm text-gray-400">
+                  <p
+                    className={`text-sm ${
+                      address &&
+                      lobby.basic.creator.toLowerCase() ===
+                        address.toLowerCase()
+                        ? "text-cyan-400 font-bold"
+                        : "text-gray-400"
+                    }`}
+                  >
                     Creator: {lobby.basic.creator.slice(0, 6)}...
                     {lobby.basic.creator.slice(-4)}
                   </p>
+                  {lobby.players.joiner !==
+                    "0x0000000000000000000000000000000000000000" && (
+                    <p
+                      className={`text-sm ${
+                        address &&
+                        lobby.players.joiner.toLowerCase() ===
+                          address.toLowerCase()
+                          ? "text-cyan-400 font-bold"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      Joiner: {lobby.players.joiner.slice(0, 6)}...
+                      {lobby.players.joiner.slice(-4)}
+                    </p>
+                  )}
+
+                  {/* Fleet Selection Indicators */}
+                  <div className="flex gap-2 mt-2">
+                    {lobby.players.creatorFleetId > 0n && (
+                      <button
+                        onClick={() => {
+                          setViewingFleetId(lobby.players.creatorFleetId);
+                          setViewingFleetOwner(lobby.basic.creator);
+                          setShowFleetView(true);
+                        }}
+                        className={`px-2 py-1 text-xs rounded border ${
+                          address &&
+                          lobby.basic.creator.toLowerCase() ===
+                            address.toLowerCase()
+                            ? "border-cyan-400 text-cyan-400 hover:bg-cyan-400/20"
+                            : "border-green-400 text-green-400 hover:bg-green-400/20"
+                        }`}
+                      >
+                        Creator Fleet #{lobby.players.creatorFleetId.toString()}
+                      </button>
+                    )}
+                    {lobby.players.joinerFleetId > 0n && (
+                      <button
+                        onClick={() => {
+                          setViewingFleetId(lobby.players.joinerFleetId);
+                          setViewingFleetOwner(lobby.players.joiner);
+                          setShowFleetView(true);
+                        }}
+                        className={`px-2 py-1 text-xs rounded border ${
+                          address &&
+                          lobby.players.joiner.toLowerCase() ===
+                            address.toLowerCase()
+                            ? "border-cyan-400 text-cyan-400 hover:bg-cyan-400/20"
+                            : "border-green-400 text-green-400 hover:bg-green-400/20"
+                        }`}
+                      >
+                        Joiner Fleet #{lobby.players.joinerFleetId.toString()}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <span
-                  className={`px-2 py-1 rounded text-xs font-bold ${getStatusColor(
-                    lobby.state.status
-                  )}`}
-                >
-                  {getStatusText(lobby.state.status)}
-                </span>
+                <div className="flex flex-col gap-2 items-end">
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-bold ${getStatusColor(
+                      lobby.state.status
+                    )}`}
+                  >
+                    {getStatusText(lobby.state.status)}
+                  </span>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-bold ${
+                      lobby.players.joiner !==
+                      "0x0000000000000000000000000000000000000000"
+                        ? "bg-green-400/20 text-green-400"
+                        : "bg-gray-400/20 text-gray-400"
+                    }`}
+                  >
+                    {lobby.players.joiner !==
+                    "0x0000000000000000000000000000000000000000"
+                      ? "JOINED"
+                      : "WAITING"}
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm mb-4">
@@ -1420,6 +1519,179 @@ const Lobbies: React.FC = () => {
             </div>
           );
         })()}
+
+      {/* Fleet View Modal */}
+      {showFleetView && viewingFleetId && viewingFleetOwner && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-60">
+          <div className="bg-black border border-cyan-400 rounded-lg p-6 max-w-4xl w-full mx-4 h-[80vh] flex flex-col">
+            <div className="flex justify-between items-start mb-4">
+              <h4 className="text-lg font-bold text-cyan-400">
+                FLEET #{viewingFleetId.toString()}
+              </h4>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowFleetView(false);
+                    setViewingFleetId(null);
+                    setViewingFleetOwner(null);
+                  }}
+                  className="px-4 py-2 border border-gray-400 text-gray-400 rounded hover:bg-gray-400/20"
+                >
+                  CLOSE
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-4 p-3 bg-black/40 border border-gray-600 rounded">
+              <p className="text-sm text-gray-300">
+                <span className="text-cyan-400">Owner:</span>{" "}
+                {viewingFleetOwner.slice(0, 6)}...{viewingFleetOwner.slice(-4)}
+                {address &&
+                  viewingFleetOwner.toLowerCase() === address.toLowerCase() && (
+                    <span className="ml-2 text-cyan-400 font-bold">(You)</span>
+                  )}
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {fleetShipIdsLoading || fleetShipsLoading ? (
+                <div className="text-center text-gray-400 py-8">
+                  <p className="text-lg mb-2">Loading Fleet...</p>
+                  <p className="text-sm">Fetching ship data...</p>
+                </div>
+              ) : fleetShips &&
+                Array.isArray(fleetShips) &&
+                fleetShips.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {fleetShips.map((ship: unknown, index: number) => {
+                    // Type assertion for contract data - using any for flexibility with contract response
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const shipData = ship as any;
+                    return (
+                      <div
+                        key={shipData.id?.toString() || index}
+                        className="border rounded-lg p-4 bg-black/40 border-gray-600"
+                      >
+                        {/* Ship Image */}
+                        <div className="mb-3">
+                          <ShipImage
+                            key={`fleet-${shipData.id?.toString() || index}-${
+                              shipData.shipData?.constructed
+                                ? "constructed"
+                                : "unconstructed"
+                            }`}
+                            ship={shipData}
+                            className="w-full h-32 rounded border border-gray-600"
+                            showLoadingState={true}
+                          />
+                        </div>
+
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-bold text-sm">
+                              {shipData.name || `Ship #${shipData.id}`}
+                            </h5>
+                          </div>
+                          <span
+                            className={`text-xs px-2 py-1 rounded ${
+                              shipData.shipData?.shiny
+                                ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
+                                : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
+                            }`}
+                          >
+                            {shipData.shipData?.shiny ? "SHINY ✨" : "COMMON"}
+                          </span>
+                        </div>
+
+                        {/* Ship Stats */}
+                        {shipData.shipData?.constructed ? (
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="opacity-60">Acc:</span>
+                              <span className="ml-2">
+                                {shipData.traits?.accuracy || 0}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="opacity-60">Hull:</span>
+                              <span className="ml-2">
+                                {shipData.traits?.hull || 0}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="opacity-60">Speed:</span>
+                              <span className="ml-2">
+                                {shipData.traits?.speed || 0}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="opacity-60">Cost:</span>
+                              <span className="ml-2">
+                                {shipData.shipData?.cost || 0}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="opacity-60">Wpn:</span>
+                              <span className="ml-2">
+                                {getMainWeaponName(
+                                  shipData.equipment?.mainWeapon || 0
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="opacity-60">
+                                {shipData.equipment?.shields > 0
+                                  ? "Shd:"
+                                  : "Arm:"}
+                              </span>
+                              <span className="ml-2">
+                                {shipData.equipment?.shields > 0
+                                  ? getShieldName(shipData.equipment.shields)
+                                  : getArmorName(
+                                      shipData.equipment?.armor || 0
+                                    )}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="opacity-60">Spc:</span>
+                              <span className="ml-2">
+                                {getSpecialName(
+                                  shipData.equipment?.special || 0
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="opacity-60">Status:</span>
+                              <span className="ml-2 text-green-400">READY</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center text-yellow-400 text-sm">
+                            {shipData.shipData?.timestampDestroyed > 0n
+                              ? "DESTROYED"
+                              : "UNDER CONSTRUCTION"}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center text-gray-400 py-8">
+                  <p className="text-lg mb-2">No Ships Found</p>
+                  <p className="text-sm">
+                    This fleet appears to be empty or the data could not be
+                    loaded.
+                  </p>
+                  <p className="text-xs mt-2 text-gray-500">
+                    Fleet ID: {viewingFleetId?.toString()}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
