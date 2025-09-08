@@ -11,9 +11,11 @@ interface TransactionButtonProps {
 
   // Contract call configuration
   contractAddress: `0x${string}`;
-  abi: readonly unknown[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  abi: any[];
   functionName: string;
-  args?: readonly unknown[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  args?: any[];
   value?: bigint;
 
   // Button appearance
