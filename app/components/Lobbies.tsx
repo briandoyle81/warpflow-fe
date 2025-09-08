@@ -54,6 +54,8 @@ const Lobbies: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedLobby, setSelectedLobby] = useState<bigint | null>(null);
   const [selectedShips, setSelectedShips] = useState<bigint[]>([]);
+  const [showFleetConfirmation, setShowFleetConfirmation] = useState(false);
+  const [isCreatingFleet, setIsCreatingFleet] = useState(false);
 
   // Fleet selection filters
   const [fleetFilters, setFleetFilters] = useState({
@@ -299,12 +301,40 @@ const Lobbies: React.FC = () => {
   const handleCreateFleet = async (lobbyId: bigint) => {
     if (!isConnected || selectedShips.length === 0) return;
 
+    const currentLobby = lobbyList.lobbies.find(
+      (lobby) => lobby.basic.id === lobbyId
+    );
+    const totalCost = selectedShips.reduce((sum, shipId) => {
+      const ship = ships.find((s) => s.id === shipId);
+      return sum + (ship ? Number(ship.shipData.cost) : 0);
+    }, 0);
+    const costLimit = currentLobby
+      ? Number(currentLobby.basic.costLimit)
+      : 1000;
+    const ninetyPercentThreshold = costLimit * 0.9;
+    const isUnderNinetyPercent = totalCost < ninetyPercentThreshold;
+
+    if (isUnderNinetyPercent) {
+      setShowFleetConfirmation(true);
+      return;
+    }
+
+    await createFleetWithConfirmation(lobbyId);
+  };
+
+  const createFleetWithConfirmation = async (lobbyId: bigint) => {
+    if (!isConnected || selectedShips.length === 0) return;
+
+    setIsCreatingFleet(true);
     try {
       await createFleet(lobbyId, selectedShips);
       setSelectedShips([]);
       setSelectedLobby(null);
+      setShowFleetConfirmation(false);
     } catch (error) {
       console.error("Failed to create fleet:", error);
+    } finally {
+      setIsCreatingFleet(false);
     }
   };
 
@@ -1296,16 +1326,20 @@ const Lobbies: React.FC = () => {
                 <div className="flex gap-2 mt-4 flex-shrink-0">
                   <button
                     onClick={() => handleCreateFleet(selectedLobby)}
-                    disabled={selectedShips.length === 0}
+                    disabled={selectedShips.length === 0 || isCreatingFleet}
                     className="flex-1 px-6 py-3 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    CREATE FLEET ({selectedShips.length} ships)
+                    {isCreatingFleet
+                      ? "CREATING FLEET..."
+                      : `CREATE FLEET (${selectedShips.length} ships)`}
                   </button>
                   <button
                     onClick={() => {
+                      if (isCreatingFleet) return; // Prevent closing during transaction
                       setSelectedLobby(null);
                       setSelectedShips([]);
                       setFiltersExpanded(false);
+                      setShowFleetConfirmation(false);
                       setFleetFilters({
                         showShiny: true,
                         showCommon: true,
@@ -1322,10 +1356,65 @@ const Lobbies: React.FC = () => {
                         specialType: "all",
                       });
                     }}
-                    className="px-4 py-2 border border-red-400 text-red-400 rounded hover:bg-red-400/20"
+                    disabled={isCreatingFleet}
+                    className="px-4 py-2 border border-red-400 text-red-400 rounded hover:bg-red-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     CANCEL
                   </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+      {/* Fleet Cost Confirmation Dialog */}
+      {showFleetConfirmation &&
+        selectedLobby &&
+        (() => {
+          const currentLobby = lobbyList.lobbies.find(
+            (lobby) => lobby.basic.id === selectedLobby
+          );
+          const totalCost = selectedShips.reduce((sum, shipId) => {
+            const ship = ships.find((s) => s.id === shipId);
+            return sum + (ship ? Number(ship.shipData.cost) : 0);
+          }, 0);
+          const costLimit = currentLobby
+            ? Number(currentLobby.basic.costLimit)
+            : 1000;
+
+          return (
+            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-60">
+              <div className="bg-black border border-yellow-400 rounded-lg p-6 max-w-md w-full mx-4">
+                <div className="text-center">
+                  <div className="text-yellow-400 text-4xl mb-4">⚠️</div>
+                  <h3 className="text-xl font-bold text-yellow-400 mb-4">
+                    FLEET COST WARNING
+                  </h3>
+                  <p className="text-gray-300 mb-6">
+                    Your fleet cost ({totalCost}) is less than 90% of the
+                    maximum ({costLimit}). You&apos;re only using{" "}
+                    {Math.round((totalCost / costLimit) * 100)}% of your
+                    available budget.
+                  </p>
+                  <p className="text-sm text-gray-400 mb-6">
+                    Consider adding more ships to maximize your fleet&apos;s
+                    potential, or proceed with your current selection.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowFleetConfirmation(false)}
+                      className="flex-1 px-4 py-2 border border-gray-400 text-gray-400 rounded hover:bg-gray-400/20"
+                    >
+                      GO BACK
+                    </button>
+                    <button
+                      onClick={() => createFleetWithConfirmation(selectedLobby)}
+                      disabled={isCreatingFleet}
+                      className="flex-1 px-4 py-2 border border-yellow-400 text-yellow-400 rounded hover:bg-yellow-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isCreatingFleet ? "CREATING..." : "CONFIRM FLEET"}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
