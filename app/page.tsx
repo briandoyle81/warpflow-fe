@@ -8,6 +8,7 @@ import Lobbies from "./components/Lobbies";
 import Games from "./components/Games";
 import Profile from "./components/Profile";
 import Info from "./components/Info";
+import Maps from "./components/Maps";
 
 export default function Home() {
   const { status } = useAccount();
@@ -22,7 +23,9 @@ export default function Home() {
     const savedTab = localStorage.getItem("warpflow-active-tab");
     if (
       savedTab &&
-      ["Manage Navy", "Lobbies", "Games", "Profile", "Info"].includes(savedTab)
+      ["Manage Navy", "Lobbies", "Games", "Profile", "Info", "Maps"].includes(
+        savedTab
+      )
     ) {
       setActiveTab(savedTab);
     }
@@ -57,11 +60,15 @@ export default function Home() {
   return (
     <div className="font-sans grid grid-rows-[auto_1fr_20px] min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <Header />
-      <main className="flex flex-col gap-8 row-start-2 pt-4 pb-20 px-8 sm:px-20 w-full max-w-7xl mx-auto">
+      <main className="flex flex-col gap-8 row-start-2 pt-4 pb-20 px-8 sm:px-20 w-full">
         {/* Game Tabs */}
-        <div className="w-full">
+        <div
+          className={`w-full ${
+            activeTab === "Maps" ? "" : "max-w-7xl mx-auto"
+          }`}
+        >
           <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {["Manage Navy", "Lobbies", "Games", "Profile", "Info"].map(
+            {["Manage Navy", "Lobbies", "Games", "Profile", "Info", "Maps"].map(
               (tab) => (
                 <button
                   key={tab}
@@ -79,13 +86,21 @@ export default function Home() {
           </div>
 
           {/* Tab Content */}
-          <div className="bg-black/40 border border-cyan-400 rounded-lg p-8 shadow-lg shadow-cyan-400/20">
-            {activeTab === "Manage Navy" && <ManageNavy />}
-            {activeTab === "Lobbies" && <Lobbies />}
-            {activeTab === "Games" && <Games />}
-            {activeTab === "Profile" && <Profile />}
-            {activeTab === "Info" && <Info />}
-          </div>
+          {activeTab === "Maps" ? (
+            <div className="w-[90%] mx-auto">
+              <div className="bg-black/40 border border-cyan-400 rounded-lg p-4 shadow-lg shadow-cyan-400/20">
+                <Maps />
+              </div>
+            </div>
+          ) : (
+            <div className="bg-black/40 border border-cyan-400 rounded-lg p-8 shadow-lg shadow-cyan-400/20">
+              {activeTab === "Manage Navy" && <ManageNavy />}
+              {activeTab === "Lobbies" && <Lobbies />}
+              {activeTab === "Games" && <Games />}
+              {activeTab === "Profile" && <Profile />}
+              {activeTab === "Info" && <Info />}
+            </div>
+          )}
         </div>
       </main>
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center text-cyan-400/60 font-mono text-sm tracking-wider">

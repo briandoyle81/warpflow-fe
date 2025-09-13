@@ -17,6 +17,7 @@ import {
 } from "../types/types";
 import { LobbyCreateButton } from "./LobbyCreateButton";
 import { LobbyJoinButton } from "./LobbyJoinButton";
+import { LobbyLeaveButton } from "./LobbyLeaveButton";
 import { useTransaction } from "../providers/TransactionContext";
 
 const Lobbies: React.FC = () => {
@@ -872,30 +873,49 @@ const Lobbies: React.FC = () => {
                   </div>
                 )}
 
-              {/* Show fleet selection for creator if they haven't selected a fleet yet */}
-              {lobby.basic.creator === address &&
-                lobby.players.creatorFleetId === 0n && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-yellow-400">Select your fleet</p>
+              {/* Show action buttons for creator */}
+              {lobby.basic.creator === address && (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  {/* Fleet selection button - only show if no fleet selected */}
+                  {lobby.players.creatorFleetId === 0n && (
                     <button
                       onClick={() => setSelectedLobby(lobby.basic.id)}
                       disabled={transactionState.isPending}
-                      className="w-full px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-4 py-2 rounded-lg border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       SELECT FLEET
                     </button>
-                  </div>
-                )}
+                  )}
+
+                  {/* Leave button - only show if no joiner has joined */}
+                  {lobby.players.joiner ===
+                    "0x0000000000000000000000000000000000000000" && (
+                    <LobbyLeaveButton
+                      lobbyId={lobby.basic.id}
+                      className="flex-1 px-4 py-2 rounded-lg border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onSuccess={() => {
+                        console.log("Left lobby successfully!");
+                        // Refresh lobby list
+                        loadLobbies();
+                      }}
+                      onError={(error) => {
+                        console.error("Failed to leave lobby:", error);
+                      }}
+                    >
+                      LEAVE
+                    </LobbyLeaveButton>
+                  )}
+                </div>
+              )}
 
               {/* Show fleet selection for joiner if they haven't selected a fleet yet */}
               {lobby.players.joiner === address &&
                 lobby.players.joinerFleetId === 0n && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-yellow-400">Select your fleet</p>
+                  <div className="flex justify-center">
                     <button
                       onClick={() => setSelectedLobby(lobby.basic.id)}
                       disabled={transactionState.isPending}
-                      className="w-full px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 rounded-lg border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       SELECT FLEET
                     </button>

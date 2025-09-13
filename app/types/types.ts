@@ -383,3 +383,37 @@ export enum ActionType {
   Special,
   ClaimPoints,
 }
+
+// Maps contract types
+export interface MapPosition {
+  row: number;
+  col: number;
+}
+
+export interface ScoringPosition {
+  row: number;
+  col: number;
+  points: number;
+  onlyOnce: boolean;
+}
+
+export interface PresetMap {
+  id: number;
+  blockedPositions: MapPosition[];
+  scoringPositions: ScoringPosition[];
+}
+
+export interface MapEditorState {
+  blockedTiles: boolean[][];
+  scoringTiles: number[][];
+  onlyOnceTiles: boolean[][];
+  selectedTool: "block" | "score" | "erase";
+  selectedScoreValue: number;
+  selectedOnlyOnce: boolean;
+  symmetryMode: "none" | "radial";
+}
+
+export const GRID_DIMENSIONS = {
+  WIDTH: 100,
+  HEIGHT: 50,
+} as const;

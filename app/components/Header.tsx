@@ -1,12 +1,20 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useAccount, useBalance, useSwitchChain, useDisconnect } from "wagmi";
+import {
+  useAccount,
+  useBalance,
+  useSwitchChain,
+  useDisconnect,
+  useReadContract,
+} from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { flowTestnet } from "viem/chains";
+import { formatEther } from "viem";
 import MusicPlayer from "./MusicPlayer";
 import PayButton from "./PayButton";
 import { toast } from "react-hot-toast";
+import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 
 const Header: React.FC = () => {
   const [isHydrated, setIsHydrated] = useState(false);
@@ -16,6 +24,16 @@ const Header: React.FC = () => {
     address: account.address,
     query: { enabled: isHydrated && !!account.address },
   });
+
+  // Read UTC balance
+  const { data: utcBalance } = useReadContract({
+    address: CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`,
+    abi: CONTRACT_ABIS.UNIVERSAL_CREDITS,
+    functionName: "balanceOf",
+    args: account.address ? [account.address] : undefined,
+    query: { enabled: isHydrated && !!account.address },
+  });
+
   const { switchChain } = useSwitchChain();
   const { disconnect } = useDisconnect();
 
@@ -181,7 +199,9 @@ const Header: React.FC = () => {
                       {/* UTC Balance */}
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-yellow-400 shadow-lg shadow-yellow-400/30 h-8 w-40 justify-center">
                         <span className="text-yellow-400 text-xs font-mono font-bold tracking-wider">
-                          0.00 UTC
+                          {utcBalance
+                            ? `${formatEther(utcBalance as bigint)} UTC`
+                            : "0.00 UTC"}
                         </span>
                       </div>
 
