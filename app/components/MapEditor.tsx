@@ -158,8 +158,8 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
   const getRadialSymmetryPositions = useCallback((row: number, col: number) => {
     // For even dimensions, center is between tiles
     // Center line is between (HEIGHT/2 - 1) and (HEIGHT/2)
-    const centerRow = (GRID_DIMENSIONS.HEIGHT - 1) / 2; // 24.5 for 50 rows
-    const centerCol = (GRID_DIMENSIONS.WIDTH - 1) / 2; // 49.5 for 100 cols
+    const centerRow = (GRID_DIMENSIONS.HEIGHT - 1) / 2; // 19.5 for 40 rows
+    const centerCol = (GRID_DIMENSIONS.WIDTH - 1) / 2; // 29.5 for 60 cols
 
     // Calculate relative position from center
     const relRow = row - centerRow;

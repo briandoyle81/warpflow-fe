@@ -414,6 +414,6 @@ export interface MapEditorState {
 }
 
 export const GRID_DIMENSIONS = {
-  WIDTH: 100,
-  HEIGHT: 50,
+  WIDTH: 60,
+  HEIGHT: 40,
 } as const;
