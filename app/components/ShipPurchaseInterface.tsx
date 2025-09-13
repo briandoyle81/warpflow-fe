@@ -74,10 +74,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = () => {
             tier={tier}
             price={price || BigInt(0)}
             className={`flex-1 min-w-[200px] px-4 py-2 rounded-lg border-2 ${colors.border} ${colors.text} ${colors.hoverBorder} ${colors.hoverText} ${colors.hoverBg} font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
-            onSuccess={() => {
-              // Refetch ships data after successful purchase
-              setTimeout(() => refetch(), 2000);
-            }}
+            refetch={refetch}
           >
             <div className="flex flex-col items-center space-y-1">
               <span>TIER {tier}</span>

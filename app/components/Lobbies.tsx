@@ -15,10 +15,13 @@ import {
   getArmorName,
   getShieldName,
 } from "../types/types";
-// Removed TransactionButton import - using simple buttons instead
+import { LobbyCreateButton } from "./LobbyCreateButton";
+import { LobbyJoinButton } from "./LobbyJoinButton";
+import { useTransaction } from "../providers/TransactionContext";
 
 const Lobbies: React.FC = () => {
   const { address, isConnected, status } = useAccount();
+  const { transactionState } = useTransaction();
   const {
     lobbyList,
     playerState,
@@ -26,8 +29,6 @@ const Lobbies: React.FC = () => {
     freeGamesPerAddress,
     additionalLobbyFee,
     paused,
-    createLobby,
-    joinLobby,
     // leaveLobby,
     // timeoutJoiner,
     createFleet,
@@ -82,6 +83,7 @@ const Lobbies: React.FC = () => {
   const [fleetFilters, setFleetFilters] = useState({
     showShiny: true,
     showCommon: true,
+    showUnavailable: false,
     minCost: 0,
     maxCost: 10000,
     minAccuracy: 0,
@@ -201,6 +203,15 @@ const Lobbies: React.FC = () => {
     // Always show selected ships regardless of filters
     if (selectedShips.includes(ship.id)) return true;
 
+    // Filter out ships that are not available for fleet selection
+    // Ships must be constructed, not destroyed, and not already in a fleet
+    // Unless showUnavailable is enabled
+    if (!fleetFilters.showUnavailable) {
+      if (!ship.shipData.constructed) return false;
+      if (ship.shipData.timestampDestroyed > 0n) return false;
+      if (ship.shipData.inFleet) return false;
+    }
+
     const cost = Number(ship.shipData.cost);
     const isShiny = ship.shipData.shiny;
     const accuracy = ship.traits.accuracy;
@@ -261,53 +272,8 @@ const Lobbies: React.FC = () => {
     turnTime: "300", // 5 minutes
     selectedMapId: "1",
     maxScore: "100",
+    creatorGoesFirst: false,
   });
-
-  const handleCreateLobby = async () => {
-    if (!isConnected) return;
-
-    // Validate inputs
-    const turnTime = parseInt(createForm.turnTime);
-    const mapId = parseInt(createForm.selectedMapId);
-    const maxScore = parseInt(createForm.maxScore);
-
-    if (turnTime < 60 || turnTime > 86400) {
-      alert("Turn time must be between 60 and 86400 seconds");
-      return;
-    }
-    if (mapId <= 0) {
-      alert("Map ID must be greater than 0");
-      return;
-    }
-    if (maxScore <= 0) {
-      alert("Max score must be greater than 0");
-      return;
-    }
-
-    try {
-      await createLobby({
-        costLimit: BigInt(parseInt(createForm.costLimit)), // Not in FLOW, just a number
-        turnTime: BigInt(turnTime),
-        creatorGoesFirst: false, // This will be set by who creates fleet first
-        selectedMapId: BigInt(mapId),
-        maxScore: BigInt(maxScore),
-        activeLobbiesCount: activeLobbiesCount, // Pass the calculated active lobbies count
-      });
-      setShowCreateForm(false);
-    } catch (error) {
-      console.error("Failed to create lobby:", error);
-    }
-  };
-
-  const handleJoinLobby = async (lobbyId: bigint) => {
-    if (!isConnected) return;
-
-    try {
-      await joinLobby(lobbyId);
-    } catch (error) {
-      console.error("Failed to join lobby:", error);
-    }
-  };
 
   // const handleLeaveLobby = async (lobbyId: bigint) => {
   //   if (!isConnected) return;
@@ -670,12 +636,32 @@ const Lobbies: React.FC = () => {
               </p>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={handleCreateLobby}
+              <LobbyCreateButton
+                costLimit={BigInt(createForm.costLimit)}
+                turnTime={BigInt(createForm.turnTime)}
+                creatorGoesFirst={createForm.creatorGoesFirst}
+                selectedMapId={BigInt(createForm.selectedMapId)}
+                maxScore={BigInt(createForm.maxScore)}
+                value={
+                  needsPaymentForLobby
+                    ? (additionalLobbyFee as bigint) || 0n
+                    : 0n
+                }
                 className="flex-1 px-6 py-3 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200"
+                onSuccess={() => {
+                  // Show success toast
+                  console.log("Lobby created successfully!");
+                  // Close the form
+                  setShowCreateForm(false);
+                  // Refresh lobby list
+                  loadLobbies();
+                }}
+                onError={(error) => {
+                  console.error("Failed to create lobby:", error);
+                }}
               >
                 CREATE
-              </button>
+              </LobbyCreateButton>
               <button
                 onClick={() => setShowCreateForm(false)}
                 className="px-4 py-2 border border-red-400 text-red-400 rounded hover:bg-red-400/20"
@@ -860,12 +846,30 @@ const Lobbies: React.FC = () => {
               {lobby.state.status === LobbyStatus.Open &&
                 lobby.basic.creator !== address &&
                 lobby.players.joiner !== address && (
-                  <button
-                    onClick={() => handleJoinLobby(lobby.basic.id)}
-                    className="w-full px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200"
-                  >
-                    JOIN LOBBY
-                  </button>
+                  <div className="space-y-2">
+                    <LobbyJoinButton
+                      lobbyId={lobby.basic.id}
+                      disabled={hasActiveLobby}
+                      className="w-full px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onSuccess={() => {
+                        // Show success toast
+                        console.log("Joined lobby successfully!");
+                        // Refresh lobby list
+                        loadLobbies();
+                      }}
+                      onError={(error) => {
+                        console.error("Failed to join lobby:", error);
+                      }}
+                    >
+                      JOIN LOBBY
+                    </LobbyJoinButton>
+                    {hasActiveLobby && (
+                      <p className="text-xs text-yellow-400 text-center">
+                        You already have an active lobby. Complete it before
+                        joining another.
+                      </p>
+                    )}
+                  </div>
                 )}
 
               {/* Show fleet selection for creator if they haven't selected a fleet yet */}
@@ -875,7 +879,8 @@ const Lobbies: React.FC = () => {
                     <p className="text-sm text-yellow-400">Select your fleet</p>
                     <button
                       onClick={() => setSelectedLobby(lobby.basic.id)}
-                      className="w-full px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200"
+                      disabled={transactionState.isPending}
+                      className="w-full px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       SELECT FLEET
                     </button>
@@ -889,7 +894,8 @@ const Lobbies: React.FC = () => {
                     <p className="text-sm text-yellow-400">Select your fleet</p>
                     <button
                       onClick={() => setSelectedLobby(lobby.basic.id)}
-                      className="w-full px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200"
+                      disabled={transactionState.isPending}
+                      className="w-full px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       SELECT FLEET
                     </button>
@@ -1006,6 +1012,22 @@ const Lobbies: React.FC = () => {
                                 className="mr-2"
                               />
                               <span className="text-yellow-400">Shiny ✨</span>
+                            </label>
+                            <label className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={fleetFilters.showUnavailable}
+                                onChange={(e) =>
+                                  setFleetFilters((prev) => ({
+                                    ...prev,
+                                    showUnavailable: e.target.checked,
+                                  }))
+                                }
+                                className="mr-2"
+                              />
+                              <span className="text-orange-400">
+                                Show Unavailable
+                              </span>
                             </label>
                           </div>
                         </div>
@@ -1246,6 +1268,7 @@ const Lobbies: React.FC = () => {
                             setFleetFilters({
                               showShiny: true,
                               showCommon: true,
+                              showUnavailable: false,
                               minCost: 0,
                               maxCost: 10000,
                               minAccuracy: 0,
@@ -1294,15 +1317,18 @@ const Lobbies: React.FC = () => {
                               ? "border-green-400 bg-green-400/20"
                               : ship.shipData.timestampDestroyed > 0n
                               ? "border-red-400 bg-black/60 opacity-50 cursor-not-allowed"
+                              : ship.shipData.inFleet
+                              ? "border-orange-400 bg-orange-400/20 opacity-50 cursor-not-allowed"
                               : ship.shipData.constructed
                               ? "border-gray-400 bg-black/40 hover:border-cyan-400 hover:bg-cyan-400/10"
                               : "border-gray-400 bg-black/60 opacity-50 cursor-not-allowed"
                           }`}
                           onClick={() => {
-                            // Don't allow selection of destroyed or unconstructed ships
+                            // Don't allow selection of destroyed, unconstructed, or ships already in a fleet
                             if (
                               ship.shipData.timestampDestroyed > 0n ||
-                              !ship.shipData.constructed
+                              !ship.shipData.constructed ||
+                              ship.shipData.inFleet
                             ) {
                               return;
                             }
@@ -1396,16 +1422,26 @@ const Lobbies: React.FC = () => {
                               </div>
                               <div className="flex justify-between">
                                 <span className="opacity-60">Status:</span>
-                                <span className="ml-2 text-green-400">
-                                  READY
+                                <span
+                                  className={`ml-2 ${
+                                    ship.shipData.timestampDestroyed > 0n
+                                      ? "text-red-400"
+                                      : ship.shipData.inFleet
+                                      ? "text-orange-400"
+                                      : "text-green-400"
+                                  }`}
+                                >
+                                  {ship.shipData.timestampDestroyed > 0n
+                                    ? "DESTROYED"
+                                    : ship.shipData.inFleet
+                                    ? "IN FLEET"
+                                    : "READY"}
                                 </span>
                               </div>
                             </div>
                           ) : (
                             <div className="text-center text-yellow-400 text-sm">
-                              {ship.shipData.timestampDestroyed > 0n
-                                ? "DESTROYED"
-                                : "UNDER CONSTRUCTION"}
+                              UNDER CONSTRUCTION
                             </div>
                           )}
 
@@ -1442,6 +1478,7 @@ const Lobbies: React.FC = () => {
                       setFleetFilters({
                         showShiny: true,
                         showCommon: true,
+                        showUnavailable: false,
                         minCost: 0,
                         maxCost: 10000,
                         minAccuracy: 0,

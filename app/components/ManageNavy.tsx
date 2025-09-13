@@ -22,6 +22,7 @@ import ShipPurchaseInterface from "./ShipPurchaseInterface";
 import { FreeShipClaimButton } from "./FreeShipClaimButton";
 import { ShipActionButton } from "./ShipActionButton";
 import { ShipImage } from "./ShipImage";
+import { useTransaction } from "../providers/TransactionContext";
 import {
   getMainWeaponName,
   getSpecialName,
@@ -31,6 +32,7 @@ import {
 
 const ManageNavy: React.FC = () => {
   const { address, chain, isConnected, status } = useAccount();
+  const { transactionState } = useTransaction();
   const { ships, isLoading, error, hasShips, shipCount, refetch } =
     useOwnedShips();
   const { fleetStats } = useShipDetails();
@@ -327,7 +329,8 @@ const ManageNavy: React.FC = () => {
 
         <button
           onClick={() => setShowShipPurchase(true)}
-          className="px-6 py-3 rounded-lg border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200"
+          disabled={transactionState.isPending}
+          className="px-6 py-3 rounded-lg border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           [BUY NEW SHIPS]
         </button>

@@ -14,6 +14,7 @@ interface ShipPurchaseButtonProps {
   disabled?: boolean;
   onSuccess?: () => void;
   onError?: (error: Error) => void;
+  refetch?: () => void;
 }
 
 const SHIP_PURCHASE_ABI = [
@@ -38,6 +39,7 @@ export function ShipPurchaseButton({
   disabled = false,
   onSuccess,
   onError,
+  refetch,
 }: ShipPurchaseButtonProps) {
   const { address } = useAccount();
   const { data: flowBalance } = useBalance({
@@ -54,6 +56,13 @@ export function ShipPurchaseButton({
     }
     return true;
   }, [address, flowBalance, price]);
+
+  const handleSuccess = React.useCallback(() => {
+    // Call the provided onSuccess callback
+    onSuccess?.();
+    // Trigger refetch to update the UI state
+    refetch?.();
+  }, [onSuccess, refetch]);
 
   return (
     <TransactionButton
@@ -72,7 +81,7 @@ export function ShipPurchaseButton({
       disabled={disabled}
       loadingText="[PURCHASING...]"
       errorText="[ERROR PURCHASING]"
-      onSuccess={onSuccess}
+      onSuccess={handleSuccess}
       onError={onError}
       validateBeforeTransaction={validateBeforeTransaction}
     >

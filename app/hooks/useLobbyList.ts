@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useLobbiesRead } from "./useLobbiesContract";
-import { Lobby, LobbyTuple, tupleToLobby } from "../types/types";
+import { Lobby } from "../types/types";
 
 export function useLobbyList() {
   const { address } = useAccount();
