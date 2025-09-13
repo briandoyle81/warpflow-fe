@@ -344,8 +344,21 @@ export function useShipImageCache(ship: Ship) {
     debugLog(
       `🔍 Checking cache for ship ${shipId}, hasRequested: ${shipRequestStates.get(
         shipId
-      )}`
+      )}, constructed: ${ship.shipData.constructed}`
     );
+
+    // For unconstructed ships, don't try to fetch from contract
+    if (!ship.shipData.constructed) {
+      debugLog(`🚫 Ship ${shipId} is not constructed, skipping contract fetch`);
+      setImageState({
+        dataUrl: null,
+        isLoading: false,
+        error: null,
+        retryCount: 0,
+      });
+      return;
+    }
+
     const cached = getCachedImage();
     if (cached) {
       debugLog(`📦 Found cached image for ship ${shipId}, testing validity...`);
@@ -394,7 +407,13 @@ export function useShipImageCache(ship: Ship) {
         Array.from(shipRequestStates.entries())
       );
     }
-  }, [getCachedImage, fetchImageFromContract, cacheKey, shipId]);
+  }, [
+    getCachedImage,
+    fetchImageFromContract,
+    cacheKey,
+    shipId,
+    ship.shipData.constructed,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {

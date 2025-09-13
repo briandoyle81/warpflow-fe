@@ -1420,7 +1420,7 @@ const Lobbies: React.FC = () => {
                                   {getSpecialName(ship.equipment.special)}
                                 </span>
                               </div>
-                              <div className="flex justify-between">
+                              <div className="flex justify-between col-span-2">
                                 <span className="opacity-60">Status:</span>
                                 <span
                                   className={`ml-2 ${
@@ -1697,7 +1697,7 @@ const Lobbies: React.FC = () => {
                                 )}
                               </span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between col-span-2">
                               <span className="opacity-60">Status:</span>
                               <span className="ml-2 text-green-400">READY</span>
                             </div>

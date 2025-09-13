@@ -16,6 +16,7 @@ import {
   clearCacheOnLogout,
 } from "../hooks";
 import { useAccount } from "wagmi";
+import { formatEther } from "viem";
 import { toast } from "react-hot-toast";
 import { Ship } from "../types/types";
 import ShipPurchaseInterface from "./ShipPurchaseInterface";
@@ -29,6 +30,9 @@ import {
   getArmorName,
   getShieldName,
 } from "../types/types";
+import { useShipsRead } from "../hooks/useShipsContract";
+import { TransactionButton } from "./TransactionButton";
+import { CONTRACT_ADDRESSES } from "../config/contracts";
 
 const ManageNavy: React.FC = () => {
   const { address, chain, isConnected, status } = useAccount();
@@ -36,6 +40,19 @@ const ManageNavy: React.FC = () => {
   const { ships, isLoading, error, hasShips, shipCount, refetch } =
     useOwnedShips();
   const { fleetStats } = useShipDetails();
+
+  // Read the recycle reward amount from the contract
+  const { data: recycleReward } = useShipsRead<bigint>("recycleReward");
+
+  // Read the user's purchase count
+  const { data: amountPurchased } = useShipsRead<bigint>(
+    "amountPurchased",
+    address ? [address] : undefined
+  );
+
+  // Check if user can recycle (minimum 10 purchases required)
+  const canRecycle = amountPurchased ? Number(amountPurchased) >= 10 : false;
+
   // Note: Ship actions are now handled by ShipActionButton components
 
   // Check if wallet is connecting
@@ -78,6 +95,8 @@ const ManageNavy: React.FC = () => {
     new Set()
   );
   const [showShipPurchase, setShowShipPurchase] = React.useState(false);
+  const [showRecycleModal, setShowRecycleModal] = React.useState(false);
+  const [shipToRecycle, setShipToRecycle] = React.useState<Ship | null>(null);
 
   // Load starred ships from localStorage on mount
   React.useEffect(() => {
@@ -172,6 +191,17 @@ const ManageNavy: React.FC = () => {
       newSelected.add(shipId);
     }
     setSelectedShips(newSelected);
+  };
+
+  // Handle recycle confirmation
+  const handleRecycleClick = (ship: Ship) => {
+    setShipToRecycle(ship);
+    setShowRecycleModal(true);
+  };
+
+  const handleRecycleCancel = () => {
+    setShowRecycleModal(false);
+    setShipToRecycle(null);
   };
 
   // Handle bulk actions - now handled by ShipActionButton components
@@ -460,22 +490,35 @@ const ManageNavy: React.FC = () => {
             </FreeShipClaimButton>
           )}
 
-        {selectedShips.size > 0 && (
-          <ShipActionButton
-            action="recycle"
-            shipIds={Array.from(selectedShips).map((id) => BigInt(id))}
-            className="px-6 py-3 rounded-lg border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-200 disabled:cursor-not-allowed"
-            onSuccess={() => {
-              // Show success toast
-              toast.success("Ships recycled successfully!");
-              // Clear selection and refetch ships data after successful recycling
-              setSelectedShips(new Set());
-              refetch();
-            }}
-          >
-            {`[RECYCLE ${selectedShips.size} SHIPS]`}
-          </ShipActionButton>
-        )}
+        {selectedShips.size > 0 &&
+          (() => {
+            // Filter out ships that are in fleets
+            const recyclableShips = Array.from(selectedShips).filter((id) => {
+              const ship = ships.find((s) => s.id.toString() === id);
+              return ship && !ship.shipData.inFleet;
+            });
+
+            return recyclableShips.length > 0 ? (
+              <ShipActionButton
+                action="recycle"
+                shipIds={recyclableShips.map((id) => BigInt(id))}
+                className="px-6 py-3 rounded-lg border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-200 disabled:cursor-not-allowed"
+                onSuccess={() => {
+                  // Show success toast
+                  toast.success("Ships recycled successfully!");
+                  // Clear selection and refetch ships data after successful recycling
+                  setSelectedShips(new Set());
+                  refetch();
+                }}
+              >
+                {`[RECYCLE ${recyclableShips.length} SHIPS]`}
+              </ShipActionButton>
+            ) : (
+              <div className="px-6 py-3 rounded-lg border-2 border-orange-400 text-orange-400 font-mono font-bold tracking-wider opacity-50">
+                [SELECTED SHIPS ARE IN FLEETS - CANNOT RECYCLE]
+              </div>
+            );
+          })()}
       </div>
 
       {/* Ship Purchase Interface */}
@@ -595,6 +638,8 @@ const ManageNavy: React.FC = () => {
                 className={`border rounded-lg p-4 ${
                   ship.shipData.timestampDestroyed > 0n
                     ? "border-red-400 bg-black/60"
+                    : ship.shipData.inFleet
+                    ? "border-orange-400 bg-orange-400/20"
                     : ship.shipData.constructed
                     ? "border-green-400 bg-black/40"
                     : "border-gray-400 bg-black/60"
@@ -701,44 +746,64 @@ const ManageNavy: React.FC = () => {
                           {getSpecialName(ship.equipment.special)}
                         </span>
                       </div>
-                      {/* Recycle icon and checkbox in bottom right */}
-                      <div className="col-start-2 col-span-2 row-start-3 flex justify-end items-center gap-1">
-                        {/* Recycle icon */}
-                        <ShipActionButton
-                          action="recycle"
-                          shipIds={[ship.id]}
-                          className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                          onSuccess={() => {
-                            // Show success toast
-                            toast.success("Ship recycled successfully!");
-                            // Refetch ships data after successful recycling
-                            refetch();
-                          }}
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
+                      <div className="flex justify-between items-center col-span-3">
+                        <div className="flex items-center">
+                          <span className="opacity-60">Status:</span>
+                          <span
+                            className={`ml-2 ${
+                              ship.shipData.timestampDestroyed > 0n
+                                ? "text-red-400"
+                                : ship.shipData.inFleet
+                                ? "text-orange-400"
+                                : "text-green-400"
+                            }`}
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </ShipActionButton>
-                        {/* Checkbox for selection */}
-                        <input
-                          type="checkbox"
-                          checked={selectedShips.has(ship.id.toString())}
-                          onChange={() =>
-                            toggleShipSelection(ship.id.toString())
-                          }
-                          className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 rounded focus:ring-cyan-400 focus:ring-2"
-                        />
+                            {ship.shipData.timestampDestroyed > 0n
+                              ? "DESTROYED"
+                              : ship.shipData.inFleet
+                              ? "IN FLEET"
+                              : "READY"}
+                          </span>
+                        </div>
+                        {/* Recycle icon and checkbox on the right */}
+                        <div className="flex items-center gap-1">
+                          {/* Recycle icon */}
+                          <button
+                            onClick={() => handleRecycleClick(ship)}
+                            disabled={ship.shipData.inFleet}
+                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={
+                              ship.shipData.inFleet
+                                ? "Cannot recycle ship in fleet"
+                                : "Recycle ship"
+                            }
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                          {/* Checkbox for selection */}
+                          <input
+                            type="checkbox"
+                            checked={selectedShips.has(ship.id.toString())}
+                            onChange={() =>
+                              toggleShipSelection(ship.id.toString())
+                            }
+                            disabled={ship.shipData.inFleet}
+                            className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 rounded focus:ring-cyan-400 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          />
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -751,6 +816,128 @@ const ManageNavy: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recycle Confirmation Modal */}
+      {showRecycleModal && shipToRecycle && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-red-400 rounded-lg p-6 max-w-md mx-4">
+            <div className="text-center">
+              <div className="text-red-400 text-4xl mb-4">☠️</div>
+              {canRecycle ? (
+                <>
+                  <h3 className="text-xl font-bold text-red-400 mb-4">
+                    DESTROY SHIP PERMANENTLY?
+                  </h3>
+                  <div className="text-cyan-300 mb-4">
+                    <p className="font-bold">
+                      {shipToRecycle.name || `Ship #${shipToRecycle.id}`}
+                    </p>
+                    <p className="text-sm opacity-80 mt-2">This action will:</p>
+                    <ul className="text-sm text-left mt-2 space-y-1">
+                      <li>
+                        •{" "}
+                        <span className="text-red-400">
+                          Permanently destroy
+                        </span>{" "}
+                        this ship
+                      </li>
+                      <li>
+                        •{" "}
+                        <span className="text-blue-400">
+                          Pay out{" "}
+                          {recycleReward
+                            ? formatEther(recycleReward as bigint)
+                            : "..."}{" "}
+                          UTC
+                        </span>{" "}
+                        per ship recycled
+                      </li>
+                      <li>
+                        •{" "}
+                        <span className="text-red-400">Cannot be reversed</span>{" "}
+                        - this is permanent
+                      </li>
+                    </ul>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-xl font-bold text-yellow-400 mb-4">
+                    INSUFFICIENT PURCHASES
+                  </h3>
+                  <div className="text-cyan-300 mb-4">
+                    <p className="font-bold">
+                      {shipToRecycle.name || `Ship #${shipToRecycle.id}`}
+                    </p>
+                    <p className="text-sm opacity-80 mt-2">
+                      You must purchase at least 10 ships before you can recycle
+                      any ships.
+                    </p>
+                    <p className="text-sm text-yellow-400 mt-2 font-bold">
+                      Current purchases:{" "}
+                      {amountPurchased ? Number(amountPurchased) : 0} / 10
+                      required
+                    </p>
+                  </div>
+                </>
+              )}
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={handleRecycleCancel}
+                  className="px-6 py-2 border border-gray-400 text-gray-400 hover:border-gray-300 hover:text-gray-300 hover:bg-gray-400/10 rounded font-mono font-bold transition-all duration-200"
+                >
+                  CANCEL
+                </button>
+                {canRecycle && (
+                  <TransactionButton
+                    transactionId={`recycle-ship-${shipToRecycle.id}`}
+                    contractAddress={CONTRACT_ADDRESSES.SHIPS as `0x${string}`}
+                    abi={[
+                      {
+                        inputs: [
+                          {
+                            internalType: "uint256[]",
+                            name: "_shipIds",
+                            type: "uint256[]",
+                          },
+                        ],
+                        name: "shipBreaker",
+                        outputs: [],
+                        stateMutability: "nonpayable",
+                        type: "function",
+                      },
+                    ]}
+                    functionName="shipBreaker"
+                    args={[[shipToRecycle.id]]}
+                    className="px-6 py-2 border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 rounded font-mono font-bold transition-all duration-200"
+                    onSuccess={() => {
+                      console.log(
+                        "Ship recycling transaction confirmed, calling onSuccess"
+                      );
+                      // Show success toast
+                      toast.success("Ship recycled successfully!");
+                      // Close modal and refetch ships data
+                      setShowRecycleModal(false);
+                      setShipToRecycle(null);
+                      // Add a small delay to ensure blockchain state is updated
+                      setTimeout(() => {
+                        console.log("Calling refetch after ship recycling");
+                        refetch();
+                      }, 1000);
+                    }}
+                    onError={() => {
+                      // Keep modal open on error so user can try again
+                      console.error("Failed to recycle ship");
+                    }}
+                  >
+                    DESTROY SHIP
+                  </TransactionButton>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -12,26 +12,28 @@ import Info from "./components/Info";
 export default function Home() {
   const { status } = useAccount();
 
-  // Initialize with saved tab immediately to prevent flash
-  const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window !== "undefined") {
-      const savedTab = localStorage.getItem("warpflow-active-tab");
-      if (
-        savedTab &&
-        ["Manage Navy", "Lobbies", "Games", "Profile", "Info"].includes(
-          savedTab
-        )
-      ) {
-        return savedTab;
-      }
-    }
-    return "Manage Navy";
-  });
+  // Initialize with default tab to prevent hydration mismatch
+  const [activeTab, setActiveTab] = useState("Manage Navy");
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Save tab to localStorage whenever it changes
+  // Load saved tab after hydration
   useEffect(() => {
-    localStorage.setItem("warpflow-active-tab", activeTab);
-  }, [activeTab]);
+    setIsHydrated(true);
+    const savedTab = localStorage.getItem("warpflow-active-tab");
+    if (
+      savedTab &&
+      ["Manage Navy", "Lobbies", "Games", "Profile", "Info"].includes(savedTab)
+    ) {
+      setActiveTab(savedTab);
+    }
+  }, []);
+
+  // Save tab to localStorage whenever it changes (only after hydration)
+  useEffect(() => {
+    if (isHydrated) {
+      localStorage.setItem("warpflow-active-tab", activeTab);
+    }
+  }, [activeTab, isHydrated]);
 
   // Show loading state while wallet is connecting
   if (status === "connecting" || status === "reconnecting") {

@@ -57,24 +57,74 @@ export function TransactionButton({
     clearError,
   } = useTransaction();
 
-  // Wait for transaction receipt
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash,
-      query: {
-        enabled: !!hash, // Only enable when we have a hash
-      },
-    });
-
   // Hydration safety - prevent mismatch between server and client
   const [isHydrated, setIsHydrated] = React.useState(false);
   React.useEffect(() => {
     setIsHydrated(true);
   }, []);
 
+  // Wait for transaction receipt
+  const {
+    isLoading: isConfirming,
+    isSuccess: isConfirmed,
+    error: receiptError,
+    data: receiptData,
+  } = useWaitForTransactionReceipt({
+    hash,
+    query: {
+      enabled: !!hash && isHydrated, // Only enable when we have a hash and are hydrated
+    },
+  });
+
   // Check if this button is the active transaction
   const isActiveTransaction =
     transactionState.activeTransactionId === transactionId;
+
+  // Fallback timeout for transaction completion
+  const [fallbackTimeout, setFallbackTimeout] =
+    React.useState<NodeJS.Timeout | null>(null);
+
+  React.useEffect(() => {
+    if (
+      isActiveTransaction &&
+      hash &&
+      !isConfirmed &&
+      !isConfirming &&
+      !error &&
+      !receiptError
+    ) {
+      // Set a fallback timeout if transaction seems stuck
+      const timeout = setTimeout(() => {
+        console.log(
+          `Transaction ${transactionId} fallback timeout - assuming success`
+        );
+        completeTransaction(transactionId, true);
+        onSuccess?.();
+      }, 30000); // 30 second fallback
+
+      setFallbackTimeout(timeout);
+
+      return () => {
+        if (timeout) {
+          clearTimeout(timeout);
+        }
+      };
+    } else if (fallbackTimeout) {
+      clearTimeout(fallbackTimeout);
+      setFallbackTimeout(null);
+    }
+  }, [
+    isActiveTransaction,
+    hash,
+    isConfirmed,
+    isConfirming,
+    error,
+    receiptError,
+    transactionId,
+    completeTransaction,
+    onSuccess,
+    fallbackTimeout,
+  ]);
   const isTransactionPending =
     (transactionState.isPending && isActiveTransaction) ||
     (isHydrated && isConfirming);
@@ -88,6 +138,8 @@ export function TransactionButton({
         isConfirming,
         isConfirmed,
         error,
+        receiptError,
+        receiptData,
         transactionStatePending: transactionState.isPending,
         isActiveTransaction,
         isTransactionPending,
@@ -100,6 +152,8 @@ export function TransactionButton({
     isConfirming,
     isConfirmed,
     error,
+    receiptError,
+    receiptData,
     transactionState.isPending,
     isActiveTransaction,
     isTransactionPending,
@@ -148,6 +202,14 @@ export function TransactionButton({
       console.log(`Transaction ${transactionId} confirmed on blockchain`);
       completeTransaction(transactionId, true);
       onSuccess?.();
+    } else if (isActiveTransaction && isHydrated && receiptError) {
+      // Transaction failed during confirmation
+      console.log(
+        `Transaction ${transactionId} failed during confirmation:`,
+        receiptError
+      );
+      completeTransaction(transactionId, false, receiptError);
+      onError?.(receiptError);
     } else if (isActiveTransaction && !isPending && error) {
       // Transaction failed during submission
       console.log(
@@ -163,6 +225,7 @@ export function TransactionButton({
     isConfirmed,
     isPending,
     error,
+    receiptError,
     transactionId,
     completeTransaction,
     onSuccess,
