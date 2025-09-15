@@ -417,3 +417,41 @@ export const GRID_DIMENSIONS = {
   WIDTH: 60,
   HEIGHT: 40,
 } as const;
+
+// Game contract types
+export interface GameMetadata {
+  gameId: bigint;
+  lobbyId: bigint;
+  creator: Address;
+  joiner: Address;
+  creatorFleetId: bigint;
+  joinerFleetId: bigint;
+  creatorGoesFirst: boolean;
+  startedAt: bigint;
+  winner: Address;
+}
+
+export interface GameTurnState {
+  currentTurn: Address;
+  turnTime: bigint;
+  turnStartTime: bigint;
+  currentRound: bigint;
+}
+
+export interface GameGridDimensions {
+  gridWidth: number;
+  gridHeight: number;
+}
+
+export interface Game {
+  metadata: GameMetadata;
+  turnState: GameTurnState;
+  gridDimensions: GameGridDimensions;
+  maxScore: bigint;
+  creatorScore: bigint;
+  joinerScore: bigint;
+  shipAttributes: readonly Attributes[];
+  shipPositions: readonly ShipPosition[];
+  creatorActiveShipIds: readonly bigint[];
+  joinerActiveShipIds: readonly bigint[];
+}

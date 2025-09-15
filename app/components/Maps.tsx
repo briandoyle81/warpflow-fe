@@ -65,7 +65,7 @@ export default function Maps() {
 
   if (showEditor) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 -mx-1 -my-1 px-1 py-1">
         <div className="flex items-center gap-4">
           <button
             onClick={handleEditorCancel}

@@ -1,11 +1,6 @@
 import { useReadContract, useWriteContract } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
-import {
-  Lobby,
-  LobbyTuple,
-  PlayerLobbyState,
-  PlayerLobbyStateTuple,
-} from "../types/types";
+import { Lobby, PlayerLobbyState } from "../types/types";
 
 // Contract instance configuration
 export const lobbiesContractConfig = {
@@ -22,7 +17,7 @@ export function useLobbiesContract() {
 }
 
 // Hook for reading contract data with proper typing
-export function useLobbiesRead<TData>(
+export function useLobbiesRead(
   functionName: string,
   args?: readonly unknown[]
 ) {
@@ -59,10 +54,9 @@ export type LobbiesWriteFunction =
 
 // Helper hooks for common operations
 export function useLobby(lobbyId: bigint) {
-  const { data, error, isLoading, refetch } = useLobbiesRead<LobbyTuple>(
-    "getLobby",
-    [lobbyId]
-  );
+  const { data, error, isLoading, refetch } = useLobbiesRead("getLobby", [
+    lobbyId,
+  ]);
 
   return {
     lobby: data
@@ -114,8 +108,9 @@ export function useLobby(lobbyId: bigint) {
 }
 
 export function usePlayerLobbyState(playerAddress: string) {
-  const { data, error, isLoading, refetch } =
-    useLobbiesRead<PlayerLobbyStateTuple>("getPlayerState", [playerAddress]);
+  const { data, error, isLoading, refetch } = useLobbiesRead("getPlayerState", [
+    playerAddress,
+  ]);
 
   return {
     playerState: data
@@ -139,13 +134,13 @@ export function usePlayerLobbyState(playerAddress: string) {
 }
 
 export function useLobbyCount() {
-  return useLobbiesRead<bigint>("lobbyCount");
+  return useLobbiesRead("lobbyCount");
 }
 
 export function useLobbySettings() {
-  const freeGames = useLobbiesRead<bigint>("freeGamesPerAddress");
-  const additionalFee = useLobbiesRead<bigint>("additionalLobbyFee");
-  const paused = useLobbiesRead<boolean>("paused");
+  const freeGames = useLobbiesRead("freeGamesPerAddress");
+  const additionalFee = useLobbiesRead("additionalLobbyFee");
+  const paused = useLobbiesRead("paused");
 
   return {
     freeGamesPerAddress: freeGames.data,
@@ -158,5 +153,5 @@ export function useLobbySettings() {
 }
 
 export function useIsLobbyOpenForJoining(lobbyId: bigint) {
-  return useLobbiesRead<boolean>("isLobbyOpenForJoining", [lobbyId]);
+  return useLobbiesRead("isLobbyOpenForJoining", [lobbyId]);
 }

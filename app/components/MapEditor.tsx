@@ -476,6 +476,95 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
     }));
   }, []);
 
+  // Download map as JSON file
+  const downloadMap = useCallback(() => {
+    const mapData = {
+      version: "1.0",
+      gridDimensions: GRID_DIMENSIONS,
+      blockedTiles: editorState.blockedTiles,
+      scoringTiles: editorState.scoringTiles,
+      onlyOnceTiles: editorState.onlyOnceTiles,
+      metadata: {
+        name: isEditing ? `Map ${mapId}` : "New Map",
+        createdAt: new Date().toISOString(),
+        createdBy: "Map Editor",
+      },
+    };
+
+    const dataStr = JSON.stringify(mapData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(dataBlob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `map_${isEditing ? mapId : "new"}_${
+      new Date().toISOString().split("T")[0]
+    }.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [editorState, isEditing, mapId]);
+
+  // Upload map from JSON file
+  const uploadMap = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const mapData = JSON.parse(e.target?.result as string);
+
+          // Validate the map data structure
+          if (
+            mapData.blockedTiles &&
+            mapData.scoringTiles &&
+            mapData.onlyOnceTiles &&
+            Array.isArray(mapData.blockedTiles) &&
+            Array.isArray(mapData.scoringTiles) &&
+            Array.isArray(mapData.onlyOnceTiles)
+          ) {
+            // Check if dimensions match
+            if (
+              mapData.blockedTiles.length === GRID_DIMENSIONS.HEIGHT &&
+              mapData.blockedTiles[0]?.length === GRID_DIMENSIONS.WIDTH &&
+              mapData.scoringTiles.length === GRID_DIMENSIONS.HEIGHT &&
+              mapData.scoringTiles[0]?.length === GRID_DIMENSIONS.WIDTH &&
+              mapData.onlyOnceTiles.length === GRID_DIMENSIONS.HEIGHT &&
+              mapData.onlyOnceTiles[0]?.length === GRID_DIMENSIONS.WIDTH
+            ) {
+              setEditorState((prev) => ({
+                ...prev,
+                blockedTiles: mapData.blockedTiles,
+                scoringTiles: mapData.scoringTiles,
+                onlyOnceTiles: mapData.onlyOnceTiles,
+              }));
+              alert("Map loaded successfully!");
+            } else {
+              alert(
+                "Map dimensions don't match the current grid size (60x40)."
+              );
+            }
+          } else {
+            alert("Invalid map file format.");
+          }
+        } catch (error) {
+          alert(
+            "Error reading map file. Please make sure it's a valid JSON file."
+          );
+          console.error("Error parsing map file:", error);
+        }
+      };
+      reader.readAsText(file);
+
+      // Reset the input so the same file can be selected again
+      event.target.value = "";
+    },
+    []
+  );
+
   // Get tile class based on state
   const getTileClass = (row: number, col: number) => {
     const isBlocked = editorState.blockedTiles[row][col];
@@ -483,7 +572,7 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
     const isOnlyOnce = editorState.onlyOnceTiles[row][col];
 
     let baseClass =
-      "w-[18px] h-[18px] cursor-pointer hover:border-white transition-colors";
+      "w-[20px] h-[20px] cursor-pointer hover:border-white transition-colors";
 
     // Set border thickness based on blocking status
     if (isBlocked) {
@@ -639,27 +728,27 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
 
         <div className="flex flex-wrap gap-4 text-xs text-gray-300">
           <div className="flex items-center gap-2">
-            <div className="w-[18px] h-[18px] bg-gray-900 border-2 border-purple-400"></div>
+            <div className="w-[20px] h-[20px] bg-gray-900 border-2 border-purple-400"></div>
             <span>Blocked (LOS) - Thick purple border</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[18px] h-[18px] bg-green-500 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-green-500 border border-gray-600"></div>
             <span>Scoring (reusable)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[18px] h-[18px] bg-yellow-500 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-yellow-500 border border-gray-600"></div>
             <span>Scoring (once only)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[18px] h-[18px] bg-green-500 border-2 border-purple-400"></div>
+            <div className="w-[20px] h-[20px] bg-green-500 border-2 border-purple-400"></div>
             <span>Blocked + Scoring</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[18px] h-[18px] bg-gray-900 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-gray-900 border border-gray-600"></div>
             <span>Empty</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[18px] h-[18px] bg-gray-900 border border-gray-600 relative">
+            <div className="w-[20px] h-[20px] bg-gray-900 border border-gray-600 relative">
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-full h-0.5 bg-blue-400"></div>
               </div>
@@ -667,7 +756,7 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
             <span>Center lines (thick blue)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[18px] h-[18px] bg-gray-900 border border-gray-600 relative">
+            <div className="w-[20px] h-[20px] bg-gray-900 border border-gray-600 relative">
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-full h-px bg-blue-200 opacity-60"></div>
               </div>
@@ -703,14 +792,16 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
       </div>
 
       {/* Grid */}
-      <div className="bg-gray-900 p-4 rounded-lg overflow-auto max-h-[77vh] w-full relative">
+      <div
+        className="bg-gray-900 rounded-lg w-full relative flex justify-center p-1"
+        style={{ height: `${GRID_DIMENSIONS.HEIGHT * 20 + 8}px` }}
+      >
         <div
           key={`grid-${editorState.blockedTiles.length}-${editorState.scoringTiles.length}`}
-          className="grid mx-auto relative"
+          className="grid relative"
           style={{
-            gridTemplateColumns: `repeat(${GRID_DIMENSIONS.WIDTH}, 18px)`,
-            width: "fit-content",
-            maxWidth: "100%",
+            gridTemplateColumns: `repeat(${GRID_DIMENSIONS.WIDTH}, 20px)`,
+            width: `${GRID_DIMENSIONS.WIDTH * 20}px`,
           }}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
@@ -754,10 +845,10 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
           className="absolute pointer-events-none"
           style={{
             left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            width: `${GRID_DIMENSIONS.WIDTH * 18}px`,
-            height: `${GRID_DIMENSIONS.HEIGHT * 18}px`,
+            top: "4px",
+            transform: "translateX(-50%)",
+            width: `${GRID_DIMENSIONS.WIDTH * 20}px`,
+            height: `${GRID_DIMENSIONS.HEIGHT * 20}px`,
           }}
         >
           {/* Vertical reference lines every 5 columns */}
@@ -765,7 +856,7 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
             { length: Math.floor(GRID_DIMENSIONS.WIDTH / 5) + 1 },
             (_, i) => {
               const col = i * 5;
-              const isCenter = col === GRID_DIMENSIONS.WIDTH / 2;
+              const isCenter = col === Math.floor(GRID_DIMENSIONS.WIDTH / 2);
               return (
                 <div
                   key={`v-${col}`}
@@ -773,7 +864,7 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
                     isCenter ? "bg-blue-400" : "bg-blue-200"
                   }`}
                   style={{
-                    left: `${col * 18}px`,
+                    left: `${col * 20}px`,
                     top: 0,
                     width: isCenter ? "2px" : "1px",
                     height: "100%",
@@ -785,12 +876,12 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
             }
           )}
 
-          {/* Horizontal reference lines every 10 rows, centered around middle */}
+          {/* Horizontal reference lines every 5 rows */}
           {Array.from(
-            { length: Math.floor(GRID_DIMENSIONS.HEIGHT / 10) + 1 },
+            { length: Math.floor(GRID_DIMENSIONS.HEIGHT / 5) + 1 },
             (_, i) => {
-              const row = i * 10;
-              const isCenter = row === GRID_DIMENSIONS.HEIGHT / 2;
+              const row = i * 5;
+              const isCenter = row === Math.floor(GRID_DIMENSIONS.HEIGHT / 2);
               return (
                 <div
                   key={`h-${row}`}
@@ -799,7 +890,7 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
                   }`}
                   style={{
                     left: 0,
-                    top: `${row * 18}px`,
+                    top: `${row * 20}px`,
                     width: "100%",
                     height: isCenter ? "2px" : "1px",
                     transform: "translateY(-50%)",
@@ -809,68 +900,37 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
               );
             }
           )}
-
-          {/* Center horizontal line */}
-          <div
-            className="absolute bg-blue-400"
-            style={{
-              left: 0,
-              top: "50%",
-              width: "100%",
-              height: "2px",
-              transform: "translateY(-50%)",
-            }}
-          />
-
-          {/* Additional horizontal lines every 5 rows, centered around the middle line */}
-          {Array.from({ length: 10 }, (_, i) => {
-            const offset = (i + 1) * 5;
-            const rowAbove = GRID_DIMENSIONS.HEIGHT / 2 - offset;
-            const rowBelow = GRID_DIMENSIONS.HEIGHT / 2 + offset;
-
-            return (
-              <>
-                {rowAbove >= 0 && (
-                  <div
-                    key={`h-above-${rowAbove}`}
-                    className="absolute bg-blue-200"
-                    style={{
-                      left: 0,
-                      top: `${rowAbove * 18}px`,
-                      width: "100%",
-                      height: "1px",
-                      transform: "translateY(-50%)",
-                      opacity: 0.6,
-                    }}
-                  />
-                )}
-                {rowBelow < GRID_DIMENSIONS.HEIGHT && (
-                  <div
-                    key={`h-below-${rowBelow}`}
-                    className="absolute bg-blue-200"
-                    style={{
-                      left: 0,
-                      top: `${rowBelow * 18}px`,
-                      width: "100%",
-                      height: "1px",
-                      transform: "translateY(-50%)",
-                      opacity: 0.6,
-                    }}
-                  />
-                )}
-              </>
-            );
-          })}
         </div>
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={clearSavedState}
           className="px-4 py-2 bg-yellow-600 text-white rounded font-mono hover:bg-yellow-700"
         >
           Clear Saved
+        </button>
+        <button
+          onClick={downloadMap}
+          className="px-4 py-2 bg-blue-600 text-white rounded font-mono hover:bg-blue-700"
+        >
+          Download Map
+        </button>
+        <label className="px-4 py-2 bg-purple-600 text-white rounded font-mono hover:bg-purple-700 cursor-pointer">
+          Upload Map
+          <input
+            type="file"
+            accept=".json"
+            onChange={uploadMap}
+            className="hidden"
+          />
+        </label>
+        <button
+          onClick={clearAll}
+          className="px-4 py-2 bg-red-600 text-white rounded font-mono hover:bg-red-700"
+        >
+          Clear All
         </button>
         <TransactionButton
           transactionId={`map-${isEditing ? "update" : "create"}-${

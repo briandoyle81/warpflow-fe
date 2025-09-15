@@ -19,6 +19,7 @@ import { LobbyCreateButton } from "./LobbyCreateButton";
 import { LobbyJoinButton } from "./LobbyJoinButton";
 import { LobbyLeaveButton } from "./LobbyLeaveButton";
 import { useTransaction } from "../providers/TransactionContext";
+import { calculateShipRank, getRankColor } from "../utils/shipLevel";
 
 const Lobbies: React.FC = () => {
   const { address, isConnected, status } = useAccount();
@@ -876,16 +877,27 @@ const Lobbies: React.FC = () => {
               {/* Show action buttons for creator */}
               {lobby.basic.creator === address && (
                 <div className="flex flex-col sm:flex-row gap-2">
-                  {/* Fleet selection button - only show if no fleet selected */}
-                  {lobby.players.creatorFleetId === 0n && (
-                    <button
-                      onClick={() => setSelectedLobby(lobby.basic.id)}
-                      disabled={transactionState.isPending}
-                      className="flex-1 px-4 py-2 rounded-lg border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      SELECT FLEET
-                    </button>
-                  )}
+                  {/* Fleet selection button - only show if no fleet selected AND joiner has joined */}
+                  {lobby.players.creatorFleetId === 0n &&
+                    lobby.players.joiner !==
+                      "0x0000000000000000000000000000000000000000" && (
+                      <button
+                        onClick={() => setSelectedLobby(lobby.basic.id)}
+                        disabled={transactionState.isPending}
+                        className="flex-1 px-4 py-2 rounded-lg border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        SELECT FLEET
+                      </button>
+                    )}
+
+                  {/* Show waiting message if no joiner has joined yet */}
+                  {lobby.players.creatorFleetId === 0n &&
+                    lobby.players.joiner ===
+                      "0x0000000000000000000000000000000000000000" && (
+                      <div className="flex-1 px-4 py-2 rounded-lg border border-gray-400 text-gray-400 text-center font-mono font-bold text-sm tracking-wider">
+                        WAITING FOR JOINER
+                      </div>
+                    )}
 
                   {/* Leave button - only show if no joiner has joined */}
                   {lobby.players.joiner ===
@@ -1382,15 +1394,27 @@ const Lobbies: React.FC = () => {
                                 {ship.name || `Ship #${ship.id}`}
                               </h5>
                             </div>
-                            <span
-                              className={`text-xs px-2 py-1 rounded ${
-                                ship.shipData.shiny
-                                  ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
-                                  : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
-                              }`}
-                            >
-                              {ship.shipData.shiny ? "SHINY ✨" : "COMMON"}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`text-xs px-2 py-1 rounded ${
+                                  ship.shipData.shiny
+                                    ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
+                                    : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
+                                }`}
+                              >
+                                {ship.shipData.shiny ? "SHINY ✨" : "COMMON"}
+                              </span>
+                              {/* Rank */}
+                              {ship.shipData.constructed && (
+                                <span
+                                  className={`text-xs px-2 py-1 rounded border ${getRankColor(
+                                    calculateShipRank(ship).rank
+                                  )}`}
+                                >
+                                  R{calculateShipRank(ship).rank}
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           {/* Ship Stats */}
@@ -1649,15 +1673,27 @@ const Lobbies: React.FC = () => {
                               {shipData.name || `Ship #${shipData.id}`}
                             </h5>
                           </div>
-                          <span
-                            className={`text-xs px-2 py-1 rounded ${
-                              shipData.shipData?.shiny
-                                ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
-                                : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
-                            }`}
-                          >
-                            {shipData.shipData?.shiny ? "SHINY ✨" : "COMMON"}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-xs px-2 py-1 rounded ${
+                                shipData.shipData?.shiny
+                                  ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
+                                  : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
+                              }`}
+                            >
+                              {shipData.shipData?.shiny ? "SHINY ✨" : "COMMON"}
+                            </span>
+                            {/* Rank */}
+                            {shipData.shipData?.constructed && (
+                              <span
+                                className={`text-xs px-2 py-1 rounded border ${getRankColor(
+                                  calculateShipRank(shipData).rank
+                                )}`}
+                              >
+                                R{calculateShipRank(shipData).rank}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Ship Stats */}

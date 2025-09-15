@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useBlockNumber } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLobbiesRead } from "./useLobbiesContract";
 import { Lobby } from "../types/types";
 
 export function useLobbyList() {
   const { address } = useAccount();
+  const queryClient = useQueryClient();
+  const { data: blockNumber } = useBlockNumber({ watch: true });
 
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +17,26 @@ export function useLobbyList() {
   const lobbiesData = useLobbiesRead("getAllLobbiesForPlayerWithDupes", [
     address || "0x0",
   ]);
+
+  // Invalidate queries when block number changes (Wagmi v2 approach)
+  useEffect(() => {
+    if (blockNumber) {
+      queryClient.invalidateQueries({
+        queryKey: lobbiesData.queryKey,
+      });
+    }
+  }, [blockNumber, queryClient, lobbiesData.queryKey]);
+
+  // Set up 15-second interval for additional refresh
+  useEffect(() => {
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: lobbiesData.queryKey,
+      });
+    }, 15000); // 15 seconds
+
+    return () => clearInterval(interval);
+  }, [queryClient, lobbiesData.queryKey]);
 
   // Process the lobby data when it changes
   useEffect(() => {

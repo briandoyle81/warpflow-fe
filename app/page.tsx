@@ -87,8 +87,8 @@ export default function Home() {
 
           {/* Tab Content */}
           {activeTab === "Maps" ? (
-            <div className="w-[90%] mx-auto">
-              <div className="bg-black/40 border border-cyan-400 rounded-lg p-4 shadow-lg shadow-cyan-400/20">
+            <div className="w-full">
+              <div className="bg-black/40 border border-cyan-400 rounded-lg p-1 shadow-lg shadow-cyan-400/20">
                 <Maps />
               </div>
             </div>

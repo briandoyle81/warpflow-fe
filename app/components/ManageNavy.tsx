@@ -33,6 +33,7 @@ import {
 import { useShipsRead } from "../hooks/useShipsContract";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
+import { calculateShipRank, getRankColor } from "../utils/shipLevel";
 
 const ManageNavy: React.FC = () => {
   const { address, chain, isConnected, status } = useAccount();
@@ -693,15 +694,27 @@ const ManageNavy: React.FC = () => {
                       {ship.name || `Ship #${ship.id}`}
                     </h5>
                   </div>
-                  <span
-                    className={`text-xs px-2 py-1 rounded ${
-                      ship.shipData.shiny
-                        ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
-                        : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
-                    }`}
-                  >
-                    {ship.shipData.shiny ? "SHINY ✨" : "COMMON"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs px-2 py-1 rounded ${
+                        ship.shipData.shiny
+                          ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
+                          : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
+                      }`}
+                    >
+                      {ship.shipData.shiny ? "SHINY ✨" : "COMMON"}
+                    </span>
+                    {/* Rank */}
+                    {ship.shipData.constructed && (
+                      <span
+                        className={`text-xs px-2 py-1 rounded border ${getRankColor(
+                          calculateShipRank(ship).rank
+                        )}`}
+                      >
+                        R{calculateShipRank(ship).rank}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Compact Stats or Construction Message */}
