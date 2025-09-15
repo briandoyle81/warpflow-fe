@@ -1,12 +1,22 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useAccount } from "wagmi";
 import { usePlayerGames } from "../hooks/usePlayerGames";
+import GameDisplay from "./GameDisplay";
+import { Game } from "../types/types";
 
 const Games: React.FC = () => {
   const { address, isConnected } = useAccount();
   const { games, isLoading, error } = usePlayerGames();
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+
+  // If a game is selected, show the game display
+  if (selectedGame) {
+    return (
+      <GameDisplay game={selectedGame} onBack={() => setSelectedGame(null)} />
+    );
+  }
 
   if (!isConnected) {
     return (
@@ -38,7 +48,7 @@ const Games: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       <h1 className="text-2xl font-mono text-white">Games</h1>
 
       {games.length === 0 ? (
@@ -133,13 +143,7 @@ const Games: React.FC = () => {
                 <div className="mt-4 pt-3 border-t border-gray-700">
                   <button
                     className="w-full px-4 py-2 bg-blue-600 text-white rounded font-mono hover:bg-blue-700 transition-colors"
-                    onClick={() => {
-                      // TODO: Implement game viewing/playing
-                      console.log(
-                        "View game:",
-                        game.metadata.gameId.toString()
-                      );
-                    }}
+                    onClick={() => setSelectedGame(game)}
                   >
                     {game.metadata.winner ===
                     "0x0000000000000000000000000000000000000000"

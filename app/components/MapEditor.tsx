@@ -158,8 +158,8 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
   const getRadialSymmetryPositions = useCallback((row: number, col: number) => {
     // For even dimensions, center is between tiles
     // Center line is between (HEIGHT/2 - 1) and (HEIGHT/2)
-    const centerRow = (GRID_DIMENSIONS.HEIGHT - 1) / 2; // 19.5 for 40 rows
-    const centerCol = (GRID_DIMENSIONS.WIDTH - 1) / 2; // 29.5 for 60 cols
+    const centerRow = (GRID_DIMENSIONS.HEIGHT - 1) / 2; // 9.5 for 20 rows
+    const centerCol = (GRID_DIMENSIONS.WIDTH - 1) / 2; // 19.5 for 40 cols
 
     // Calculate relative position from center
     const relRow = row - centerRow;
@@ -572,7 +572,7 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
     const isOnlyOnce = editorState.onlyOnceTiles[row][col];
 
     let baseClass =
-      "w-[20px] h-[20px] cursor-pointer hover:border-white transition-colors";
+      "w-full h-full cursor-pointer hover:border-white transition-colors";
 
     // Set border thickness based on blocking status
     if (isBlocked) {
@@ -792,16 +792,17 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
       </div>
 
       {/* Grid */}
-      <div
-        className="bg-gray-900 rounded-lg w-full relative flex justify-center p-1"
-        style={{ height: `${GRID_DIMENSIONS.HEIGHT * 20 + 8}px` }}
-      >
+      <div className="bg-gray-900 rounded-lg w-full relative flex justify-center p-1">
         <div
           key={`grid-${editorState.blockedTiles.length}-${editorState.scoringTiles.length}`}
           className="grid relative"
           style={{
-            gridTemplateColumns: `repeat(${GRID_DIMENSIONS.WIDTH}, 20px)`,
-            width: `${GRID_DIMENSIONS.WIDTH * 20}px`,
+            gridTemplateColumns: `repeat(${GRID_DIMENSIONS.WIDTH}, 1fr)`,
+            gridTemplateRows: `repeat(${GRID_DIMENSIONS.HEIGHT}, 1fr)`,
+            width: "min(95vw, 1800px)",
+            height: "min(47.5vw, 900px)",
+            minWidth: "1200px",
+            minHeight: "600px",
           }}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
@@ -842,13 +843,15 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
 
         {/* Grid reference lines overlay */}
         <div
-          className="absolute pointer-events-none"
+          className="absolute pointer-events-none inset-0"
           style={{
             left: "50%",
             top: "4px",
             transform: "translateX(-50%)",
-            width: `${GRID_DIMENSIONS.WIDTH * 20}px`,
-            height: `${GRID_DIMENSIONS.HEIGHT * 20}px`,
+            width: "min(95vw, 1800px)",
+            height: "min(47.5vw, 900px)",
+            minWidth: "1200px",
+            minHeight: "600px",
           }}
         >
           {/* Vertical reference lines every 5 columns */}
@@ -864,7 +867,7 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
                     isCenter ? "bg-blue-400" : "bg-blue-200"
                   }`}
                   style={{
-                    left: `${col * 20}px`,
+                    left: `${(col / GRID_DIMENSIONS.WIDTH) * 100}%`,
                     top: 0,
                     width: isCenter ? "2px" : "1px",
                     height: "100%",
@@ -890,7 +893,7 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
                   }`}
                   style={{
                     left: 0,
-                    top: `${row * 20}px`,
+                    top: `${(row / GRID_DIMENSIONS.HEIGHT) * 100}%`,
                     width: "100%",
                     height: isCenter ? "2px" : "1px",
                     transform: "translateY(-50%)",

@@ -1,6 +1,5 @@
 import { useReadContract, useWriteContract } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
-import { MapPosition, ScoringPosition } from "../types/types";
 
 // Contract instance configuration
 export const mapsContractConfig = {
@@ -68,4 +67,34 @@ export function useMapExists(mapId: number) {
   return useMapsRead("mapExists", [BigInt(mapId)], {
     query: { enabled: mapId > 0 },
   });
+}
+
+// Track how many times the hook is called
+let hookCallCount = 0;
+const gameIdCallCounts: Record<number, number> = {};
+
+export function useGetGameMapState(gameId: number) {
+  hookCallCount++;
+  gameIdCallCounts[gameId] = (gameIdCallCounts[gameId] || 0) + 1;
+
+  console.log(
+    `🔍 useGetGameMapState called for gameId: ${gameId} (Total calls: ${hookCallCount}, This gameId calls: ${gameIdCallCounts[gameId]})`
+  );
+
+  const result = useMapsRead("getGameMapState", [BigInt(gameId)], {
+    query: {
+      enabled: gameId > 0,
+      // Note: staleTime and gcTime may not be supported by wagmi's useReadContract
+      // The caching is handled by React Query internally
+    },
+  });
+
+  console.log(`📊 Contract call result for gameId ${gameId}:`, {
+    isLoading: result.isLoading,
+    isFetching: result.isFetching,
+    data: result.data ? "Data received" : "No data",
+    error: result.error,
+  });
+
+  return result;
 }

@@ -926,8 +926,7 @@ const Lobbies: React.FC = () => {
                   <div className="flex justify-center">
                     <button
                       onClick={() => setSelectedLobby(lobby.basic.id)}
-                      disabled={transactionState.isPending}
-                      className="px-4 py-2 rounded-lg border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 rounded-lg border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200"
                     >
                       SELECT FLEET
                     </button>

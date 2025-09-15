@@ -60,11 +60,17 @@ export default function Home() {
   return (
     <div className="font-sans grid grid-rows-[auto_1fr_20px] min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <Header />
-      <main className="flex flex-col gap-8 row-start-2 pt-4 pb-20 px-8 sm:px-20 w-full">
+      <main
+        className={`flex flex-col gap-8 row-start-2 pt-4 pb-20 w-full ${
+          activeTab === "Games" ? "px-0" : "px-8 sm:px-20"
+        }`}
+      >
         {/* Game Tabs */}
         <div
           className={`w-full ${
-            activeTab === "Maps" ? "" : "max-w-7xl mx-auto"
+            activeTab === "Maps" || activeTab === "Games"
+              ? ""
+              : "max-w-7xl mx-auto"
           }`}
         >
           <div className="flex flex-wrap justify-center gap-2 mb-8">
@@ -92,11 +98,16 @@ export default function Home() {
                 <Maps />
               </div>
             </div>
+          ) : activeTab === "Games" ? (
+            <div className="w-full px-2 sm:px-4">
+              <div className="bg-black/40 border border-cyan-400 rounded-lg p-4 shadow-lg shadow-cyan-400/20">
+                <Games />
+              </div>
+            </div>
           ) : (
             <div className="bg-black/40 border border-cyan-400 rounded-lg p-8 shadow-lg shadow-cyan-400/20">
               {activeTab === "Manage Navy" && <ManageNavy />}
               {activeTab === "Lobbies" && <Lobbies />}
-              {activeTab === "Games" && <Games />}
               {activeTab === "Profile" && <Profile />}
               {activeTab === "Info" && <Info />}
             </div>
