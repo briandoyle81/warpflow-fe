@@ -92,3 +92,32 @@ body {
   background: rgba(34, 211, 238, 0.3);
   color: #22d3ee;
 }
+
+/* Ship movement preview animations */
+@keyframes pulse-preview {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes pulse-original {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.animate-pulse-preview {
+  animation: pulse-preview 1s ease-in-out infinite;
+}
+
+.animate-pulse-original {
+  animation: pulse-original 1s ease-in-out infinite;
+}

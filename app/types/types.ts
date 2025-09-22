@@ -360,6 +360,7 @@ export interface ShipPosition {
   shipId: bigint;
   position: Position;
   isCreator: boolean;
+  isPreview?: boolean; // Optional flag for preview ships
 }
 
 export interface GameDataView {
@@ -369,10 +370,14 @@ export interface GameDataView {
   maxScore: bigint; // Maximum score needed to win the game
   creatorScore: bigint; // Current score of the creator player
   joinerScore: bigint; // Current score of the joiner player
+  shipIds: readonly bigint[]; // Array of ship IDs that corresponds to shipAttributes by index
   shipAttributes: readonly Attributes[]; // Combined array of all ship attributes indexed by ship ID
   shipPositions: readonly ShipPosition[]; // All ship positions on the grid
   creatorActiveShipIds: readonly bigint[];
   joinerActiveShipIds: readonly bigint[];
+  // Ships that have moved this round
+  creatorMovedShipIds: readonly bigint[]; // Creator ships that have moved this round
+  joinerMovedShipIds: readonly bigint[]; // Joiner ships that have moved this round
 }
 
 export enum ActionType {
@@ -450,8 +455,9 @@ export interface Game {
   maxScore: bigint;
   creatorScore: bigint;
   joinerScore: bigint;
-  shipAttributes: readonly Attributes[];
-  shipPositions: readonly ShipPosition[];
+  shipIds: readonly bigint[]; // Array of ship IDs that corresponds to shipAttributes by index
+  shipAttributes: readonly Attributes[]; // Combined array of all ship attributes indexed by ship ID
+  shipPositions: readonly ShipPosition[]; // All ship positions on the grid
   creatorActiveShipIds: readonly bigint[];
   joinerActiveShipIds: readonly bigint[];
 }

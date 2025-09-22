@@ -2,7 +2,7 @@
 
 import React from "react";
 import { TransactionButton } from "./TransactionButton";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import { CONTRACT_ADDRESSES } from "../config/contracts";
 import { useAccount } from "wagmi";
 
 interface LobbyCreateButtonProps {

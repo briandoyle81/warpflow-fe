@@ -1,211 +1,188 @@
-import { useEffect, useCallback } from "react";
-import { useAccount } from "wagmi";
-import { usePublicClient } from "wagmi";
-import { CONTRACT_ADDRESSES } from "../config/contracts";
-import { useOwnedShips } from "./useOwnedShips";
+"use client";
 
-// Temporary disable flag for debugging
-const DISABLE_EVENT_WATCHING = true; // Set to true to disable all event watching
+import { useAccount, useWatchContractEvent } from "wagmi";
+import { useOwnedShips } from "./useOwnedShips";
+import { usePlayerGames } from "./usePlayerGames";
+import { CONTRACT_ADDRESSES } from "../config/contracts";
+
+// Global refetch functions for individual game data
+export const globalGameRefetchFunctions: Map<number, () => void> = new Map();
+
+// Function to register a game refetch function
+export function registerGameRefetch(gameId: number, refetchFn: () => void) {
+  globalGameRefetchFunctions.set(gameId, refetchFn);
+}
+
+// Function to unregister a game refetch function
+export function unregisterGameRefetch(gameId: number) {
+  globalGameRefetchFunctions.delete(gameId);
+}
 
 export function useContractEvents() {
   const { address } = useAccount();
-  const publicClient = usePublicClient();
-  const { refetch } = useOwnedShips();
+  const { refetch: refetchShips } = useOwnedShips();
+  const { refetch: refetchGames } = usePlayerGames();
 
-  // Debug logging to check contract addresses
-  console.log("Contract addresses:", CONTRACT_ADDRESSES);
-  console.log("SHIPS address:", CONTRACT_ADDRESSES.SHIPS);
+  console.log("Setting up contract event watchers for address:", address);
+  console.log("Game contract address:", CONTRACT_ADDRESSES.GAME);
 
-  // Listen to ship construction events
-  const listenToShipConstruction = useCallback(async () => {
-    // Early return if event watching is disabled
-    if (DISABLE_EVENT_WATCHING) {
-      console.log("Event watching is disabled");
-      return undefined;
-    }
+  // Watch ship transfer events
+  useWatchContractEvent({
+    address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+    abi: [
+      {
+        type: "event",
+        name: "Transfer",
+        inputs: [
+          { indexed: true, name: "from", type: "address" },
+          { indexed: true, name: "to", type: "address" },
+          { indexed: false, name: "tokenId", type: "uint256" },
+        ],
+      },
+    ],
+    eventName: "Transfer",
+    poll: true, // Force polling since WebSockets not available
+    pollingInterval: 5000, // Poll every 5 seconds
+    onLogs: (logs) => {
+      if (!Array.isArray(logs) || logs.length === 0) return;
 
-    if (!address || !publicClient || !CONTRACT_ADDRESSES.SHIPS) {
-      console.warn("Missing required data for ship construction listener");
-      return;
-    }
-
-    // Additional safety check for contract address format
-    if (
-      typeof CONTRACT_ADDRESSES.SHIPS !== "string" ||
-      !CONTRACT_ADDRESSES.SHIPS.startsWith("0x")
-    ) {
-      console.error(
-        "Invalid SHIPS contract address:",
-        CONTRACT_ADDRESSES.SHIPS
-      );
-      return;
-    }
-
-    try {
-      // Use a more defensive approach with error handling
-      let unwatch;
       try {
-        unwatch = publicClient.watchContractEvent({
-          address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
-          abi: [
-            {
-              anonymous: false,
-              inputs: [
-                {
-                  indexed: true,
-                  internalType: "address",
-                  name: "from",
-                  type: "address",
-                },
-                {
-                  indexed: true,
-                  internalType: "address",
-                  name: "to",
-                  type: "address",
-                },
-                {
-                  indexed: true,
-                  internalType: "uint256",
-                  name: "tokenId",
-                  type: "uint256",
-                },
-              ],
-              name: "Transfer",
-              type: "event",
-            },
-          ],
-          eventName: "Transfer",
-          onLogs: (logs) => {
-            // Defensive null check with early return
-            if (!logs || !Array.isArray(logs) || logs.length === 0) {
-              return;
-            }
-
-            try {
-              // Check if any of the events involve our address
-              const relevantLogs = logs.filter((log) => {
-                // Add comprehensive null checks for log.args
-                if (!log || !log.args) return false;
-                if (
-                  typeof log.args.to !== "string" ||
-                  typeof log.args.from !== "string"
-                )
-                  return false;
-                return log.args.to === address || log.args.from === address;
-              });
-
-              if (relevantLogs.length > 0) {
-                console.log("Ship transfer detected, refetching data...");
-                // Wait a bit for the transaction to be processed
-                setTimeout(() => refetch(), 2000);
-              }
-            } catch (error) {
-              console.error("Error processing ship transfer logs:", error);
-            }
-          },
-          onError: (error) => {
-            console.error("Error listening to ship transfer events:", error);
-            // Don't retry automatically to avoid error loops
-            // In production, you might want to implement exponential backoff
-          },
+        // Check if any of the events involve our address
+        const relevantLogs = logs.filter((log) => {
+          if (!log || !log.args) return false;
+          const args = log.args as { to?: string; from?: string };
+          return args.to === address || args.from === address;
         });
-      } catch (watchError) {
-        console.error("Error creating watchContractEvent:", watchError);
-        return undefined;
-      }
 
-      return unwatch;
-    } catch (error) {
-      console.error("Error setting up ship construction listener:", error);
-      return undefined;
-    }
-  }, [address, publicClient, refetch]);
-
-  // Note: ShipsRecycled event doesn't exist in the Ships contract
-  // We'll rely on Transfer events to detect when ships are removed
-  const listenToShipRecycling = useCallback(async () => {
-    // Early return if event watching is disabled
-    if (DISABLE_EVENT_WATCHING) {
-      console.log("Event watching is disabled");
-      return undefined;
-    }
-
-    // This function is kept for future use but currently disabled
-    // since the ShipsRecycled event doesn't exist in the contract
-    console.log(
-      "Ship recycling listener disabled - event doesn't exist in contract"
-    );
-    return undefined;
-  }, []);
-
-  // Set up event listeners
-  useEffect(() => {
-    let unwatchConstruction: (() => void) | undefined;
-    let unwatchRecycling: (() => void) | undefined;
-
-    const setupListeners = async () => {
-      try {
-        // Check if event watching is disabled
-        if (DISABLE_EVENT_WATCHING) {
-          console.log("Event watching is disabled for debugging");
-          return;
-        }
-
-        // Additional safety check - if we're still getting errors, disable completely
-        if (!address || !publicClient) {
-          console.log("Missing address or publicClient, skipping event setup");
-          return;
-        }
-
-        // Check if we have all required data before setting up listeners
-        if (!address || !publicClient || !CONTRACT_ADDRESSES.SHIPS) {
-          console.warn("Skipping event listener setup - missing required data");
-          return;
-        }
-
-        // Validate contract address format
-        if (
-          typeof CONTRACT_ADDRESSES.SHIPS !== "string" ||
-          !CONTRACT_ADDRESSES.SHIPS.startsWith("0x")
-        ) {
-          console.error(
-            "Invalid contract address format, skipping event listeners"
-          );
-          return;
-        }
-
-        if (address) {
-          // Wrap in try-catch to handle individual listener failures
-          try {
-            unwatchConstruction = await listenToShipConstruction();
-          } catch (error) {
-            console.error("Failed to setup construction listener:", error);
-          }
-
-          try {
-            unwatchRecycling = await listenToShipRecycling();
-          } catch (error) {
-            console.error("Failed to setup recycling listener:", error);
-          }
+        if (relevantLogs.length > 0) {
+          console.log("Ship transfer detected, refetching data...");
+          refetchShips();
         }
       } catch (error) {
-        console.error("Error setting up contract event listeners:", error);
-        // Don't crash the app, just log the error
+        console.error("Error processing ship transfer logs:", error);
       }
-    };
+    },
+  });
 
-    setupListeners();
+  // Watch game move events
+  console.log("Setting up Move event watcher");
+  useWatchContractEvent({
+    address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
+    abi: [
+      {
+        anonymous: false,
+        inputs: [
+          {
+            indexed: true,
+            internalType: "uint256",
+            name: "gameId",
+            type: "uint256",
+          },
+          {
+            indexed: false,
+            internalType: "uint256",
+            name: "shipId",
+            type: "uint256",
+          },
+          {
+            indexed: false,
+            internalType: "int16",
+            name: "newRow",
+            type: "int16",
+          },
+          {
+            indexed: false,
+            internalType: "int16",
+            name: "newCol",
+            type: "int16",
+          },
+          {
+            indexed: false,
+            internalType: "enum ActionType",
+            name: "actionType",
+            type: "uint8",
+          },
+          {
+            indexed: false,
+            internalType: "uint256",
+            name: "targetShipId",
+            type: "uint256",
+          },
+        ],
+        name: "Move",
+        type: "event",
+      },
+    ],
+    eventName: "Move",
+    poll: true, // Force polling since WebSockets not available
+    pollingInterval: 5000, // Poll every 5 seconds
+    onLogs: (logs) => {
+      console.log("Move event logs received:", logs);
+      if (!Array.isArray(logs) || logs.length === 0) return;
 
-    // Cleanup function
-    return () => {
       try {
-        if (unwatchConstruction) unwatchConstruction();
-        if (unwatchRecycling) unwatchRecycling();
+        console.log("Game Move event detected, refetching game data...");
+        console.log(
+          "Registered game refetch functions:",
+          globalGameRefetchFunctions.size
+        );
+        refetchGames();
+
+        // Also refetch individual game data for all registered games
+        globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
+          console.log(`Refetching individual game data for game ${gameId}`);
+          refetchFn();
+        });
       } catch (error) {
-        console.error("Error cleaning up contract event listeners:", error);
+        console.error("Error processing game move logs:", error);
       }
-    };
-  }, [address, publicClient, listenToShipConstruction, listenToShipRecycling]);
+    },
+  });
+
+  // Watch game update events
+  console.log("Setting up GameUpdate event watcher");
+  useWatchContractEvent({
+    address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
+    abi: [
+      {
+        anonymous: false,
+        inputs: [
+          {
+            indexed: true,
+            internalType: "uint256",
+            name: "gameId",
+            type: "uint256",
+          },
+        ],
+        name: "GameUpdate",
+        type: "event",
+      },
+    ],
+    eventName: "GameUpdate",
+    poll: true, // Force polling since WebSockets not available
+    pollingInterval: 5000, // Poll every 5 seconds
+    onLogs: (logs) => {
+      console.log("GameUpdate event logs received:", logs);
+      if (!Array.isArray(logs) || logs.length === 0) return;
+
+      try {
+        console.log("Game Update event detected, refetching game data...");
+        console.log(
+          "Registered game refetch functions:",
+          globalGameRefetchFunctions.size
+        );
+        refetchGames();
+
+        // Also refetch individual game data for all registered games
+        globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
+          console.log(`Refetching individual game data for game ${gameId}`);
+          refetchFn();
+        });
+      } catch (error) {
+        console.error("Error processing game update logs:", error);
+      }
+    },
+  });
 
   return {
     isListening: !!address,

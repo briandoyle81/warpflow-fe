@@ -1,20 +1,67 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { usePlayerGames } from "../hooks/usePlayerGames";
+import { useContractEvents } from "../hooks/useContractEvents";
 import GameDisplay from "./GameDisplay";
-import { Game } from "../types/types";
+import { GameDataView } from "../types/types";
 
 const Games: React.FC = () => {
   const { address, isConnected } = useAccount();
-  const { games, isLoading, error } = usePlayerGames();
-  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const { games, isLoading, error, refetch } = usePlayerGames();
+  const [selectedGame, setSelectedGame] = useState<GameDataView | null>(null);
+
+  // Enable real-time event listening for game updates
+  useContractEvents();
+
+  // Persist selected game in localStorage
+  useEffect(() => {
+    if (selectedGame) {
+      localStorage.setItem(
+        "selectedGameId",
+        selectedGame.metadata.gameId.toString()
+      );
+    } else {
+      localStorage.removeItem("selectedGameId");
+    }
+  }, [selectedGame]);
+
+  // Restore selected game from localStorage on page load
+  useEffect(() => {
+    if (games.length > 0 && !selectedGame) {
+      const savedGameId = localStorage.getItem("selectedGameId");
+      if (savedGameId) {
+        const gameToRestore = games.find(
+          (game) => game.metadata.gameId.toString() === savedGameId
+        );
+        if (gameToRestore) {
+          console.log(`Restoring game ${savedGameId} from localStorage`);
+          setSelectedGame(gameToRestore);
+        } else {
+          // Game not found, clear the saved ID
+          localStorage.removeItem("selectedGameId");
+        }
+      }
+    }
+  }, [games, selectedGame]);
+
+  // Clear selected game when user disconnects
+  useEffect(() => {
+    if (!isConnected) {
+      setSelectedGame(null);
+      localStorage.removeItem("selectedGameId");
+    }
+  }, [isConnected]);
 
   // If a game is selected, show the game display
   if (selectedGame) {
     return (
-      <GameDisplay game={selectedGame} onBack={() => setSelectedGame(null)} />
+      <GameDisplay
+        game={selectedGame}
+        onBack={() => setSelectedGame(null)}
+        refetch={refetch}
+      />
     );
   }
 

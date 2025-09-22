@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import type { Abi } from "viem";
 import { toast } from "react-hot-toast";
 import { useTransaction } from "../providers/TransactionContext";
 
@@ -11,11 +12,9 @@ interface TransactionButtonProps {
 
   // Contract call configuration
   contractAddress: `0x${string}`;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  abi: any[];
+  abi: Abi;
   functionName: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args?: any[];
+  args?: unknown[];
   value?: bigint;
 
   // Button appearance

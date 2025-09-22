@@ -27,16 +27,16 @@ export function useLobbyList() {
     }
   }, [blockNumber, queryClient, lobbiesData.queryKey]);
 
-  // Set up 15-second interval for additional refresh
+  // Set up 5-second interval for additional refresh
   useEffect(() => {
     const interval = setInterval(() => {
       queryClient.invalidateQueries({
         queryKey: lobbiesData.queryKey,
       });
-    }, 15000); // 15 seconds
+    }, 5000); // 5 seconds
 
     return () => clearInterval(interval);
-  }, [queryClient, lobbiesData.queryKey]);
+  }, [queryClient, lobbiesData.queryKey, address]);
 
   // Process the lobby data when it changes
   useEffect(() => {
