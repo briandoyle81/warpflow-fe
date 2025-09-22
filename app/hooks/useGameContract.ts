@@ -1,10 +1,11 @@
 import { useReadContract, useWriteContract } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import type { Abi } from "viem";
 
 // Contract instance configuration
 export const gameContractConfig = {
   address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
-  abi: CONTRACT_ABIS.GAME,
+  abi: CONTRACT_ABIS.GAME as Abi,
 } as const;
 
 // Hook for reading contract data
@@ -16,11 +17,16 @@ export function useGameContract() {
 }
 
 // Hook for reading contract data with proper typing
-export function useGameRead(functionName: string, args?: readonly unknown[]) {
+export function useGameRead(
+  functionName: string,
+  args?: readonly unknown[],
+  options?: { query?: { enabled?: boolean } }
+) {
   return useReadContract({
     ...gameContractConfig,
     functionName,
     args,
+    query: options?.query,
   });
 }
 

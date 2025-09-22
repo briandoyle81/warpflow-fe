@@ -1,10 +1,11 @@
 import { useReadContract, useWriteContract } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import type { Abi } from "viem";
 
 // Contract instance configuration
 export const mapsContractConfig = {
   address: CONTRACT_ADDRESSES.MAPS as `0x${string}`,
-  abi: CONTRACT_ABIS.MAPS,
+  abi: CONTRACT_ABIS.MAPS as Abi,
 } as const;
 
 // Hook for reading contract data

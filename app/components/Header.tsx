@@ -15,6 +15,7 @@ import MusicPlayer from "./MusicPlayer";
 import PayButton from "./PayButton";
 import { toast } from "react-hot-toast";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import type { Abi } from "viem";
 
 const Header: React.FC = () => {
   const [isHydrated, setIsHydrated] = useState(false);
@@ -28,7 +29,7 @@ const Header: React.FC = () => {
   // Read UTC balance
   const { data: utcBalance } = useReadContract({
     address: CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`,
-    abi: CONTRACT_ABIS.UNIVERSAL_CREDITS,
+    abi: CONTRACT_ABIS.UNIVERSAL_CREDITS as Abi,
     functionName: "balanceOf",
     args: account.address ? [account.address] : undefined,
     query: { enabled: isHydrated && !!account.address },

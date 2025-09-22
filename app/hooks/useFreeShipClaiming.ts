@@ -1,5 +1,6 @@
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import type { Abi } from "viem";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -38,7 +39,7 @@ export function useFreeShipClaiming() {
     error: claimStatusError,
   } = useReadContract({
     address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
-    abi: CONTRACT_ABIS.SHIPS,
+    abi: CONTRACT_ABIS.SHIPS as Abi,
     functionName: "hasClaimedFreeShips",
     args: address ? [address] : undefined,
   });
@@ -251,7 +252,7 @@ export function useFreeShipClaiming() {
       // Call the smart contract to claim free ships
       writeContract({
         address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
-        abi: CONTRACT_ABIS.SHIPS,
+        abi: CONTRACT_ABIS.SHIPS as Abi,
         functionName: "claimFreeShips",
       });
 

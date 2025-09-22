@@ -1,11 +1,12 @@
 import { useReadContract, useWriteContract } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import type { Abi } from "viem";
 import { Lobby, PlayerLobbyState } from "../types/types";
 
 // Contract instance configuration
 export const lobbiesContractConfig = {
   address: CONTRACT_ADDRESSES.LOBBIES as `0x${string}`,
-  abi: CONTRACT_ABIS.LOBBIES,
+  abi: CONTRACT_ABIS.LOBBIES as Abi,
 } as const;
 
 // Hook for reading contract data

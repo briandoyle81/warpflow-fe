@@ -7,10 +7,7 @@ export function useShipsByIds(shipIds: bigint[]) {
     isLoading,
     error,
     refetch,
-  } = useShipsRead<Ship[]>(
-    "getShipsByIds",
-    shipIds.length > 0 ? [shipIds] : undefined
-  );
+  } = useShipsRead("getShipsByIds", shipIds.length > 0 ? [shipIds] : undefined);
 
   return {
     ships: (ships as Ship[]) || [],

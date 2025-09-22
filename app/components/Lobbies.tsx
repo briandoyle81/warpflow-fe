@@ -68,13 +68,12 @@ const Lobbies: React.FC = () => {
   );
 
   // Fleet ship data fetching
-  const { data: fleetShipIds, isLoading: fleetShipIdsLoading } = useFleetsRead<
-    bigint[]
-  >("getFleetShipIds", viewingFleetId ? [viewingFleetId] : undefined);
+  const { data: fleetShipIds, isLoading: fleetShipIdsLoading } = useFleetsRead(
+    "getFleetShipIds",
+    viewingFleetId ? [viewingFleetId] : undefined
+  );
 
-  const { data: fleetShips, isLoading: fleetShipsLoading } = useShipsRead<
-    unknown[]
-  >(
+  const { data: fleetShips, isLoading: fleetShipsLoading } = useShipsRead(
     "getShipsByIds",
     fleetShipIds && Array.isArray(fleetShipIds) && fleetShipIds.length > 0
       ? [fleetShipIds]

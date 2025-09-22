@@ -4,6 +4,7 @@ import React from "react";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import { useAccount } from "wagmi";
+import type { Abi } from "viem";
 
 interface FreeShipClaimButtonProps {
   isEligible: boolean;
@@ -38,7 +39,7 @@ export function FreeShipClaimButton({
     <TransactionButton
       transactionId={`claim-free-ships-${address}`}
       contractAddress={CONTRACT_ADDRESSES.SHIPS as `0x${string}`}
-      abi={CONTRACT_ABIS.SHIPS}
+      abi={CONTRACT_ABIS.SHIPS as Abi}
       functionName="claimFreeShips"
       className={className}
       disabled={disabled || !isEligible}

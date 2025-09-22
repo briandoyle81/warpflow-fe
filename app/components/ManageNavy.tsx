@@ -43,10 +43,10 @@ const ManageNavy: React.FC = () => {
   const { fleetStats } = useShipDetails();
 
   // Read the recycle reward amount from the contract
-  const { data: recycleReward } = useShipsRead<bigint>("recycleReward");
+  const { data: recycleReward } = useShipsRead("recycleReward");
 
   // Read the user's purchase count
-  const { data: amountPurchased } = useShipsRead<bigint>(
+  const { data: amountPurchased } = useShipsRead(
     "amountPurchased",
     address ? [address] : undefined
   );

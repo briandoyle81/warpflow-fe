@@ -1,11 +1,12 @@
 import { useReadContract, useWriteContract } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
-import { Ship, ShipTuple } from "../types/types";
+import type { Abi } from "viem";
+// import { Ship, ShipTuple } from "../types/types";
 
 // Contract instance configuration
 export const shipsContractConfig = {
   address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
-  abi: CONTRACT_ABIS.SHIPS,
+  abi: CONTRACT_ABIS.SHIPS as Abi,
 } as const;
 
 // Hook for reading contract data
@@ -17,10 +18,7 @@ export function useShipsContract() {
 }
 
 // Hook for reading contract data with proper typing
-export function useShipsRead<TData>(
-  functionName: string,
-  args?: readonly unknown[]
-) {
+export function useShipsRead(functionName: string, args?: readonly unknown[]) {
   return useReadContract({
     ...shipsContractConfig,
     functionName,

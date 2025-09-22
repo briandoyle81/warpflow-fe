@@ -1,10 +1,11 @@
 import { useReadContract, useWriteContract } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import type { Abi } from "viem";
 
 // Contract instance configuration
 export const fleetsContractConfig = {
   address: CONTRACT_ADDRESSES.FLEETS as `0x${string}`,
-  abi: CONTRACT_ABIS.FLEETS,
+  abi: CONTRACT_ABIS.FLEETS as Abi,
 } as const;
 
 // Hook for reading contract data
@@ -16,14 +17,16 @@ export function useFleetsContract() {
 }
 
 // Hook for reading contract data with proper typing
-export function useFleetsRead<TData>(
+export function useFleetsRead(
   functionName: string,
-  args?: readonly unknown[]
+  args?: readonly unknown[],
+  options?: { query?: { enabled?: boolean } }
 ) {
   return useReadContract({
     ...fleetsContractConfig,
     functionName,
     args,
+    query: options?.query,
   });
 }
 

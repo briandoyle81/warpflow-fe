@@ -3,6 +3,7 @@
 import React from "react";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
+import type { Abi } from "viem";
 
 interface ShipActionButtonProps {
   action: "construct" | "constructAll" | "recycle";
@@ -26,7 +27,7 @@ const SHIP_ACTION_CONFIG = {
         stateMutability: "nonpayable",
         type: "function",
       },
-    ],
+    ] as Abi,
   },
   constructAll: {
     functionName: "constructAllMyShips",
@@ -38,7 +39,7 @@ const SHIP_ACTION_CONFIG = {
         stateMutability: "nonpayable",
         type: "function",
       },
-    ],
+    ] as Abi,
   },
   recycle: {
     functionName: "shipBreaker",
@@ -56,7 +57,7 @@ const SHIP_ACTION_CONFIG = {
         stateMutability: "nonpayable",
         type: "function",
       },
-    ],
+    ] as Abi,
   },
 };
 

@@ -6,13 +6,13 @@ export function useOwnedShips() {
   const { address } = useAccount();
 
   // Get ship IDs owned by the user
-  const shipIdsResult = useShipsRead<bigint[]>(
+  const shipIdsResult = useShipsRead(
     "getShipIdsOwned",
     address ? [address] : undefined
   );
 
   // Get ship details for all owned ships
-  const shipsDataResult = useShipsRead<Ship[]>(
+  const shipsDataResult = useShipsRead(
     "getShipsByIds",
     shipIdsResult.data ? [shipIdsResult.data] : undefined
   );

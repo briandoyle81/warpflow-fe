@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { usePublicClient } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import type { Abi } from "viem";
 import { Ship } from "../types/types";
 
 // Cache configuration
@@ -231,7 +232,7 @@ export function useShipImageCache(ship: Ship) {
         // Call tokenURI directly
         const tokenURI = await publicClient.readContract({
           address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
-          abi: CONTRACT_ABIS.SHIPS,
+          abi: CONTRACT_ABIS.SHIPS as Abi,
           functionName: "tokenURI",
           args: [ship.id],
         });

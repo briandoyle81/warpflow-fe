@@ -8,7 +8,7 @@ import { flowTestnet } from "viem/chains";
 import { http } from "wagmi";
 import { MusicPlayerProvider } from "./providers/MusicPlayerContext";
 import { TransactionProvider } from "./providers/TransactionContext";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 
 const config = getDefaultConfig({
   appName: "WarpFlow",
