@@ -556,6 +556,69 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     specialType,
   ]);
 
+  // Get friendly ships with 0 hitpoints that are adjacent to the current ship
+  const assistableTargets = React.useMemo(() => {
+    if (!selectedShipId || !gameShips) return [];
+
+    const currentPosition = game.shipPositions.find(
+      (pos) => pos.shipId === selectedShipId
+    );
+
+    if (!currentPosition) return [];
+
+    // Use preview position if available, otherwise use current position
+    const startRow = previewPosition
+      ? previewPosition.row
+      : currentPosition.position.row;
+    const startCol = previewPosition
+      ? previewPosition.col
+      : currentPosition.position.col;
+
+    const assistableShips: {
+      shipId: bigint;
+      position: { row: number; col: number };
+    }[] = [];
+
+    // Check all ships for adjacency
+    game.shipPositions.forEach((shipPosition) => {
+      const ship = shipMap.get(shipPosition.shipId);
+      if (!ship) return;
+
+      // Only friendly ships can be assisted
+      if (ship.owner !== address) return;
+
+      // Skip the current ship itself
+      if (shipPosition.shipId === selectedShipId) return;
+
+      const targetRow = shipPosition.position.row;
+      const targetCol = shipPosition.position.col;
+      const distance =
+        Math.abs(targetRow - startRow) + Math.abs(targetCol - startCol);
+
+      // Check if adjacent (distance of 1)
+      if (distance === 1) {
+        const targetAttributes = getShipAttributes(shipPosition.shipId);
+        // Check if the ship has 0 hitpoints
+        if (targetAttributes && targetAttributes.hullPoints === 0) {
+          assistableShips.push({
+            shipId: shipPosition.shipId,
+            position: { row: targetRow, col: targetCol },
+          });
+        }
+      }
+    });
+
+    return assistableShips;
+  }, [
+    selectedShipId,
+    previewPosition,
+    gameShips,
+    shipMap,
+    address,
+    game.shipPositions,
+    getShipAttributes,
+  ]);
+
   // Calculate shooting range for selected ship (where it could shoot from any valid move position)
   const shootingRange = React.useMemo(() => {
     if (!selectedShipId || !gameShips) return [];
@@ -1107,6 +1170,16 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     return isValidTargetType;
                   })() &&
                   validTargets.some((target) => target.shipId === cell.shipId);
+
+                // Check if this cell contains an assistable target (friendly ship with 0 HP)
+                const isAssistableTarget =
+                  cell &&
+                  selectedShipId &&
+                  isCurrentPlayerTurn &&
+                  isShipOwnedByCurrentPlayer(selectedShipId) &&
+                  assistableTargets.some(
+                    (target) => target.shipId === cell.shipId
+                  );
                 const isSelectedTarget = cell && targetShipId === cell.shipId;
 
                 const handleCellClick = () => {
@@ -1143,6 +1216,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           }
                           return;
                         }
+                      }
+
+                      // Check if this is a friendly ship with 0 hitpoints that can be assisted
+                      const isAssistableTarget = assistableTargets.some(
+                        (target) => target.shipId === cell.shipId
+                      );
+                      if (isAssistableTarget) {
+                        setTargetShipId(cell.shipId);
+                        return;
                       }
                     }
 
@@ -1202,9 +1284,21 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           ? "bg-blue-900 ring-2 ring-blue-400"
                           : "bg-purple-900 ring-2 ring-purple-400"
                         : isSelectedTarget
-                        ? selectedWeaponType === "special"
-                          ? "bg-blue-900 ring-2 ring-blue-400"
-                          : "bg-red-900 ring-2 ring-red-400"
+                        ? (() => {
+                            // Check if this is an assist action
+                            const isAssistAction = assistableTargets.some(
+                              (target) => target.shipId === cell.shipId
+                            );
+                            if (isAssistAction) {
+                              return "bg-cyan-900 ring-2 ring-cyan-400";
+                            }
+                            // Otherwise use weapon-based styling
+                            return selectedWeaponType === "special"
+                              ? "bg-blue-900 ring-2 ring-blue-400"
+                              : "bg-red-900 ring-2 ring-red-400";
+                          })()
+                        : isAssistableTarget
+                        ? "bg-cyan-900/50 ring-1 ring-cyan-400"
                         : isValidTarget
                         ? selectedWeaponType === "special"
                           ? "bg-blue-900/50 ring-1 ring-blue-400"
@@ -1255,6 +1349,8 @@ Attributes:
                         ? `Move here (${rowIndex}, ${colIndex})`
                         : isShootingTile
                         ? `Shooting range (${rowIndex}, ${colIndex})`
+                        : isAssistableTarget
+                        ? `Click to assist this ship (${rowIndex}, ${colIndex})`
                         : isValidTarget
                         ? `Click to target this ship (${rowIndex}, ${colIndex})`
                         : `Empty (${rowIndex}, ${colIndex})`
@@ -1760,9 +1856,19 @@ Attributes:
                             : 0;
                         })(),
                     targetShipId
-                      ? selectedWeaponType === "special"
-                        ? ActionType.Special
-                        : ActionType.Shoot
+                      ? (() => {
+                          // Check if this is an assist action (friendly ship with 0 HP)
+                          const isAssistAction = assistableTargets.some(
+                            (target) => target.shipId === targetShipId
+                          );
+                          if (isAssistAction) {
+                            return ActionType.Assist;
+                          }
+                          // Otherwise, check weapon type for shooting/special
+                          return selectedWeaponType === "special"
+                            ? ActionType.Special
+                            : ActionType.Shoot;
+                        })()
                       : ActionType.ClaimPoints,
                     targetShipId || 0n,
                   ]}
@@ -1840,15 +1946,27 @@ Attributes:
                 >
                   Submit Move{" "}
                   {targetShipId
-                    ? selectedWeaponType === "special"
-                      ? specialType === 3
-                        ? "(Flak)"
-                        : `(${
-                            selectedShip
-                              ? getSpecialName(selectedShip.equipment.special)
-                              : "Special"
-                          })`
-                      : "(Shoot)"
+                    ? (() => {
+                        // Check if this is an assist action
+                        const isAssistAction = assistableTargets.some(
+                          (target) => target.shipId === targetShipId
+                        );
+                        if (isAssistAction) {
+                          return "(Assist)";
+                        }
+                        // Otherwise show weapon type
+                        return selectedWeaponType === "special"
+                          ? specialType === 3
+                            ? "(Flak)"
+                            : `(${
+                                selectedShip
+                                  ? getSpecialName(
+                                      selectedShip.equipment.special
+                                    )
+                                  : "Special"
+                              })`
+                          : "(Shoot)";
+                      })()
                     : previewPosition
                     ? scoringGrid[previewPosition.row] &&
                       scoringGrid[previewPosition.row][previewPosition.col] > 0
