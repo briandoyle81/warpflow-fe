@@ -506,9 +506,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
       // Filter targets based on weapon type
       if (selectedWeaponType === "special") {
-        // Flak special targets all enemy ships in range
+        // Flak targets ALL ships in range (friendly and enemy)
         if (specialType === 3) {
-          // Flak
+          // Flak hits everything - don't filter by ownership
+        } else if (specialType === 1) {
+          // EMP targets enemy ships
           if (ship.owner === address) return; // Don't target friendly ships
         } else {
           // Other special abilities target friendly ships (allies)
@@ -1049,56 +1051,115 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             <h1 className="text-2xl font-mono text-white">
               Game #{game.metadata.gameId.toString()}
             </h1>
-            {/* Round Indicator */}
-            <div className="text-sm text-gray-400">
-              <span className="text-yellow-400">
-                Round {game.turnState.currentRound.toString()}
-              </span>
-            </div>
-          </div>
-          {/* Turn Indicator */}
-          {game.metadata.winner ===
-            "0x0000000000000000000000000000000000000000" && (
-            <div className="flex flex-col">
+            {/* Turn Indicator */}
+            {game.metadata.winner ===
+              "0x0000000000000000000000000000000000000000" && (
               <div className="text-sm text-gray-400">
                 <span className="text-yellow-400">
                   {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
                 </span>
               </div>
-              {/* Debug buttons - remove these later */}
-              <div className="mt-2 space-x-2">
-                <button
-                  onClick={() => {
-                    console.log("Manual refetch triggered");
-                    refetchGame();
-                  }}
-                  className="px-2 py-1 bg-blue-600 text-white text-xs rounded"
-                >
-                  Test Refetch
-                </button>
-                <button
-                  onClick={() => {
-                    console.log(
-                      "Testing event system - triggering refetch for all games"
-                    );
-                    globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
-                      console.log(
-                        `Manually triggering refetch for game ${gameId}`
-                      );
-                      refetchFn();
-                    });
-                  }}
-                  className="px-2 py-1 bg-green-600 text-white text-xs rounded"
-                >
-                  Test Events
-                </button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Game Status and Emergency Flee */}
+        {/* Game Info Cards - Center */}
+        <div className="flex gap-2 text-xs">
+          <div className="bg-gray-800 rounded p-2 border border-gray-700 w-48">
+            <h4 className="text-white font-mono mb-1">Scores</h4>
+            <div className="space-y-0.5">
+              <div className="flex justify-between">
+                <span className="text-gray-400">My Score:</span>
+                <span className="text-white">
+                  {game.metadata.creator === address
+                    ? game.creatorScore?.toString() || "0"
+                    : game.joinerScore?.toString() || "0"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Opponent:</span>
+                <span className="text-white">
+                  {game.metadata.creator === address
+                    ? game.joinerScore?.toString() || "0"
+                    : game.creatorScore?.toString() || "0"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-800 rounded p-2 border border-gray-700 w-48">
+            <h4 className="text-white font-mono mb-1">Game Info</h4>
+            <div className="space-y-0.5">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Round:</span>
+                <span className="text-white">
+                  {game.turnState.currentRound.toString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Score Target:</span>
+                <span className="text-white">
+                  {game.maxScore?.toString() || "0"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-800 rounded p-2 border border-gray-700 w-48">
+            <h4 className="text-white font-mono mb-1">Players</h4>
+            <div className="space-y-0.5">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Creator:</span>
+                <span className="text-white font-mono text-xs">
+                  {game.metadata.creator.slice(0, 6)}...
+                  {game.metadata.creator.slice(-4)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Joiner:</span>
+                <span className="text-white font-mono text-xs">
+                  {game.metadata.joiner.slice(0, 6)}...
+                  {game.metadata.joiner.slice(-4)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Debug buttons and Emergency Flee */}
         <div className="flex items-center space-x-4">
+          {/* Debug buttons - remove these later */}
+          {game.metadata.winner ===
+            "0x0000000000000000000000000000000000000000" && (
+            <div className="flex space-x-2">
+              <button
+                onClick={() => {
+                  console.log("Manual refetch triggered");
+                  refetchGame();
+                }}
+                className="px-2 py-1 bg-blue-600 text-white text-xs rounded"
+              >
+                Test Refetch
+              </button>
+              <button
+                onClick={() => {
+                  console.log(
+                    "Testing event system - triggering refetch for all games"
+                  );
+                  globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
+                    console.log(
+                      `Manually triggering refetch for game ${gameId}`
+                    );
+                    refetchFn();
+                  });
+                }}
+                className="px-2 py-1 bg-green-600 text-white text-xs rounded"
+              >
+                Test Events
+              </button>
+            </div>
+          )}
+
           {/* Emergency Flee Safety Switch */}
           {game.metadata.winner ===
             "0x0000000000000000000000000000000000000000" && (
@@ -1174,7 +1235,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     const isValidTargetType =
                       selectedWeaponType === "special"
                         ? specialType === 3 // Flak
-                          ? !isShipOwnedByCurrentPlayer(cell.shipId) // Flak targets enemy ships
+                          ? true // Flak hits ALL ships in range (friendly and enemy)
+                          : specialType === 1 // EMP
+                          ? !isShipOwnedByCurrentPlayer(cell.shipId) // EMP targets enemy ships
                           : isShipOwnedByCurrentPlayer(cell.shipId) // Other special abilities target friendly ships
                         : !isShipOwnedByCurrentPlayer(cell.shipId); // Weapons target enemy ships
                     return isValidTargetType;
@@ -1197,6 +1260,33 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
                 const handleCellClick = () => {
                   if (cell) {
+                    // Check for repair drone auto-switch FIRST (before any other logic)
+                    if (
+                      selectedShipId &&
+                      isCurrentPlayerTurn &&
+                      isShipOwnedByCurrentPlayer(selectedShipId)
+                    ) {
+                      const isFriendlyShip = isShipOwnedByCurrentPlayer(
+                        cell.shipId
+                      );
+                      const selectedShip = shipMap.get(selectedShipId);
+                      const hasRepairDrones =
+                        selectedShip?.equipment.special === 2; // Repair special
+
+                      if (isFriendlyShip && hasRepairDrones) {
+                        // Check if the friendly ship is in repair range
+                        const isInRepairRange = validTargets.some(
+                          (target) => target.shipId === cell.shipId
+                        );
+                        if (isInRepairRange) {
+                          // Switch to repair drones and target this ship
+                          setSelectedWeaponType("special");
+                          setTargetShipId(cell.shipId);
+                          return;
+                        }
+                      }
+                    }
+
                     // If we have a selected ship and this is a valid target in range, select as target
                     if (
                       selectedShipId &&
@@ -1207,7 +1297,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       const isValidTargetType =
                         selectedWeaponType === "special"
                           ? specialType === 3 // Flak
-                            ? !isShipOwnedByCurrentPlayer(cell.shipId) // Flak targets enemy ships
+                            ? true // Flak hits ALL ships in range (friendly and enemy)
+                            : specialType === 1 // EMP
+                            ? !isShipOwnedByCurrentPlayer(cell.shipId) // EMP targets enemy ships
                             : isShipOwnedByCurrentPlayer(cell.shipId) // Other special abilities target friendly ships
                           : !isShipOwnedByCurrentPlayer(cell.shipId); // Weapons target enemy ships
 
@@ -1225,6 +1317,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             // Just indicate that flak is ready to fire
                             setTargetShipId(0n); // Use 0 to indicate area-of-effect
                           } else {
+                            // EMP and other specials target individual ships
                             setTargetShipId(cell.shipId);
                           }
                           return;
@@ -1315,15 +1408,19 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             }
                             // Otherwise use weapon-based styling
                             return selectedWeaponType === "special"
-                              ? "bg-blue-900 ring-2 ring-blue-400"
+                              ? specialType === 3 // Flak
+                                ? "bg-red-900 ring-2 ring-red-400" // Flak uses red highlighting like regular weapons
+                                : "bg-blue-900 ring-2 ring-blue-400" // Other specials use blue
                               : "bg-red-900 ring-2 ring-red-400";
                           })()
-                        : isAssistableTarget
-                        ? "bg-cyan-900/50 ring-1 ring-cyan-400"
                         : isValidTarget
                         ? selectedWeaponType === "special"
-                          ? "bg-blue-900/50 ring-1 ring-blue-400"
+                          ? specialType === 3 // Flak
+                            ? "bg-red-900/50 ring-1 ring-red-400" // Flak uses red highlighting like regular weapons
+                            : "bg-blue-900/50 ring-1 ring-blue-400" // Other specials use blue
                           : "bg-orange-900/50 ring-1 ring-orange-400"
+                        : isAssistableTarget
+                        ? "bg-cyan-900/50 ring-1 ring-cyan-400"
                         : isMovementTile
                         ? "bg-green-900/50"
                         : "bg-gray-950"
@@ -1341,10 +1438,20 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             const moved = movedShipIdsSet.has(cell.shipId)
                               ? "Yes"
                               : "No";
-                            return `${shipName}
-Ship ${cell.shipId.toString()} (${cell.isCreator ? "Creator" : "Joiner"}) ${
+                            const criticalWarning =
+                              attributes && attributes.hullPoints === 0
+                                ? `
+🚨 CRITICAL: This ship will be destroyed at the end of the round unless healed or assisted to flee!`
+                                : "";
+
+                            return `${shipName} (${
+                              cell.isCreator ===
+                              (address === game.metadata.creator)
+                                ? "My Fleet"
+                                : "Enemy Fleet"
+                            }) ${
                               isSelected ? "(Selected)" : ""
-                            }
+                            }${criticalWarning}
 ${
   attributes
     ? `
@@ -1461,6 +1568,35 @@ Attributes:
                               })()}
                             </div>
                           )}
+
+                        {/* Health bar for damaged ships */}
+                        {(() => {
+                          const attributes = getShipAttributes(cell.shipId);
+                          if (
+                            !attributes ||
+                            attributes.hullPoints >= attributes.maxHullPoints
+                          )
+                            return null;
+
+                          const healthPercentage =
+                            (attributes.hullPoints / attributes.maxHullPoints) *
+                            100;
+                          const isLowHealth = healthPercentage <= 25;
+
+                          return (
+                            <div className="absolute -top-2 left-0 right-0 z-15">
+                              <div className="w-full h-1 bg-gray-700 rounded-sm">
+                                <div
+                                  className={`h-full rounded-sm transition-all duration-300 ${
+                                    isLowHealth ? "bg-red-500" : "bg-green-500"
+                                  }`}
+                                  style={{ width: `${healthPercentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         <ShipImage
                           ship={ship}
                           className={`w-full h-full ${
@@ -1635,6 +1771,17 @@ Attributes:
                             💥 {validTargets.length} targets
                           </span>
                         </>
+                      ) : selectedWeaponType === "special" &&
+                        specialType === 1 ? (
+                        // EMP special - targets individual enemy ship
+                        <>
+                          <span className="text-blue-400 font-mono">
+                            EMP: Target Enemy Ship
+                          </span>
+                          <span className="ml-2 text-blue-400">
+                            ⚡ Reactor Critical +1
+                          </span>
+                        </>
                       ) : (
                         <>
                           <span className="text-red-400 font-mono">
@@ -1780,6 +1927,27 @@ Attributes:
                       >
                         💥 Flak All Enemies ({validTargets.length} targets)
                       </button>
+                    ) : selectedWeaponType === "special" &&
+                      specialType === 1 ? (
+                      // EMP special - show individual target buttons
+                      validTargets.map((target) => {
+                        const targetShip = shipMap.get(target.shipId);
+                        return (
+                          <button
+                            key={target.shipId.toString()}
+                            onClick={() => setTargetShipId(target.shipId)}
+                            className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
+                              targetShipId === target.shipId
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                            }`}
+                          >
+                            ⚡ EMP{" "}
+                            {targetShip?.name ||
+                              `Ship #${target.shipId.toString()}`}
+                          </button>
+                        );
+                      })
                     ) : (
                       validTargets.map((target) => {
                         const targetShip = shipMap.get(target.shipId);
@@ -1993,6 +2161,8 @@ Attributes:
                         return selectedWeaponType === "special"
                           ? specialType === 3
                             ? "(Flak)"
+                            : specialType === 1
+                            ? "(EMP)"
                             : `(${
                                 selectedShip
                                   ? getSpecialName(
@@ -2025,95 +2195,19 @@ Attributes:
           </div>
         )}
 
-      {/* Game Info */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-          <h3 className="text-white font-mono mb-2">Scores</h3>
-          <div className="space-y-1">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Creator:</span>
-              <span className="text-white">
-                {game.creatorScore?.toString() || "0"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Joiner:</span>
-              <span className="text-white">
-                {game.joinerScore?.toString() || "0"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Max Score:</span>
-              <span className="text-white">
-                {game.maxScore?.toString() || "0"}
-              </span>
-            </div>
-            {/* Debug scores */}
-            <div className="text-xs text-gray-500 mt-2">
-              Debug: creatorScore={game.creatorScore?.toString()}, joinerScore=
-              {game.joinerScore?.toString()}, maxScore=
-              {game.maxScore?.toString()}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-          <h3 className="text-white font-mono mb-2">Players</h3>
-          <div className="space-y-1">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Creator:</span>
-              <span className="text-white font-mono text-xs">
-                {game.metadata.creator.slice(0, 6)}...
-                {game.metadata.creator.slice(-4)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Joiner:</span>
-              <span className="text-white font-mono text-xs">
-                {game.metadata.joiner.slice(0, 6)}...
-                {game.metadata.joiner.slice(-4)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-          <h3 className="text-white font-mono mb-2">Game Info</h3>
-          <div className="space-y-1">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Round:</span>
-              <span className="text-white">
-                {game.turnState.currentRound.toString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Lobby ID:</span>
-              <span className="text-white">
-                {game.metadata.lobbyId.toString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Started:</span>
-              <span className="text-white">
-                {new Date(
-                  Number(game.metadata.startedAt) * 1000
-                ).toLocaleDateString()}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Ship Details */}
       <div className="bg-gray-900 rounded-lg p-4 border border-gray-700 w-full">
         <h3 className="text-white font-mono mb-4">Ship Details</h3>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Creator Ships */}
+          {/* My Fleet - Always on the left */}
           <div>
-            <h4 className="text-blue-400 font-mono mb-3">Creator Fleet</h4>
+            <h4 className="text-blue-400 font-mono mb-3">My Fleet</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {game.creatorActiveShipIds.map((shipId) => {
+              {(game.metadata.creator === address
+                ? game.creatorActiveShipIds
+                : game.joinerActiveShipIds
+              ).map((shipId) => {
                 const shipPosition = game.shipPositions.find(
                   (sp) => sp.shipId === shipId
                 );
@@ -2125,7 +2219,14 @@ Attributes:
                 return (
                   <div
                     key={shipId.toString()}
-                    className="bg-gray-800 rounded p-2 border border-gray-700"
+                    className={`bg-gray-800 rounded p-2 border ${
+                      attributes.reactorCriticalTimer > 0 &&
+                      attributes.hullPoints === 0
+                        ? "border-red-500" // Red outline for reactor critical + 0 HP
+                        : attributes.reactorCriticalTimer > 0
+                        ? "border-yellow-500" // Yellow outline for reactor critical
+                        : "border-gray-700" // Default gray outline
+                    }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       {ship && (
@@ -2154,9 +2255,15 @@ Attributes:
                             {shipPosition.position.col})
                           </span>
                         </div>
+                        {attributes.reactorCriticalTimer > 0 && (
+                          <div className="text-xs text-red-400 mt-1">
+                            Reactor Critical: {attributes.reactorCriticalTimer}
+                            /3
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-1 text-xs">
+                    <div className="grid grid-cols-3 gap-1 text-xs">
                       <div>
                         <span className="text-gray-400">Hull:</span>
                         <span className="text-white ml-1">
@@ -2170,9 +2277,9 @@ Attributes:
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-400">Damage:</span>
+                        <span className="text-gray-400">Armor:</span>
                         <span className="text-white ml-1">
-                          {attributes.gunDamage}
+                          {attributes.damageReduction}
                         </span>
                       </div>
                       <div>
@@ -2181,23 +2288,35 @@ Attributes:
                           {attributes.movement}
                         </span>
                       </div>
-                    </div>
-                    {attributes.reactorCriticalTimer > 0 && (
-                      <div className="mt-2 text-xs text-red-400">
-                        Reactor Critical: {attributes.reactorCriticalTimer}/3
+                      <div>
+                        <span className="text-gray-400">Damage:</span>
+                        <span className="text-white ml-1">
+                          {attributes.gunDamage}
+                        </span>
                       </div>
-                    )}
+                      <div>
+                        <span className="text-gray-400">Special:</span>
+                        <span className="text-white ml-1">
+                          {ship
+                            ? getSpecialName(ship.equipment.special)
+                            : "None"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Joiner Ships */}
+          {/* Opponent's Fleet - Always on the right */}
           <div>
-            <h4 className="text-green-400 font-mono mb-3">Joiner Fleet</h4>
+            <h4 className="text-red-400 font-mono mb-3">Opponent's Fleet</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {game.joinerActiveShipIds.map((shipId) => {
+              {(game.metadata.creator === address
+                ? game.joinerActiveShipIds
+                : game.creatorActiveShipIds
+              ).map((shipId) => {
                 const shipPosition = game.shipPositions.find(
                   (sp) => sp.shipId === shipId
                 );
@@ -2209,7 +2328,14 @@ Attributes:
                 return (
                   <div
                     key={shipId.toString()}
-                    className="bg-gray-800 rounded p-2 border border-gray-700"
+                    className={`bg-gray-800 rounded p-2 border ${
+                      attributes.reactorCriticalTimer > 0 &&
+                      attributes.hullPoints === 0
+                        ? "border-red-500" // Red outline for reactor critical + 0 HP
+                        : attributes.reactorCriticalTimer > 0
+                        ? "border-yellow-500" // Yellow outline for reactor critical
+                        : "border-gray-700" // Default gray outline
+                    }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       {ship && (
@@ -2238,9 +2364,15 @@ Attributes:
                             {shipPosition.position.col})
                           </span>
                         </div>
+                        {attributes.reactorCriticalTimer > 0 && (
+                          <div className="text-xs text-red-400 mt-1">
+                            Reactor Critical: {attributes.reactorCriticalTimer}
+                            /3
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-1 text-xs">
+                    <div className="grid grid-cols-3 gap-1 text-xs">
                       <div>
                         <span className="text-gray-400">Hull:</span>
                         <span className="text-white ml-1">
@@ -2254,9 +2386,9 @@ Attributes:
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-400">Damage:</span>
+                        <span className="text-gray-400">Armor:</span>
                         <span className="text-white ml-1">
-                          {attributes.gunDamage}
+                          {attributes.damageReduction}
                         </span>
                       </div>
                       <div>
@@ -2265,12 +2397,21 @@ Attributes:
                           {attributes.movement}
                         </span>
                       </div>
-                    </div>
-                    {attributes.reactorCriticalTimer > 0 && (
-                      <div className="mt-2 text-xs text-red-400">
-                        Reactor Critical: {attributes.reactorCriticalTimer}/3
+                      <div>
+                        <span className="text-gray-400">Damage:</span>
+                        <span className="text-white ml-1">
+                          {attributes.gunDamage}
+                        </span>
                       </div>
-                    )}
+                      <div>
+                        <span className="text-gray-400">Special:</span>
+                        <span className="text-white ml-1">
+                          {ship
+                            ? getSpecialName(ship.equipment.special)
+                            : "None"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
