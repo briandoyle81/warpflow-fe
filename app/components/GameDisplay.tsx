@@ -1055,7 +1055,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             {game.metadata.winner ===
               "0x0000000000000000000000000000000000000000" && (
               <div className="text-sm text-gray-400">
-                <span className="text-yellow-400">
+                <span className={isMyTurn ? "text-blue-400" : "text-red-400"}>
                   {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
                 </span>
               </div>
@@ -1627,6 +1627,36 @@ Attributes:
                             M
                           </div>
                         )}
+                        {/* Reactor damage skulls */}
+                        {(() => {
+                          const attributes = getShipAttributes(cell.shipId);
+                          console.log(
+                            `Ship ${cell.shipId}: reactorTimer=${attributes?.reactorCriticalTimer}`
+                          );
+                          if (
+                            !attributes ||
+                            attributes.reactorCriticalTimer === 0
+                          )
+                            return null;
+
+                          const skullCount = Math.min(
+                            attributes.reactorCriticalTimer,
+                            3
+                          );
+                          const skulls = "💀".repeat(skullCount);
+
+                          return (
+                            <div
+                              className={`absolute ${
+                                cell.isCreator
+                                  ? "bottom-0 left-0"
+                                  : "bottom-0 right-0"
+                              } m-0.5 text-[8px] font-mono`}
+                            >
+                              {skulls}
+                            </div>
+                          );
+                        })()}
                         {/* Critical hull indicator */}
                         {(() => {
                           const attributes = getShipAttributes(cell.shipId);
