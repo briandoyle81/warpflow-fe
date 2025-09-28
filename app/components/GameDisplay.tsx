@@ -1056,7 +1056,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               "0x0000000000000000000000000000000000000000" && (
               <div className="text-sm text-gray-400">
                 <span className={isMyTurn ? "text-blue-400" : "text-red-400"}>
-                  {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
+                  {isMyTurn ? "YOUR TURN" : "OPPONENT&apos;S TURN"}
                 </span>
               </div>
             )}
@@ -2134,10 +2134,10 @@ Attributes:
                       );
                     } else if (errorMessage.includes("execution reverted")) {
                       toast.error(
-                        "Transaction reverted - check if it's your turn and ship is valid"
+                        "Transaction reverted - check if it&apos;s your turn and ship is valid"
                       );
                     } else if (errorMessage.includes("NotYourTurn")) {
-                      toast.error("It's not your turn to move");
+                      toast.error("It&apos;s not your turn to move");
                     } else if (errorMessage.includes("ShipNotFound")) {
                       toast.error("Ship not found in this game");
                     } else if (errorMessage.includes("InvalidMove")) {
@@ -2339,9 +2339,11 @@ Attributes:
             </div>
           </div>
 
-          {/* Opponent's Fleet - Always on the right */}
+          {/* Opponent&apos;s Fleet - Always on the right */}
           <div>
-            <h4 className="text-red-400 font-mono mb-3">Opponent's Fleet</h4>
+            <h4 className="text-red-400 font-mono mb-3">
+              Opponent&apos;s Fleet
+            </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(game.metadata.creator === address
                 ? game.joinerActiveShipIds
