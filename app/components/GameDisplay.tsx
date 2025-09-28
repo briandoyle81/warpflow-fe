@@ -24,6 +24,7 @@ import {
 import { TransactionButton } from "./TransactionButton";
 import { toast } from "react-hot-toast";
 import { useSpecialRange } from "../hooks/useSpecialRange";
+import { FleeSafetySwitch } from "./FleeSafetySwitch";
 
 interface GameDisplayProps {
   game: GameDataView;
@@ -619,6 +620,64 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     getShipAttributes,
   ]);
 
+  // Get friendly ships with 0 hitpoints that are adjacent to the current ship's starting position
+  // This is used to show assist options even when not moving
+  const assistableTargetsFromStart = React.useMemo(() => {
+    if (!selectedShipId || !gameShips) return [];
+
+    const currentPosition = game.shipPositions.find(
+      (pos) => pos.shipId === selectedShipId
+    );
+
+    if (!currentPosition) return [];
+
+    const startRow = currentPosition.position.row;
+    const startCol = currentPosition.position.col;
+
+    const assistableShips: {
+      shipId: bigint;
+      position: { row: number; col: number };
+    }[] = [];
+
+    // Check all ships for adjacency from starting position
+    game.shipPositions.forEach((shipPosition) => {
+      const ship = shipMap.get(shipPosition.shipId);
+      if (!ship) return;
+
+      // Only friendly ships can be assisted
+      if (ship.owner !== address) return;
+
+      // Skip the current ship itself
+      if (shipPosition.shipId === selectedShipId) return;
+
+      const targetRow = shipPosition.position.row;
+      const targetCol = shipPosition.position.col;
+      const distance =
+        Math.abs(targetRow - startRow) + Math.abs(targetCol - startCol);
+
+      // Check if adjacent (distance of 1)
+      if (distance === 1) {
+        const targetAttributes = getShipAttributes(shipPosition.shipId);
+        // Check if the ship has 0 hitpoints
+        if (targetAttributes && targetAttributes.hullPoints === 0) {
+          assistableShips.push({
+            shipId: shipPosition.shipId,
+            position: { row: targetRow, col: targetCol },
+          });
+        }
+      }
+    });
+
+    return assistableShips;
+  }, [
+    selectedShipId,
+    gameShips,
+    shipMap,
+    address,
+    game.shipPositions,
+    getShipAttributes,
+  ]);
+
   // Calculate shooting range for selected ship (where it could shoot from any valid move position)
   const shootingRange = React.useMemo(() => {
     if (!selectedShipId || !gameShips) return [];
@@ -986,137 +1045,88 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           >
             ← BACK TO GAMES
           </button>
-          <h1 className="text-2xl font-mono text-white">
-            Game #{game.metadata.gameId.toString()}
-          </h1>
-        </div>
-
-        {/* Game Status */}
-        <div className="text-right">
-          <div className="text-sm text-gray-400">
-            {game.metadata.winner ===
-            "0x0000000000000000000000000000000000000000" ? (
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-mono text-white">
+              Game #{game.metadata.gameId.toString()}
+            </h1>
+            {/* Round Indicator */}
+            <div className="text-sm text-gray-400">
               <span className="text-yellow-400">
-                {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
+                Round {game.turnState.currentRound.toString()}
               </span>
-            ) : (
-              <span
-                className={
-                  game.metadata.winner === address
-                    ? "text-green-400"
-                    : "text-red-400"
-                }
-              >
-                {game.metadata.winner === address ? "VICTORY" : "DEFEAT"}
-              </span>
-            )}
+            </div>
           </div>
-          <div className="text-xs text-gray-500">
-            Round {game.turnState.currentRound.toString()}
-          </div>
-          {/* Debug buttons - remove these later */}
-          <div className="mt-2 space-x-2">
-            <button
-              onClick={() => {
-                console.log("Manual refetch triggered");
-                refetchGame();
+          {/* Turn Indicator */}
+          {game.metadata.winner ===
+            "0x0000000000000000000000000000000000000000" && (
+            <div className="flex flex-col">
+              <div className="text-sm text-gray-400">
+                <span className="text-yellow-400">
+                  {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
+                </span>
+              </div>
+              {/* Debug buttons - remove these later */}
+              <div className="mt-2 space-x-2">
+                <button
+                  onClick={() => {
+                    console.log("Manual refetch triggered");
+                    refetchGame();
+                  }}
+                  className="px-2 py-1 bg-blue-600 text-white text-xs rounded"
+                >
+                  Test Refetch
+                </button>
+                <button
+                  onClick={() => {
+                    console.log(
+                      "Testing event system - triggering refetch for all games"
+                    );
+                    globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
+                      console.log(
+                        `Manually triggering refetch for game ${gameId}`
+                      );
+                      refetchFn();
+                    });
+                  }}
+                  className="px-2 py-1 bg-green-600 text-white text-xs rounded"
+                >
+                  Test Events
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Game Status and Emergency Flee */}
+        <div className="flex items-center space-x-4">
+          {/* Emergency Flee Safety Switch */}
+          {game.metadata.winner ===
+            "0x0000000000000000000000000000000000000000" && (
+            <FleeSafetySwitch
+              gameId={game.metadata.gameId}
+              onFlee={() => {
+                // Handle successful flee - could navigate back or show message
+                toast.success("You have fled the battle!");
+                refetch?.();
               }}
-              className="px-2 py-1 bg-blue-600 text-white text-xs rounded"
-            >
-              Test Refetch
-            </button>
-            <button
-              onClick={() => {
-                console.log(
-                  "Testing event system - triggering refetch for all games"
-                );
-                globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
-                  console.log(`Manually triggering refetch for game ${gameId}`);
-                  refetchFn();
-                });
-              }}
-              className="px-2 py-1 bg-green-600 text-white text-xs rounded"
-            >
-              Test Events
-            </button>
-          </div>
-        </div>
-      </div>
+            />
+          )}
 
-      {/* Game Info */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-          <h3 className="text-white font-mono mb-2">Scores</h3>
-          <div className="space-y-1">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Creator:</span>
-              <span className="text-white">
-                {game.creatorScore?.toString() || "0"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Joiner:</span>
-              <span className="text-white">
-                {game.joinerScore?.toString() || "0"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Max Score:</span>
-              <span className="text-white">
-                {game.maxScore?.toString() || "0"}
-              </span>
-            </div>
-            {/* Debug scores */}
-            <div className="text-xs text-gray-500 mt-2">
-              Debug: creatorScore={game.creatorScore?.toString()}, joinerScore=
-              {game.joinerScore?.toString()}, maxScore=
-              {game.maxScore?.toString()}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-          <h3 className="text-white font-mono mb-2">Players</h3>
-          <div className="space-y-1">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Creator:</span>
-              <span className="text-white font-mono text-xs">
-                {game.metadata.creator.slice(0, 6)}...
-                {game.metadata.creator.slice(-4)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Joiner:</span>
-              <span className="text-white font-mono text-xs">
-                {game.metadata.joiner.slice(0, 6)}...
-                {game.metadata.joiner.slice(-4)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-          <h3 className="text-white font-mono mb-2">Game Info</h3>
-          <div className="space-y-1">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Round:</span>
-              <span className="text-white">
-                {game.turnState.currentRound.toString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Lobby ID:</span>
-              <span className="text-white">
-                {game.metadata.lobbyId.toString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Started:</span>
-              <span className="text-white">
-                {new Date(
-                  Number(game.metadata.startedAt) * 1000
-                ).toLocaleDateString()}
-              </span>
+          {/* Game Status */}
+          <div className="text-right">
+            <div className="text-sm text-gray-400">
+              {game.metadata.winner !==
+                "0x0000000000000000000000000000000000000000" && (
+                <span
+                  className={
+                    game.metadata.winner === address
+                      ? "text-green-400"
+                      : "text-red-400"
+                  }
+                >
+                  {game.metadata.winner === address ? "VICTORY" : "DEFEAT"}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -1177,9 +1187,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   selectedShipId &&
                   isCurrentPlayerTurn &&
                   isShipOwnedByCurrentPlayer(selectedShipId) &&
-                  assistableTargets.some(
+                  (assistableTargets.some(
                     (target) => target.shipId === cell.shipId
-                  );
+                  ) ||
+                    assistableTargetsFromStart.some(
+                      (target) => target.shipId === cell.shipId
+                    ));
                 const isSelectedTarget = cell && targetShipId === cell.shipId;
 
                 const handleCellClick = () => {
@@ -1222,7 +1235,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       const isAssistableTarget = assistableTargets.some(
                         (target) => target.shipId === cell.shipId
                       );
-                      if (isAssistableTarget) {
+                      const isAssistableFromStart =
+                        assistableTargetsFromStart.some(
+                          (target) => target.shipId === cell.shipId
+                        );
+                      if (isAssistableTarget || isAssistableFromStart) {
                         setTargetShipId(cell.shipId);
                         return;
                       }
@@ -1286,9 +1303,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         : isSelectedTarget
                         ? (() => {
                             // Check if this is an assist action
-                            const isAssistAction = assistableTargets.some(
-                              (target) => target.shipId === cell.shipId
-                            );
+                            const isAssistAction =
+                              assistableTargets.some(
+                                (target) => target.shipId === cell.shipId
+                              ) ||
+                              assistableTargetsFromStart.some(
+                                (target) => target.shipId === cell.shipId
+                              );
                             if (isAssistAction) {
                               return "bg-cyan-900 ring-2 ring-cyan-400";
                             }
@@ -1580,7 +1601,13 @@ Attributes:
               <div className="flex items-center space-x-4">
                 <div className="text-gray-300">
                   <span className="text-white font-mono">
-                    Ship #{selectedShipId.toString()}
+                    {(() => {
+                      const selectedShip = shipMap.get(selectedShipId);
+                      return (
+                        selectedShip?.name ||
+                        `Ship #${selectedShipId.toString()}`
+                      );
+                    })()}
                   </span>
                   <span className="mx-2">→</span>
                   <span className="text-white font-mono">
@@ -1858,9 +1885,13 @@ Attributes:
                     targetShipId
                       ? (() => {
                           // Check if this is an assist action (friendly ship with 0 HP)
-                          const isAssistAction = assistableTargets.some(
-                            (target) => target.shipId === targetShipId
-                          );
+                          const isAssistAction =
+                            assistableTargets.some(
+                              (target) => target.shipId === targetShipId
+                            ) ||
+                            assistableTargetsFromStart.some(
+                              (target) => target.shipId === targetShipId
+                            );
                           if (isAssistAction) {
                             return ActionType.Assist;
                           }
@@ -1948,9 +1979,13 @@ Attributes:
                   {targetShipId
                     ? (() => {
                         // Check if this is an assist action
-                        const isAssistAction = assistableTargets.some(
-                          (target) => target.shipId === targetShipId
-                        );
+                        const isAssistAction =
+                          assistableTargets.some(
+                            (target) => target.shipId === targetShipId
+                          ) ||
+                          assistableTargetsFromStart.some(
+                            (target) => target.shipId === targetShipId
+                          );
                         if (isAssistAction) {
                           return "(Assist)";
                         }
@@ -1990,15 +2025,94 @@ Attributes:
           </div>
         )}
 
+      {/* Game Info */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <h3 className="text-white font-mono mb-2">Scores</h3>
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Creator:</span>
+              <span className="text-white">
+                {game.creatorScore?.toString() || "0"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Joiner:</span>
+              <span className="text-white">
+                {game.joinerScore?.toString() || "0"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Max Score:</span>
+              <span className="text-white">
+                {game.maxScore?.toString() || "0"}
+              </span>
+            </div>
+            {/* Debug scores */}
+            <div className="text-xs text-gray-500 mt-2">
+              Debug: creatorScore={game.creatorScore?.toString()}, joinerScore=
+              {game.joinerScore?.toString()}, maxScore=
+              {game.maxScore?.toString()}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <h3 className="text-white font-mono mb-2">Players</h3>
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Creator:</span>
+              <span className="text-white font-mono text-xs">
+                {game.metadata.creator.slice(0, 6)}...
+                {game.metadata.creator.slice(-4)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Joiner:</span>
+              <span className="text-white font-mono text-xs">
+                {game.metadata.joiner.slice(0, 6)}...
+                {game.metadata.joiner.slice(-4)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <h3 className="text-white font-mono mb-2">Game Info</h3>
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Round:</span>
+              <span className="text-white">
+                {game.turnState.currentRound.toString()}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Lobby ID:</span>
+              <span className="text-white">
+                {game.metadata.lobbyId.toString()}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Started:</span>
+              <span className="text-white">
+                {new Date(
+                  Number(game.metadata.startedAt) * 1000
+                ).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Ship Details */}
       <div className="bg-gray-900 rounded-lg p-4 border border-gray-700 w-full">
         <h3 className="text-white font-mono mb-4">Ship Details</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Creator Ships */}
           <div>
-            <h4 className="text-blue-400 font-mono mb-2">Creator Fleet</h4>
-            <div className="space-y-2">
+            <h4 className="text-blue-400 font-mono mb-3">Creator Fleet</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {game.creatorActiveShipIds.map((shipId) => {
                 const shipPosition = game.shipPositions.find(
                   (sp) => sp.shipId === shipId
@@ -2011,11 +2125,11 @@ Attributes:
                 return (
                   <div
                     key={shipId.toString()}
-                    className="bg-gray-800 rounded p-3 border border-gray-700"
+                    className="bg-gray-800 rounded p-2 border border-gray-700"
                   >
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-2 mb-2">
                       {ship && (
-                        <div className="w-12 h-12 flex-shrink-0">
+                        <div className="w-32 h-32 flex-shrink-0">
                           <ShipImage
                             ship={ship}
                             className="w-full h-full"
@@ -2023,14 +2137,14 @@ Attributes:
                           />
                         </div>
                       )}
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-mono text-sm">
-                              Ship #{shipId.toString()}
+                          <div className="flex items-center gap-1">
+                            <span className="text-white font-mono text-xs truncate">
+                              {ship?.name || `Ship #${shipId.toString()}`}
                             </span>
                             {movedShipIdsSet.has(shipId) && (
-                              <span className="px-2 py-0.5 bg-gray-600 text-white text-xs rounded font-mono">
+                              <span className="px-1 py-0.5 bg-gray-600 text-white text-xs rounded font-mono">
                                 M
                               </span>
                             )}
@@ -2042,7 +2156,7 @@ Attributes:
                         </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="grid grid-cols-2 gap-1 text-xs">
                       <div>
                         <span className="text-gray-400">Hull:</span>
                         <span className="text-white ml-1">
@@ -2081,8 +2195,8 @@ Attributes:
 
           {/* Joiner Ships */}
           <div>
-            <h4 className="text-red-400 font-mono mb-2">Joiner Fleet</h4>
-            <div className="space-y-2">
+            <h4 className="text-green-400 font-mono mb-3">Joiner Fleet</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {game.joinerActiveShipIds.map((shipId) => {
                 const shipPosition = game.shipPositions.find(
                   (sp) => sp.shipId === shipId
@@ -2095,11 +2209,11 @@ Attributes:
                 return (
                   <div
                     key={shipId.toString()}
-                    className="bg-gray-800 rounded p-3 border border-gray-700"
+                    className="bg-gray-800 rounded p-2 border border-gray-700"
                   >
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-2 mb-2">
                       {ship && (
-                        <div className="w-12 h-12 flex-shrink-0">
+                        <div className="w-32 h-32 flex-shrink-0">
                           <ShipImage
                             ship={ship}
                             className="w-full h-full"
@@ -2107,14 +2221,14 @@ Attributes:
                           />
                         </div>
                       )}
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-mono text-sm">
-                              Ship #{shipId.toString()}
+                          <div className="flex items-center gap-1">
+                            <span className="text-white font-mono text-xs truncate">
+                              {ship?.name || `Ship #${shipId.toString()}`}
                             </span>
                             {movedShipIdsSet.has(shipId) && (
-                              <span className="px-2 py-0.5 bg-gray-600 text-white text-xs rounded font-mono">
+                              <span className="px-1 py-0.5 bg-gray-600 text-white text-xs rounded font-mono">
                                 M
                               </span>
                             )}
@@ -2126,7 +2240,7 @@ Attributes:
                         </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="grid grid-cols-2 gap-1 text-xs">
                       <div>
                         <span className="text-gray-400">Hull:</span>
                         <span className="text-white ml-1">
