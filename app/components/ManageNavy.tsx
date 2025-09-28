@@ -33,6 +33,7 @@ import {
 import { useShipsRead } from "../hooks/useShipsContract";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
+import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
 import { calculateShipRank, getRankColor } from "../utils/shipLevel";
 
 const ManageNavy: React.FC = () => {
@@ -50,6 +51,25 @@ const ManageNavy: React.FC = () => {
     "amountPurchased",
     address ? [address] : undefined
   );
+
+  // Get ship attributes for in-game properties
+  const shipIds = ships.map((ship) => ship.id);
+  const {
+    attributes: shipAttributes,
+    isLoading: attributesLoading,
+    isFromCache,
+  } = useShipAttributesByIds(shipIds);
+
+  // Create a map of ship ID to attributes for quick lookup
+  const attributesMap = React.useMemo(() => {
+    const map = new Map<bigint, (typeof shipAttributes)[0]>();
+    shipIds.forEach((shipId, index) => {
+      if (shipAttributes[index]) {
+        map.set(shipId, shipAttributes[index]);
+      }
+    });
+    return map;
+  }, [shipIds, shipAttributes]);
 
   // Check if user can recycle (minimum 10 purchases required)
   const canRecycle = amountPurchased ? Number(amountPurchased) >= 10 : false;
@@ -132,62 +152,6 @@ const ManageNavy: React.FC = () => {
       }
       return newSet;
     });
-  };
-
-  // Calculate in-game attributes from NFT properties
-  const calculateInGameAttributes = (ship: Ship) => {
-    // This is a simplified calculation - in reality, the game contract would handle this
-    // Based on the contract structure, we can approximate the calculations
-    const baseHull = ship.traits.hull;
-    const baseSpeed = ship.traits.speed;
-    const baseAccuracy = ship.traits.accuracy;
-
-    // Equipment bonuses
-    const weaponDamage =
-      ship.equipment.mainWeapon === 0
-        ? 0
-        : ship.equipment.mainWeapon === 1
-        ? 2
-        : ship.equipment.mainWeapon === 2
-        ? 3
-        : 4;
-
-    const armorReduction =
-      ship.equipment.armor === 0
-        ? 0
-        : ship.equipment.armor === 1
-        ? 10
-        : ship.equipment.armor === 2
-        ? 15
-        : 20;
-
-    const shieldReduction =
-      ship.equipment.shields === 0
-        ? 0
-        : ship.equipment.shields === 1
-        ? 25
-        : ship.equipment.shields === 2
-        ? 35
-        : 45;
-
-    const damageReduction = Math.max(armorReduction, shieldReduction);
-
-    // Calculate final attributes
-    const range = Math.max(1, Math.floor(baseAccuracy / 20) + 1);
-    const gunDamage = weaponDamage;
-    const hullPoints = baseHull;
-    const maxHullPoints = baseHull;
-    const movement = Math.max(1, Math.floor(baseSpeed / 25) + 1);
-
-    return {
-      range,
-      gunDamage,
-      hullPoints,
-      maxHullPoints,
-      movement,
-      damageReduction,
-      reactorCriticalTimer: 0, // Ships start with 0 reactor critical timer
-    };
   };
 
   // Filter and sort ships
@@ -664,6 +628,9 @@ const ManageNavy: React.FC = () => {
               />
               <span className="text-sm font-bold text-cyan-400">
                 IN-GAME PROPERTIES
+                {isFromCache && (
+                  <span className="text-xs text-green-400 ml-1">(cached)</span>
+                )}
               </span>
             </label>
           </div>
@@ -795,7 +762,16 @@ const ManageNavy: React.FC = () => {
                       {showInGameProperties ? (
                         // In-Game Properties
                         (() => {
-                          const inGameAttrs = calculateInGameAttributes(ship);
+                          const inGameAttrs = attributesMap.get(ship.id);
+                          if (!inGameAttrs) {
+                            return (
+                              <div className="col-span-3 text-center text-gray-400 text-xs">
+                                {attributesLoading
+                                  ? "Loading attributes..."
+                                  : "Attributes not available"}
+                              </div>
+                            );
+                          }
                           return (
                             <>
                               <div className="flex justify-between">

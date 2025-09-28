@@ -19,6 +19,7 @@ import { LobbyCreateButton } from "./LobbyCreateButton";
 import { LobbyJoinButton } from "./LobbyJoinButton";
 import { LobbyLeaveButton } from "./LobbyLeaveButton";
 import { useTransaction } from "../providers/TransactionContext";
+import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
 import { calculateShipRank, getRankColor } from "../utils/shipLevel";
 
 const Lobbies: React.FC = () => {
@@ -97,6 +98,28 @@ const Lobbies: React.FC = () => {
     defenseType: "all",
     specialType: "all",
   });
+
+  // In-game properties toggle
+  const [showInGameProperties, setShowInGameProperties] = useState(true);
+
+  // Get ship attributes for in-game properties
+  const shipIds = ships.map((ship) => ship.id);
+  const {
+    attributes: shipAttributes,
+    isLoading: attributesLoading,
+    isFromCache,
+  } = useShipAttributesByIds(shipIds);
+
+  // Create a map of ship ID to attributes for quick lookup
+  const attributesMap = React.useMemo(() => {
+    const map = new Map<bigint, (typeof shipAttributes)[0]>();
+    shipIds.forEach((shipId, index) => {
+      if (shipAttributes[index]) {
+        map.set(shipId, shipAttributes[index]);
+      }
+    });
+    return map;
+  }, [shipIds, shipAttributes]);
 
   const [dragging, setDragging] = useState<{
     type:
@@ -1287,6 +1310,28 @@ const Lobbies: React.FC = () => {
                             <span className="font-medium">Fast (2)</span>
                           </div>
                         </div>
+
+                        {/* In-Game Properties Toggle */}
+                        <div className="col-span-2 md:col-span-3">
+                          <label className="flex items-center gap-2 text-sm text-cyan-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={showInGameProperties}
+                              onChange={(e) =>
+                                setShowInGameProperties(e.target.checked)
+                              }
+                              className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 rounded focus:ring-cyan-400 focus:ring-2"
+                            />
+                            <span className="text-sm font-bold text-cyan-400">
+                              IN-GAME PROPERTIES
+                              {isFromCache && (
+                                <span className="text-xs text-green-400 ml-1">
+                                  (cached)
+                                </span>
+                              )}
+                            </span>
+                          </label>
+                        </div>
                       </div>
 
                       <div className="mt-3 flex justify-between items-center text-xs">
@@ -1418,68 +1463,180 @@ const Lobbies: React.FC = () => {
                           {/* Ship Stats */}
                           {ship.shipData.constructed ? (
                             <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
-                              <div className="flex justify-between">
-                                <span className="opacity-60">Acc:</span>
-                                <span className="ml-2">
-                                  {ship.traits.accuracy}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="opacity-60">Hull:</span>
-                                <span className="ml-2">{ship.traits.hull}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="opacity-60">Speed:</span>
-                                <span className="ml-2">
-                                  {ship.traits.speed}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="opacity-60">Cost:</span>
-                                <span className="ml-2">
-                                  {ship.shipData.cost}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="opacity-60">Wpn:</span>
-                                <span className="ml-2">
-                                  {getMainWeaponName(ship.equipment.mainWeapon)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="opacity-60">
-                                  {ship.equipment.shields > 0 ? "Shd:" : "Arm:"}
-                                </span>
-                                <span className="ml-2">
-                                  {ship.equipment.shields > 0
-                                    ? getShieldName(ship.equipment.shields)
-                                    : getArmorName(ship.equipment.armor)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="opacity-60">Spc:</span>
-                                <span className="ml-2">
-                                  {getSpecialName(ship.equipment.special)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between col-span-2">
-                                <span className="opacity-60">Status:</span>
-                                <span
-                                  className={`ml-2 ${
-                                    ship.shipData.timestampDestroyed > 0n
-                                      ? "text-red-400"
-                                      : ship.shipData.inFleet
-                                      ? "text-orange-400"
-                                      : "text-green-400"
-                                  }`}
-                                >
-                                  {ship.shipData.timestampDestroyed > 0n
-                                    ? "DESTROYED"
-                                    : ship.shipData.inFleet
-                                    ? "IN FLEET"
-                                    : "READY"}
-                                </span>
-                              </div>
+                              {showInGameProperties ? (
+                                // In-Game Properties
+                                (() => {
+                                  const inGameAttrs = attributesMap.get(
+                                    ship.id
+                                  );
+                                  if (!inGameAttrs) {
+                                    return (
+                                      <div className="col-span-2 text-center text-gray-400 text-xs">
+                                        {attributesLoading
+                                          ? "Loading attributes..."
+                                          : "Attributes not available"}
+                                      </div>
+                                    );
+                                  }
+
+                                  return (
+                                    <>
+                                      <div className="flex justify-between">
+                                        <span className="opacity-60">
+                                          Range:
+                                        </span>
+                                        <span className="ml-2">
+                                          {inGameAttrs.range}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="opacity-60">
+                                          Damage:
+                                        </span>
+                                        <span className="ml-2">
+                                          {inGameAttrs.gunDamage}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="opacity-60">
+                                          Hull:
+                                        </span>
+                                        <span className="ml-2">
+                                          {inGameAttrs.hullPoints}/
+                                          {inGameAttrs.maxHullPoints}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="opacity-60">
+                                          Move:
+                                        </span>
+                                        <span className="ml-2">
+                                          {inGameAttrs.movement}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="opacity-60">
+                                          Armor:
+                                        </span>
+                                        <span className="ml-2">
+                                          {inGameAttrs.damageReduction}%
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="opacity-60">
+                                          Special:
+                                        </span>
+                                        <span className="ml-2">
+                                          {getSpecialName(
+                                            ship.equipment.special
+                                          )}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="opacity-60">
+                                          Cost:
+                                        </span>
+                                        <span className="ml-2">
+                                          {ship.shipData.cost}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between col-span-2">
+                                        <span className="opacity-60">
+                                          Status:
+                                        </span>
+                                        <span
+                                          className={`ml-2 ${
+                                            ship.shipData.timestampDestroyed >
+                                            0n
+                                              ? "text-red-400"
+                                              : ship.shipData.inFleet
+                                              ? "text-orange-400"
+                                              : "text-green-400"
+                                          }`}
+                                        >
+                                          {ship.shipData.timestampDestroyed > 0n
+                                            ? "DESTROYED"
+                                            : ship.shipData.inFleet
+                                            ? "IN FLEET"
+                                            : "READY"}
+                                        </span>
+                                      </div>
+                                    </>
+                                  );
+                                })()
+                              ) : (
+                                // NFT Properties (original)
+                                <>
+                                  <div className="flex justify-between">
+                                    <span className="opacity-60">Acc:</span>
+                                    <span className="ml-2">
+                                      {ship.traits.accuracy}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="opacity-60">Hull:</span>
+                                    <span className="ml-2">
+                                      {ship.traits.hull}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="opacity-60">Speed:</span>
+                                    <span className="ml-2">
+                                      {ship.traits.speed}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="opacity-60">Cost:</span>
+                                    <span className="ml-2">
+                                      {ship.shipData.cost}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="opacity-60">Wpn:</span>
+                                    <span className="ml-2">
+                                      {getMainWeaponName(
+                                        ship.equipment.mainWeapon
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="opacity-60">
+                                      {ship.equipment.shields > 0
+                                        ? "Shd:"
+                                        : "Arm:"}
+                                    </span>
+                                    <span className="ml-2">
+                                      {ship.equipment.shields > 0
+                                        ? getShieldName(ship.equipment.shields)
+                                        : getArmorName(ship.equipment.armor)}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="opacity-60">Spc:</span>
+                                    <span className="ml-2">
+                                      {getSpecialName(ship.equipment.special)}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between col-span-2">
+                                    <span className="opacity-60">Status:</span>
+                                    <span
+                                      className={`ml-2 ${
+                                        ship.shipData.timestampDestroyed > 0n
+                                          ? "text-red-400"
+                                          : ship.shipData.inFleet
+                                          ? "text-orange-400"
+                                          : "text-green-400"
+                                      }`}
+                                    >
+                                      {ship.shipData.timestampDestroyed > 0n
+                                        ? "DESTROYED"
+                                        : ship.shipData.inFleet
+                                        ? "IN FLEET"
+                                        : "READY"}
+                                    </span>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           ) : (
                             <div className="text-center text-yellow-400 text-sm">

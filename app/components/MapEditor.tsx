@@ -18,9 +18,15 @@ interface MapEditorProps {
   mapId?: number;
   onSave?: () => void;
   onCancel?: () => void;
+  canEdit?: boolean;
 }
 
-export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
+export function MapEditor({
+  mapId,
+  onSave,
+  onCancel,
+  canEdit = true,
+}: MapEditorProps) {
   const isEditing = mapId !== undefined;
 
   // Load map data when editing
@@ -35,11 +41,20 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
         const saved = localStorage.getItem("mapEditorState");
         if (saved) {
           const parsed = JSON.parse(saved);
-          // Validate the structure before using it
+          // Validate the structure and dimensions before using it
           if (
             parsed.blockedTiles &&
             parsed.scoringTiles &&
-            parsed.onlyOnceTiles
+            parsed.onlyOnceTiles &&
+            Array.isArray(parsed.blockedTiles) &&
+            Array.isArray(parsed.scoringTiles) &&
+            Array.isArray(parsed.onlyOnceTiles) &&
+            parsed.blockedTiles.length === GRID_DIMENSIONS.HEIGHT &&
+            parsed.blockedTiles[0]?.length === GRID_DIMENSIONS.WIDTH &&
+            parsed.scoringTiles.length === GRID_DIMENSIONS.HEIGHT &&
+            parsed.scoringTiles[0]?.length === GRID_DIMENSIONS.WIDTH &&
+            parsed.onlyOnceTiles.length === GRID_DIMENSIONS.HEIGHT &&
+            parsed.onlyOnceTiles[0]?.length === GRID_DIMENSIONS.WIDTH
           ) {
             return {
               blockedTiles: parsed.blockedTiles,
@@ -50,6 +65,12 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
               selectedOnlyOnce: parsed.selectedOnlyOnce || false,
               symmetryMode: parsed.symmetryMode || "none",
             };
+          } else {
+            // Clear invalid cached data
+            localStorage.removeItem("mapEditorState");
+            console.log(
+              "Cleared invalid map editor cache due to dimension mismatch"
+            );
           }
         }
       } catch (error) {
@@ -57,6 +78,8 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
           "Failed to load map editor state from localStorage:",
           error
         );
+        // Clear corrupted cache
+        localStorage.removeItem("mapEditorState");
       }
     }
 
@@ -187,6 +210,11 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
   // Handle tile click
   const handleTileClick = useCallback(
     (row: number, col: number) => {
+      // Don't allow editing if not authorized
+      if (!canEdit) {
+        return;
+      }
+
       console.log(
         `Tile clicked: row=${row}, col=${col}, tool=${editorState.selectedTool}`
       );
@@ -249,12 +277,17 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
         };
       });
     },
-    [editorState.selectedTool, getRadialSymmetryPositions]
+    [editorState.selectedTool, getRadialSymmetryPositions, canEdit]
   );
 
   // Handle tile mouse down for drag start
   const handleTileMouseDown = useCallback(
     (e: React.MouseEvent, row: number, col: number) => {
+      // Don't allow editing if not authorized
+      if (!canEdit) {
+        return;
+      }
+
       e.preventDefault();
       if (editorState.selectedTool === "block") {
         setIsDragging(true);
@@ -286,12 +319,17 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
       }
       // For non-block tools, don't do anything here - let onClick handle it
     },
-    [editorState.selectedTool, getRadialSymmetryPositions]
+    [editorState.selectedTool, getRadialSymmetryPositions, canEdit]
   );
 
   // Handle tile mouse enter for drag painting
   const handleTileMouseEnter = useCallback(
     (row: number, col: number) => {
+      // Don't allow editing if not authorized
+      if (!canEdit) {
+        return;
+      }
+
       if (isDragging && dragTool === "block") {
         setEditorState((prev) => {
           // Create deep copy of the arrays
@@ -320,7 +358,7 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
         });
       }
     },
-    [isDragging, dragTool, getRadialSymmetryPositions]
+    [isDragging, dragTool, getRadialSymmetryPositions, canEdit]
   );
 
   // Handle mouse up to stop dragging
@@ -356,6 +394,11 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
   // Handle tile right-click for blocking
   const handleTileRightClick = useCallback(
     (e: React.MouseEvent, row: number, col: number) => {
+      // Don't allow editing if not authorized
+      if (!canEdit) {
+        return;
+      }
+
       e.preventDefault();
       console.log(`Tile right-clicked: row=${row}, col=${col}`);
       setEditorState((prev) => {
@@ -373,7 +416,7 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
         };
       });
     },
-    []
+    [canEdit]
   );
 
   // Convert editor state to contract format
@@ -567,6 +610,19 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
 
   // Get tile class based on state
   const getTileClass = (row: number, col: number) => {
+    // Bounds checking to prevent errors
+    if (
+      row < 0 ||
+      row >= GRID_DIMENSIONS.HEIGHT ||
+      col < 0 ||
+      col >= GRID_DIMENSIONS.WIDTH ||
+      !editorState.blockedTiles[row] ||
+      !editorState.scoringTiles[row] ||
+      !editorState.onlyOnceTiles[row]
+    ) {
+      return "w-full h-full cursor-pointer hover:border-white transition-colors border border-gray-600 bg-gray-900";
+    }
+
     const isBlocked = editorState.blockedTiles[row][col];
     const scoreValue = editorState.scoringTiles[row][col];
     const isOnlyOnce = editorState.onlyOnceTiles[row][col];
@@ -605,6 +661,19 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
 
   return (
     <div className="w-full space-y-4">
+      {/* Authorization Notice */}
+      {!canEdit && (
+        <div className="p-4 bg-yellow-900/20 border border-yellow-400/30 rounded-lg">
+          <div className="flex items-center gap-2 text-yellow-400">
+            <span className="text-lg">⚠️</span>
+            <span className="font-mono text-sm">
+              READ-ONLY MODE: You are not authorized to edit maps. Only
+              authorized addresses can modify maps.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-wrap gap-4 p-4 bg-gray-800 rounded-lg">
         <div className="flex gap-2">
@@ -612,8 +681,11 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
             onClick={() =>
               setEditorState((prev) => ({ ...prev, selectedTool: "score" }))
             }
+            disabled={!canEdit}
             className={`px-3 py-2 rounded text-sm font-mono ${
-              editorState.selectedTool === "score"
+              !canEdit
+                ? "bg-gray-500 text-gray-400 cursor-not-allowed"
+                : editorState.selectedTool === "score"
                 ? "bg-gray-600 text-white"
                 : "bg-gray-700 text-gray-300 hover:bg-gray-600"
             }`}
@@ -624,8 +696,11 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
             onClick={() =>
               setEditorState((prev) => ({ ...prev, selectedTool: "block" }))
             }
+            disabled={!canEdit}
             className={`px-3 py-2 rounded text-sm font-mono ${
-              editorState.selectedTool === "block"
+              !canEdit
+                ? "bg-gray-500 text-gray-400 cursor-not-allowed"
+                : editorState.selectedTool === "block"
                 ? "bg-gray-600 text-white"
                 : "bg-gray-700 text-gray-300 hover:bg-gray-600"
             }`}
@@ -636,8 +711,11 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
             onClick={() =>
               setEditorState((prev) => ({ ...prev, selectedTool: "erase" }))
             }
+            disabled={!canEdit}
             className={`px-3 py-2 rounded text-sm font-mono ${
-              editorState.selectedTool === "erase"
+              !canEdit
+                ? "bg-gray-500 text-gray-400 cursor-not-allowed"
+                : editorState.selectedTool === "erase"
                 ? "bg-gray-600 text-white"
                 : "bg-gray-700 text-gray-300 hover:bg-gray-600"
             }`}
@@ -656,8 +734,11 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
                   prev.symmetryMode === "radial" ? "none" : "radial",
               }))
             }
+            disabled={!canEdit}
             className={`px-3 py-2 rounded text-sm font-mono ${
-              editorState.symmetryMode === "radial"
+              !canEdit
+                ? "bg-gray-500 text-gray-400 cursor-not-allowed"
+                : editorState.symmetryMode === "radial"
                 ? "bg-purple-600 text-white"
                 : "bg-gray-700 text-gray-300 hover:bg-gray-600"
             }`}
@@ -682,7 +763,12 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
                 ),
               }))
             }
-            className="w-16 px-2 py-1 bg-gray-700 text-white rounded text-sm"
+            disabled={!canEdit}
+            className={`w-16 px-2 py-1 rounded text-sm ${
+              !canEdit
+                ? "bg-gray-500 text-gray-400 cursor-not-allowed"
+                : "bg-gray-700 text-white"
+            }`}
           />
           <label className="flex items-center gap-1 text-sm text-gray-300">
             <input
@@ -694,7 +780,8 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
                   selectedOnlyOnce: e.target.checked,
                 }))
               }
-              className="rounded"
+              disabled={!canEdit}
+              className={`rounded ${!canEdit ? "cursor-not-allowed" : ""}`}
             />
             Once only
           </label>
@@ -702,7 +789,12 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
 
         <button
           onClick={clearAll}
-          className="px-3 py-2 bg-red-600 text-white rounded text-sm font-mono hover:bg-red-700"
+          disabled={!canEdit}
+          className={`px-3 py-2 rounded text-sm font-mono ${
+            !canEdit
+              ? "bg-gray-500 text-gray-400 cursor-not-allowed"
+              : "bg-red-600 text-white hover:bg-red-700"
+          }`}
         >
           Clear All
         </button>
@@ -799,10 +891,11 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
           style={{
             gridTemplateColumns: `repeat(${GRID_DIMENSIONS.WIDTH}, 1fr)`,
             gridTemplateRows: `repeat(${GRID_DIMENSIONS.HEIGHT}, 1fr)`,
-            width: "min(95vw, 1800px)",
-            height: "min(47.5vw, 900px)",
-            minWidth: "1200px",
-            minHeight: "600px",
+            width: "100%",
+            height: "100vw",
+            maxWidth: "1800px",
+            maxHeight: "1200px",
+            aspectRatio: "3 / 2",
           }}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
@@ -848,10 +941,11 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
             left: "50%",
             top: "4px",
             transform: "translateX(-50%)",
-            width: "min(95vw, 1800px)",
-            height: "min(47.5vw, 900px)",
-            minWidth: "1200px",
-            minHeight: "600px",
+            width: "100%",
+            height: "100vw",
+            maxWidth: "1800px",
+            maxHeight: "1200px",
+            aspectRatio: "3 / 2",
           }}
         >
           {/* Vertical reference lines every 5 columns */}
@@ -945,7 +1039,12 @@ export function MapEditor({ mapId, onSave, onCancel }: MapEditorProps) {
           args={getTransactionData().args}
           onSuccess={handleTransactionSuccess}
           validateBeforeTransaction={validateBeforeTransaction}
-          className="px-4 py-2 bg-green-600 text-white rounded font-mono hover:bg-green-700"
+          disabled={!canEdit}
+          className={`px-4 py-2 rounded font-mono ${
+            !canEdit
+              ? "bg-gray-500 text-gray-400 cursor-not-allowed"
+              : "bg-green-600 text-white hover:bg-green-700"
+          }`}
         >
           {isEditing ? "Update Map" : "Create Map"}
         </TransactionButton>

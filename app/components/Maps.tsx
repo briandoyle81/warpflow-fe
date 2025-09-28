@@ -47,6 +47,13 @@ export default function Maps() {
   };
 
   const handleEditMap = (mapId: number) => {
+    // Check if user is authorized to edit maps
+    if (!canCreateMaps) {
+      alert(
+        "You are not authorized to edit maps. Only authorized addresses can edit maps."
+      );
+      return;
+    }
     setEditingMapId(mapId);
     setShowEditor(true);
   };
@@ -81,6 +88,7 @@ export default function Maps() {
           mapId={editingMapId}
           onSave={handleEditorSave}
           onCancel={handleEditorCancel}
+          canEdit={canCreateMaps}
         />
       </div>
     );

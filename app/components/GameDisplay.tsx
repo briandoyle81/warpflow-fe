@@ -91,7 +91,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   }, [gameData, initialGame]);
 
   // Grid dimensions from the contract
-  const GRID_WIDTH = 40;
+  const GRID_WIDTH = 30;
   const GRID_HEIGHT = 20;
 
   // Get game map state directly from the Maps contract
