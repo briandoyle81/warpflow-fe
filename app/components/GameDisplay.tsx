@@ -1056,7 +1056,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               "0x0000000000000000000000000000000000000000" && (
               <div className="text-sm text-gray-400">
                 <span className={isMyTurn ? "text-blue-400" : "text-red-400"}>
-                  {isMyTurn ? "YOUR TURN" : "OPPONENT&apos;S TURN"}
+                  {isMyTurn ? "YOUR TURN" : "OPPONENT" + "'" + "S TURN"}
                 </span>
               </div>
             )}
@@ -1206,9 +1206,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               gridTemplateColumns: `repeat(${GRID_WIDTH}, 1fr)`,
               gridTemplateRows: `repeat(${GRID_HEIGHT}, 1fr)`,
               width: "min(95vw, 1800px)",
-              height: "min(47.5vw, 900px)", // 20/40 * width for aspect ratio
+              height: "min(63.33vw, 1200px)", // 20/30 * width for 30x20 aspect ratio
               minWidth: "1200px",
-              minHeight: "600px",
+              minHeight: "800px",
             }}
           >
             {grid.map((row, rowIndex) =>
@@ -1223,6 +1223,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 );
                 const isCurrentPlayerTurn =
                   game.turnState.currentTurn === address;
+
+                // Check if this ship has already moved this round
+                const hasShipMoved = cell && movedShipIdsSet.has(cell.shipId);
 
                 // Check if this cell contains a valid target
                 const isValidTarget =
@@ -1344,6 +1347,16 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       setPreviewPosition(null);
                       setTargetShipId(null);
                     } else {
+                      // Check if this is the current player's turn and they're trying to select a moved ship
+                      if (
+                        isCurrentPlayerTurn &&
+                        isShipOwnedByCurrentPlayer(cell.shipId) &&
+                        movedShipIdsSet.has(cell.shipId)
+                      ) {
+                        // Don't allow selecting ships that have already moved this round
+                        return;
+                      }
+
                       // Allow selecting any ship (for viewing stats/range)
                       setSelectedShipId(cell.shipId);
                       setTargetShipId(null);
@@ -1393,6 +1406,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         ? canMoveShip
                           ? "bg-blue-900 ring-2 ring-blue-400"
                           : "bg-purple-900 ring-2 ring-purple-400"
+                        : hasShipMoved &&
+                          isCurrentPlayerTurn &&
+                          isShipOwnedByCurrentPlayer(cell.shipId)
+                        ? "bg-gray-700 opacity-60 cursor-not-allowed"
                         : isSelectedTarget
                         ? (() => {
                             // Check if this is an assist action
@@ -1444,6 +1461,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 🚨 CRITICAL: This ship will be destroyed at the end of the round unless healed or assisted to flee!`
                                 : "";
 
+                            const movedWarning =
+                              hasShipMoved &&
+                              isCurrentPlayerTurn &&
+                              isShipOwnedByCurrentPlayer(cell.shipId)
+                                ? `
+⚠️ This ship has already moved this round and cannot be selected for moves!`
+                                : "";
+
                             return `${shipName} (${
                               cell.isCreator ===
                               (address === game.metadata.creator)
@@ -1451,7 +1476,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                                 : "Enemy Fleet"
                             }) ${
                               isSelected ? "(Selected)" : ""
-                            }${criticalWarning}
+                            }${criticalWarning}${movedWarning}
 ${
   attributes
     ? `
@@ -2134,10 +2159,12 @@ Attributes:
                       );
                     } else if (errorMessage.includes("execution reverted")) {
                       toast.error(
-                        "Transaction reverted - check if it&apos;s your turn and ship is valid"
+                        "Transaction reverted - check if it" +
+                          "'" +
+                          "s your turn and ship is valid"
                       );
                     } else if (errorMessage.includes("NotYourTurn")) {
-                      toast.error("It&apos;s not your turn to move");
+                      toast.error("It" + "'" + "s not your turn to move");
                     } else if (errorMessage.includes("ShipNotFound")) {
                       toast.error("Ship not found in this game");
                     } else if (errorMessage.includes("InvalidMove")) {
@@ -2159,6 +2186,9 @@ Attributes:
                     }
                     if (!isShipOwnedByCurrentPlayer(selectedShipId)) {
                       return "You can only move your own ships";
+                    }
+                    if (movedShipIdsSet.has(selectedShipId)) {
+                      return "This ship has already moved this round";
                     }
                     if (previewPosition) {
                       if (
@@ -2339,10 +2369,10 @@ Attributes:
             </div>
           </div>
 
-          {/* Opponent&apos;s Fleet - Always on the right */}
+          {/* Opponent's Fleet - Always on the right */}
           <div>
             <h4 className="text-red-400 font-mono mb-3">
-              Opponent&apos;s Fleet
+              {"Opponent" + "'" + "s Fleet"}
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(game.metadata.creator === address
