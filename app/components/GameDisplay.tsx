@@ -1198,17 +1198,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         <h3 className="text-white font-mono mb-4">Battle Map</h3>
 
         {/* Map Grid */}
-        <div className="w-full flex justify-center">
+        <div className="w-full px-2">
           <div
             key="game-grid"
             className="grid gap-0 border border-gray-900"
             style={{
               gridTemplateColumns: `repeat(${GRID_WIDTH}, 1fr)`,
               gridTemplateRows: `repeat(${GRID_HEIGHT}, 1fr)`,
-              width: "min(95vw, 1800px)",
-              height: "min(63.33vw, 1200px)", // 20/30 * width for 30x20 aspect ratio
-              minWidth: "1200px",
-              minHeight: "800px",
+              width: "100%",
+              aspectRatio: "3 / 2",
             }}
           >
             {grid.map((row, rowIndex) =>
@@ -2290,7 +2288,7 @@ Attributes:
                   >
                     <div className="flex items-center gap-2 mb-2">
                       {ship && (
-                        <div className="w-32 h-32 flex-shrink-0">
+                        <div className="w-64 h-64 flex-shrink-0">
                           <ShipImage
                             ship={ship}
                             className="w-full h-full"
@@ -2401,7 +2399,7 @@ Attributes:
                   >
                     <div className="flex items-center gap-2 mb-2">
                       {ship && (
-                        <div className="w-32 h-32 flex-shrink-0">
+                        <div className="w-64 h-64 flex-shrink-0">
                           <ShipImage
                             ship={ship}
                             className="w-full h-full"

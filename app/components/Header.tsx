@@ -74,7 +74,7 @@ const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between py-2 gap-4">
           {/* Left side - Logo and Title */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex flex-col items-start gap-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="relative">
                 <h1 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 tracking-wider">
@@ -89,10 +89,19 @@ const Header: React.FC = () => {
                   </span>
                   <div className="absolute inset-0 bg-amber-400/10 animate-pulse"></div>
                 </div>
-                <div className="border border-purple-400 bg-black/40 rounded-lg p-2">
-                  <MusicPlayer />
-                </div>
               </div>
+            </div>
+            <div className="relative ml-0">
+              <span className="text-sm font-mono font-bold text-red-400 tracking-wider px-2 py-1 border border-red-400 bg-black/30">
+                In active development, ships and games will be lost
+              </span>
+              <div className="absolute inset-0 bg-red-400/10 animate-pulse"></div>
+            </div>
+          </div>
+          {/* Center section - Player Controls */}
+          <div className="flex-1 flex justify-center items-center">
+            <div className="border border-purple-400 bg-black/40 rounded-lg p-2">
+              <MusicPlayer />
             </div>
           </div>
 
