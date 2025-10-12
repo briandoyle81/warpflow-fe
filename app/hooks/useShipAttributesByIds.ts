@@ -14,13 +14,17 @@ const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
 
 export function useShipAttributesByIds(shipIds: bigint[]) {
   // Convert shipIds to strings for caching
-  const shipIdsString = shipIds
-    .map((id) => id.toString())
-    .sort()
-    .join(",");
+  const shipIdsString = React.useMemo(
+    () =>
+      shipIds
+        .map((id) => id.toString())
+        .sort()
+        .join(","),
+    [shipIds]
+  );
 
-  // Check cache first
-  const getCachedData = (): Attributes[] | null => {
+  // Check cache first - memoized to prevent repeated calls
+  const getCachedData = React.useCallback((): Attributes[] | null => {
     if (typeof window === "undefined") return null;
 
     try {
@@ -47,10 +51,10 @@ export function useShipAttributesByIds(shipIds: bigint[]) {
       localStorage.removeItem(CACHE_KEY);
       return null;
     }
-  };
+  }, [shipIdsString]);
 
   // Get cached data
-  const cachedData = getCachedData();
+  const cachedData = React.useMemo(() => getCachedData(), [getCachedData]);
 
   // Only call contract if we don't have valid cached data
   const shouldCallContract = !cachedData && shipIds.length > 0;

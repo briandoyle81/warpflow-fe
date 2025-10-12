@@ -91,8 +91,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   }, [gameData, initialGame]);
 
   // Grid dimensions from the contract
-  const GRID_WIDTH = 30;
-  const GRID_HEIGHT = 20;
+  const GRID_WIDTH = 25;
+  const GRID_HEIGHT = 13;
 
   // Get game map state directly from the Maps contract
   const { data: gameMapState, isLoading: mapLoading } = useGetGameMapState(
@@ -1201,13 +1201,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         <div className="w-full px-2">
           <div
             key="game-grid"
-            className="grid gap-0 border border-gray-900"
-            style={{
-              gridTemplateColumns: `repeat(${GRID_WIDTH}, 1fr)`,
-              gridTemplateRows: `repeat(${GRID_HEIGHT}, 1fr)`,
-              width: "100%",
-              aspectRatio: "3 / 2",
-            }}
+            className="grid gap-0 border border-gray-900 grid-cols-[repeat(25,1fr)] grid-rows-[repeat(13,1fr)] w-full"
           >
             {grid.map((row, rowIndex) =>
               row.map((cell, colIndex) => {
@@ -1399,7 +1393,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 return (
                   <div
                     key={`cell-${rowIndex}-${colIndex}`}
-                    className={`w-full h-full border border-gray-900 relative cursor-pointer ${
+                    className={`w-full h-full aspect-square border-0 outline outline-1 outline-gray-900 relative cursor-pointer ${
                       isSelected
                         ? canMoveShip
                           ? "bg-blue-900 ring-2 ring-blue-400"

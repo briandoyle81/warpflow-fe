@@ -21,6 +21,7 @@ import { LobbyLeaveButton } from "./LobbyLeaveButton";
 import { useTransaction } from "../providers/TransactionContext";
 import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
 import { calculateShipRank, getRankColor } from "../utils/shipLevel";
+import { MapDisplay } from "./MapDisplay";
 
 const Lobbies: React.FC = () => {
   const { address, isConnected, status } = useAccount();
@@ -60,6 +61,9 @@ const Lobbies: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedLobby, setSelectedLobby] = useState<bigint | null>(null);
   const [selectedShips, setSelectedShips] = useState<bigint[]>([]);
+  const [shipPositions, setShipPositions] = useState<
+    Array<{ shipId: bigint; row: number; col: number }>
+  >([]);
   const [showFleetConfirmation, setShowFleetConfirmation] = useState(false);
   const [isCreatingFleet, setIsCreatingFleet] = useState(false);
   const [showFleetView, setShowFleetView] = useState(false);
@@ -103,7 +107,80 @@ const Lobbies: React.FC = () => {
   const [showInGameProperties, setShowInGameProperties] = useState(true);
 
   // Get ship attributes for in-game properties
-  const shipIds = ships.map((ship) => ship.id);
+  const shipIds = React.useMemo(() => ships.map((ship) => ship.id), [ships]);
+
+  // Helper function to find next available position for a ship
+  const findNextPosition = (
+    isCreator: boolean,
+    existingPositions: Array<{ row: number; col: number }>
+  ) => {
+    if (isCreator) {
+      // Creator ships start in upper left (rows 0-12, cols 0-4)
+      // Find the next available position in order: (0,0), (1,0), (2,0), ..., (12,0), (0,1), (1,1), etc.
+      for (let col = 0; col < 5; col++) {
+        for (let row = 0; row < 13; row++) {
+          if (
+            !existingPositions.some((pos) => pos.row === row && pos.col === col)
+          ) {
+            return { row, col };
+          }
+        }
+      }
+    } else {
+      // Joiner ships start in lower right (rows 0-12, cols 20-24)
+      // Find the next available position in order: (12,24), (11,24), (10,24), ..., (0,24), (12,23), etc.
+      for (let col = 24; col >= 20; col--) {
+        for (let row = 12; row >= 0; row--) {
+          if (
+            !existingPositions.some((pos) => pos.row === row && pos.col === col)
+          ) {
+            return { row, col };
+          }
+        }
+      }
+    }
+    return null; // No available position
+  };
+
+  // Function to add ship to fleet with position
+  const addShipToFleet = (shipId: bigint) => {
+    const currentLobby = lobbyList.lobbies.find(
+      (lobby) => lobby.basic.id === selectedLobby
+    );
+    if (!currentLobby) return;
+
+    const isCreator = currentLobby.basic.creator === address;
+    const existingPositions = shipPositions.map((pos) => ({
+      row: pos.row,
+      col: pos.col,
+    }));
+
+    console.log("Adding ship to fleet:", {
+      shipId: shipId.toString(),
+      isCreator,
+      existingPositions,
+      address,
+      creator: currentLobby.basic.creator,
+    });
+
+    const position = findNextPosition(isCreator, existingPositions);
+
+    console.log("Found position:", position);
+
+    if (position) {
+      setSelectedShips((prev) => [...prev, shipId]);
+      setShipPositions((prev) => [
+        ...prev,
+        { shipId, row: position.row, col: position.col },
+      ]);
+    }
+  };
+
+  // Function to remove ship from fleet
+  const removeShipFromFleet = (shipId: bigint) => {
+    setSelectedShips((prev) => prev.filter((id) => id !== shipId));
+    setShipPositions((prev) => prev.filter((pos) => pos.shipId !== shipId));
+  };
   const {
     attributes: shipAttributes,
     isLoading: attributesLoading,
@@ -338,8 +415,15 @@ const Lobbies: React.FC = () => {
 
     setIsCreatingFleet(true);
     try {
-      await createFleet(lobbyId, selectedShips);
+      // Convert shipPositions to the format expected by the contract
+      const startingPositions = shipPositions.map((pos) => ({
+        row: pos.row,
+        col: pos.col,
+      }));
+
+      await createFleet(lobbyId, selectedShips, startingPositions);
       setSelectedShips([]);
+      setShipPositions([]);
       setSelectedLobby(null);
       setShowFleetConfirmation(false);
     } catch (error) {
@@ -994,19 +1078,67 @@ const Lobbies: React.FC = () => {
 
           return (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-              <div className="bg-black border border-cyan-400 rounded-lg p-6 max-w-6xl w-full mx-4 h-[90vh] flex flex-col">
+              <div className="bg-black border border-cyan-400 rounded-lg p-6 w-[100vw] h-[100vh] flex flex-col">
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="text-lg font-bold text-cyan-400">
                     SELECT FLEET
                   </h4>
-                  <div
-                    className={`text-lg font-bold px-3 py-1 rounded ${
-                      isOverLimit
-                        ? "text-red-400 bg-red-400/20 border border-red-400/30"
-                        : "text-green-400 bg-green-400/20 border border-green-400/30"
-                    }`}
-                  >
-                    {totalCost}/{costLimit}
+                  <div className="flex items-center gap-3">
+                    {/* Debug Info */}
+                    <div className="text-xs text-gray-400">
+                      Ships:{" "}
+                      {selectedShips.map((id) => id.toString()).join(", ")} |
+                      Positions:{" "}
+                      {shipPositions
+                        .map((pos) => `(${pos.row},${pos.col})`)
+                        .join(", ")}
+                    </div>
+                    {/* Filter Button */}
+                    <button
+                      onClick={() => setFiltersExpanded(!filtersExpanded)}
+                      className="px-2 py-1 text-xs font-bold text-cyan-400 border border-cyan-400 rounded hover:text-cyan-300 hover:border-cyan-300 transition-colors"
+                    >
+                      FILTERS ▼
+                    </button>
+                    {/* Total Points Display */}
+                    <div
+                      className={`text-lg font-bold px-3 py-1 rounded ${
+                        isOverLimit
+                          ? "text-red-400 bg-red-400/20 border border-red-400/30"
+                          : "text-green-400 bg-green-400/20 border border-green-400/30"
+                      }`}
+                    >
+                      {totalCost}/{costLimit}
+                    </div>
+                    {/* Close Button */}
+                    <button
+                      onClick={() => {
+                        setSelectedLobby(null);
+                        setSelectedShips([]);
+                        setShipPositions([]);
+                        setFiltersExpanded(false);
+                        setShowFleetConfirmation(false);
+                        setFleetFilters({
+                          showShiny: true,
+                          showCommon: true,
+                          showUnavailable: false,
+                          minCost: 0,
+                          maxCost: 10000,
+                          minAccuracy: 0,
+                          maxAccuracy: 2,
+                          minHull: 0,
+                          maxHull: 2,
+                          minSpeed: 0,
+                          maxSpeed: 2,
+                          weaponType: "all",
+                          defenseType: "all",
+                          specialType: "all",
+                        });
+                      }}
+                      className="px-3 py-1 text-sm font-bold text-red-400 border border-red-400 rounded hover:text-red-300 hover:border-red-300 transition-colors"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
                 <p className="text-sm text-yellow-400 mb-4">
@@ -1014,23 +1146,27 @@ const Lobbies: React.FC = () => {
                   game!
                 </p>
 
-                {/* Filter Controls */}
-                <div className="mb-4 p-4 bg-black/40 border border-gray-600 rounded-lg">
-                  <button
-                    onClick={() => setFiltersExpanded(!filtersExpanded)}
-                    className="flex items-center justify-between w-full text-sm font-bold text-cyan-400 mb-3 hover:text-cyan-300 transition-colors"
+                {/* Filter Overlay */}
+                {filtersExpanded && (
+                  <div
+                    className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]"
+                    onClick={() => setFiltersExpanded(false)}
                   >
-                    <span>FILTERS</span>
-                    <span
-                      className={`transform transition-transform duration-200 ${
-                        filtersExpanded ? "rotate-180" : ""
-                      }`}
+                    <div
+                      className="bg-black border border-cyan-400 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      ▼
-                    </span>
-                  </button>
-                  {filtersExpanded && (
-                    <>
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold text-cyan-400">
+                          FILTERS
+                        </h3>
+                        <button
+                          onClick={() => setFiltersExpanded(false)}
+                          className="text-gray-400 hover:text-white text-xl"
+                        >
+                          ×
+                        </button>
+                      </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                         {/* Rarity Filters */}
                         <div>
@@ -1362,139 +1498,219 @@ const Lobbies: React.FC = () => {
                           Reset Filters
                         </button>
                       </div>
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                )}
 
                 {shipsLoading ? (
                   <div className="text-center text-gray-400 flex-1 flex items-center justify-center">
                     Loading ships...
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 flex-1 overflow-y-auto content-start">
-                    {filteredShips
-                      .sort((a, b) => {
-                        // Selected ships first
-                        const aSelected = selectedShips.includes(a.id);
-                        const bSelected = selectedShips.includes(b.id);
+                  <div className="flex gap-4 flex-1">
+                    {/* Ship Selection Grid - 1/5 width */}
+                    <div className="w-1/5 h-full">
+                      <div className="grid grid-cols-1 gap-4 mb-6 overflow-y-auto content-start max-h-[80vh]">
+                        {filteredShips
+                          .sort((a, b) => {
+                            // Selected ships first
+                            const aSelected = selectedShips.includes(a.id);
+                            const bSelected = selectedShips.includes(b.id);
 
-                        if (aSelected && !bSelected) return -1;
-                        if (!aSelected && bSelected) return 1;
+                            if (aSelected && !bSelected) return -1;
+                            if (!aSelected && bSelected) return 1;
 
-                        // Within each group, sort by ship ID
-                        return Number(a.id - b.id);
-                      })
-                      .map((ship) => (
-                        <div
-                          key={ship.id.toString()}
-                          className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 self-start ${
-                            selectedShips.includes(ship.id)
-                              ? "border-green-400 bg-green-400/20"
-                              : ship.shipData.timestampDestroyed > 0n
-                              ? "border-red-400 bg-black/60 opacity-50 cursor-not-allowed"
-                              : ship.shipData.inFleet
-                              ? "border-orange-400 bg-orange-400/20 opacity-50 cursor-not-allowed"
-                              : ship.shipData.constructed
-                              ? "border-gray-400 bg-black/40 hover:border-cyan-400 hover:bg-cyan-400/10"
-                              : "border-gray-400 bg-black/60 opacity-50 cursor-not-allowed"
-                          }`}
-                          onClick={() => {
-                            // Don't allow selection of destroyed, unconstructed, or ships already in a fleet
-                            if (
-                              ship.shipData.timestampDestroyed > 0n ||
-                              !ship.shipData.constructed ||
-                              ship.shipData.inFleet
-                            ) {
-                              return;
-                            }
-
-                            if (selectedShips.includes(ship.id)) {
-                              setSelectedShips((prev) =>
-                                prev.filter((id) => id !== ship.id)
-                              );
-                            } else {
-                              setSelectedShips((prev) => [...prev, ship.id]);
-                            }
-                          }}
-                        >
-                          {/* Ship Image */}
-                          <div className="mb-3">
-                            <ShipImage
-                              key={`${ship.id.toString()}-${
-                                ship.shipData.constructed
-                                  ? "constructed"
-                                  : "unconstructed"
+                            // Within each group, sort by ship ID
+                            return Number(a.id - b.id);
+                          })
+                          .map((ship) => (
+                            <div
+                              key={ship.id.toString()}
+                              className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 self-start ${
+                                selectedShips.includes(ship.id)
+                                  ? "border-green-400 bg-green-400/20"
+                                  : ship.shipData.timestampDestroyed > 0n
+                                  ? "border-red-400 bg-black/60 opacity-50 cursor-not-allowed"
+                                  : ship.shipData.inFleet
+                                  ? "border-orange-400 bg-orange-400/20 opacity-50 cursor-not-allowed"
+                                  : ship.shipData.constructed
+                                  ? "border-gray-400 bg-black/40 hover:border-cyan-400 hover:bg-cyan-400/10"
+                                  : "border-gray-400 bg-black/60 opacity-50 cursor-not-allowed"
                               }`}
-                              ship={ship}
-                              className="w-full h-32 rounded border border-gray-600"
-                              showLoadingState={true}
-                            />
-                          </div>
+                              onClick={() => {
+                                // Don't allow selection of destroyed, unconstructed, or ships already in a fleet
+                                if (
+                                  ship.shipData.timestampDestroyed > 0n ||
+                                  !ship.shipData.constructed ||
+                                  ship.shipData.inFleet
+                                ) {
+                                  return;
+                                }
 
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex items-center gap-2">
-                              <h5 className="font-bold text-sm">
-                                {ship.name || `Ship #${ship.id}`}
-                              </h5>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`text-xs px-2 py-1 rounded ${
-                                  ship.shipData.shiny
-                                    ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
-                                    : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
-                                }`}
-                              >
-                                {ship.shipData.shiny ? "SHINY ✨" : "COMMON"}
-                              </span>
-                              {/* Rank */}
-                              {ship.shipData.constructed && (
-                                <span
-                                  className={`text-xs px-2 py-1 rounded border ${getRankColor(
-                                    calculateShipRank(ship).rank
-                                  )}`}
-                                >
-                                  R{calculateShipRank(ship).rank}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                                if (selectedShips.includes(ship.id)) {
+                                  removeShipFromFleet(ship.id);
+                                } else {
+                                  addShipToFleet(ship.id);
+                                }
+                              }}
+                            >
+                              {/* Ship Image */}
+                              <div className="mb-3">
+                                <ShipImage
+                                  key={`${ship.id.toString()}-${
+                                    ship.shipData.constructed
+                                      ? "constructed"
+                                      : "unconstructed"
+                                  }`}
+                                  ship={ship}
+                                  className="w-full h-32 rounded border border-gray-600"
+                                  showLoadingState={true}
+                                />
+                              </div>
 
-                          {/* Ship Stats */}
-                          {ship.shipData.constructed ? (
-                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
-                              {showInGameProperties ? (
-                                // In-Game Properties
-                                (() => {
-                                  const inGameAttrs = attributesMap.get(
-                                    ship.id
-                                  );
-                                  if (!inGameAttrs) {
-                                    return (
-                                      <div className="col-span-2 text-center text-gray-400 text-xs">
-                                        {attributesLoading
-                                          ? "Loading attributes..."
-                                          : "Attributes not available"}
-                                      </div>
-                                    );
-                                  }
+                              <div className="flex justify-between items-start mb-3">
+                                <div className="flex items-center gap-2">
+                                  <h5 className="font-bold text-sm">
+                                    {ship.name || `Ship #${ship.id}`}
+                                  </h5>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`text-xs px-2 py-1 rounded ${
+                                      ship.shipData.shiny
+                                        ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
+                                        : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
+                                    }`}
+                                  >
+                                    {ship.shipData.shiny
+                                      ? "SHINY ✨"
+                                      : "COMMON"}
+                                  </span>
+                                  {/* Rank */}
+                                  {ship.shipData.constructed && (
+                                    <span
+                                      className={`text-xs px-2 py-1 rounded border ${getRankColor(
+                                        calculateShipRank(ship).rank
+                                      )}`}
+                                    >
+                                      R{calculateShipRank(ship).rank}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
 
-                                  return (
+                              {/* Ship Stats */}
+                              {ship.shipData.constructed ? (
+                                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                                  {showInGameProperties ? (
+                                    // In-Game Properties
+                                    (() => {
+                                      const inGameAttrs = attributesMap.get(
+                                        ship.id
+                                      );
+                                      if (!inGameAttrs) {
+                                        return (
+                                          <div className="col-span-2 text-center text-gray-400 text-xs">
+                                            {attributesLoading
+                                              ? "Loading attributes..."
+                                              : "Attributes not available"}
+                                          </div>
+                                        );
+                                      }
+
+                                      return (
+                                        <>
+                                          <div className="flex justify-between">
+                                            <span className="opacity-60">
+                                              Range:
+                                            </span>
+                                            <span className="ml-2">
+                                              {inGameAttrs.range}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="opacity-60">
+                                              Damage:
+                                            </span>
+                                            <span className="ml-2">
+                                              {inGameAttrs.gunDamage}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="opacity-60">
+                                              Hull:
+                                            </span>
+                                            <span className="ml-2">
+                                              {inGameAttrs.hullPoints}/
+                                              {inGameAttrs.maxHullPoints}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="opacity-60">
+                                              Move:
+                                            </span>
+                                            <span className="ml-2">
+                                              {inGameAttrs.movement}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="opacity-60">
+                                              Armor:
+                                            </span>
+                                            <span className="ml-2">
+                                              {inGameAttrs.damageReduction}%
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="opacity-60">
+                                              Special:
+                                            </span>
+                                            <span className="ml-2">
+                                              {getSpecialName(
+                                                ship.equipment.special
+                                              )}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="opacity-60">
+                                              Cost:
+                                            </span>
+                                            <span className="ml-2">
+                                              {ship.shipData.cost}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between col-span-2">
+                                            <span className="opacity-60">
+                                              Status:
+                                            </span>
+                                            <span
+                                              className={`ml-2 ${
+                                                ship.shipData
+                                                  .timestampDestroyed > 0n
+                                                  ? "text-red-400"
+                                                  : ship.shipData.inFleet
+                                                  ? "text-orange-400"
+                                                  : "text-green-400"
+                                              }`}
+                                            >
+                                              {ship.shipData
+                                                .timestampDestroyed > 0n
+                                                ? "DESTROYED"
+                                                : ship.shipData.inFleet
+                                                ? "IN FLEET"
+                                                : "READY"}
+                                            </span>
+                                          </div>
+                                        </>
+                                      );
+                                    })()
+                                  ) : (
+                                    // NFT Properties (original)
                                     <>
                                       <div className="flex justify-between">
-                                        <span className="opacity-60">
-                                          Range:
-                                        </span>
+                                        <span className="opacity-60">Acc:</span>
                                         <span className="ml-2">
-                                          {inGameAttrs.range}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="opacity-60">
-                                          Damage:
-                                        </span>
-                                        <span className="ml-2">
-                                          {inGameAttrs.gunDamage}
+                                          {ship.traits.accuracy}
                                         </span>
                                       </div>
                                       <div className="flex justify-between">
@@ -1502,34 +1718,15 @@ const Lobbies: React.FC = () => {
                                           Hull:
                                         </span>
                                         <span className="ml-2">
-                                          {inGameAttrs.hullPoints}/
-                                          {inGameAttrs.maxHullPoints}
+                                          {ship.traits.hull}
                                         </span>
                                       </div>
                                       <div className="flex justify-between">
                                         <span className="opacity-60">
-                                          Move:
+                                          Speed:
                                         </span>
                                         <span className="ml-2">
-                                          {inGameAttrs.movement}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="opacity-60">
-                                          Armor:
-                                        </span>
-                                        <span className="ml-2">
-                                          {inGameAttrs.damageReduction}%
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="opacity-60">
-                                          Special:
-                                        </span>
-                                        <span className="ml-2">
-                                          {getSpecialName(
-                                            ship.equipment.special
-                                          )}
+                                          {ship.traits.speed}
                                         </span>
                                       </div>
                                       <div className="flex justify-between">
@@ -1538,6 +1735,38 @@ const Lobbies: React.FC = () => {
                                         </span>
                                         <span className="ml-2">
                                           {ship.shipData.cost}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="opacity-60">Wpn:</span>
+                                        <span className="ml-2">
+                                          {getMainWeaponName(
+                                            ship.equipment.mainWeapon
+                                          )}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="opacity-60">
+                                          {ship.equipment.shields > 0
+                                            ? "Shd:"
+                                            : "Arm:"}
+                                        </span>
+                                        <span className="ml-2">
+                                          {ship.equipment.shields > 0
+                                            ? getShieldName(
+                                                ship.equipment.shields
+                                              )
+                                            : getArmorName(
+                                                ship.equipment.armor
+                                              )}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="opacity-60">Spc:</span>
+                                        <span className="ml-2">
+                                          {getSpecialName(
+                                            ship.equipment.special
+                                          )}
                                         </span>
                                       </div>
                                       <div className="flex justify-between col-span-2">
@@ -1562,98 +1791,41 @@ const Lobbies: React.FC = () => {
                                         </span>
                                       </div>
                                     </>
-                                  );
-                                })()
+                                  )}
+                                </div>
                               ) : (
-                                // NFT Properties (original)
-                                <>
-                                  <div className="flex justify-between">
-                                    <span className="opacity-60">Acc:</span>
-                                    <span className="ml-2">
-                                      {ship.traits.accuracy}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="opacity-60">Hull:</span>
-                                    <span className="ml-2">
-                                      {ship.traits.hull}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="opacity-60">Speed:</span>
-                                    <span className="ml-2">
-                                      {ship.traits.speed}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="opacity-60">Cost:</span>
-                                    <span className="ml-2">
-                                      {ship.shipData.cost}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="opacity-60">Wpn:</span>
-                                    <span className="ml-2">
-                                      {getMainWeaponName(
-                                        ship.equipment.mainWeapon
-                                      )}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="opacity-60">
-                                      {ship.equipment.shields > 0
-                                        ? "Shd:"
-                                        : "Arm:"}
-                                    </span>
-                                    <span className="ml-2">
-                                      {ship.equipment.shields > 0
-                                        ? getShieldName(ship.equipment.shields)
-                                        : getArmorName(ship.equipment.armor)}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="opacity-60">Spc:</span>
-                                    <span className="ml-2">
-                                      {getSpecialName(ship.equipment.special)}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between col-span-2">
-                                    <span className="opacity-60">Status:</span>
-                                    <span
-                                      className={`ml-2 ${
-                                        ship.shipData.timestampDestroyed > 0n
-                                          ? "text-red-400"
-                                          : ship.shipData.inFleet
-                                          ? "text-orange-400"
-                                          : "text-green-400"
-                                      }`}
-                                    >
-                                      {ship.shipData.timestampDestroyed > 0n
-                                        ? "DESTROYED"
-                                        : ship.shipData.inFleet
-                                        ? "IN FLEET"
-                                        : "READY"}
-                                    </span>
-                                  </div>
-                                </>
+                                <div className="text-center text-yellow-400 text-sm">
+                                  UNDER CONSTRUCTION
+                                </div>
+                              )}
+
+                              {/* Selection Indicator */}
+                              {selectedShips.includes(ship.id) && (
+                                <div className="mt-2 text-center">
+                                  <span className="text-green-400 text-sm font-bold">
+                                    ✓ SELECTED
+                                  </span>
+                                </div>
                               )}
                             </div>
-                          ) : (
-                            <div className="text-center text-yellow-400 text-sm">
-                              UNDER CONSTRUCTION
-                            </div>
-                          )}
+                          ))}
+                      </div>
+                    </div>
 
-                          {/* Selection Indicator */}
-                          {selectedShips.includes(ship.id) && (
-                            <div className="mt-2 text-center">
-                              <span className="text-green-400 text-sm font-bold">
-                                ✓ SELECTED
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                    {/* Empty space - 4/5 width */}
+                    <div className="w-4/5 h-full flex items-center justify-center">
+                      {/* Map Display */}
+                      {currentLobby && (
+                        <MapDisplay
+                          mapId={Number(currentLobby.gameConfig.selectedMapId)}
+                          className="w-full h-full"
+                          showPlayerOverlay={true}
+                          isCreator={currentLobby.basic.creator === address}
+                          shipPositions={shipPositions}
+                          ships={ships}
+                        />
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1672,6 +1844,7 @@ const Lobbies: React.FC = () => {
                       if (isCreatingFleet) return; // Prevent closing during transaction
                       setSelectedLobby(null);
                       setSelectedShips([]);
+                      setShipPositions([]);
                       setFiltersExpanded(false);
                       setShowFleetConfirmation(false);
                       setFleetFilters({

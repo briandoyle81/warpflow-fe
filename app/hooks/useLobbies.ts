@@ -152,14 +152,18 @@ export function useLobbies() {
   };
 
   // Create a fleet for a lobby
-  const createFleet = async (lobbyId: bigint, shipIds: bigint[]) => {
+  const createFleet = async (
+    lobbyId: bigint,
+    shipIds: bigint[],
+    startingPositions: Array<{ row: number; col: number }>
+  ) => {
     if (!address) throw new Error("No wallet connected");
 
     try {
       await writeContract({
         ...lobbiesContractConfig,
         functionName: "createFleet",
-        args: [lobbyId, shipIds],
+        args: [lobbyId, shipIds, startingPositions],
       });
     } catch (error) {
       console.error("Failed to create fleet:", error);

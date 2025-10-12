@@ -181,8 +181,8 @@ export function MapEditor({
   const getRadialSymmetryPositions = useCallback((row: number, col: number) => {
     // For even dimensions, center is between tiles
     // Center line is between (HEIGHT/2 - 1) and (HEIGHT/2)
-    const centerRow = (GRID_DIMENSIONS.HEIGHT - 1) / 2; // 9.5 for 20 rows
-    const centerCol = (GRID_DIMENSIONS.WIDTH - 1) / 2; // 19.5 for 40 cols
+    const centerRow = (GRID_DIMENSIONS.HEIGHT - 1) / 2; // 6 for 13 rows
+    const centerCol = (GRID_DIMENSIONS.WIDTH - 1) / 2; // 12 for 25 cols
 
     // Calculate relative position from center
     const relRow = row - centerRow;
@@ -620,7 +620,7 @@ export function MapEditor({
       !editorState.scoringTiles[row] ||
       !editorState.onlyOnceTiles[row]
     ) {
-      return "w-full h-full cursor-pointer hover:border-white transition-colors border border-gray-600 bg-gray-900";
+      return "w-full h-full aspect-square cursor-pointer hover:border-white transition-colors border-0 outline outline-1 outline-gray-600 bg-gray-900";
     }
 
     const isBlocked = editorState.blockedTiles[row][col];
@@ -628,21 +628,21 @@ export function MapEditor({
     const isOnlyOnce = editorState.onlyOnceTiles[row][col];
 
     let baseClass =
-      "w-full h-full cursor-pointer hover:border-white transition-colors";
+      "w-full h-full aspect-square cursor-pointer hover:border-white transition-colors";
 
     // Set border thickness based on blocking status
     if (isBlocked) {
-      baseClass += " border-2 border-purple-400";
+      baseClass += " border-0 shadow-[inset_0_0_0_2px_rgb(168,85,247)]";
     } else {
-      baseClass += " border border-gray-600";
+      baseClass += " border-0 outline outline-1 outline-gray-600";
     }
 
     // Set background color based on scoring status
     if (scoreValue > 0) {
       if (isOnlyOnce) {
-        baseClass += " bg-yellow-500";
+        baseClass += " bg-yellow-400"; // Gold for once-only
       } else {
-        baseClass += " bg-green-500";
+        baseClass += " bg-blue-400"; // Cornflower blue for reusable
       }
     } else {
       // Empty
@@ -824,15 +824,15 @@ export function MapEditor({
             <span>Blocked (LOS) - Thick purple border</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-green-500 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-blue-400 border border-gray-600"></div>
             <span>Scoring (reusable)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-yellow-500 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-yellow-400 border border-gray-600"></div>
             <span>Scoring (once only)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-green-500 border-2 border-purple-400"></div>
+            <div className="w-[20px] h-[20px] bg-blue-400 border-2 border-purple-400"></div>
             <span>Blocked + Scoring</span>
           </div>
           <div className="flex items-center gap-2">
@@ -887,16 +887,7 @@ export function MapEditor({
       <div className="bg-gray-900 rounded-lg w-full relative flex justify-center p-1">
         <div
           key={`grid-${editorState.blockedTiles.length}-${editorState.scoringTiles.length}`}
-          className="grid relative"
-          style={{
-            gridTemplateColumns: `repeat(${GRID_DIMENSIONS.WIDTH}, 1fr)`,
-            gridTemplateRows: `repeat(${GRID_DIMENSIONS.HEIGHT}, 1fr)`,
-            width: "100%",
-            height: "100vw",
-            maxWidth: "1800px",
-            maxHeight: "1200px",
-            aspectRatio: "3 / 2",
-          }}
+          className="grid relative gap-0 grid-cols-[repeat(25,1fr)] grid-rows-[repeat(13,1fr)] w-full"
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
@@ -928,75 +919,122 @@ export function MapEditor({
                         }`
                       : ""
                   }`}
-                />
+                >
+                  {/* Score value display */}
+                  {editorState.scoringTiles[row][col] > 0 && (
+                    <div
+                      className={`flex items-center justify-center text-lg font-bold text-black w-full h-full`}
+                    >
+                      {editorState.scoringTiles[row][col]}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           ))}
         </div>
 
         {/* Grid reference lines overlay */}
-        <div
-          className="absolute pointer-events-none inset-0"
-          style={{
-            left: "50%",
-            top: "4px",
-            transform: "translateX(-50%)",
-            width: "100%",
-            height: "100vw",
-            maxWidth: "1800px",
-            maxHeight: "1200px",
-            aspectRatio: "3 / 2",
-          }}
-        >
-          {/* Vertical reference lines every 5 columns */}
-          {Array.from(
-            { length: Math.floor(GRID_DIMENSIONS.WIDTH / 5) + 1 },
-            (_, i) => {
-              const col = i * 5;
-              const isCenter = col === Math.floor(GRID_DIMENSIONS.WIDTH / 2);
-              return (
-                <div
-                  key={`v-${col}`}
-                  className={`absolute ${
-                    isCenter ? "bg-blue-400" : "bg-blue-200"
-                  }`}
-                  style={{
-                    left: `${(col / GRID_DIMENSIONS.WIDTH) * 100}%`,
-                    top: 0,
-                    width: isCenter ? "2px" : "1px",
-                    height: "100%",
-                    transform: "translateX(-50%)",
-                    opacity: isCenter ? 1 : 0.6,
-                  }}
-                />
-              );
-            }
-          )}
+        <div className="absolute pointer-events-none inset-0">
+          {/* Vertical reference lines */}
+          {/* Center column edges (left and right of column 12) */}
+          <div
+            className="absolute bg-blue-400"
+            style={{
+              left: `${(12 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+              top: 0,
+              width: "2px",
+              height: "100%",
+              transform: "translateX(-50%)",
+            }}
+          />
+          <div
+            className="absolute bg-blue-400"
+            style={{
+              left: `${(13 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+              top: 0,
+              width: "2px",
+              height: "100%",
+              transform: "translateX(-50%)",
+            }}
+          />
 
-          {/* Horizontal reference lines every 5 rows */}
-          {Array.from(
-            { length: Math.floor(GRID_DIMENSIONS.HEIGHT / 5) + 1 },
-            (_, i) => {
-              const row = i * 5;
-              const isCenter = row === Math.floor(GRID_DIMENSIONS.HEIGHT / 2);
-              return (
-                <div
-                  key={`h-${row}`}
-                  className={`absolute ${
-                    isCenter ? "bg-blue-400" : "bg-blue-200"
-                  }`}
-                  style={{
-                    left: 0,
-                    top: `${(row / GRID_DIMENSIONS.HEIGHT) * 100}%`,
-                    width: "100%",
-                    height: isCenter ? "2px" : "1px",
-                    transform: "translateY(-50%)",
-                    opacity: isCenter ? 1 : 0.6,
-                  }}
-                />
-              );
-            }
-          )}
+          {/* Red emphasis lines */}
+          <div
+            className="absolute bg-red-400"
+            style={{
+              left: `${(5 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+              top: 0,
+              width: "2px",
+              height: "100%",
+              transform: "translateX(-50%)",
+            }}
+          />
+          <div
+            className="absolute bg-red-400"
+            style={{
+              left: `${(20 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+              top: 0,
+              width: "2px",
+              height: "100%",
+              transform: "translateX(-50%)",
+            }}
+          />
+
+          {/* Every 5 columns from center */}
+          {[7, 2, 18, 23].map((col) => (
+            <div
+              key={`v-${col}`}
+              className="absolute bg-blue-200"
+              style={{
+                left: `${(col / GRID_DIMENSIONS.WIDTH) * 100}%`,
+                top: 0,
+                width: "1px",
+                height: "100%",
+                transform: "translateX(-50%)",
+                opacity: 0.6,
+              }}
+            />
+          ))}
+
+          {/* Horizontal reference lines */}
+          {/* Center row edges (top and bottom of row 6) */}
+          <div
+            className="absolute bg-blue-400"
+            style={{
+              left: 0,
+              top: `${(6 / GRID_DIMENSIONS.HEIGHT) * 100}%`,
+              width: "100%",
+              height: "2px",
+              transform: "translateY(-50%)",
+            }}
+          />
+          <div
+            className="absolute bg-blue-400"
+            style={{
+              left: 0,
+              top: `${(7 / GRID_DIMENSIONS.HEIGHT) * 100}%`,
+              width: "100%",
+              height: "2px",
+              transform: "translateY(-50%)",
+            }}
+          />
+
+          {/* Every 5 rows from center */}
+          {[1, 12].map((row) => (
+            <div
+              key={`h-${row}`}
+              className="absolute bg-blue-200"
+              style={{
+                left: 0,
+                top: `${(row / GRID_DIMENSIONS.HEIGHT) * 100}%`,
+                width: "100%",
+                height: "1px",
+                transform: "translateY(-50%)",
+                opacity: 0.6,
+              }}
+            />
+          ))}
         </div>
       </div>
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useGetAllPresetMaps, useMapCount } from "../hooks/useMapsContract";
 import { MapEditor } from "./MapEditor";
-import { PresetMap } from "../types/types";
+import { PresetMap, GRID_DIMENSIONS } from "../types/types";
 
 export default function Maps() {
   const { address } = useAccount();
@@ -146,7 +146,7 @@ export default function Maps() {
 
               <div className="space-y-2 text-sm text-gray-300">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-gray-800 border border-gray-600"></div>
+                  <div className="w-3 h-3 bg-purple-500 border border-gray-600"></div>
                   <span>Blocked tiles: {map.blockedPositions.length}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -165,17 +165,16 @@ export default function Maps() {
               {/* Mini preview */}
               <div className="mt-3 p-2 bg-gray-900 rounded">
                 <div className="text-xs text-gray-400 mb-1">
-                  Preview (10x10):
+                  Preview ({GRID_DIMENSIONS.WIDTH}x{GRID_DIMENSIONS.HEIGHT}):
                 </div>
                 <div
-                  className="grid gap-px"
+                  className="grid gap-px w-full"
                   style={{
-                    gridTemplateColumns: "repeat(10, 8px)",
-                    width: "fit-content",
+                    gridTemplateColumns: `repeat(${GRID_DIMENSIONS.WIDTH}, 1fr)`,
                   }}
                 >
-                  {Array.from({ length: 10 }, (_, row) =>
-                    Array.from({ length: 10 }, (_, col) => {
+                  {Array.from({ length: GRID_DIMENSIONS.HEIGHT }, (_, row) =>
+                    Array.from({ length: GRID_DIMENSIONS.WIDTH }, (_, col) => {
                       const isBlocked = map.blockedPositions.some(
                         (p) => p.row === row && p.col === col
                       );
@@ -185,11 +184,11 @@ export default function Maps() {
                       const isScoring = scoringPos !== undefined;
                       const isOnlyOnce = scoringPos?.onlyOnce || false;
 
-                      let className = "w-1.5 h-1.5 border border-gray-600";
+                      let className = "aspect-square border border-gray-600";
                       if (isBlocked && isScoring) {
                         className += " bg-red-500";
                       } else if (isBlocked) {
-                        className += " bg-gray-800";
+                        className += " bg-purple-500";
                       } else if (isScoring) {
                         className += isOnlyOnce
                           ? " bg-yellow-500"

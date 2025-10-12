@@ -37,6 +37,7 @@ export function useFreeShipClaiming() {
     data: hasClaimedFreeShips,
     isLoading: isLoadingClaimStatus,
     error: claimStatusError,
+    refetch: refetchClaimStatus,
   } = useReadContract({
     address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
     abi: CONTRACT_ABIS.SHIPS as Abi,
@@ -138,7 +139,7 @@ export function useFreeShipClaiming() {
     saveCacheToStorage,
   ]);
 
-  // Update cache after successful claiming
+  // Update cache only after successful claiming
   useEffect(() => {
     // Check if isPending changed from true to false (claiming completed)
     if (address && prevIsPending.current && !isPending) {
@@ -146,24 +147,27 @@ export function useFreeShipClaiming() {
       const wasEligible = eligibilityCache[address]?.eligible;
 
       if (wasEligible && !error) {
-        // Only update cache if we were previously eligible AND there's no error
-        // This means the transaction was successful
+        // Transaction was successful, update cache and refetch data
+        setEligibilityCache((prev) => {
+          const newCache = {
+            ...prev,
+            [address]: {
+              eligible: false, // Now permanently ineligible
+              timestamp: Date.now(),
+              checked: true,
+            },
+          };
+          saveCacheToStorage(newCache);
+          return newCache;
+        });
+
+        // Refetch data after a short delay
         const timer = setTimeout(() => {
-          setEligibilityCache((prev) => {
-            const newCache = {
-              ...prev,
-              [address]: {
-                eligible: false, // Now permanently ineligible
-                timestamp: Date.now(),
-                checked: true,
-              },
-            };
-            saveCacheToStorage(newCache);
-            return newCache;
-          });
-          // Also refetch the ships data to show the newly claimed ships
+          // Refetch the ships data to show the newly claimed ships
           refetch();
-        }, 3000); // Wait 3 seconds for the transaction to be mined
+          // Refetch the claim status to update the contract data
+          refetchClaimStatus();
+        }, 2000);
 
         return () => clearTimeout(timer);
       }
@@ -176,6 +180,7 @@ export function useFreeShipClaiming() {
     isPending,
     error,
     refetch,
+    refetchClaimStatus,
     saveCacheToStorage,
     eligibilityCache,
   ]);
