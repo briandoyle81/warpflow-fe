@@ -155,9 +155,9 @@ export function MapDisplay({
     // Set background color based on scoring status
     if (scoreValue > 0) {
       if (isOnlyOnce) {
-        baseClass += " bg-yellow-400"; // Gold for once-only
+        baseClass += " bg-blue-400"; // Cornflower blue for once-only
       } else {
-        baseClass += " bg-blue-400"; // Cornflower blue for reusable
+        baseClass += " bg-yellow-400"; // Gold for reusable
       }
     } else {
       // Empty
