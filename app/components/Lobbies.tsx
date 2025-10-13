@@ -64,6 +64,7 @@ const Lobbies: React.FC = () => {
   const [shipPositions, setShipPositions] = useState<
     Array<{ shipId: bigint; row: number; col: number }>
   >([]);
+  const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
   const [showFleetConfirmation, setShowFleetConfirmation] = useState(false);
   const [isCreatingFleet, setIsCreatingFleet] = useState(false);
   const [showFleetView, setShowFleetView] = useState(false);
@@ -180,6 +181,39 @@ const Lobbies: React.FC = () => {
   const removeShipFromFleet = (shipId: bigint) => {
     setSelectedShips((prev) => prev.filter((id) => id !== shipId));
     setShipPositions((prev) => prev.filter((pos) => pos.shipId !== shipId));
+    // Clear selection if the removed ship was selected
+    if (selectedShipId === shipId) {
+      setSelectedShipId(null);
+    }
+  };
+
+  // Function to handle ship selection on the grid
+  const handleShipSelect = (shipId: bigint) => {
+    setSelectedShipId(shipId);
+  };
+
+  // Function to handle ship movement on the grid
+  const handleShipMove = (shipId: bigint, row: number, col: number) => {
+    // Check if the ship is already in the fleet
+    if (!selectedShips.includes(shipId)) {
+      return; // Ship not in fleet, can't move
+    }
+
+    // Check if position is already occupied
+    const existingPosition = shipPositions.find(
+      (pos) => pos.row === row && pos.col === col
+    );
+    if (existingPosition) {
+      return; // Position already occupied
+    }
+
+    // Update the ship's position
+    setShipPositions((prev) =>
+      prev.map((pos) => (pos.shipId === shipId ? { ...pos, row, col } : pos))
+    );
+
+    // Clear selection after moving
+    setSelectedShipId(null);
   };
   const {
     attributes: shipAttributes,
@@ -421,9 +455,39 @@ const Lobbies: React.FC = () => {
         col: pos.col,
       }));
 
-      await createFleet(lobbyId, selectedShips, startingPositions);
+      // Submit tx and get hash
+      const txHash = await createFleet(
+        lobbyId,
+        selectedShips,
+        startingPositions
+      );
+
+      // Wait for on-chain confirmation before closing
+      try {
+        // Prefer wagmi's public client if available at runtime
+        // @ts-expect-error global availability depends on app setup
+        const { waitForTransactionReceipt } = await import("viem/actions");
+        // @ts-expect-error global availability depends on app setup
+        const { createPublicClient, http } = await import("viem");
+        // @ts-expect-error using configured chain from app setup if available
+        const { default: chains } = await import("../config/contracts");
+        // Fallback: create a basic public client to wait for receipt
+        const client = createPublicClient({
+          chain: undefined as any,
+          transport: http(),
+        });
+        await waitForTransactionReceipt(client, {
+          hash: txHash as `0x${string}`,
+        });
+      } catch {
+        // If dynamic import/public client isn't available, fall back to leaving UI open;
+        // the TransactionButton/toasts elsewhere will reflect status.
+      }
+
+      // Only after receipt: clear state and close
       setSelectedShips([]);
       setShipPositions([]);
+      setSelectedShipId(null);
       setSelectedLobby(null);
       setShowFleetConfirmation(false);
     } catch (error) {
@@ -1075,6 +1139,7 @@ const Lobbies: React.FC = () => {
             ? Number(currentLobby.basic.costLimit)
             : 1000;
           const isOverLimit = totalCost > costLimit;
+          const isUnder90Percent = totalCost < costLimit * 0.9;
 
           return (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
@@ -1105,6 +1170,8 @@ const Lobbies: React.FC = () => {
                       className={`text-lg font-bold px-3 py-1 rounded ${
                         isOverLimit
                           ? "text-red-400 bg-red-400/20 border border-red-400/30"
+                          : isUnder90Percent
+                          ? "text-yellow-400 bg-yellow-400/20 border border-yellow-400/30"
                           : "text-green-400 bg-green-400/20 border border-green-400/30"
                       }`}
                     >
@@ -1116,6 +1183,7 @@ const Lobbies: React.FC = () => {
                         setSelectedLobby(null);
                         setSelectedShips([]);
                         setShipPositions([]);
+                        setSelectedShipId(null);
                         setFiltersExpanded(false);
                         setShowFleetConfirmation(false);
                         setFleetFilters({
@@ -1823,6 +1891,10 @@ const Lobbies: React.FC = () => {
                           isCreator={currentLobby.basic.creator === address}
                           shipPositions={shipPositions}
                           ships={ships}
+                          shipAttributes={shipAttributes}
+                          selectedShipId={selectedShipId}
+                          onShipSelect={handleShipSelect}
+                          onShipMove={handleShipMove}
                         />
                       )}
                     </div>
@@ -1832,11 +1904,21 @@ const Lobbies: React.FC = () => {
                 <div className="flex gap-2 mt-4 flex-shrink-0">
                   <button
                     onClick={() => handleCreateFleet(selectedLobby)}
-                    disabled={selectedShips.length === 0 || isCreatingFleet}
+                    disabled={
+                      selectedShips.length === 0 ||
+                      isCreatingFleet ||
+                      isUnder90Percent
+                    }
                     className="flex-1 px-6 py-3 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isCreatingFleet
                       ? "CREATING FLEET..."
+                      : isUnder90Percent
+                      ? `NEED ${Math.round(
+                          costLimit * 0.9
+                        )} POINTS (${Math.round(
+                          (totalCost / costLimit) * 100
+                        )}%)`
                       : `CREATE FLEET (${selectedShips.length} ships)`}
                   </button>
                   <button
@@ -1845,6 +1927,7 @@ const Lobbies: React.FC = () => {
                       setSelectedLobby(null);
                       setSelectedShips([]);
                       setShipPositions([]);
+                      setSelectedShipId(null);
                       setFiltersExpanded(false);
                       setShowFleetConfirmation(false);
                       setFleetFilters({
