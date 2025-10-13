@@ -166,6 +166,8 @@ export interface Fleet {
   shipIds: bigint[];
   totalCost: bigint;
   isComplete: boolean;
+  // Added: starting positions (immutable once created)
+  startingPositions?: Array<{ row: number; col: number }>;
 }
 
 export interface PlayerStats {

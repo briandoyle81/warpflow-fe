@@ -20,13 +20,17 @@ interface MapDisplayProps {
   mapId: number;
   className?: string;
   showPlayerOverlay?: boolean;
-  isCreator?: boolean;
+  isCreator?: boolean; // kept for backward compatibility (flips all)
+  isCreatorViewer?: boolean; // determines placement validity
   shipPositions?: Array<{ shipId: bigint; row: number; col: number }>;
   ships?: Array<{ id: bigint; name: string; imageUrl?: string }>;
   shipAttributes?: Array<any>;
   selectedShipId?: bigint | null;
   onShipSelect?: (shipId: bigint) => void;
   onShipMove?: (shipId: bigint, row: number, col: number) => void;
+  allowSelection?: boolean;
+  selectableShipIds?: bigint[]; // which ships are allowed to be selected
+  flippedShipIds?: bigint[]; // specific ships to flip horizontally
 }
 
 export function MapDisplay({
@@ -34,12 +38,16 @@ export function MapDisplay({
   className = "",
   showPlayerOverlay = false,
   isCreator = false,
+  isCreatorViewer = false,
   shipPositions = [],
   ships = [],
   shipAttributes = [],
   selectedShipId = null,
   onShipSelect,
   onShipMove,
+  allowSelection = true,
+  selectableShipIds,
+  flippedShipIds = [],
 }: MapDisplayProps) {
   // Only fetch map data if mapId is valid
   const { data: blockedPositions } = useGetPresetMap(mapId);
@@ -136,16 +144,6 @@ export function MapDisplay({
     const ship = shipMap.get(position.shipId);
     if (!ship || !ship.id) return null;
 
-    // Debug logging for first few calls
-    if (row === 0 && col === 0) {
-      console.log("Checking position (0,0):", {
-        shipPositions,
-        ships: ships.map((s) => ({ id: s.id.toString(), name: s.name })),
-        position,
-        ship,
-      });
-    }
-
     return ship;
   };
 
@@ -159,7 +157,7 @@ export function MapDisplay({
     return shipAttributes[shipIndex];
   };
 
-  // Helper to validate allowed deployment columns based on player role
+  // Helper to validate allowed deployment columns based on viewer role
   const isValidShipPosition = (row: number, col: number) => {
     // Boundaries
     if (
@@ -172,7 +170,7 @@ export function MapDisplay({
     }
 
     // Creator may place in left 5 columns; joiner in right 5 columns
-    return isCreator
+    return isCreatorViewer
       ? col >= 0 && col <= 4
       : col >= GRID_DIMENSIONS.WIDTH - 5 && col < GRID_DIMENSIONS.WIDTH;
   };
@@ -226,17 +224,55 @@ Attributes: Loading...`;
 
   // Handle cell click
   const handleCellClick = (row: number, col: number) => {
+    if (!allowSelection) return;
     if (!onShipSelect || !onShipMove) return;
 
     const ship = getShipAtPosition(row, col);
 
     if (ship) {
-      // Clicked on a ship - select it
-      onShipSelect(ship.id);
+      // Only allow selecting if the ship is in selectable set (if provided)
+      if (
+        !selectableShipIds ||
+        selectableShipIds.some((id) => id === ship.id)
+      ) {
+        onShipSelect(ship.id);
+      }
     } else if (selectedShipId && isValidShipPosition(row, col)) {
       // Clicked on empty valid position with ship selected - move ship
       onShipMove(selectedShipId, row, col);
     }
+  };
+
+  // Lightweight custom tooltip with shorter delay
+  const [hoveredTooltip, setHoveredTooltip] = useState<{
+    row: number;
+    col: number;
+    text: string;
+    visible: boolean;
+  } | null>(null);
+  const hoverTimerRef = React.useRef<number | null>(null);
+
+  const handleCellEnter = (row: number, col: number) => {
+    // Prepare text immediately but show after shorter delay (~250ms)
+    const ship = getShipAtPosition(row, col);
+    const text = ship
+      ? createShipTooltip(ship, row, col)
+      : `Row: ${row}, Col: ${col}`;
+    if (hoverTimerRef.current) {
+      window.clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    hoverTimerRef.current = window.setTimeout(() => {
+      setHoveredTooltip({ row, col, text, visible: true });
+    }, 250);
+  };
+
+  const handleCellLeave = () => {
+    if (hoverTimerRef.current) {
+      window.clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    setHoveredTooltip(null);
   };
 
   // Get tile class based on state
@@ -251,7 +287,9 @@ Attributes: Loading...`;
       !mapState.scoringTiles[row] ||
       !mapState.onlyOnceTiles[row]
     ) {
-      return "w-full h-full border-0 outline outline-1 outline-gray-600 bg-gray-900 cursor-pointer";
+      return `w-full h-full border-0 outline outline-1 outline-gray-600 bg-gray-900 ${
+        allowSelection ? "cursor-pointer" : "cursor-default"
+      }`;
     }
 
     const isBlocked = mapState.blockedTiles[row][col];
@@ -260,7 +298,9 @@ Attributes: Loading...`;
     const ship = getShipAtPosition(row, col);
     const isSelected = ship && selectedShipId && ship.id === selectedShipId;
 
-    let baseClass = "w-full h-full cursor-pointer relative";
+    let baseClass = `w-full h-full relative ${
+      allowSelection ? "cursor-pointer" : "cursor-default"
+    }`;
 
     // If selected, use a high-contrast gold inset border that shows on all sides
     if (isSelected) {
@@ -354,23 +394,8 @@ Attributes: Loading...`;
                   key={`${row}-${col}`}
                   className={getTileClass(row, col)}
                   onClick={() => handleCellClick(row, col)}
-                  title={(() => {
-                    const ship = getShipAtPosition(row, col);
-                    if (ship) {
-                      return createShipTooltip(ship, row, col);
-                    }
-                    return `Row: ${row}, Col: ${col}${
-                      mapState.blockedTiles[row][col] ? ", Blocked (LOS)" : ""
-                    }${
-                      mapState.scoringTiles[row][col] > 0
-                        ? `, Score: ${mapState.scoringTiles[row][col]}${
-                            mapState.onlyOnceTiles[row][col]
-                              ? " (once only)"
-                              : " (reusable)"
-                          }`
-                        : ""
-                    }`;
-                  })()}
+                  onMouseEnter={() => handleCellEnter(row, col)}
+                  onMouseLeave={handleCellLeave}
                 >
                   {/* Score value display */}
                   {mapState.scoringTiles[row][col] > 0 && (
@@ -386,17 +411,32 @@ Attributes: Loading...`;
                     const ship = getShipAtPosition(row, col);
                     if (!ship || !ship.id) return null;
 
+                    const flipThis =
+                      (flippedShipIds &&
+                        flippedShipIds.some((id) => id === ship.id)) ||
+                      (!flippedShipIds?.length && isCreator); // fallback to legacy flip-all when flipped set not provided
+
                     return (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <ShipImage
                           ship={ship}
                           className={`max-w-full max-h-full object-contain ${
-                            isCreator ? "scale-x-[-1]" : ""
+                            flipThis ? "scale-x-[-1]" : ""
                           }`}
                         />
                       </div>
                     );
                   })()}
+
+                  {/* Custom tooltip (short delay) */}
+                  {hoveredTooltip &&
+                    hoveredTooltip.visible &&
+                    hoveredTooltip.row === row &&
+                    hoveredTooltip.col === col && (
+                      <div className="absolute z-20 bottom-0 left-0 translate-y-full mt-1 max-w-[260px] whitespace-pre-wrap pointer-events-none bg-black/90 text-gray-200 text-xs border border-gray-600 rounded p-2 shadow-lg">
+                        {hoveredTooltip.text}
+                      </div>
+                    )}
                 </div>
               ))}
             </div>

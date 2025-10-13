@@ -44,3 +44,15 @@ export type FleetsReadFunction =
   | "getFleetIdsInLobby";
 
 export type FleetsWriteFunction = "createFleet" | "withdrawFleet";
+
+export function useFleetShipIdsAndPositions(
+  fleetId?: bigint,
+  options?: { query?: { enabled?: boolean } }
+) {
+  return useReadContract({
+    ...fleetsContractConfig,
+    functionName: "getFleetShipIdsAndPositions",
+    args: fleetId ? [fleetId] : undefined,
+    query: options?.query,
+  });
+}

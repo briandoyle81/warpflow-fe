@@ -78,12 +78,47 @@ const Lobbies: React.FC = () => {
     "getFleetShipIds",
     viewingFleetId ? [viewingFleetId] : undefined
   );
+  // Also fetch positions together when available
+  const { data: fleetIdsAndPositions } = useFleetsRead(
+    "getFleetShipIdsAndPositions",
+    viewingFleetId ? [viewingFleetId] : undefined
+  );
 
   const { data: fleetShips, isLoading: fleetShipsLoading } = useShipsRead(
     "getShipsByIds",
     fleetShipIds && Array.isArray(fleetShipIds) && fleetShipIds.length > 0
       ? [fleetShipIds]
       : undefined
+  );
+
+  // Normalize opponent positions for MapDisplay when viewing a fleet
+  const opponentPositions = React.useMemo(() => {
+    if (!fleetIdsAndPositions)
+      return [] as Array<{ shipId: bigint; row: number; col: number }>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tuple = fleetIdsAndPositions as any;
+    const ids: bigint[] = (tuple?.[0] || []) as bigint[];
+    const positions: Array<{ row: number; col: number }> = (tuple?.[1] ||
+      []) as Array<{ row: number; col: number }>;
+    return ids.map((id, i) => ({
+      shipId: id,
+      row: positions?.[i]?.row ?? 0,
+      col: positions?.[i]?.col ?? 0,
+    }));
+  }, [fleetIdsAndPositions]);
+
+  // Load opponent ship objects using existing ships contract reader
+  const { data: opponentShipsData } = useShipsRead(
+    "getShipsByIds",
+    opponentPositions.length > 0
+      ? [opponentPositions.map((p) => p.shipId)]
+      : undefined
+  );
+  // Use existing image caching via ShipImage component; just shape into array
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const opponentShips = React.useMemo(
+    () => (opponentShipsData as any) || [],
+    [opponentShipsData]
   );
 
   // Fleet selection filters
@@ -523,30 +558,184 @@ const Lobbies: React.FC = () => {
     }
   };
 
-  if (!isConnected) {
-    return (
-      <div className="text-cyan-300 font-mono">
-        <h3 className="text-2xl font-bold mb-6 tracking-wider text-center">
-          [LOBBIES]
-        </h3>
-        <div className="text-center text-red-400">
-          Please connect your wallet to access lobbies
-        </div>
-      </div>
-    );
-  }
+  // NOTE: Early returns moved below to keep hook order stable across renders
 
-  // Show loading state while wallet is connecting
-  if (isConnecting) {
-    return (
-      <div className="text-center text-cyan-400 font-mono">
-        <div className="text-xl mb-4">Connecting to wallet...</div>
-        <div className="text-sm text-cyan-400/60">
-          Please wait while we establish your connection
-        </div>
-      </div>
-    );
-  }
+  // Auto-fetch opponent fleet data for grid preview (cache immutable fleets)
+  const opponentCacheKey = React.useMemo(() => {
+    if (!selectedLobby) return null;
+    const lobby = lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
+    if (!lobby) return null;
+    const myIsCreator = lobby.basic.creator === address;
+    const opponentFleetId = myIsCreator
+      ? lobby.players.joinerFleetId
+      : lobby.players.creatorFleetId;
+    return opponentFleetId && opponentFleetId > 0n
+      ? `fleet:${opponentFleetId.toString()}`
+      : null;
+  }, [selectedLobby, lobbyList.lobbies, address]);
+
+  // Compute opponent fleetId for grid
+  const opponentFleetIdForGrid = React.useMemo(() => {
+    if (!selectedLobby) return null as bigint | null;
+    const lobby = lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
+    if (!lobby) return null;
+    const myIsCreator = lobby.basic.creator === address;
+    const fid = myIsCreator
+      ? lobby.players.joinerFleetId
+      : lobby.players.creatorFleetId;
+    return fid && fid > 0n ? fid : null;
+  }, [selectedLobby, lobbyList.lobbies, address]);
+
+  // Whether the opponent fleet (when shown) belongs to the lobby creator
+  const opponentIsCreator = React.useMemo(() => {
+    if (!selectedLobby) return false;
+    const lobby = lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
+    if (!lobby) return false;
+    const opponentFid = opponentFleetIdForGrid;
+    if (!opponentFid) return false;
+    return lobby.players.creatorFleetId === opponentFid;
+  }, [selectedLobby, lobbyList.lobbies, opponentFleetIdForGrid]);
+
+  const [opponentGridPositions, setOpponentGridPositions] = React.useState<
+    Array<{ shipId: bigint; row: number; col: number }>
+  >([]);
+  const [opponentGridShips, setOpponentGridShips] = React.useState<any[]>([]);
+
+  // Hook read for ids+positions when opponent fleet exists
+  const { data: oppIdsPos } = useFleetsRead(
+    "getFleetShipIdsAndPositions",
+    opponentFleetIdForGrid ? [opponentFleetIdForGrid] : undefined,
+    { query: { enabled: !!opponentFleetIdForGrid } }
+  );
+
+  // Normalize to positions and ids
+  const opponentGridPositionsFromHook = React.useMemo(() => {
+    if (!oppIdsPos)
+      return [] as Array<{ shipId: bigint; row: number; col: number }>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tuple = oppIdsPos as any;
+    const ids: bigint[] = (tuple?.[0] || []) as bigint[];
+    const positions: Array<{ row: number; col: number }> = (tuple?.[1] ||
+      []) as Array<{ row: number; col: number }>;
+    return ids.map((id, i) => ({
+      shipId: id,
+      row: positions?.[i]?.row ?? 0,
+      col: positions?.[i]?.col ?? 0,
+    }));
+  }, [oppIdsPos]);
+
+  // Fetch opponent ships when we have ids
+  const { data: opponentGridShipsData } = useShipsRead(
+    "getShipsByIds",
+    opponentGridPositionsFromHook.length > 0
+      ? [opponentGridPositionsFromHook.map((p) => p.shipId)]
+      : undefined
+  );
+
+  // Opponent attributes (grid preview)
+  const opponentGridShipIds = React.useMemo(
+    () => opponentGridPositionsFromHook.map((p) => p.shipId),
+    [opponentGridPositionsFromHook]
+  );
+  const { attributes: opponentGridAttributes } =
+    useShipAttributesByIds(opponentGridShipIds);
+
+  // Opponent attributes (modal view)
+  const opponentViewShipIds = React.useMemo(
+    () => opponentPositions.map((p) => p.shipId),
+    [opponentPositions]
+  );
+  const { attributes: opponentViewAttributes } =
+    useShipAttributesByIds(opponentViewShipIds);
+
+  // Combine both fleets for grid view during selection
+  const combinedPositions = React.useMemo(
+    () => [
+      ...shipPositions,
+      ...(opponentGridPositionsFromHook.length > 0
+        ? opponentGridPositionsFromHook
+        : []),
+    ],
+    [shipPositions, opponentGridPositionsFromHook]
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const combinedShips = React.useMemo<any[]>(
+    () => [
+      ...(ships as any[]),
+      ...(((opponentGridShipsData as any) ?? []) as any[]),
+    ],
+    [ships, opponentGridShipsData]
+  );
+
+  const combinedAttributes = React.useMemo(
+    () => [
+      ...(shipAttributes as any[]),
+      ...(((opponentGridAttributes as any) ?? []) as any[]),
+    ],
+    [shipAttributes, opponentGridAttributes]
+  );
+
+  // Selection allowed only on current builder's ships
+  const selectableShipIds = selectedShips;
+  // Flip opponent ships if opponent is creator (grid preview)
+  const flippedShipIds = React.useMemo(
+    () => (opponentIsCreator ? opponentGridShipIds : []),
+    [opponentIsCreator, opponentGridShipIds]
+  );
+
+  // Apply cache-first and update state when data loads
+  React.useEffect(() => {
+    // Load from cache first
+    if (opponentCacheKey && typeof window !== "undefined") {
+      const cached = window.localStorage.getItem(opponentCacheKey);
+      if (
+        cached &&
+        opponentGridPositions.length === 0 &&
+        opponentGridShips.length === 0
+      ) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed?.positions && parsed?.ships) {
+            setOpponentGridPositions(parsed.positions);
+            setOpponentGridShips(parsed.ships);
+          }
+        } catch {}
+      }
+    }
+  }, [
+    opponentCacheKey,
+    opponentGridPositions.length,
+    opponentGridShips.length,
+  ]);
+
+  React.useEffect(() => {
+    // Update from hook reads
+    if (opponentGridPositionsFromHook.length > 0) {
+      setOpponentGridPositions(opponentGridPositionsFromHook);
+    }
+    if (opponentGridShipsData && Array.isArray(opponentGridShipsData)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setOpponentGridShips(opponentGridShipsData as any);
+    }
+    // Write-through to cache when we have both
+    if (
+      opponentCacheKey &&
+      opponentGridPositionsFromHook.length > 0 &&
+      opponentGridShipsData &&
+      typeof window !== "undefined"
+    ) {
+      try {
+        window.localStorage.setItem(
+          opponentCacheKey,
+          JSON.stringify({
+            positions: opponentGridPositionsFromHook,
+            ships: opponentGridShipsData,
+          })
+        );
+      } catch {}
+    }
+  }, [opponentCacheKey, opponentGridPositionsFromHook, opponentGridShipsData]);
 
   return (
     <div className="text-cyan-300 font-mono">
@@ -1889,12 +2078,36 @@ const Lobbies: React.FC = () => {
                           className="w-full h-full"
                           showPlayerOverlay={true}
                           isCreator={currentLobby.basic.creator === address}
-                          shipPositions={shipPositions}
-                          ships={ships}
-                          shipAttributes={shipAttributes}
+                          isCreatorViewer={
+                            currentLobby.basic.creator === address
+                          }
+                          shipPositions={
+                            showFleetView && viewingFleetOwner && viewingFleetId
+                              ? opponentPositions
+                              : combinedPositions
+                          }
+                          ships={
+                            showFleetView && viewingFleetOwner && viewingFleetId
+                              ? opponentShips
+                              : combinedShips
+                          }
+                          shipAttributes={
+                            showFleetView && viewingFleetOwner && viewingFleetId
+                              ? (opponentViewAttributes as any)
+                              : (combinedAttributes as any)
+                          }
                           selectedShipId={selectedShipId}
                           onShipSelect={handleShipSelect}
                           onShipMove={handleShipMove}
+                          allowSelection={
+                            !(
+                              showFleetView &&
+                              viewingFleetId &&
+                              viewingFleetOwner
+                            )
+                          }
+                          selectableShipIds={selectableShipIds}
+                          flippedShipIds={flippedShipIds as any}
                         />
                       )}
                     </div>
