@@ -21,7 +21,13 @@ export default function Home() {
   useEffect(() => {
     setIsHydrated(true);
     const savedTab = localStorage.getItem("warpflow-active-tab");
-    if (
+    const savedGameId = localStorage.getItem("selectedGameId");
+
+    // If there's a saved game, prioritize switching to Games tab
+    if (savedGameId) {
+      console.log(`Found saved game ID ${savedGameId}, switching to Games tab`);
+      setActiveTab("Games");
+    } else if (
       savedTab &&
       ["Manage Navy", "Lobbies", "Games", "Profile", "Info", "Maps"].includes(
         savedTab

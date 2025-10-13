@@ -29,9 +29,15 @@ const Games: React.FC = () => {
 
   // Restore selected game from localStorage on page load
   useEffect(() => {
-    if (games.length > 0 && !selectedGame) {
-      const savedGameId = localStorage.getItem("selectedGameId");
-      if (savedGameId) {
+    const savedGameId = localStorage.getItem("selectedGameId");
+    console.log(
+      `Checking for saved game ID: ${savedGameId}, isLoading: ${isLoading}, games.length: ${
+        games.length
+      }, selectedGame: ${selectedGame ? "exists" : "null"}`
+    );
+
+    if (savedGameId && !selectedGame) {
+      if (games.length > 0) {
         const gameToRestore = games.find(
           (game) => game.metadata.gameId.toString() === savedGameId
         );
@@ -40,11 +46,18 @@ const Games: React.FC = () => {
           setSelectedGame(gameToRestore);
         } else {
           // Game not found, clear the saved ID
+          console.log(
+            `Game ${savedGameId} not found in current games, clearing saved ID`
+          );
           localStorage.removeItem("selectedGameId");
         }
+      } else if (!isLoading) {
+        // Games are loaded but empty, clear the saved ID
+        console.log(`No games found, clearing saved game ID`);
+        localStorage.removeItem("selectedGameId");
       }
     }
-  }, [games, selectedGame]);
+  }, [games, selectedGame, isLoading]);
 
   // Clear selected game when user disconnects
   useEffect(() => {
@@ -189,7 +202,7 @@ const Games: React.FC = () => {
                 {/* Game Actions */}
                 <div className="mt-4 pt-3 border-t border-gray-700">
                   <button
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded font-mono hover:bg-blue-700 transition-colors"
+                    className="w-full px-6 py-3 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200"
                     onClick={() => setSelectedGame(game)}
                   >
                     {game.metadata.winner ===

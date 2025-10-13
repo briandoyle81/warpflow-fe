@@ -971,7 +971,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             onClick={onBack}
             className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
           >
-            ← Back to Games
+            ←
           </button>
         </div>
         <div className="text-center py-8">
@@ -990,7 +990,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             onClick={onBack}
             className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
           >
-            ← Back to Games
+            ←
           </button>
         </div>
         <div className="text-center py-8">
@@ -1018,10 +1018,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               onClick={onBack}
               className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
             >
-              ← BACK TO GAMES
+              ←
             </button>
-            <h1 className="text-2xl font-mono text-white">
-              Game #{game.metadata.gameId.toString()}
+            <h1 className="text-2xl font-mono text-white flex items-center gap-3">
+              <span>Game {game.metadata.gameId.toString()}</span>
+              <span className="text-gray-400 text-base">
+                Round {game.turnState.currentRound.toString()}
+              </span>
             </h1>
           </div>
         </div>
@@ -1045,28 +1048,27 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             onClick={onBack}
             className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
           >
-            ← BACK TO GAMES
+            ←
           </button>
           <div className="flex flex-col">
-            <h1 className="text-2xl font-mono text-white">
-              Game #{game.metadata.gameId.toString()}
+            <h1 className="text-2xl font-mono text-white flex items-center gap-3">
+              <span>Game {game.metadata.gameId.toString()}</span>
+              <span className="text-gray-400 text-base">
+                Round {game.turnState.currentRound.toString()}
+              </span>
             </h1>
             {/* Turn Indicator */}
             {game.metadata.winner ===
               "0x0000000000000000000000000000000000000000" && (
               <div className="text-sm text-gray-400">
                 <span className={isMyTurn ? "text-blue-400" : "text-red-400"}>
-                  {isMyTurn ? "YOUR TURN" : "OPPONENT" + "'" + "S TURN"}
+                  {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
                 </span>
               </div>
             )}
           </div>
-        </div>
-
-        {/* Game Info Cards - Center */}
-        <div className="flex gap-2 text-xs">
-          <div className="bg-gray-800 rounded p-2 border border-gray-700 w-48">
-            <h4 className="text-white font-mono mb-1">Scores</h4>
+          {/* Scores box aligned left, to the right of title */}
+          <div className="ml-6 bg-gray-800 rounded p-2 border border-gray-700 w-48 text-lg">
             <div className="space-y-0.5">
               <div className="flex justify-between">
                 <span className="text-gray-400">My Score:</span>
@@ -1074,6 +1076,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   {game.metadata.creator === address
                     ? game.creatorScore?.toString() || "0"
                     : game.joinerScore?.toString() || "0"}
+                  /{game.maxScore?.toString() || "0"}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -1082,84 +1085,437 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   {game.metadata.creator === address
                     ? game.joinerScore?.toString() || "0"
                     : game.creatorScore?.toString() || "0"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-800 rounded p-2 border border-gray-700 w-48">
-            <h4 className="text-white font-mono mb-1">Game Info</h4>
-            <div className="space-y-0.5">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Round:</span>
-                <span className="text-white">
-                  {game.turnState.currentRound.toString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Score Target:</span>
-                <span className="text-white">
-                  {game.maxScore?.toString() || "0"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-800 rounded p-2 border border-gray-700 w-48">
-            <h4 className="text-white font-mono mb-1">Players</h4>
-            <div className="space-y-0.5">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Creator:</span>
-                <span className="text-white font-mono text-xs">
-                  {game.metadata.creator.slice(0, 6)}...
-                  {game.metadata.creator.slice(-4)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Joiner:</span>
-                <span className="text-white font-mono text-xs">
-                  {game.metadata.joiner.slice(0, 6)}...
-                  {game.metadata.joiner.slice(-4)}
+                  /{game.maxScore?.toString() || "0"}
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Debug buttons and Emergency Flee */}
-        <div className="flex items-center space-x-4">
-          {/* Debug buttons - remove these later */}
-          {game.metadata.winner ===
-            "0x0000000000000000000000000000000000000000" && (
-            <div className="flex space-x-2">
-              <button
-                onClick={() => {
-                  console.log("Manual refetch triggered");
-                  refetchGame();
-                }}
-                className="px-2 py-1 bg-blue-600 text-white text-xs rounded"
-              >
-                Test Refetch
-              </button>
-              <button
-                onClick={() => {
-                  console.log(
-                    "Testing event system - triggering refetch for all games"
-                  );
-                  globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
-                    console.log(
-                      `Manually triggering refetch for game ${gameId}`
-                    );
-                    refetchFn();
-                  });
-                }}
-                className="px-2 py-1 bg-green-600 text-white text-xs rounded"
-              >
-                Test Events
-              </button>
+        {/* Move Confirmation UI - positioned between left and right sections */}
+        {selectedShipId &&
+          isMyTurn &&
+          isShipOwnedByCurrentPlayer(selectedShipId) && (
+            <div className="flex-1 mx-6 bg-gray-900 rounded-lg p-4 border border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="text-gray-300">
+                    <span className="text-white font-mono">
+                      {(() => {
+                        const selectedShip = shipMap.get(selectedShipId);
+                        return (
+                          selectedShip?.name ||
+                          `Ship #${selectedShipId.toString()}`
+                        );
+                      })()}
+                    </span>
+                    <span className="mx-2">→</span>
+                    <span className="text-white font-mono">
+                      {previewPosition
+                        ? `(${previewPosition.row}, ${previewPosition.col})`
+                        : (() => {
+                            const currentPosition = game.shipPositions.find(
+                              (pos) => pos.shipId === selectedShipId
+                            );
+                            return currentPosition
+                              ? `(${currentPosition.position.row}, ${currentPosition.position.col}) - Stay`
+                              : "Unknown Position";
+                          })()}
+                    </span>
+                    {/* Automatic scoring indicator */}
+                    {(() => {
+                      const points = (() => {
+                        if (previewPosition) {
+                          const row = previewPosition.row;
+                          const col = previewPosition.col;
+                          return (
+                            (scoringGrid[row] && scoringGrid[row][col]) || 0
+                          );
+                        }
+                        const currentPosition = game.shipPositions.find(
+                          (pos) => pos.shipId === selectedShipId
+                        );
+                        if (!currentPosition) return 0;
+                        const r = currentPosition.position.row;
+                        const c = currentPosition.position.col;
+                        return (scoringGrid[r] && scoringGrid[r][c]) || 0;
+                      })();
+                      return points > 0 ? (
+                        <div className="text-yellow-400 font-mono mt-1">
+                          ⭐ Score {points} Points
+                        </div>
+                      ) : null;
+                    })()}
+                    {targetShipId ? (
+                      <>
+                        <span className="mx-2">🎯</span>
+                        {selectedWeaponType === "special" &&
+                        specialType === 3 ? (
+                          // Flak special - affects all targets in range
+                          <>
+                            <span className="text-orange-400 font-mono">
+                              Flak: All Enemies in Range
+                            </span>
+                            <span className="ml-2 text-orange-400">
+                              💥 {validTargets.length} targets
+                            </span>
+                          </>
+                        ) : selectedWeaponType === "special" &&
+                          specialType === 1 ? (
+                          // EMP special - targets individual enemy ship
+                          <>
+                            <span className="text-blue-400 font-mono">
+                              EMP: Target Enemy Ship
+                            </span>
+                            <span className="ml-2 text-blue-400">
+                              ⚡ Reactor Critical +1
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-red-400 font-mono">
+                              Target: #{targetShipId.toString()}
+                            </span>
+                            {(() => {
+                              const damage = calculateDamage(targetShipId);
+                              if (selectedWeaponType === "special") {
+                                // Special abilities - show repair/heal effect
+                                return (
+                                  <span className="ml-2 text-blue-400">
+                                    🔧 Repair {damage.reducedDamage} HP
+                                  </span>
+                                );
+                              } else if (damage.reactorCritical) {
+                                return (
+                                  <span className="ml-2 text-yellow-400">
+                                    ⚡ Reactor Critical +1
+                                  </span>
+                                );
+                              } else if (damage.willKill) {
+                                return (
+                                  <span className="ml-2 text-red-400">
+                                    💀 {damage.reducedDamage} DMG (KILL)
+                                  </span>
+                                );
+                              } else {
+                                return (
+                                  <span className="ml-2 text-orange-400">
+                                    ⚔️ {damage.reducedDamage} DMG
+                                  </span>
+                                );
+                              }
+                            })()}
+                          </>
+                        )}
+                      </>
+                    ) : null}
+                  </div>
+
+                  {/* Weapon/Special Selection Dropdown */}
+                  {selectedShip && selectedShip.equipment.special > 0 && (
+                    <select
+                      value={selectedWeaponType}
+                      onChange={(e) =>
+                        setSelectedWeaponType(
+                          e.target.value as "weapon" | "special"
+                        )
+                      }
+                      className="px-3 py-1 text-sm rounded font-mono bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="weapon">
+                        {selectedShip
+                          ? getMainWeaponName(selectedShip.equipment.mainWeapon)
+                          : "Weapon"}
+                      </option>
+                      <option value="special">
+                        {selectedShip
+                          ? getSpecialName(selectedShip.equipment.special)
+                          : "Special"}
+                      </option>
+                    </select>
+                  )}
+
+                  {/* Removed verbose weapon/range/damage/movement text as requested */}
+                </div>
+
+                {/* Target Selection */}
+                {validTargets.length > 0 && (
+                  <div className="mb-4 p-3 bg-gray-800 rounded border border-gray-600">
+                    <h4 className="text-sm text-gray-300 mb-2">
+                      Select Target (Optional)
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedWeaponType === "special" && specialType === 3 ? (
+                        // Flak special - show area-of-effect button
+                        <button
+                          onClick={() => setTargetShipId(0n)}
+                          className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
+                            targetShipId === 0n
+                              ? "bg-orange-600 text-white"
+                              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                          }`}
+                        >
+                          💥 Flak All Enemies ({validTargets.length} targets)
+                        </button>
+                      ) : selectedWeaponType === "special" &&
+                        specialType === 1 ? (
+                        // EMP special - show individual target buttons
+                        validTargets.map((target) => {
+                          const targetShip = shipMap.get(target.shipId);
+                          return (
+                            <button
+                              key={target.shipId.toString()}
+                              onClick={() => setTargetShipId(target.shipId)}
+                              className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
+                                targetShipId === target.shipId
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                              }`}
+                            >
+                              ⚡ EMP{" "}
+                              {targetShip?.name ||
+                                `Ship #${target.shipId.toString()}`}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        validTargets.map((target) => {
+                          const targetShip = shipMap.get(target.shipId);
+                          const damage = calculateDamage(target.shipId);
+                          return (
+                            <button
+                              key={target.shipId.toString()}
+                              onClick={() => setTargetShipId(target.shipId)}
+                              className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
+                                targetShipId === target.shipId
+                                  ? selectedWeaponType === "special"
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-red-600 text-white"
+                                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                              }`}
+                            >
+                              Target #{target.shipId.toString()}
+                              {targetShip && ` (${targetShip.name})`}
+                              {selectedWeaponType === "special" ? (
+                                <span className="ml-1 text-blue-400">
+                                  🔧 {damage.reducedDamage}
+                                </span>
+                              ) : damage.reactorCritical ? (
+                                <span className="ml-1 text-yellow-400">
+                                  ⚡ +1
+                                </span>
+                              ) : damage.willKill ? (
+                                <span className="ml-1 text-red-400">
+                                  💀 {damage.reducedDamage}
+                                </span>
+                              ) : (
+                                <span className="ml-1 text-orange-400">
+                                  ⚔️ {damage.reducedDamage}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
+                      <button
+                        onClick={() => setTargetShipId(null)}
+                        className="px-3 py-1 text-xs rounded font-mono bg-gray-600 text-gray-300 hover:bg-gray-500"
+                      >
+                        {previewPosition ? "Move Only Instead" : "Stay Instead"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={handleCancelMove}
+                    className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <TransactionButton
+                    transactionId={`move-ship-${selectedShipId}-${game.metadata.gameId}`}
+                    contractAddress={gameContractConfig.address}
+                    abi={gameContractConfig.abi}
+                    functionName="moveShip"
+                    args={[
+                      game.metadata.gameId,
+                      selectedShipId,
+                      previewPosition
+                        ? (previewPosition.row as number)
+                        : (() => {
+                            const currentPosition = game.shipPositions.find(
+                              (pos) => pos.shipId === selectedShipId
+                            );
+                            return currentPosition
+                              ? currentPosition.position.row
+                              : 0;
+                          })(),
+                      previewPosition
+                        ? (previewPosition.col as number)
+                        : (() => {
+                            const currentPosition = game.shipPositions.find(
+                              (pos) => pos.shipId === selectedShipId
+                            );
+                            return currentPosition
+                              ? currentPosition.position.col
+                              : 0;
+                          })(),
+                      targetShipId
+                        ? (() => {
+                            // Check if this is an assist action (friendly ship with 0 HP)
+                            const isAssistAction =
+                              assistableTargets.some(
+                                (target) => target.shipId === targetShipId
+                              ) ||
+                              assistableTargetsFromStart.some(
+                                (target) => target.shipId === targetShipId
+                              );
+                            if (isAssistAction) {
+                              return ActionType.Assist;
+                            }
+                            // Otherwise, check weapon type for shooting/special
+                            return selectedWeaponType === "special"
+                              ? ActionType.Special
+                              : ActionType.Shoot;
+                          })()
+                        : ActionType.Pass,
+                      targetShipId || 0n,
+                    ]}
+                    className="px-6 py-2 bg-green-600 text-white rounded font-mono hover:bg-green-700 transition-colors"
+                    loadingText="Submitting..."
+                    errorText="Error"
+                    onSuccess={() => {
+                      toast.success("Move submitted successfully!");
+                      setPreviewPosition(null);
+                      setSelectedShipId(null);
+                      setTargetShipId(null);
+                      setSelectedWeaponType("weapon");
+                      // Refetch both the specific game and the game list
+                      refetchGame();
+                      refetch?.();
+                    }}
+                    onError={(error) => {
+                      console.error("Error submitting move:", error);
+                      const errorMessage =
+                        (error as Error)?.message ||
+                        String(error) ||
+                        "Unknown error";
+
+                      if (
+                        errorMessage.includes("User rejected") ||
+                        errorMessage.includes("User denied")
+                      ) {
+                        toast.error("Transaction declined by user");
+                      } else if (errorMessage.includes("insufficient funds")) {
+                        toast.error("Insufficient funds for transaction");
+                      } else if (errorMessage.includes("gas")) {
+                        toast.error(
+                          "Transaction failed due to gas estimation error"
+                        );
+                      } else if (errorMessage.includes("execution reverted")) {
+                        toast.error(
+                          "Transaction reverted - check if it&apos;s your turn and ship is valid"
+                        );
+                      } else if (errorMessage.includes("NotYourTurn")) {
+                        toast.error("It&apos;s not your turn to move");
+                      } else if (errorMessage.includes("ShipNotFound")) {
+                        toast.error("Ship not found in this game");
+                      } else if (errorMessage.includes("InvalidMove")) {
+                        toast.error(
+                          "Invalid move - check ship position and movement range"
+                        );
+                      } else if (errorMessage.includes("PositionOccupied")) {
+                        toast.error("Target position is already occupied");
+                      } else {
+                        toast.error(`Transaction failed: ${errorMessage}`);
+                      }
+                    }}
+                    validateBeforeTransaction={() => {
+                      if (!selectedShipId) {
+                        return "No ship selected";
+                      }
+                      if (
+                        !game.metadata.gameId ||
+                        game.metadata.gameId === 0n
+                      ) {
+                        return "Invalid game ID";
+                      }
+                      if (!isShipOwnedByCurrentPlayer(selectedShipId)) {
+                        return "You can only move your own ships";
+                      }
+                      if (movedShipIdsSet.has(selectedShipId)) {
+                        return "This ship has already moved this round";
+                      }
+                      if (previewPosition) {
+                        if (
+                          previewPosition.row < 0 ||
+                          previewPosition.row >= GRID_HEIGHT ||
+                          previewPosition.col < 0 ||
+                          previewPosition.col >= GRID_WIDTH
+                        ) {
+                          return "Invalid position coordinates";
+                        }
+                      }
+                      return true;
+                    }}
+                  >
+                    Submit{" "}
+                    {targetShipId
+                      ? (() => {
+                          // Check if this is an assist action
+                          const isAssistAction =
+                            assistableTargets.some(
+                              (target) => target.shipId === targetShipId
+                            ) ||
+                            assistableTargetsFromStart.some(
+                              (target) => target.shipId === targetShipId
+                            );
+                          if (isAssistAction) {
+                            return "(Assist)";
+                          }
+                          // Otherwise show weapon type
+                          return selectedWeaponType === "special"
+                            ? specialType === 3
+                              ? "(Flak)"
+                              : specialType === 1
+                              ? "(EMP)"
+                              : `(${
+                                  selectedShip
+                                    ? getSpecialName(
+                                        selectedShip.equipment.special
+                                      )
+                                    : "Special"
+                                })`
+                            : "(Shoot)";
+                        })()
+                      : previewPosition
+                      ? scoringGrid[previewPosition.row] &&
+                        scoringGrid[previewPosition.row][previewPosition.col] >
+                          0
+                        ? "(Move + Score)"
+                        : "(Move Only)"
+                      : (() => {
+                          const currentPosition = game.shipPositions.find(
+                            (pos) => pos.shipId === selectedShipId
+                          );
+                          return currentPosition &&
+                            scoringGrid[currentPosition.position.row] &&
+                            scoringGrid[currentPosition.position.row][
+                              currentPosition.position.col
+                            ] > 0
+                            ? "(Stay + Score)"
+                            : "(Pass)";
+                        })()}
+                  </TransactionButton>
+                </div>
+              </div>
             </div>
           )}
 
+        {/* Debug buttons and Emergency Flee */}
+        <div className="flex items-center space-x-4">
           {/* Emergency Flee Safety Switch */}
           {game.metadata.winner ===
             "0x0000000000000000000000000000000000000000" && (
@@ -1194,9 +1550,18 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       </div>
 
       {/* Game Map */}
-      <div className="bg-gray-900 rounded-lg p-2 border border-gray-700 w-full">
-        <h3 className="text-white font-mono mb-4">Battle Map</h3>
-
+      <div
+        className="bg-gray-900 rounded-lg p-2 w-full"
+        style={{
+          outline: `2px solid ${
+            game.turnState.currentTurn === address ? "#60a5fa" : "#f87171"
+          }`, // blue-400 when my turn, red-400 when opponent's
+          outlineOffset: 0,
+          borderColor: "#374151", // keep the subtle internal border color
+          borderWidth: 1,
+          borderStyle: "solid",
+        }}
+      >
         {/* Map Grid */}
         <div className="w-full px-2">
           <div
@@ -1393,7 +1758,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 return (
                   <div
                     key={`cell-${rowIndex}-${colIndex}`}
-                    className={`w-full h-full aspect-square border-0 outline outline-1 outline-gray-900 relative cursor-pointer ${
+                    className={`w-full h-full aspect-square ${
+                      isShipOnScoringTile
+                        ? "border-2 border-yellow-400"
+                        : "border-0"
+                    } outline outline-1 outline-gray-900 relative cursor-pointer ${
                       isSelected
                         ? canMoveShip
                           ? "bg-blue-900 ring-2 ring-blue-400"
@@ -1433,7 +1802,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         : isMovementTile
                         ? "bg-green-900/50"
                         : "bg-gray-950"
-                    } ${isShipOnScoringTile ? "ring-2 ring-yellow-400" : ""}`}
+                    }`}
                     onClick={handleCellClick}
                     title={
                       cell
@@ -1721,540 +2090,96 @@ Attributes:
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center justify-center space-x-6 mt-4 text-sm">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-500 border border-gray-700"></div>
-            <span className="text-gray-300">Creator Ships</span>
+        {/* Legend and Test Controls Row */}
+        <div className="flex items-center justify-between mt-4 text-sm">
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-blue-500 border border-gray-700"></div>
+              <span className="text-gray-300">Creator Ships</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-red-500 border border-gray-700"></div>
+              <span className="text-gray-300">Joiner Ships</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-green-400 bg-green-500/20"></div>
+              <span className="text-gray-300">Movement Range</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-orange-400 bg-orange-500/20"></div>
+              <span className="text-gray-300">Shooting Range</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-gray-600 border border-gray-700"></div>
+              <span className="text-gray-300">Moved This Round</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-blue-400 bg-blue-900"></div>
+              <span className="text-gray-300">Your Ship (Movable)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-purple-400 bg-purple-900"></div>
+              <span className="text-gray-300">Opponent Ship (View Only)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-1 border-orange-400 bg-orange-900/50"></div>
+              <span className="text-gray-300">Valid Target</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-red-400 bg-red-900"></div>
+              <span className="text-gray-300">Selected Target</span>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-red-500 border border-gray-700"></div>
-            <span className="text-gray-300">Joiner Ships</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 border-2 border-green-400 bg-green-500/20"></div>
-            <span className="text-gray-300">Movement Range</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 border-2 border-orange-400 bg-orange-500/20"></div>
-            <span className="text-gray-300">Shooting Range</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-gray-600 border border-gray-700"></div>
-            <span className="text-gray-300">Moved This Round</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 border-2 border-blue-400 bg-blue-900"></div>
-            <span className="text-gray-300">Your Ship (Movable)</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 border-2 border-purple-400 bg-purple-900"></div>
-            <span className="text-gray-300">Opponent Ship (View Only)</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 border-1 border-orange-400 bg-orange-900/50"></div>
-            <span className="text-gray-300">Valid Target</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 border-2 border-red-400 bg-red-900"></div>
-            <span className="text-gray-300">Selected Target</span>
-          </div>
+
+          {/* Test controls moved to the right of the key */}
+          {game.metadata.winner ===
+            "0x0000000000000000000000000000000000000000" && (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => {
+                  console.log("Manual refetch triggered");
+                  refetchGame();
+                }}
+                className="px-2 py-1 border border-cyan-400 text-cyan-400 rounded font-mono hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10"
+              >
+                Test Refetch
+              </button>
+              <button
+                onClick={() => {
+                  console.log(
+                    "Testing event system - triggering refetch for all games"
+                  );
+                  globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
+                    console.log(
+                      `Manually triggering refetch for game ${gameId}`
+                    );
+                    refetchFn();
+                  });
+                }}
+                className="px-2 py-1 border border-green-400 text-green-400 rounded font-mono hover:border-green-300 hover:text-green-300 hover:bg-green-400/10"
+              >
+                Test Events
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Move Confirmation UI */}
-      {selectedShipId &&
-        isMyTurn &&
-        isShipOwnedByCurrentPlayer(selectedShipId) && (
-          <div className="bg-gray-900 rounded-lg p-4 border border-gray-700 w-full">
-            <h3 className="text-white font-mono mb-4">Confirm Move</h3>
-
-            {/* Debug info */}
-            <div className="text-xs text-gray-500 mb-2">
-              Debug: selectedShipId={selectedShipId?.toString()},
-              previewPosition=
-              {previewPosition
-                ? `${previewPosition.row},${previewPosition.col}`
-                : "null"}
-              , targetShipId={targetShipId?.toString() || "none"}, isMyTurn=
-              {isMyTurn.toString()}
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="text-gray-300">
-                  <span className="text-white font-mono">
-                    {(() => {
-                      const selectedShip = shipMap.get(selectedShipId);
-                      return (
-                        selectedShip?.name ||
-                        `Ship #${selectedShipId.toString()}`
-                      );
-                    })()}
-                  </span>
-                  <span className="mx-2">→</span>
-                  <span className="text-white font-mono">
-                    {previewPosition
-                      ? `(${previewPosition.row}, ${previewPosition.col})`
-                      : (() => {
-                          const currentPosition = game.shipPositions.find(
-                            (pos) => pos.shipId === selectedShipId
-                          );
-                          return currentPosition
-                            ? `(${currentPosition.position.row}, ${currentPosition.position.col}) - Stay`
-                            : "Unknown Position";
-                        })()}
-                  </span>
-                  {targetShipId ? (
-                    <>
-                      <span className="mx-2">🎯</span>
-                      {selectedWeaponType === "special" && specialType === 3 ? (
-                        // Flak special - affects all targets in range
-                        <>
-                          <span className="text-orange-400 font-mono">
-                            Flak: All Enemies in Range
-                          </span>
-                          <span className="ml-2 text-orange-400">
-                            💥 {validTargets.length} targets
-                          </span>
-                        </>
-                      ) : selectedWeaponType === "special" &&
-                        specialType === 1 ? (
-                        // EMP special - targets individual enemy ship
-                        <>
-                          <span className="text-blue-400 font-mono">
-                            EMP: Target Enemy Ship
-                          </span>
-                          <span className="ml-2 text-blue-400">
-                            ⚡ Reactor Critical +1
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-red-400 font-mono">
-                            Target: #{targetShipId.toString()}
-                          </span>
-                          {(() => {
-                            const damage = calculateDamage(targetShipId);
-                            if (selectedWeaponType === "special") {
-                              // Special abilities - show repair/heal effect
-                              return (
-                                <span className="ml-2 text-blue-400">
-                                  🔧 Repair {damage.reducedDamage} HP
-                                </span>
-                              );
-                            } else if (damage.reactorCritical) {
-                              return (
-                                <span className="ml-2 text-yellow-400">
-                                  ⚡ Reactor Critical +1
-                                </span>
-                              );
-                            } else if (damage.willKill) {
-                              return (
-                                <span className="ml-2 text-red-400">
-                                  💀 {damage.reducedDamage} DMG (KILL)
-                                </span>
-                              );
-                            } else {
-                              return (
-                                <span className="ml-2 text-orange-400">
-                                  ⚔️ {damage.reducedDamage} DMG
-                                </span>
-                              );
-                            }
-                          })()}
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <span className="mx-2">💰</span>
-                      <span className="text-yellow-400 font-mono">
-                        {previewPosition
-                          ? scoringGrid[previewPosition.row] &&
-                            scoringGrid[previewPosition.row][
-                              previewPosition.col
-                            ] > 0
-                            ? "Claim Points"
-                            : "Move Only"
-                          : (() => {
-                              const currentPosition = game.shipPositions.find(
-                                (pos) => pos.shipId === selectedShipId
-                              );
-                              return currentPosition &&
-                                scoringGrid[currentPosition.position.row] &&
-                                scoringGrid[currentPosition.position.row][
-                                  currentPosition.position.col
-                                ] > 0
-                                ? "Claim Points"
-                                : "Stay in Position";
-                            })()}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {/* Weapon/Special Selection Dropdown */}
-                {selectedShip && selectedShip.equipment.special > 0 && (
-                  <div className="mb-4 p-3 bg-gray-800 rounded border border-gray-600">
-                    <h4 className="text-sm text-gray-300 mb-2">
-                      Select Weapon Type
-                    </h4>
-                    <select
-                      value={selectedWeaponType}
-                      onChange={(e) =>
-                        setSelectedWeaponType(
-                          e.target.value as "weapon" | "special"
-                        )
-                      }
-                      className="px-3 py-1 text-sm rounded font-mono bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
-                    >
-                      <option value="weapon">
-                        {selectedShip
-                          ? getMainWeaponName(selectedShip.equipment.mainWeapon)
-                          : "Weapon"}
-                      </option>
-                      <option value="special">
-                        {selectedShip
-                          ? getSpecialName(selectedShip.equipment.special)
-                          : "Special"}
-                      </option>
-                    </select>
-                  </div>
-                )}
-
-                {/* Show ship attributes for context */}
-                {(() => {
-                  const attributes = getShipAttributes(selectedShipId);
-                  const ship = shipMap.get(selectedShipId);
-                  const gunName = ship
-                    ? getMainWeaponName(ship.equipment.mainWeapon)
-                    : "Unknown";
-
-                  return attributes ? (
-                    <div className="text-sm text-gray-400">
-                      <span className="text-white">
-                        {selectedWeaponType === "special"
-                          ? getSpecialName(ship?.equipment.special || 0)
-                          : gunName}
-                      </span>
-                      <span className="mx-2">•</span>
-                      <span>
-                        Range:{" "}
-                        {selectedWeaponType === "special" &&
-                        specialRange !== undefined
-                          ? specialRange
-                          : attributes.range}
-                      </span>
-                      <span className="mx-2">•</span>
-                      <span>Damage: {attributes.gunDamage}</span>
-                      <span className="mx-2">•</span>
-                      <span>Movement: {attributes.movement}</span>
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-
-              {/* Target Selection */}
-              {validTargets.length > 0 && (
-                <div className="mb-4 p-3 bg-gray-800 rounded border border-gray-600">
-                  <h4 className="text-sm text-gray-300 mb-2">
-                    Select Target (Optional)
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedWeaponType === "special" && specialType === 3 ? (
-                      // Flak special - show area-of-effect button
-                      <button
-                        onClick={() => setTargetShipId(0n)}
-                        className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
-                          targetShipId === 0n
-                            ? "bg-orange-600 text-white"
-                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                        }`}
-                      >
-                        💥 Flak All Enemies ({validTargets.length} targets)
-                      </button>
-                    ) : selectedWeaponType === "special" &&
-                      specialType === 1 ? (
-                      // EMP special - show individual target buttons
-                      validTargets.map((target) => {
-                        const targetShip = shipMap.get(target.shipId);
-                        return (
-                          <button
-                            key={target.shipId.toString()}
-                            onClick={() => setTargetShipId(target.shipId)}
-                            className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
-                              targetShipId === target.shipId
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                            }`}
-                          >
-                            ⚡ EMP{" "}
-                            {targetShip?.name ||
-                              `Ship #${target.shipId.toString()}`}
-                          </button>
-                        );
-                      })
-                    ) : (
-                      validTargets.map((target) => {
-                        const targetShip = shipMap.get(target.shipId);
-                        const damage = calculateDamage(target.shipId);
-                        return (
-                          <button
-                            key={target.shipId.toString()}
-                            onClick={() => setTargetShipId(target.shipId)}
-                            className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
-                              targetShipId === target.shipId
-                                ? selectedWeaponType === "special"
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-red-600 text-white"
-                                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                            }`}
-                          >
-                            Target #{target.shipId.toString()}
-                            {targetShip && ` (${targetShip.name})`}
-                            {selectedWeaponType === "special" ? (
-                              <span className="ml-1 text-blue-400">
-                                🔧 {damage.reducedDamage}
-                              </span>
-                            ) : damage.reactorCritical ? (
-                              <span className="ml-1 text-yellow-400">
-                                ⚡ +1
-                              </span>
-                            ) : damage.willKill ? (
-                              <span className="ml-1 text-red-400">
-                                💀 {damage.reducedDamage}
-                              </span>
-                            ) : (
-                              <span className="ml-1 text-orange-400">
-                                ⚔️ {damage.reducedDamage}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })
-                    )}
-                    <button
-                      onClick={() => setTargetShipId(null)}
-                      className="px-3 py-1 text-xs rounded font-mono bg-gray-600 text-gray-300 hover:bg-gray-500"
-                    >
-                      {previewPosition
-                        ? scoringGrid[previewPosition.row] &&
-                          scoringGrid[previewPosition.row][
-                            previewPosition.col
-                          ] > 0
-                          ? "Claim Points Instead"
-                          : "Move Only Instead"
-                        : (() => {
-                            const currentPosition = game.shipPositions.find(
-                              (pos) => pos.shipId === selectedShipId
-                            );
-                            return currentPosition &&
-                              scoringGrid[currentPosition.position.row] &&
-                              scoringGrid[currentPosition.position.row][
-                                currentPosition.position.col
-                              ] > 0
-                              ? "Claim Points Instead"
-                              : "Stay Instead";
-                          })()}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={handleCancelMove}
-                  className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <TransactionButton
-                  transactionId={`move-ship-${selectedShipId}-${game.metadata.gameId}`}
-                  contractAddress={gameContractConfig.address}
-                  abi={gameContractConfig.abi}
-                  functionName="moveShip"
-                  args={[
-                    game.metadata.gameId,
-                    selectedShipId,
-                    previewPosition
-                      ? (previewPosition.row as number)
-                      : (() => {
-                          const currentPosition = game.shipPositions.find(
-                            (pos) => pos.shipId === selectedShipId
-                          );
-                          return currentPosition
-                            ? currentPosition.position.row
-                            : 0;
-                        })(),
-                    previewPosition
-                      ? (previewPosition.col as number)
-                      : (() => {
-                          const currentPosition = game.shipPositions.find(
-                            (pos) => pos.shipId === selectedShipId
-                          );
-                          return currentPosition
-                            ? currentPosition.position.col
-                            : 0;
-                        })(),
-                    targetShipId
-                      ? (() => {
-                          // Check if this is an assist action (friendly ship with 0 HP)
-                          const isAssistAction =
-                            assistableTargets.some(
-                              (target) => target.shipId === targetShipId
-                            ) ||
-                            assistableTargetsFromStart.some(
-                              (target) => target.shipId === targetShipId
-                            );
-                          if (isAssistAction) {
-                            return ActionType.Assist;
-                          }
-                          // Otherwise, check weapon type for shooting/special
-                          return selectedWeaponType === "special"
-                            ? ActionType.Special
-                            : ActionType.Shoot;
-                        })()
-                      : ActionType.ClaimPoints,
-                    targetShipId || 0n,
-                  ]}
-                  className="px-6 py-2 bg-green-600 text-white rounded font-mono hover:bg-green-700 transition-colors"
-                  loadingText="Submitting..."
-                  errorText="Error"
-                  onSuccess={() => {
-                    toast.success("Move submitted successfully!");
-                    setPreviewPosition(null);
-                    setSelectedShipId(null);
-                    setTargetShipId(null);
-                    setSelectedWeaponType("weapon");
-                    // Refetch both the specific game and the game list
-                    refetchGame();
-                    refetch?.();
-                  }}
-                  onError={(error) => {
-                    console.error("Error submitting move:", error);
-                    const errorMessage =
-                      (error as Error)?.message ||
-                      String(error) ||
-                      "Unknown error";
-
-                    if (
-                      errorMessage.includes("User rejected") ||
-                      errorMessage.includes("User denied")
-                    ) {
-                      toast.error("Transaction declined by user");
-                    } else if (errorMessage.includes("insufficient funds")) {
-                      toast.error("Insufficient funds for transaction");
-                    } else if (errorMessage.includes("gas")) {
-                      toast.error(
-                        "Transaction failed due to gas estimation error"
-                      );
-                    } else if (errorMessage.includes("execution reverted")) {
-                      toast.error(
-                        "Transaction reverted - check if it" +
-                          "'" +
-                          "s your turn and ship is valid"
-                      );
-                    } else if (errorMessage.includes("NotYourTurn")) {
-                      toast.error("It" + "'" + "s not your turn to move");
-                    } else if (errorMessage.includes("ShipNotFound")) {
-                      toast.error("Ship not found in this game");
-                    } else if (errorMessage.includes("InvalidMove")) {
-                      toast.error(
-                        "Invalid move - check ship position and movement range"
-                      );
-                    } else if (errorMessage.includes("PositionOccupied")) {
-                      toast.error("Target position is already occupied");
-                    } else {
-                      toast.error(`Transaction failed: ${errorMessage}`);
-                    }
-                  }}
-                  validateBeforeTransaction={() => {
-                    if (!selectedShipId) {
-                      return "No ship selected";
-                    }
-                    if (!game.metadata.gameId || game.metadata.gameId === 0n) {
-                      return "Invalid game ID";
-                    }
-                    if (!isShipOwnedByCurrentPlayer(selectedShipId)) {
-                      return "You can only move your own ships";
-                    }
-                    if (movedShipIdsSet.has(selectedShipId)) {
-                      return "This ship has already moved this round";
-                    }
-                    if (previewPosition) {
-                      if (
-                        previewPosition.row < 0 ||
-                        previewPosition.row >= GRID_HEIGHT ||
-                        previewPosition.col < 0 ||
-                        previewPosition.col >= GRID_WIDTH
-                      ) {
-                        return "Invalid position coordinates";
-                      }
-                    }
-                    return true;
-                  }}
-                >
-                  Submit Move{" "}
-                  {targetShipId
-                    ? (() => {
-                        // Check if this is an assist action
-                        const isAssistAction =
-                          assistableTargets.some(
-                            (target) => target.shipId === targetShipId
-                          ) ||
-                          assistableTargetsFromStart.some(
-                            (target) => target.shipId === targetShipId
-                          );
-                        if (isAssistAction) {
-                          return "(Assist)";
-                        }
-                        // Otherwise show weapon type
-                        return selectedWeaponType === "special"
-                          ? specialType === 3
-                            ? "(Flak)"
-                            : specialType === 1
-                            ? "(EMP)"
-                            : `(${
-                                selectedShip
-                                  ? getSpecialName(
-                                      selectedShip.equipment.special
-                                    )
-                                  : "Special"
-                              })`
-                          : "(Shoot)";
-                      })()
-                    : previewPosition
-                    ? scoringGrid[previewPosition.row] &&
-                      scoringGrid[previewPosition.row][previewPosition.col] > 0
-                      ? "(Claim Points)"
-                      : "(Move Only)"
-                    : (() => {
-                        const currentPosition = game.shipPositions.find(
-                          (pos) => pos.shipId === selectedShipId
-                        );
-                        return currentPosition &&
-                          scoringGrid[currentPosition.position.row] &&
-                          scoringGrid[currentPosition.position.row][
-                            currentPosition.position.col
-                          ] > 0
-                          ? "(Claim Points)"
-                          : "(Stay)";
-                      })()}
-                </TransactionButton>
-              </div>
-            </div>
-          </div>
-        )}
-
       {/* Ship Details */}
       <div className="bg-gray-900 rounded-lg p-4 border border-gray-700 w-full">
-        <h3 className="text-white font-mono mb-4">Ship Details</h3>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* My Fleet - Always on the left */}
           <div>
-            <h4 className="text-blue-400 font-mono mb-3">My Fleet</h4>
+            <h4 className="text-blue-400 font-mono mb-3">
+              My Fleet
+              <span className="ml-2 text-gray-400">
+                (
+                {game.metadata.creator === address
+                  ? game.metadata.creator
+                  : game.metadata.joiner}
+                )
+              </span>
+            </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(game.metadata.creator === address
                 ? game.creatorActiveShipIds
@@ -2364,7 +2289,14 @@ Attributes:
           {/* Opponent's Fleet - Always on the right */}
           <div>
             <h4 className="text-red-400 font-mono mb-3">
-              {"Opponent" + "'" + "s Fleet"}
+              Opponent&apos;s Fleet
+              <span className="ml-2 text-gray-400">
+                (
+                {game.metadata.creator === address
+                  ? game.metadata.joiner
+                  : game.metadata.creator}
+                )
+              </span>
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(game.metadata.creator === address
