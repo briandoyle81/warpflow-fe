@@ -9,9 +9,12 @@ import Games from "./components/Games";
 import Profile from "./components/Profile";
 import Info from "./components/Info";
 import Maps from "./components/Maps";
+import ShipAttributes from "./components/ShipAttributes";
+import { useShipAttributesOwner } from "./hooks/useShipAttributesContract";
 
 export default function Home() {
   const { status } = useAccount();
+  const { isOwner } = useShipAttributesOwner();
 
   // Initialize with default tab to prevent hydration mismatch
   const [activeTab, setActiveTab] = useState("Manage Navy");
@@ -23,19 +26,26 @@ export default function Home() {
     const savedTab = localStorage.getItem("warpflow-active-tab");
     const savedGameId = localStorage.getItem("selectedGameId");
 
+    const validTabs = [
+      "Manage Navy",
+      "Lobbies",
+      "Games",
+      "Profile",
+      "Info",
+      "Maps",
+    ];
+    if (isOwner) {
+      validTabs.push("Ship Attributes");
+    }
+
     // If there's a saved game, prioritize switching to Games tab
     if (savedGameId) {
       console.log(`Found saved game ID ${savedGameId}, switching to Games tab`);
       setActiveTab("Games");
-    } else if (
-      savedTab &&
-      ["Manage Navy", "Lobbies", "Games", "Profile", "Info", "Maps"].includes(
-        savedTab
-      )
-    ) {
+    } else if (savedTab && validTabs.includes(savedTab)) {
       setActiveTab(savedTab);
     }
-  }, []);
+  }, [isOwner]);
 
   // Save tab to localStorage whenever it changes (only after hydration)
   useEffect(() => {
@@ -80,21 +90,32 @@ export default function Home() {
           }`}
         >
           <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {["Manage Navy", "Lobbies", "Games", "Profile", "Info", "Maps"].map(
-              (tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-6 py-3 rounded-lg border-2 font-mono font-bold tracking-wider transition-all duration-200 shadow-lg ${
-                    activeTab === tab
-                      ? "border-cyan-300 text-cyan-300 bg-cyan-400/20 shadow-cyan-400/40"
-                      : "border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 shadow-cyan-400/20 hover:shadow-cyan-400/40"
-                  }`}
-                >
-                  [{tab.toUpperCase()}]
-                </button>
-              )
-            )}
+            {(() => {
+              const tabs = [
+                "Manage Navy",
+                "Lobbies",
+                "Games",
+                "Profile",
+                "Info",
+                "Maps",
+              ];
+              if (isOwner) {
+                tabs.push("Ship Attributes");
+              }
+              return tabs;
+            })().map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-6 py-3 rounded-lg border-2 font-mono font-bold tracking-wider transition-all duration-200 shadow-lg ${
+                  activeTab === tab
+                    ? "border-cyan-300 text-cyan-300 bg-cyan-400/20 shadow-cyan-400/40"
+                    : "border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 shadow-cyan-400/20 hover:shadow-cyan-400/40"
+                }`}
+              >
+                [{tab.toUpperCase()}]
+              </button>
+            ))}
           </div>
 
           {/* Tab Content */}
@@ -116,6 +137,7 @@ export default function Home() {
               {activeTab === "Lobbies" && <Lobbies />}
               {activeTab === "Profile" && <Profile />}
               {activeTab === "Info" && <Info />}
+              {activeTab === "Ship Attributes" && <ShipAttributes />}
             </div>
           )}
         </div>
