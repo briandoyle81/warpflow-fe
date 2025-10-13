@@ -7,7 +7,8 @@ import { useLobbies } from "../hooks/useLobbies";
 import { useOwnedShips } from "../hooks/useOwnedShips";
 import { useFleetsRead } from "../hooks/useFleetsContract";
 import { useShipsRead } from "../hooks/useShipsContract";
-import { LobbyStatus } from "../types/types";
+import { LobbyStatus, Ship, Attributes } from "../types/types";
+import { toast } from "react-hot-toast";
 import { ShipImage } from "./ShipImage";
 import {
   getMainWeaponName,
@@ -95,8 +96,10 @@ const Lobbies: React.FC = () => {
   const opponentPositions = React.useMemo(() => {
     if (!fleetIdsAndPositions)
       return [] as Array<{ shipId: bigint; row: number; col: number }>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tuple = fleetIdsAndPositions as any;
+    const tuple = fleetIdsAndPositions as [
+      bigint[],
+      Array<{ row: number; col: number }>
+    ];
     const ids: bigint[] = (tuple?.[0] || []) as bigint[];
     const positions: Array<{ row: number; col: number }> = (tuple?.[1] ||
       []) as Array<{ row: number; col: number }>;
@@ -115,9 +118,8 @@ const Lobbies: React.FC = () => {
       : undefined
   );
   // Use existing image caching via ShipImage component; just shape into array
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const opponentShips = React.useMemo(
-    () => (opponentShipsData as any) || [],
+    () => (opponentShipsData as Ship[]) || [],
     [opponentShipsData]
   );
 
@@ -490,40 +492,15 @@ const Lobbies: React.FC = () => {
         col: pos.col,
       }));
 
-      // Submit tx and get hash
-      const txHash = await createFleet(
-        lobbyId,
-        selectedShips,
-        startingPositions
-      );
+      // Submit tx
+      await createFleet(lobbyId, selectedShips, startingPositions);
 
-      // Wait for on-chain confirmation before closing
-      try {
-        // Prefer wagmi's public client if available at runtime
-        // @ts-expect-error global availability depends on app setup
-        const { waitForTransactionReceipt } = await import("viem/actions");
-        // @ts-expect-error global availability depends on app setup
-        const { createPublicClient, http } = await import("viem");
-        // @ts-expect-error using configured chain from app setup if available
-        const { default: chains } = await import("../config/contracts");
-        // Fallback: create a basic public client to wait for receipt
-        const client = createPublicClient({
-          chain: undefined as any,
-          transport: http(),
-        });
-        await waitForTransactionReceipt(client, {
-          hash: txHash as `0x${string}`,
-        });
-      } catch {
-        // If dynamic import/public client isn't available, fall back to leaving UI open;
-        // the TransactionButton/toasts elsewhere will reflect status.
-      }
-
-      // Only after receipt: clear state and close
+      // Transaction submitted successfully - close modal
+      setShowFleetView(false);
       setSelectedShips([]);
       setShipPositions([]);
       setSelectedShipId(null);
-      setSelectedLobby(null);
+      toast.success("Fleet created successfully!");
       setShowFleetConfirmation(false);
     } catch (error) {
       console.error("Failed to create fleet:", error);
@@ -599,7 +576,7 @@ const Lobbies: React.FC = () => {
   const [opponentGridPositions, setOpponentGridPositions] = React.useState<
     Array<{ shipId: bigint; row: number; col: number }>
   >([]);
-  const [opponentGridShips, setOpponentGridShips] = React.useState<any[]>([]);
+  const [opponentGridShips, setOpponentGridShips] = React.useState<Ship[]>([]);
 
   // Hook read for ids+positions when opponent fleet exists
   const { data: oppIdsPos } = useFleetsRead(
@@ -612,8 +589,7 @@ const Lobbies: React.FC = () => {
   const opponentGridPositionsFromHook = React.useMemo(() => {
     if (!oppIdsPos)
       return [] as Array<{ shipId: bigint; row: number; col: number }>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tuple = oppIdsPos as any;
+    const tuple = oppIdsPos as [bigint[], Array<{ row: number; col: number }>];
     const ids: bigint[] = (tuple?.[0] || []) as bigint[];
     const positions: Array<{ row: number; col: number }> = (tuple?.[1] ||
       []) as Array<{ row: number; col: number }>;
@@ -659,19 +635,18 @@ const Lobbies: React.FC = () => {
     [shipPositions, opponentGridPositionsFromHook]
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const combinedShips = React.useMemo<any[]>(
+  const combinedShips = React.useMemo<Ship[]>(
     () => [
-      ...(ships as any[]),
-      ...(((opponentGridShipsData as any) ?? []) as any[]),
+      ...(ships as Ship[]),
+      ...(((opponentGridShipsData as Ship[]) ?? []) as Ship[]),
     ],
     [ships, opponentGridShipsData]
   );
 
   const combinedAttributes = React.useMemo(
     () => [
-      ...(shipAttributes as any[]),
-      ...(((opponentGridAttributes as any) ?? []) as any[]),
+      ...(shipAttributes as Attributes[]),
+      ...(((opponentGridAttributes as Attributes[]) ?? []) as Attributes[]),
     ],
     [shipAttributes, opponentGridAttributes]
   );
@@ -715,8 +690,7 @@ const Lobbies: React.FC = () => {
       setOpponentGridPositions(opponentGridPositionsFromHook);
     }
     if (opponentGridShipsData && Array.isArray(opponentGridShipsData)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setOpponentGridShips(opponentGridShipsData as any);
+      setOpponentGridShips(opponentGridShipsData as Ship[]);
     }
     // Write-through to cache when we have both
     if (
@@ -2093,8 +2067,8 @@ const Lobbies: React.FC = () => {
                           }
                           shipAttributes={
                             showFleetView && viewingFleetOwner && viewingFleetId
-                              ? (opponentViewAttributes as any)
-                              : (combinedAttributes as any)
+                              ? (opponentViewAttributes as Attributes[])
+                              : (combinedAttributes as Attributes[])
                           }
                           selectedShipId={selectedShipId}
                           onShipSelect={handleShipSelect}
@@ -2107,7 +2081,7 @@ const Lobbies: React.FC = () => {
                             )
                           }
                           selectableShipIds={selectableShipIds}
-                          flippedShipIds={flippedShipIds as any}
+                          flippedShipIds={flippedShipIds as bigint[]}
                         />
                       )}
                     </div>
@@ -2269,9 +2243,7 @@ const Lobbies: React.FC = () => {
                 fleetShips.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {fleetShips.map((ship: unknown, index: number) => {
-                    // Type assertion for contract data - using any for flexibility with contract response
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const shipData = ship as any;
+                    const shipData = ship as Ship;
                     return (
                       <div
                         key={shipData.id?.toString() || index}

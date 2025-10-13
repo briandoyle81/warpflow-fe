@@ -156,16 +156,16 @@ export function useLobbies() {
     lobbyId: bigint,
     shipIds: bigint[],
     startingPositions: Array<{ row: number; col: number }>
-  ) => {
+  ): Promise<void> => {
     if (!address) throw new Error("No wallet connected");
 
     try {
-      const txHash = await writeContract({
+      await writeContract({
         ...lobbiesContractConfig,
         functionName: "createFleet",
         args: [lobbyId, shipIds, startingPositions],
       });
-      return txHash; // let caller await receipt
+      // Transaction submitted successfully
     } catch (error) {
       console.error("Failed to create fleet:", error);
       throw error;

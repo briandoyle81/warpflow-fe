@@ -10,14 +10,18 @@ import {
   useAttributesVersionBase,
   useGunData,
   useArmorData,
-  useShipAttributesWrite,
+  useShieldData,
+  useSpecialData,
   GunData,
   ArmorData,
+  ShieldData,
+  SpecialData,
   Costs,
 } from "../hooks/useShipAttributesContract";
 import { TransactionButton } from "./TransactionButton";
 import { toast } from "react-hot-toast";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import type { Abi } from "viem";
 
 const ShipAttributes: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -29,20 +33,45 @@ const ShipAttributes: React.FC = () => {
 
   // Costs data
   const { data: costsData } = useCosts();
-  const costs = costsData?.[1] as Costs | undefined;
+  const costs =
+    Array.isArray(costsData) && costsData.length > 1
+      ? (costsData[1] as Costs)
+      : undefined;
 
   // Attributes version base data
   const { data: attributesBaseData } = useAttributesVersionBase(
     Number(currentAttributesVersion) || 1
   );
 
-  // Equipment data
-  const { data: gunData } = useGunData(0); // Laser
-  const { data: armorData } = useArmorData(0); // None
+  // Equipment data - individual hooks for each equipment type
+  const gun0 = useGunData(0); // Laser
+  const gun1 = useGunData(1); // Railgun
+  const gun2 = useGunData(2); // Missile Launcher
+  const gun3 = useGunData(3); // Plasma Cannon
+
+  const armor0 = useArmorData(0); // None
+  const armor1 = useArmorData(1); // Light
+  const armor2 = useArmorData(2); // Medium
+  const armor3 = useArmorData(3); // Heavy
+
+  const shield0 = useShieldData(0); // None
+  const shield1 = useShieldData(1); // Light
+  const shield2 = useShieldData(2); // Medium
+  const shield3 = useShieldData(3); // Heavy
+
+  const special0 = useSpecialData(0); // None
+  const special1 = useSpecialData(1); // EMP
+  const special2 = useSpecialData(2); // Repair Drones
+  const special3 = useSpecialData(3); // Flak Array
 
   // State for editing
   const [editingCosts, setEditingCosts] = useState(false);
+  const [editingAttributes, setEditingAttributes] = useState(false);
   const [newCosts, setNewCosts] = useState<Partial<Costs>>({});
+  const [newAttributesVersion, setNewAttributesVersion] = useState<{
+    baseHull?: number;
+    baseSpeed?: number;
+  }>({});
 
   if (!isConnected) {
     return (
@@ -245,7 +274,7 @@ const ShipAttributes: React.FC = () => {
                   contractAddress={
                     CONTRACT_ADDRESSES.SHIP_ATTRIBUTES as `0x${string}`
                   }
-                  abi={CONTRACT_ABIS.SHIP_ATTRIBUTES}
+                  abi={CONTRACT_ABIS.SHIP_ATTRIBUTES as Abi}
                   functionName="setCosts"
                   args={[
                     {
@@ -273,85 +302,289 @@ const ShipAttributes: React.FC = () => {
         )}
       </div>
 
-      {/* Attributes Version Info */}
+      {/* Attributes Management */}
       <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
-        <h3 className="text-lg font-mono text-white mb-4">
-          Current Attributes Version
-        </h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-mono text-white">
+            Attributes Management
+          </h3>
+          <button
+            onClick={() => setEditingAttributes(!editingAttributes)}
+            className="px-4 py-2 bg-blue-600 text-white rounded font-mono hover:bg-blue-700 transition-colors"
+          >
+            {editingAttributes ? "Cancel" : "Edit Attributes"}
+          </button>
+        </div>
 
-        {attributesBaseData && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-800 rounded p-3">
-              <h4 className="text-white font-mono mb-2">Base Stats</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Version:</span>
-                  <span className="text-white">
-                    {attributesBaseData[0]?.toString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Base Hull:</span>
-                  <span className="text-white">
-                    {attributesBaseData[1]?.toString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Base Speed:</span>
-                  <span className="text-white">
-                    {attributesBaseData[2]?.toString()}
-                  </span>
+        {(() => {
+          if (
+            !attributesBaseData ||
+            !Array.isArray(attributesBaseData) ||
+            attributesBaseData.length < 3
+          ) {
+            return null;
+          }
+          const baseData = attributesBaseData as [number, number, number];
+          return (
+            <div className="space-y-4">
+              {/* Base Attributes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-800 rounded p-3">
+                  <h4 className="text-white font-mono mb-2">Base Attributes</h4>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-gray-400 text-sm">
+                        Base Hull:
+                      </label>
+                      {editingAttributes ? (
+                        <input
+                          type="number"
+                          value={newAttributesVersion.baseHull ?? baseData[1]}
+                          onChange={(e) =>
+                            setNewAttributesVersion({
+                              ...newAttributesVersion,
+                              baseHull: Number(e.target.value),
+                            })
+                          }
+                          className="w-full px-2 py-1 bg-gray-700 text-white rounded font-mono mt-1"
+                        />
+                      ) : (
+                        <div className="text-white">{baseData[1]}</div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-sm">
+                        Base Speed:
+                      </label>
+                      {editingAttributes ? (
+                        <input
+                          type="number"
+                          value={newAttributesVersion.baseSpeed ?? baseData[2]}
+                          onChange={(e) =>
+                            setNewAttributesVersion({
+                              ...newAttributesVersion,
+                              baseSpeed: Number(e.target.value),
+                            })
+                          }
+                          className="w-full px-2 py-1 bg-gray-700 text-white rounded font-mono mt-1"
+                        />
+                      ) : (
+                        <div className="text-white">{baseData[2]}</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-gray-800 rounded p-3">
-              <h4 className="text-white font-mono mb-2">Sample Gun Data</h4>
-              {gunData && (
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Range:</span>
-                    <span className="text-white">
-                      {(gunData as GunData).range}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Damage:</span>
-                    <span className="text-white">
-                      {(gunData as GunData).damage}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Movement:</span>
-                    <span className="text-white">
-                      {(gunData as GunData).movement}
-                    </span>
-                  </div>
+              {/* Gun Data */}
+              <div className="bg-gray-800 rounded p-3">
+                <h4 className="text-white font-mono mb-2">Gun Data</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { gun: gun0, name: "Laser" },
+                    { gun: gun1, name: "Railgun" },
+                    { gun: gun2, name: "Missile Launcher" },
+                    { gun: gun3, name: "Plasma Cannon" },
+                  ].map(({ gun, name }, index) => {
+                    const gunData = gun.data as GunData | undefined;
+
+                    return (
+                      <div key={index} className="bg-gray-700 rounded p-2">
+                        <h5 className="text-white font-mono text-sm mb-2">
+                          {name}
+                        </h5>
+                        {gunData && (
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Range:</span>
+                              <span className="text-white">
+                                {gunData.range}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Damage:</span>
+                              <span className="text-white">
+                                {gunData.damage}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Movement:</span>
+                              <span className="text-white">
+                                {gunData.movement}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Armor Data */}
+              <div className="bg-gray-800 rounded p-3">
+                <h4 className="text-white font-mono mb-2">Armor Data</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { armor: armor0, name: "None" },
+                    { armor: armor1, name: "Light" },
+                    { armor: armor2, name: "Medium" },
+                    { armor: armor3, name: "Heavy" },
+                  ].map(({ armor, name }, index) => {
+                    const armorData = armor.data as ArmorData | undefined;
+
+                    return (
+                      <div key={index} className="bg-gray-700 rounded p-2">
+                        <h5 className="text-white font-mono text-sm mb-2">
+                          {name}
+                        </h5>
+                        {armorData && (
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">DR:</span>
+                              <span className="text-white">
+                                {armorData.damageReduction}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Movement:</span>
+                              <span className="text-white">
+                                {armorData.movement}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Shield Data */}
+              <div className="bg-gray-800 rounded p-3">
+                <h4 className="text-white font-mono mb-2">Shield Data</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { shield: shield0, name: "None" },
+                    { shield: shield1, name: "Light" },
+                    { shield: shield2, name: "Medium" },
+                    { shield: shield3, name: "Heavy" },
+                  ].map(({ shield, name }, index) => {
+                    const shieldData = shield.data as ShieldData | undefined;
+
+                    return (
+                      <div key={index} className="bg-gray-700 rounded p-2">
+                        <h5 className="text-white font-mono text-sm mb-2">
+                          {name}
+                        </h5>
+                        {shieldData && (
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">DR:</span>
+                              <span className="text-white">
+                                {shieldData.damageReduction}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Movement:</span>
+                              <span className="text-white">
+                                {shieldData.movement}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Special Data */}
+              <div className="bg-gray-800 rounded p-3">
+                <h4 className="text-white font-mono mb-2">Special Data</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { special: special0, name: "None" },
+                    { special: special1, name: "EMP" },
+                    { special: special2, name: "Repair Drones" },
+                    { special: special3, name: "Flak Array" },
+                  ].map(({ special, name }, index) => {
+                    const specialData = special.data as SpecialData | undefined;
+
+                    return (
+                      <div key={index} className="bg-gray-700 rounded p-2">
+                        <h5 className="text-white font-mono text-sm mb-2">
+                          {name}
+                        </h5>
+                        {specialData && (
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Range:</span>
+                              <span className="text-white">
+                                {specialData.range}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Strength:</span>
+                              <span className="text-white">
+                                {specialData.strength}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Movement:</span>
+                              <span className="text-white">
+                                {specialData.movement}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {editingAttributes && (
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => {
+                      setEditingAttributes(false);
+                      setNewAttributesVersion({});
+                    }}
+                    className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <TransactionButton
+                    transactionId="update-attributes-base"
+                    contractAddress={
+                      CONTRACT_ADDRESSES.SHIP_ATTRIBUTES as `0x${string}`
+                    }
+                    abi={CONTRACT_ABIS.SHIP_ATTRIBUTES as Abi}
+                    functionName="setAttributesVersionBase"
+                    args={[
+                      Number(currentAttributesVersion) || 1,
+                      newAttributesVersion.baseHull ?? baseData[1],
+                      newAttributesVersion.baseSpeed ?? baseData[2],
+                    ]}
+                    className="px-4 py-2 bg-green-600 text-white rounded font-mono hover:bg-green-700 transition-colors"
+                    onSuccess={() => {
+                      toast.success("Base attributes updated successfully!");
+                      setEditingAttributes(false);
+                      setNewAttributesVersion({});
+                    }}
+                    onError={(error) => {
+                      console.error("Failed to update base attributes:", error);
+                      toast.error("Failed to update base attributes");
+                    }}
+                  >
+                    Update Base Attributes
+                  </TransactionButton>
                 </div>
               )}
             </div>
-
-            <div className="bg-gray-800 rounded p-3">
-              <h4 className="text-white font-mono mb-2">Sample Armor Data</h4>
-              {armorData && (
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Damage Reduction:</span>
-                    <span className="text-white">
-                      {(armorData as ArmorData).damageReduction}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Movement:</span>
-                    <span className="text-white">
-                      {(armorData as ArmorData).movement}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

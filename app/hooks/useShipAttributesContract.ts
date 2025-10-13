@@ -72,7 +72,7 @@ export type ShipAttributesWriteFunction =
   | "addEngineSpeed"
   | "setCosts";
 
-export function useShipAttributesRead<T = unknown>(
+export function useShipAttributesRead(
   functionName: ShipAttributesReadFunction,
   args?: readonly unknown[]
 ) {

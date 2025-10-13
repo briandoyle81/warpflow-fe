@@ -5,6 +5,8 @@ import {
   GRID_DIMENSIONS,
   MapPosition,
   ScoringPosition,
+  Ship,
+  Attributes,
   getMainWeaponName,
   getArmorName,
   getShieldName,
@@ -23,8 +25,8 @@ interface MapDisplayProps {
   isCreator?: boolean; // kept for backward compatibility (flips all)
   isCreatorViewer?: boolean; // determines placement validity
   shipPositions?: Array<{ shipId: bigint; row: number; col: number }>;
-  ships?: Array<{ id: bigint; name: string; imageUrl?: string }>;
-  shipAttributes?: Array<any>;
+  ships?: Array<Ship | { id: bigint; name: string; imageUrl?: string }>;
+  shipAttributes?: Array<Attributes>;
   selectedShipId?: bigint | null;
   onShipSelect?: (shipId: bigint) => void;
   onShipMove?: (shipId: bigint, row: number, col: number) => void;
@@ -125,7 +127,10 @@ export function MapDisplay({
 
   // Create a map of ship ID to ship object for quick lookup
   const shipMap = React.useMemo(() => {
-    const map = new Map<bigint, any>();
+    const map = new Map<
+      bigint,
+      Ship | { id: bigint; name: string; imageUrl?: string }
+    >();
     ships.forEach((ship) => {
       map.set(ship.id, ship);
     });
@@ -176,7 +181,11 @@ export function MapDisplay({
   };
 
   // Helper function to create ship tooltip
-  const createShipTooltip = (ship: any, row: number, col: number) => {
+  const createShipTooltip = (
+    ship: Ship | { id: bigint; name: string; imageUrl?: string },
+    row: number,
+    col: number
+  ) => {
     if (!ship) return `Row: ${row}, Col: ${col}`;
 
     const attributes = getShipAttributes(ship.id);
@@ -185,16 +194,19 @@ export function MapDisplay({
     const isSelected = selectedShipId === ship.id;
 
     const gunName =
-      ship.equipment?.mainWeapon !== undefined
+      "equipment" in ship && ship.equipment?.mainWeapon !== undefined
         ? getMainWeaponName(ship.equipment.mainWeapon)
         : "Unknown";
-    const defenseLabel = ship.equipment?.shields > 0 ? "Shield" : "Armor";
+    const defenseLabel =
+      "equipment" in ship && ship.equipment?.shields > 0 ? "Shield" : "Armor";
     const defenseName =
-      ship.equipment?.shields > 0
+      "equipment" in ship && ship.equipment?.shields > 0
         ? getShieldName(ship.equipment.shields)
-        : getArmorName(ship.equipment?.armor ?? 0);
+        : getArmorName(
+            ("equipment" in ship ? ship.equipment?.armor : undefined) ?? 0
+          );
     const specialName =
-      ship.equipment?.special !== undefined
+      "equipment" in ship && ship.equipment?.special !== undefined
         ? getSpecialName(ship.equipment.special)
         : "Unknown";
 
@@ -418,12 +430,18 @@ Attributes: Loading...`;
 
                     return (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <ShipImage
-                          ship={ship}
-                          className={`max-w-full max-h-full object-contain ${
-                            flipThis ? "scale-x-[-1]" : ""
-                          }`}
-                        />
+                        {"equipment" in ship ? (
+                          <ShipImage
+                            ship={ship as Ship}
+                            className={`max-w-full max-h-full object-contain ${
+                              flipThis ? "scale-x-[-1]" : ""
+                            }`}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-600 rounded flex items-center justify-center text-white text-xs">
+                            {ship.name}
+                          </div>
+                        )}
                       </div>
                     );
                   })()}
