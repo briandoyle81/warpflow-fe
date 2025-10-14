@@ -942,42 +942,58 @@ const ShipAttributes: React.FC = () => {
                         [
                           {
                             range:
-                              newGunData[0]?.range ?? gun0.data?.range ?? 6,
+                              newGunData[0]?.range ??
+                              (gun0.data as GunData)?.range ??
+                              6,
                             damage:
-                              newGunData[0]?.damage ?? gun0.data?.damage ?? 25,
+                              newGunData[0]?.damage ??
+                              (gun0.data as GunData)?.damage ??
+                              25,
                             movement:
                               newGunData[0]?.movement ??
-                              gun0.data?.movement ??
+                              (gun0.data as GunData)?.movement ??
                               0,
                           },
                           {
                             range:
-                              newGunData[1]?.range ?? gun1.data?.range ?? 10,
+                              newGunData[1]?.range ??
+                              (gun1.data as GunData)?.range ??
+                              10,
                             damage:
-                              newGunData[1]?.damage ?? gun1.data?.damage ?? 20,
+                              newGunData[1]?.damage ??
+                              (gun1.data as GunData)?.damage ??
+                              20,
                             movement:
                               newGunData[1]?.movement ??
-                              gun1.data?.movement ??
+                              (gun1.data as GunData)?.movement ??
                               0,
                           },
                           {
                             range:
-                              newGunData[2]?.range ?? gun2.data?.range ?? 8,
+                              newGunData[2]?.range ??
+                              (gun2.data as GunData)?.range ??
+                              8,
                             damage:
-                              newGunData[2]?.damage ?? gun2.data?.damage ?? 30,
+                              newGunData[2]?.damage ??
+                              (gun2.data as GunData)?.damage ??
+                              30,
                             movement:
                               newGunData[2]?.movement ??
-                              gun2.data?.movement ??
+                              (gun2.data as GunData)?.movement ??
                               -1,
                           },
                           {
                             range:
-                              newGunData[3]?.range ?? gun3.data?.range ?? 3,
+                              newGunData[3]?.range ??
+                              (gun3.data as GunData)?.range ??
+                              3,
                             damage:
-                              newGunData[3]?.damage ?? gun3.data?.damage ?? 40,
+                              newGunData[3]?.damage ??
+                              (gun3.data as GunData)?.damage ??
+                              40,
                             movement:
                               newGunData[3]?.movement ??
-                              gun3.data?.movement ??
+                              (gun3.data as GunData)?.movement ??
                               0,
                           },
                         ],
@@ -987,41 +1003,41 @@ const ShipAttributes: React.FC = () => {
                           {
                             damageReduction:
                               newArmorData[0]?.damageReduction ??
-                              armor0.data?.damageReduction ??
+                              (armor0.data as ArmorData)?.damageReduction ??
                               0,
                             movement:
                               newArmorData[0]?.movement ??
-                              armor0.data?.movement ??
+                              (armor0.data as ArmorData)?.movement ??
                               1,
                           },
                           {
                             damageReduction:
                               newArmorData[1]?.damageReduction ??
-                              armor1.data?.damageReduction ??
+                              (armor1.data as ArmorData)?.damageReduction ??
                               15,
                             movement:
                               newArmorData[1]?.movement ??
-                              armor1.data?.movement ??
+                              (armor1.data as ArmorData)?.movement ??
                               0,
                           },
                           {
                             damageReduction:
                               newArmorData[2]?.damageReduction ??
-                              armor2.data?.damageReduction ??
+                              (armor2.data as ArmorData)?.damageReduction ??
                               30,
                             movement:
                               newArmorData[2]?.movement ??
-                              armor2.data?.movement ??
+                              (armor2.data as ArmorData)?.movement ??
                               -1,
                           },
                           {
                             damageReduction:
                               newArmorData[3]?.damageReduction ??
-                              armor3.data?.damageReduction ??
+                              (armor3.data as ArmorData)?.damageReduction ??
                               45,
                             movement:
                               newArmorData[3]?.movement ??
-                              armor3.data?.movement ??
+                              (armor3.data as ArmorData)?.movement ??
                               -2,
                           },
                         ],
@@ -1031,41 +1047,41 @@ const ShipAttributes: React.FC = () => {
                           {
                             damageReduction:
                               newShieldData[0]?.damageReduction ??
-                              shield0.data?.damageReduction ??
+                              (shield0.data as ShieldData)?.damageReduction ??
                               0,
                             movement:
                               newShieldData[0]?.movement ??
-                              shield0.data?.movement ??
+                              (shield0.data as ShieldData)?.movement ??
                               1,
                           },
                           {
                             damageReduction:
                               newShieldData[1]?.damageReduction ??
-                              shield1.data?.damageReduction ??
+                              (shield1.data as ShieldData)?.damageReduction ??
                               15,
                             movement:
                               newShieldData[1]?.movement ??
-                              shield1.data?.movement ??
+                              (shield1.data as ShieldData)?.movement ??
                               1,
                           },
                           {
                             damageReduction:
                               newShieldData[2]?.damageReduction ??
-                              shield2.data?.damageReduction ??
+                              (shield2.data as ShieldData)?.damageReduction ??
                               30,
                             movement:
                               newShieldData[2]?.movement ??
-                              shield2.data?.movement ??
+                              (shield2.data as ShieldData)?.movement ??
                               0,
                           },
                           {
                             damageReduction:
                               newShieldData[3]?.damageReduction ??
-                              shield3.data?.damageReduction ??
+                              (shield3.data as ShieldData)?.damageReduction ??
                               45,
                             movement:
                               newShieldData[3]?.movement ??
-                              shield3.data?.movement ??
+                              (shield3.data as ShieldData)?.movement ??
                               -1,
                           },
                         ],
@@ -1075,57 +1091,57 @@ const ShipAttributes: React.FC = () => {
                           {
                             range:
                               newSpecialData[0]?.range ??
-                              special0.data?.range ??
+                              (special0.data as SpecialData)?.range ??
                               0,
                             strength:
                               newSpecialData[0]?.strength ??
-                              special0.data?.strength ??
+                              (special0.data as SpecialData)?.strength ??
                               0,
                             movement:
                               newSpecialData[0]?.movement ??
-                              special0.data?.movement ??
+                              (special0.data as SpecialData)?.movement ??
                               0,
                           },
                           {
                             range:
                               newSpecialData[1]?.range ??
-                              special1.data?.range ??
+                              (special1.data as SpecialData)?.range ??
                               1,
                             strength:
                               newSpecialData[1]?.strength ??
-                              special1.data?.strength ??
+                              (special1.data as SpecialData)?.strength ??
                               1,
                             movement:
                               newSpecialData[1]?.movement ??
-                              special1.data?.movement ??
+                              (special1.data as SpecialData)?.movement ??
                               0,
                           },
                           {
                             range:
                               newSpecialData[2]?.range ??
-                              special2.data?.range ??
+                              (special2.data as SpecialData)?.range ??
                               6,
                             strength:
                               newSpecialData[2]?.strength ??
-                              special2.data?.strength ??
+                              (special2.data as SpecialData)?.strength ??
                               20,
                             movement:
                               newSpecialData[2]?.movement ??
-                              special2.data?.movement ??
+                              (special2.data as SpecialData)?.movement ??
                               0,
                           },
                           {
                             range:
                               newSpecialData[3]?.range ??
-                              special3.data?.range ??
+                              (special3.data as SpecialData)?.range ??
                               4,
                             strength:
                               newSpecialData[3]?.strength ??
-                              special3.data?.strength ??
+                              (special3.data as SpecialData)?.strength ??
                               15,
                             movement:
                               newSpecialData[3]?.movement ??
-                              special3.data?.movement ??
+                              (special3.data as SpecialData)?.movement ??
                               0,
                           },
                         ],
