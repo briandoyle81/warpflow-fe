@@ -64,6 +64,29 @@ const ShipAttributes: React.FC = () => {
   const special2 = useSpecialData(2); // Repair Drones
   const special3 = useSpecialData(3); // Flak Array
 
+  // Debug: Log special data loading status
+  React.useEffect(() => {
+    console.log("Special data loading status:", {
+      special0: special0.data,
+      special1: special1.data,
+      special2: special2.data,
+      special3: special3.data,
+      special0Loading: special0.isLoading,
+      special1Loading: special1.isLoading,
+      special2Loading: special2.isLoading,
+      special3Loading: special3.isLoading,
+    });
+  }, [
+    special0.data,
+    special1.data,
+    special2.data,
+    special3.data,
+    special0.isLoading,
+    special1.isLoading,
+    special2.isLoading,
+    special3.isLoading,
+  ]);
+
   // State for editing
   const [editingCosts, setEditingCosts] = useState(false);
   const [editingAttributes, setEditingAttributes] = useState(false);
@@ -72,6 +95,12 @@ const ShipAttributes: React.FC = () => {
     baseHull?: number;
     baseSpeed?: number;
   }>({});
+  const [newGunData, setNewGunData] = useState<Partial<GunData>[]>([]);
+  const [newArmorData, setNewArmorData] = useState<Partial<ArmorData>[]>([]);
+  const [newShieldData, setNewShieldData] = useState<Partial<ShieldData>[]>([]);
+  const [newSpecialData, setNewSpecialData] = useState<Partial<SpecialData>[]>(
+    []
+  );
 
   if (!isConnected) {
     return (
@@ -91,6 +120,33 @@ const ShipAttributes: React.FC = () => {
         </p>
         <p className="text-gray-400 text-sm mt-2">Owner: {owner}</p>
         <p className="text-gray-400 text-sm">Your address: {address}</p>
+      </div>
+    );
+  }
+
+  // Check if any critical data is still loading
+  const isDataLoading =
+    gun0.isLoading ||
+    gun1.isLoading ||
+    gun2.isLoading ||
+    gun3.isLoading ||
+    armor0.isLoading ||
+    armor1.isLoading ||
+    armor2.isLoading ||
+    armor3.isLoading ||
+    shield0.isLoading ||
+    shield1.isLoading ||
+    shield2.isLoading ||
+    shield3.isLoading ||
+    special0.isLoading ||
+    special1.isLoading ||
+    special2.isLoading ||
+    special3.isLoading;
+
+  if (isDataLoading) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-400">Loading ship attributes data...</p>
       </div>
     );
   }
@@ -381,12 +437,26 @@ const ShipAttributes: React.FC = () => {
                 <h4 className="text-white font-mono mb-2">Gun Data</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
-                    { gun: gun0, name: "Laser" },
-                    { gun: gun1, name: "Railgun" },
-                    { gun: gun2, name: "Missile Launcher" },
-                    { gun: gun3, name: "Plasma Cannon" },
-                  ].map(({ gun, name }, index) => {
+                    { gun: gun0, name: "Laser", index: 0 },
+                    { gun: gun1, name: "Railgun", index: 1 },
+                    { gun: gun2, name: "Missile Launcher", index: 2 },
+                    { gun: gun3, name: "Plasma Cannon", index: 3 },
+                  ].map(({ gun, name, index }) => {
                     const gunData = gun.data as GunData | undefined;
+                    const currentGunData = newGunData[index] || {};
+
+                    if (!gunData) {
+                      return (
+                        <div key={index} className="bg-gray-700 rounded p-2">
+                          <h5 className="text-white font-mono text-sm mb-2">
+                            {name} (Loading...)
+                          </h5>
+                          <div className="text-gray-400 text-xs">
+                            Loading data...
+                          </div>
+                        </div>
+                      );
+                    }
 
                     return (
                       <div key={index} className="bg-gray-700 rounded p-2">
@@ -397,21 +467,73 @@ const ShipAttributes: React.FC = () => {
                           <div className="space-y-1 text-xs">
                             <div className="flex justify-between">
                               <span className="text-gray-400">Range:</span>
-                              <span className="text-white">
-                                {gunData.range}
-                              </span>
+                              {editingAttributes ? (
+                                <input
+                                  type="number"
+                                  value={currentGunData.range ?? gunData.range}
+                                  onChange={(e) => {
+                                    const updated = [...newGunData];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      range: Number(e.target.value),
+                                    };
+                                    setNewGunData(updated);
+                                  }}
+                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded text-xs"
+                                />
+                              ) : (
+                                <span className="text-white">
+                                  {gunData.range}
+                                </span>
+                              )}
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Damage:</span>
-                              <span className="text-white">
-                                {gunData.damage}
-                              </span>
+                              {editingAttributes ? (
+                                <input
+                                  type="number"
+                                  value={
+                                    currentGunData.damage ?? gunData.damage
+                                  }
+                                  onChange={(e) => {
+                                    const updated = [...newGunData];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      damage: Number(e.target.value),
+                                    };
+                                    setNewGunData(updated);
+                                  }}
+                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded text-xs"
+                                />
+                              ) : (
+                                <span className="text-white">
+                                  {gunData.damage}
+                                </span>
+                              )}
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Movement:</span>
-                              <span className="text-white">
-                                {gunData.movement}
-                              </span>
+                              {editingAttributes ? (
+                                <input
+                                  type="number"
+                                  value={
+                                    currentGunData.movement ?? gunData.movement
+                                  }
+                                  onChange={(e) => {
+                                    const updated = [...newGunData];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      movement: Number(e.target.value),
+                                    };
+                                    setNewGunData(updated);
+                                  }}
+                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded text-xs"
+                                />
+                              ) : (
+                                <span className="text-white">
+                                  {gunData.movement}
+                                </span>
+                              )}
                             </div>
                           </div>
                         )}
@@ -426,12 +548,26 @@ const ShipAttributes: React.FC = () => {
                 <h4 className="text-white font-mono mb-2">Armor Data</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
-                    { armor: armor0, name: "None" },
-                    { armor: armor1, name: "Light" },
-                    { armor: armor2, name: "Medium" },
-                    { armor: armor3, name: "Heavy" },
-                  ].map(({ armor, name }, index) => {
+                    { armor: armor0, name: "None", index: 0 },
+                    { armor: armor1, name: "Light", index: 1 },
+                    { armor: armor2, name: "Medium", index: 2 },
+                    { armor: armor3, name: "Heavy", index: 3 },
+                  ].map(({ armor, name, index }) => {
                     const armorData = armor.data as ArmorData | undefined;
+                    const currentArmorData = newArmorData[index] || {};
+
+                    if (!armorData) {
+                      return (
+                        <div key={index} className="bg-gray-700 rounded p-2">
+                          <h5 className="text-white font-mono text-sm mb-2">
+                            {name} (Loading...)
+                          </h5>
+                          <div className="text-gray-400 text-xs">
+                            Loading data...
+                          </div>
+                        </div>
+                      );
+                    }
 
                     return (
                       <div key={index} className="bg-gray-700 rounded p-2">
@@ -442,15 +578,53 @@ const ShipAttributes: React.FC = () => {
                           <div className="space-y-1 text-xs">
                             <div className="flex justify-between">
                               <span className="text-gray-400">DR:</span>
-                              <span className="text-white">
-                                {armorData.damageReduction}
-                              </span>
+                              {editingAttributes ? (
+                                <input
+                                  type="number"
+                                  value={
+                                    currentArmorData.damageReduction ??
+                                    armorData.damageReduction
+                                  }
+                                  onChange={(e) => {
+                                    const updated = [...newArmorData];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      damageReduction: Number(e.target.value),
+                                    };
+                                    setNewArmorData(updated);
+                                  }}
+                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded text-xs"
+                                />
+                              ) : (
+                                <span className="text-white">
+                                  {armorData.damageReduction}
+                                </span>
+                              )}
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Movement:</span>
-                              <span className="text-white">
-                                {armorData.movement}
-                              </span>
+                              {editingAttributes ? (
+                                <input
+                                  type="number"
+                                  value={
+                                    currentArmorData.movement ??
+                                    armorData.movement
+                                  }
+                                  onChange={(e) => {
+                                    const updated = [...newArmorData];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      movement: Number(e.target.value),
+                                    };
+                                    setNewArmorData(updated);
+                                  }}
+                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded text-xs"
+                                />
+                              ) : (
+                                <span className="text-white">
+                                  {armorData.movement}
+                                </span>
+                              )}
                             </div>
                           </div>
                         )}
@@ -465,12 +639,26 @@ const ShipAttributes: React.FC = () => {
                 <h4 className="text-white font-mono mb-2">Shield Data</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
-                    { shield: shield0, name: "None" },
-                    { shield: shield1, name: "Light" },
-                    { shield: shield2, name: "Medium" },
-                    { shield: shield3, name: "Heavy" },
-                  ].map(({ shield, name }, index) => {
+                    { shield: shield0, name: "None", index: 0 },
+                    { shield: shield1, name: "Light", index: 1 },
+                    { shield: shield2, name: "Medium", index: 2 },
+                    { shield: shield3, name: "Heavy", index: 3 },
+                  ].map(({ shield, name, index }) => {
                     const shieldData = shield.data as ShieldData | undefined;
+                    const currentShieldData = newShieldData[index] || {};
+
+                    if (!shieldData) {
+                      return (
+                        <div key={index} className="bg-gray-700 rounded p-2">
+                          <h5 className="text-white font-mono text-sm mb-2">
+                            {name} (Loading...)
+                          </h5>
+                          <div className="text-gray-400 text-xs">
+                            Loading data...
+                          </div>
+                        </div>
+                      );
+                    }
 
                     return (
                       <div key={index} className="bg-gray-700 rounded p-2">
@@ -481,15 +669,53 @@ const ShipAttributes: React.FC = () => {
                           <div className="space-y-1 text-xs">
                             <div className="flex justify-between">
                               <span className="text-gray-400">DR:</span>
-                              <span className="text-white">
-                                {shieldData.damageReduction}
-                              </span>
+                              {editingAttributes ? (
+                                <input
+                                  type="number"
+                                  value={
+                                    currentShieldData.damageReduction ??
+                                    shieldData.damageReduction
+                                  }
+                                  onChange={(e) => {
+                                    const updated = [...newShieldData];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      damageReduction: Number(e.target.value),
+                                    };
+                                    setNewShieldData(updated);
+                                  }}
+                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded text-xs"
+                                />
+                              ) : (
+                                <span className="text-white">
+                                  {shieldData.damageReduction}
+                                </span>
+                              )}
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Movement:</span>
-                              <span className="text-white">
-                                {shieldData.movement}
-                              </span>
+                              {editingAttributes ? (
+                                <input
+                                  type="number"
+                                  value={
+                                    currentShieldData.movement ??
+                                    shieldData.movement
+                                  }
+                                  onChange={(e) => {
+                                    const updated = [...newShieldData];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      movement: Number(e.target.value),
+                                    };
+                                    setNewShieldData(updated);
+                                  }}
+                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded text-xs"
+                                />
+                              ) : (
+                                <span className="text-white">
+                                  {shieldData.movement}
+                                </span>
+                              )}
                             </div>
                           </div>
                         )}
@@ -504,12 +730,26 @@ const ShipAttributes: React.FC = () => {
                 <h4 className="text-white font-mono mb-2">Special Data</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
-                    { special: special0, name: "None" },
-                    { special: special1, name: "EMP" },
-                    { special: special2, name: "Repair Drones" },
-                    { special: special3, name: "Flak Array" },
-                  ].map(({ special, name }, index) => {
+                    { special: special0, name: "None", index: 0 },
+                    { special: special1, name: "EMP", index: 1 },
+                    { special: special2, name: "Repair Drones", index: 2 },
+                    { special: special3, name: "Flak Array", index: 3 },
+                  ].map(({ special, name, index }) => {
                     const specialData = special.data as SpecialData | undefined;
+                    const currentSpecialData = newSpecialData[index] || {};
+
+                    if (!specialData) {
+                      return (
+                        <div key={index} className="bg-gray-700 rounded p-2">
+                          <h5 className="text-white font-mono text-sm mb-2">
+                            {name} (Loading...)
+                          </h5>
+                          <div className="text-gray-400 text-xs">
+                            Loading data...
+                          </div>
+                        </div>
+                      );
+                    }
 
                     return (
                       <div key={index} className="bg-gray-700 rounded p-2">
@@ -520,21 +760,96 @@ const ShipAttributes: React.FC = () => {
                           <div className="space-y-1 text-xs">
                             <div className="flex justify-between">
                               <span className="text-gray-400">Range:</span>
-                              <span className="text-white">
-                                {specialData.range}
-                              </span>
+                              {editingAttributes ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="255"
+                                  value={
+                                    currentSpecialData.range ??
+                                    specialData.range
+                                  }
+                                  onChange={(e) => {
+                                    const value = Math.max(
+                                      0,
+                                      Math.min(255, Number(e.target.value))
+                                    );
+                                    const updated = [...newSpecialData];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      range: value,
+                                    };
+                                    setNewSpecialData(updated);
+                                  }}
+                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded text-xs"
+                                />
+                              ) : (
+                                <span className="text-white">
+                                  {specialData.range}
+                                </span>
+                              )}
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Strength:</span>
-                              <span className="text-white">
-                                {specialData.strength}
-                              </span>
+                              {editingAttributes ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="255"
+                                  value={
+                                    currentSpecialData.strength ??
+                                    specialData.strength
+                                  }
+                                  onChange={(e) => {
+                                    const value = Math.max(
+                                      0,
+                                      Math.min(255, Number(e.target.value))
+                                    );
+                                    const updated = [...newSpecialData];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      strength: value,
+                                    };
+                                    setNewSpecialData(updated);
+                                  }}
+                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded text-xs"
+                                />
+                              ) : (
+                                <span className="text-white">
+                                  {specialData.strength}
+                                </span>
+                              )}
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Movement:</span>
-                              <span className="text-white">
-                                {specialData.movement}
-                              </span>
+                              {editingAttributes ? (
+                                <input
+                                  type="number"
+                                  min="-128"
+                                  max="127"
+                                  value={
+                                    currentSpecialData.movement ??
+                                    specialData.movement
+                                  }
+                                  onChange={(e) => {
+                                    const value = Math.max(
+                                      -128,
+                                      Math.min(127, Number(e.target.value))
+                                    );
+                                    const updated = [...newSpecialData];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      movement: value,
+                                    };
+                                    setNewSpecialData(updated);
+                                  }}
+                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded text-xs"
+                                />
+                              ) : (
+                                <span className="text-white">
+                                  {specialData.movement}
+                                </span>
+                              )}
                             </div>
                           </div>
                         )}
@@ -550,6 +865,10 @@ const ShipAttributes: React.FC = () => {
                     onClick={() => {
                       setEditingAttributes(false);
                       setNewAttributesVersion({});
+                      setNewGunData([]);
+                      setNewArmorData([]);
+                      setNewShieldData([]);
+                      setNewSpecialData([]);
                     }}
                     className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
                   >
@@ -572,6 +891,10 @@ const ShipAttributes: React.FC = () => {
                       toast.success("Base attributes updated successfully!");
                       setEditingAttributes(false);
                       setNewAttributesVersion({});
+                      setNewGunData([]);
+                      setNewArmorData([]);
+                      setNewShieldData([]);
+                      setNewSpecialData([]);
                     }}
                     onError={(error) => {
                       console.error("Failed to update base attributes:", error);
@@ -580,6 +903,259 @@ const ShipAttributes: React.FC = () => {
                   >
                     Update Base Attributes
                   </TransactionButton>
+
+                  {/* Update All Attributes */}
+                  {(newGunData.some(
+                    (gun) => gun && Object.keys(gun).length > 0
+                  ) ||
+                    newArmorData.some(
+                      (armor) => armor && Object.keys(armor).length > 0
+                    ) ||
+                    newShieldData.some(
+                      (shield) => shield && Object.keys(shield).length > 0
+                    ) ||
+                    newSpecialData.some(
+                      (special) => special && Object.keys(special).length > 0
+                    ) ||
+                    Object.keys(newAttributesVersion).length > 0) && (
+                    <TransactionButton
+                      transactionId="update-all-attributes"
+                      contractAddress={
+                        CONTRACT_ADDRESSES.SHIP_ATTRIBUTES as `0x${string}`
+                      }
+                      abi={CONTRACT_ABIS.SHIP_ATTRIBUTES as Abi}
+                      functionName="setAllAttributes"
+                      args={[
+                        // Base attributes
+                        newAttributesVersion.baseHull ??
+                          (
+                            attributesBaseData as [number, number, number]
+                          )?.[1] ??
+                          100,
+                        newAttributesVersion.baseSpeed ??
+                          (
+                            attributesBaseData as [number, number, number]
+                          )?.[2] ??
+                          3,
+
+                        // Gun data array
+                        [
+                          {
+                            range:
+                              newGunData[0]?.range ?? gun0.data?.range ?? 6,
+                            damage:
+                              newGunData[0]?.damage ?? gun0.data?.damage ?? 25,
+                            movement:
+                              newGunData[0]?.movement ??
+                              gun0.data?.movement ??
+                              0,
+                          },
+                          {
+                            range:
+                              newGunData[1]?.range ?? gun1.data?.range ?? 10,
+                            damage:
+                              newGunData[1]?.damage ?? gun1.data?.damage ?? 20,
+                            movement:
+                              newGunData[1]?.movement ??
+                              gun1.data?.movement ??
+                              0,
+                          },
+                          {
+                            range:
+                              newGunData[2]?.range ?? gun2.data?.range ?? 8,
+                            damage:
+                              newGunData[2]?.damage ?? gun2.data?.damage ?? 30,
+                            movement:
+                              newGunData[2]?.movement ??
+                              gun2.data?.movement ??
+                              -1,
+                          },
+                          {
+                            range:
+                              newGunData[3]?.range ?? gun3.data?.range ?? 3,
+                            damage:
+                              newGunData[3]?.damage ?? gun3.data?.damage ?? 40,
+                            movement:
+                              newGunData[3]?.movement ??
+                              gun3.data?.movement ??
+                              0,
+                          },
+                        ],
+
+                        // Armor data array
+                        [
+                          {
+                            damageReduction:
+                              newArmorData[0]?.damageReduction ??
+                              armor0.data?.damageReduction ??
+                              0,
+                            movement:
+                              newArmorData[0]?.movement ??
+                              armor0.data?.movement ??
+                              1,
+                          },
+                          {
+                            damageReduction:
+                              newArmorData[1]?.damageReduction ??
+                              armor1.data?.damageReduction ??
+                              15,
+                            movement:
+                              newArmorData[1]?.movement ??
+                              armor1.data?.movement ??
+                              0,
+                          },
+                          {
+                            damageReduction:
+                              newArmorData[2]?.damageReduction ??
+                              armor2.data?.damageReduction ??
+                              30,
+                            movement:
+                              newArmorData[2]?.movement ??
+                              armor2.data?.movement ??
+                              -1,
+                          },
+                          {
+                            damageReduction:
+                              newArmorData[3]?.damageReduction ??
+                              armor3.data?.damageReduction ??
+                              45,
+                            movement:
+                              newArmorData[3]?.movement ??
+                              armor3.data?.movement ??
+                              -2,
+                          },
+                        ],
+
+                        // Shield data array
+                        [
+                          {
+                            damageReduction:
+                              newShieldData[0]?.damageReduction ??
+                              shield0.data?.damageReduction ??
+                              0,
+                            movement:
+                              newShieldData[0]?.movement ??
+                              shield0.data?.movement ??
+                              1,
+                          },
+                          {
+                            damageReduction:
+                              newShieldData[1]?.damageReduction ??
+                              shield1.data?.damageReduction ??
+                              15,
+                            movement:
+                              newShieldData[1]?.movement ??
+                              shield1.data?.movement ??
+                              1,
+                          },
+                          {
+                            damageReduction:
+                              newShieldData[2]?.damageReduction ??
+                              shield2.data?.damageReduction ??
+                              30,
+                            movement:
+                              newShieldData[2]?.movement ??
+                              shield2.data?.movement ??
+                              0,
+                          },
+                          {
+                            damageReduction:
+                              newShieldData[3]?.damageReduction ??
+                              shield3.data?.damageReduction ??
+                              45,
+                            movement:
+                              newShieldData[3]?.movement ??
+                              shield3.data?.movement ??
+                              -1,
+                          },
+                        ],
+
+                        // Special data array
+                        [
+                          {
+                            range:
+                              newSpecialData[0]?.range ??
+                              special0.data?.range ??
+                              0,
+                            strength:
+                              newSpecialData[0]?.strength ??
+                              special0.data?.strength ??
+                              0,
+                            movement:
+                              newSpecialData[0]?.movement ??
+                              special0.data?.movement ??
+                              0,
+                          },
+                          {
+                            range:
+                              newSpecialData[1]?.range ??
+                              special1.data?.range ??
+                              1,
+                            strength:
+                              newSpecialData[1]?.strength ??
+                              special1.data?.strength ??
+                              1,
+                            movement:
+                              newSpecialData[1]?.movement ??
+                              special1.data?.movement ??
+                              0,
+                          },
+                          {
+                            range:
+                              newSpecialData[2]?.range ??
+                              special2.data?.range ??
+                              6,
+                            strength:
+                              newSpecialData[2]?.strength ??
+                              special2.data?.strength ??
+                              20,
+                            movement:
+                              newSpecialData[2]?.movement ??
+                              special2.data?.movement ??
+                              0,
+                          },
+                          {
+                            range:
+                              newSpecialData[3]?.range ??
+                              special3.data?.range ??
+                              4,
+                            strength:
+                              newSpecialData[3]?.strength ??
+                              special3.data?.strength ??
+                              15,
+                            movement:
+                              newSpecialData[3]?.movement ??
+                              special3.data?.movement ??
+                              0,
+                          },
+                        ],
+
+                        // Fore accuracy array (hardcoded for now)
+                        [0, 125, 150],
+
+                        // Engine speeds array (hardcoded for now)
+                        [0, 1, 2],
+                      ]}
+                      className="px-4 py-2 bg-green-600 text-white rounded font-mono hover:bg-green-700 transition-colors"
+                      onSuccess={() => {
+                        toast.success("All attributes updated successfully!");
+                        setNewGunData([]);
+                        setNewArmorData([]);
+                        setNewShieldData([]);
+                        setNewSpecialData([]);
+                        setNewAttributesVersion({});
+                      }}
+                      onError={(error) => {
+                        console.error(
+                          "Failed to update all attributes:",
+                          error
+                        );
+                        toast.error("Failed to update all attributes");
+                      }}
+                    >
+                      Update All Attributes
+                    </TransactionButton>
+                  )}
                 </div>
               )}
             </div>

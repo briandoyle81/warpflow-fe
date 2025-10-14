@@ -8,20 +8,24 @@ import { flowTestnet } from "viem/chains";
 import { http } from "wagmi";
 import { MusicPlayerProvider } from "./providers/MusicPlayerContext";
 import { TransactionProvider } from "./providers/TransactionContext";
-import { type ReactNode, useState } from "react";
-
-const config = getDefaultConfig({
-  appName: "WarpFlow",
-  projectId:
-    process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID",
-  chains: [flowTestnet],
-  transports: {
-    [flowTestnet.id]: http(),
-  },
-});
+import { type ReactNode, useState, useMemo } from "react";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
+
+  const config = useMemo(
+    () =>
+      getDefaultConfig({
+        appName: "WarpFlow",
+        projectId:
+          process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID",
+        chains: [flowTestnet],
+        transports: {
+          [flowTestnet.id]: http(),
+        },
+      }),
+    []
+  );
 
   return (
     <WagmiProvider config={config}>
