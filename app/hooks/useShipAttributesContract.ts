@@ -29,6 +29,7 @@ export interface AttributesVersion {
   baseHull: number;
   baseSpeed: number;
   foreAccuracy: number[];
+  hull: number[];
   engineSpeeds: number[];
   guns: GunData[];
   armors: ArmorData[];

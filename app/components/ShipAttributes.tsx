@@ -101,6 +101,10 @@ const ShipAttributes: React.FC = () => {
   const [newSpecialData, setNewSpecialData] = useState<Partial<SpecialData>[]>(
     []
   );
+  // Editable arrays for attributes
+  const [newForeAccuracy, setNewForeAccuracy] = useState<number[] | null>(null);
+  const [newHullBonuses, setNewHullBonuses] = useState<number[] | null>(null);
+  const [newEngineSpeeds, setNewEngineSpeeds] = useState<number[] | null>(null);
 
   if (!isConnected) {
     return (
@@ -430,6 +434,67 @@ const ShipAttributes: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                {editingAttributes && (
+                  <div className="bg-gray-800 rounded p-3">
+                    <h4 className="text-white font-mono mb-2">Global Arrays</h4>
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <label className="text-gray-400">
+                          Fore Accuracy (comma-separated):
+                        </label>
+                        <input
+                          type="text"
+                          value={(newForeAccuracy ?? [0, 25, 50]).join(",")}
+                          onChange={(e) => {
+                            const parts = e.target.value
+                              .split(",")
+                              .map((p) => p.trim())
+                              .filter((p) => p.length > 0)
+                              .map((p) => Number(p));
+                            setNewForeAccuracy(parts);
+                          }}
+                          className="w-full px-2 py-1 bg-gray-700 text-white rounded font-mono mt-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-gray-400">
+                          Hull Bonuses (comma-separated):
+                        </label>
+                        <input
+                          type="text"
+                          value={(newHullBonuses ?? [0, 10, 20]).join(",")}
+                          onChange={(e) => {
+                            const parts = e.target.value
+                              .split(",")
+                              .map((p) => p.trim())
+                              .filter((p) => p.length > 0)
+                              .map((p) => Number(p));
+                            setNewHullBonuses(parts);
+                          }}
+                          className="w-full px-2 py-1 bg-gray-700 text-white rounded font-mono mt-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-gray-400">
+                          Engine Speeds (comma-separated):
+                        </label>
+                        <input
+                          type="text"
+                          value={(newEngineSpeeds ?? [0, 1, 2]).join(",")}
+                          onChange={(e) => {
+                            const parts = e.target.value
+                              .split(",")
+                              .map((p) => p.trim())
+                              .filter((p) => p.length > 0)
+                              .map((p) => Number(p));
+                            setNewEngineSpeeds(parts);
+                          }}
+                          className="w-full px-2 py-1 bg-gray-700 text-white rounded font-mono mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Gun Data */}
@@ -917,7 +982,10 @@ const ShipAttributes: React.FC = () => {
                     newSpecialData.some(
                       (special) => special && Object.keys(special).length > 0
                     ) ||
-                    Object.keys(newAttributesVersion).length > 0) && (
+                    Object.keys(newAttributesVersion).length > 0 ||
+                    (newForeAccuracy && newForeAccuracy.length > 0) ||
+                    (newHullBonuses && newHullBonuses.length > 0) ||
+                    (newEngineSpeeds && newEngineSpeeds.length > 0)) && (
                     <TransactionButton
                       transactionId="update-all-attributes"
                       contractAddress={
@@ -1146,11 +1214,18 @@ const ShipAttributes: React.FC = () => {
                           },
                         ],
 
-                        // Fore accuracy array (hardcoded for now)
-                        [0, 125, 150],
-
-                        // Engine speeds array (hardcoded for now)
-                        [0, 1, 2],
+                        // Fore accuracy array (editable or default)
+                        newForeAccuracy && newForeAccuracy.length > 0
+                          ? newForeAccuracy
+                          : [0, 25, 50],
+                        // Hull bonuses array (editable or default)
+                        newHullBonuses && newHullBonuses.length > 0
+                          ? newHullBonuses
+                          : [0, 10, 20],
+                        // Engine speeds array (editable or default)
+                        newEngineSpeeds && newEngineSpeeds.length > 0
+                          ? newEngineSpeeds
+                          : [0, 1, 2],
                       ]}
                       className="px-4 py-2 bg-green-600 text-white rounded font-mono hover:bg-green-700 transition-colors"
                       onSuccess={() => {
