@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAccount, useWatchContractEvent, usePublicClient } from "wagmi";
+import { useWatchContractEvent, usePublicClient } from "wagmi";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
 import { ActionType, ShipPosition } from "../types/types";
 import { parseAbiItem } from "viem";
@@ -20,17 +20,12 @@ interface GameEvent {
 
 interface GameEventsProps {
   gameId: bigint;
-  shipMap: Map<bigint, any>;
+  shipMap: Map<bigint, { name: string; owner: string }>;
   shipPositions: readonly ShipPosition[];
   address?: string;
 }
 
-export function GameEvents({
-  gameId,
-  shipMap,
-  shipPositions,
-  address,
-}: GameEventsProps) {
+export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
@@ -337,7 +332,7 @@ export function GameEvents({
       <div
         className={`space-y-2 ${isExpanded ? "" : "max-h-32 overflow-hidden"}`}
       >
-        {events.map((event, index) => {
+        {events.map((event) => {
           const ship = shipMap.get(event.shipId);
           const isMyShip = ship && ship.owner === address;
           const isRecent = Date.now() - event.timestamp < 10000; // Highlight events from last 10 seconds
@@ -368,8 +363,8 @@ export function GameEvents({
       {!isExpanded && events.length > 3 && (
         <div className="mt-2 text-center">
           <span className="text-gray-400 text-xs">
-            Showing latest 3 events. Click "Expand" to see all {events.length}{" "}
-            events.
+            Showing latest 3 events. Click &ldquo;Expand&rdquo; to see all{" "}
+            {events.length} events.
           </span>
         </div>
       )}
