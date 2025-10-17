@@ -23,12 +23,14 @@ import {
 } from "../hooks/useContractEvents";
 import { TransactionButton } from "./TransactionButton";
 import { toast } from "react-hot-toast";
+import { useTransaction } from "../providers/TransactionContext";
 import { useSpecialRange } from "../hooks/useSpecialRange";
 import {
   useSpecialData,
   SpecialData,
 } from "../hooks/useShipAttributesContract";
 import { FleeSafetySwitch } from "./FleeSafetySwitch";
+import { GameEvents } from "./GameEvents";
 
 interface GameDisplayProps {
   game: GameDataView;
@@ -42,6 +44,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   refetch,
 }) => {
   const { address } = useAccount();
+  const { clearAllTransactions } = useTransaction();
   const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
   const [previewPosition, setPreviewPosition] = useState<{
     row: number;
@@ -1024,6 +1027,21 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     // Update the previous turn state
     prevTurnRef.current = isMyTurn;
   }, [isMyTurn, address]);
+
+  // Clear any pending transaction state when turn changes
+  React.useEffect(() => {
+    // Clear any stale transaction state when turn changes from opponent to player
+    if (isMyTurn && address && prevTurnRef.current === false) {
+      // Clear any pending transaction state that might be blocking the submit button
+      clearAllTransactions();
+
+      // Reset move-related state to ensure clean slate
+      setPreviewPosition(null);
+      setSelectedShipId(null);
+      setTargetShipId(null);
+      setSelectedWeaponType("weapon");
+    }
+  }, [isMyTurn, address, clearAllTransactions]);
 
   // Check if a ship belongs to the current player
   const isShipOwnedByCurrentPlayer = (shipId: bigint): boolean => {
@@ -2350,6 +2368,14 @@ Attributes:
           )}
         </div>
       </div>
+
+      {/* Game Events */}
+      <GameEvents
+        gameId={game.metadata.gameId}
+        shipMap={shipMap}
+        shipPositions={game.shipPositions}
+        address={address}
+      />
 
       {/* Ship Details */}
       <div className="bg-gray-900 rounded-lg p-4 border border-gray-700 w-full">

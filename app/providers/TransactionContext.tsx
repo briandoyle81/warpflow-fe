@@ -18,6 +18,7 @@ interface TransactionContextType {
     error?: Error
   ) => void;
   clearError: (transactionId: string) => void;
+  clearAllTransactions: () => void;
 }
 
 const TransactionContext = createContext<TransactionContextType | undefined>(
@@ -94,6 +95,14 @@ export function TransactionProvider({
     });
   }, []);
 
+  const clearAllTransactions = useCallback(() => {
+    setTransactionState({
+      isPending: false,
+      error: null,
+      activeTransactionId: null,
+    });
+  }, []);
+
   return (
     <TransactionContext.Provider
       value={{
@@ -101,6 +110,7 @@ export function TransactionProvider({
         startTransaction,
         completeTransaction,
         clearError,
+        clearAllTransactions,
       }}
     >
       {children}
