@@ -24,6 +24,10 @@ import {
 import { TransactionButton } from "./TransactionButton";
 import { toast } from "react-hot-toast";
 import { useSpecialRange } from "../hooks/useSpecialRange";
+import {
+  useSpecialData,
+  SpecialData,
+} from "../hooks/useShipAttributesContract";
 import { FleeSafetySwitch } from "./FleeSafetySwitch";
 
 interface GameDisplayProps {
@@ -203,6 +207,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   const selectedShip = selectedShipId ? shipMap.get(selectedShipId) : null;
   const specialType = selectedShip?.equipment.special || 0;
   const { specialRange } = useSpecialRange(specialType);
+  const { data: specialData } = useSpecialData(specialType);
 
   // Get ship attributes by ship ID from game data
   const getShipAttributes = React.useCallback(
@@ -434,7 +439,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Calculate damage for a target ship
   const calculateDamage = React.useCallback(
-    (targetShipId: bigint) => {
+    (
+      targetShipId: bigint,
+      weaponType?: "weapon" | "special",
+      showReducedDamage?: boolean
+    ) => {
       if (!selectedShipId)
         return { baseDamage: 0, reducedDamage: 0, willKill: false };
 
@@ -454,19 +463,39 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         };
       }
 
-      // Calculate damage based on contract logic
-      const baseDamage = shooterAttributes.gunDamage;
+      // Determine which damage value to use based on weapon type
+      const currentWeaponType = weaponType || selectedWeaponType;
+      let baseDamage: number;
+
+      if (currentWeaponType === "special") {
+        // For special abilities, use the special strength
+        baseDamage =
+          (specialData as SpecialData)?.strength || shooterAttributes.gunDamage;
+      } else {
+        // Regular weapon damage
+        baseDamage = shooterAttributes.gunDamage;
+      }
+
       const reduction = targetAttributes.damageReduction;
-      const reducedDamage = Math.max(
-        0,
-        baseDamage - Math.floor((baseDamage * reduction) / 100)
-      );
+      let reducedDamage: number;
+
+      // For display purposes, flak can show reduced damage even though it ignores reduction in actual combat
+      if (currentWeaponType === "special" && !showReducedDamage) {
+        // Special abilities ignore damage reduction (actual combat behavior)
+        reducedDamage = baseDamage;
+      } else {
+        // Regular weapons are affected by damage reduction, or show reduced damage for display
+        reducedDamage = Math.max(
+          0,
+          baseDamage - Math.floor((baseDamage * reduction) / 100)
+        );
+      }
 
       const willKill = reducedDamage >= targetAttributes.hullPoints;
 
       return { baseDamage, reducedDamage, willKill, reactorCritical: false };
     },
-    [selectedShipId, getShipAttributes]
+    [selectedShipId, getShipAttributes, selectedWeaponType, specialData]
   );
 
   // Get valid targets (enemy ships in shooting range from preview position or current position)
@@ -506,9 +535,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
       // Filter targets based on weapon type
       if (selectedWeaponType === "special") {
-        // Flak targets ALL ships in range (friendly and enemy)
+        // Flak targets ALL ships in range (friendly and enemy) except itself
         if (specialType === 3) {
-          // Flak hits everything - don't filter by ownership
+          // Flak hits everything except the ship using flak
+          if (shipPosition.shipId === selectedShipId) return; // Don't target self
         } else if (specialType === 1) {
           // EMP targets enemy ships
           if (ship.owner === address) return; // Don't target friendly ships
@@ -531,8 +561,16 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       const canShoot = distance === 1 || distance <= shootingRange;
 
       if (canShoot && distance > 0) {
-        // Check line of sight
+        // Ships can always shoot adjacent enemies (distance === 1) regardless of nebula squares
+        // OR special abilities ignore nebula squares
+        // OR regular weapons need line of sight
+        const shouldCheckLineOfSight =
+          distance > 1 && // Not adjacent
+          (selectedWeaponType !== "special" ||
+            (specialType !== 1 && specialType !== 2 && specialType !== 3)); // Not EMP, Repair, or Flak
+
         if (
+          !shouldCheckLineOfSight ||
           hasLineOfSight(startRow, startCol, targetRow, targetCol, blockedGrid)
         ) {
           targets.push({
@@ -760,8 +798,20 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             );
 
             if (!isOccupied) {
-              // Check line of sight from preview position
-              if (hasLineOfSight(startRow, startCol, row, col, blockedGrid)) {
+              // Ships can always shoot adjacent enemies (distance === 1) regardless of nebula squares
+              // OR special abilities ignore nebula squares
+              // OR regular weapons need line of sight
+              const shouldCheckLineOfSight =
+                distance > 1 && // Not adjacent
+                (selectedWeaponType !== "special" ||
+                  (specialType !== 1 &&
+                    specialType !== 2 &&
+                    specialType !== 3)); // Not EMP, Repair, or Flak
+
+              if (
+                !shouldCheckLineOfSight ||
+                hasLineOfSight(startRow, startCol, row, col, blockedGrid)
+              ) {
                 validShootingPositions.push({ row, col });
               }
             }
@@ -907,8 +957,18 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       shootDistance === 1 || shootDistance <= shootingRange;
 
                     if (canShoot) {
-                      // Check line of sight using the blocked grid
+                      // Ships can always shoot adjacent enemies (distance === 1) regardless of nebula squares
+                      // OR special abilities ignore nebula squares
+                      // OR regular weapons need line of sight
+                      const shouldCheckLineOfSight =
+                        shootDistance > 1 && // Not adjacent
+                        (selectedWeaponType !== "special" ||
+                          (specialType !== 1 &&
+                            specialType !== 2 &&
+                            specialType !== 3)); // Not EMP, Repair, or Flak
+
                       if (
+                        !shouldCheckLineOfSight ||
                         hasLineOfSight(moveRow, moveCol, row, col, blockedGrid)
                       ) {
                         canShootFromSomewhere = true;
@@ -941,10 +1001,29 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     previewPosition,
     selectedWeaponType,
     specialRange,
+    specialType,
   ]);
 
   // Check if it's the current player's turn
   const isMyTurn = game.turnState.currentTurn === address;
+
+  // Track previous turn state to detect turn changes
+  const prevTurnRef = React.useRef<boolean | null>(null);
+
+  // Play alert sound when it becomes the player's turn
+  React.useEffect(() => {
+    if (isMyTurn && address && prevTurnRef.current === false) {
+      // Only play sound when turn changes from opponent to player
+      const audio = new Audio("/sound/alert.mp3");
+      audio.volume = 0.5; // Set volume to 50%
+      audio.play().catch((error) => {
+        console.log("Could not play alert sound:", error);
+        // Silently fail - some browsers block autoplay
+      });
+    }
+    // Update the previous turn state
+    prevTurnRef.current = isMyTurn;
+  }, [isMyTurn, address]);
 
   // Check if a ship belongs to the current player
   const isShipOwnedByCurrentPlayer = (shipId: bigint): boolean => {
@@ -1154,11 +1233,48 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           // Flak special - affects all targets in range
                           <>
                             <span className="text-orange-400 font-mono">
-                              Flak: All Enemies in Range
+                              Flak: All Ships in Range
                             </span>
                             <span className="ml-2 text-orange-400">
                               💥 {validTargets.length} targets
                             </span>
+                            {/* Show damage calculations for all ships in flak range */}
+                            <div className="mt-2 text-xs">
+                              {validTargets.map((target) => {
+                                const damage = calculateDamage(
+                                  target.shipId,
+                                  "special",
+                                  true
+                                ); // Show reduced damage for flak display
+                                const targetShip = shipMap.get(target.shipId);
+                                const isFriendly =
+                                  targetShip?.owner === address;
+                                return (
+                                  <div
+                                    key={target.shipId.toString()}
+                                    className="flex justify-between"
+                                  >
+                                    <span
+                                      className={
+                                        isFriendly
+                                          ? "text-blue-400"
+                                          : "text-red-400"
+                                      }
+                                    >
+                                      {targetShip?.name ||
+                                        `Ship #${target.shipId.toString()}`}
+                                    </span>
+                                    <span className="text-orange-400">
+                                      {damage.reactorCritical
+                                        ? "⚡ Reactor Critical +1"
+                                        : damage.willKill
+                                        ? `💀 ${damage.reducedDamage} DMG (KILL)`
+                                        : `⚔️ ${damage.reducedDamage} DMG`}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </>
                         ) : selectedWeaponType === "special" &&
                           specialType === 1 ? (
@@ -1215,11 +1331,19 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   {selectedShip && selectedShip.equipment.special > 0 && (
                     <select
                       value={selectedWeaponType}
-                      onChange={(e) =>
-                        setSelectedWeaponType(
-                          e.target.value as "weapon" | "special"
-                        )
-                      }
+                      onChange={(e) => {
+                        const newWeaponType = e.target.value as
+                          | "weapon"
+                          | "special";
+                        setSelectedWeaponType(newWeaponType);
+
+                        // Auto-set flak action when flak special is selected
+                        if (newWeaponType === "special" && specialType === 3) {
+                          setTargetShipId(0n); // Set target to 0 for flak AOE
+                        } else {
+                          setTargetShipId(null); // Clear target for other weapons
+                        }
+                      }}
                       className="px-3 py-1 text-sm rounded font-mono bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
                     >
                       <option value="weapon">
@@ -1255,7 +1379,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                           }`}
                         >
-                          💥 Flak All Enemies ({validTargets.length} targets)
+                          💥 Flak All Ships ({validTargets.length} targets)
                         </button>
                       ) : selectedWeaponType === "special" &&
                         specialType === 1 ? (
@@ -1462,7 +1586,29 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     }}
                   >
                     Submit{" "}
-                    {targetShipId
+                    {previewPosition
+                      ? (() => {
+                          // Check if flak is selected when moving
+                          if (
+                            selectedWeaponType === "special" &&
+                            specialType === 3
+                          ) {
+                            return scoringGrid[previewPosition.row] &&
+                              scoringGrid[previewPosition.row][
+                                previewPosition.col
+                              ] > 0
+                              ? "(Move + Score + Flak)"
+                              : "(Move + Flak)";
+                          }
+                          // Regular move logic
+                          return scoringGrid[previewPosition.row] &&
+                            scoringGrid[previewPosition.row][
+                              previewPosition.col
+                            ] > 0
+                            ? "(Move + Score)"
+                            : "(Move Only)";
+                        })()
+                      : targetShipId !== null
                       ? (() => {
                           // Check if this is an assist action
                           const isAssistAction =
@@ -1474,6 +1620,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             );
                           if (isAssistAction) {
                             return "(Assist)";
+                          }
+                          // Check if this is flak (targetShipId === 0n)
+                          if (
+                            targetShipId === 0n &&
+                            selectedWeaponType === "special" &&
+                            specialType === 3
+                          ) {
+                            return "(Flak)";
                           }
                           // Otherwise show weapon type
                           return selectedWeaponType === "special"
@@ -1490,16 +1644,24 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                                 })`
                             : "(Shoot)";
                         })()
-                      : previewPosition
-                      ? scoringGrid[previewPosition.row] &&
-                        scoringGrid[previewPosition.row][previewPosition.col] >
-                          0
-                        ? "(Move + Score)"
-                        : "(Move Only)"
                       : (() => {
                           const currentPosition = game.shipPositions.find(
                             (pos) => pos.shipId === selectedShipId
                           );
+                          // Check if flak is selected when staying
+                          if (
+                            selectedWeaponType === "special" &&
+                            specialType === 3
+                          ) {
+                            return currentPosition &&
+                              scoringGrid[currentPosition.position.row] &&
+                              scoringGrid[currentPosition.position.row][
+                                currentPosition.position.col
+                              ] > 0
+                              ? "(Stay + Score + Flak)"
+                              : "(Flak)";
+                          }
+                          // Regular stay logic
                           return currentPosition &&
                             scoringGrid[currentPosition.position.row] &&
                             scoringGrid[currentPosition.position.row][
@@ -1595,7 +1757,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     const isValidTargetType =
                       selectedWeaponType === "special"
                         ? specialType === 3 // Flak
-                          ? true // Flak hits ALL ships in range (friendly and enemy)
+                          ? cell.shipId !== selectedShipId // Flak hits ALL ships in range except itself
                           : specialType === 1 // EMP
                           ? !isShipOwnedByCurrentPlayer(cell.shipId) // EMP targets enemy ships
                           : isShipOwnedByCurrentPlayer(cell.shipId) // Other special abilities target friendly ships
@@ -1657,7 +1819,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       const isValidTargetType =
                         selectedWeaponType === "special"
                           ? specialType === 3 // Flak
-                            ? true // Flak hits ALL ships in range (friendly and enemy)
+                            ? cell.shipId !== selectedShipId // Flak hits ALL ships in range except itself
                             : specialType === 1 // EMP
                             ? !isShipOwnedByCurrentPlayer(cell.shipId) // EMP targets enemy ships
                             : isShipOwnedByCurrentPlayer(cell.shipId) // Other special abilities target friendly ships
@@ -1928,32 +2090,56 @@ Attributes:
 
                     {cell && ship ? (
                       <div className="w-full h-full relative z-10">
-                        {/* Damage display for selected target */}
-                        {isSelectedTarget &&
+                        {/* Damage display for selected target or flak targets */}
+                        {((isSelectedTarget &&
                           (previewPosition ||
-                            selectedWeaponType === "special") && (
-                            <div
-                              className={`absolute -top-8 left-1/2 transform -translate-x-1/2 z-20 rounded px-2 py-1 text-xs font-mono text-white whitespace-nowrap ${
-                                selectedWeaponType === "special"
-                                  ? "bg-blue-900 border border-blue-500"
-                                  : "bg-red-900 border border-red-500"
-                              }`}
-                            >
-                              {(() => {
-                                const damage = calculateDamage(cell.shipId);
-                                if (selectedWeaponType === "special") {
-                                  // Special abilities - show repair/heal effect
-                                  return `🔧 Repair ${damage.reducedDamage} HP`;
-                                } else if (damage.reactorCritical) {
-                                  return "⚡ Reactor Critical +1";
-                                } else if (damage.willKill) {
-                                  return `💀 ${damage.reducedDamage} DMG (KILL)`;
+                            selectedWeaponType === "special")) ||
+                          (selectedWeaponType === "special" &&
+                            specialType === 3 &&
+                            targetShipId === 0n &&
+                            validTargets.some(
+                              (target) => target.shipId === cell.shipId
+                            ))) && (
+                          <div
+                            className={`absolute -top-8 left-1/2 transform -translate-x-1/2 z-20 rounded px-2 py-1 text-xs font-mono text-white whitespace-nowrap ${
+                              selectedWeaponType === "special"
+                                ? specialType === 3 // Flak
+                                  ? "bg-orange-900 border border-orange-500" // Orange for flak
+                                  : "bg-blue-900 border border-blue-500" // Blue for other specials
+                                : "bg-red-900 border border-red-500"
+                            }`}
+                          >
+                            {(() => {
+                              const damage = calculateDamage(
+                                cell.shipId,
+                                "special",
+                                true
+                              ); // Show reduced damage for flak display
+                              if (selectedWeaponType === "special") {
+                                // Flak does damage, other special abilities repair/heal
+                                if (specialType === 3) {
+                                  // Flak special - show damage effect
+                                  if (damage.reactorCritical) {
+                                    return "⚡ Reactor Critical +1";
+                                  } else if (damage.willKill) {
+                                    return `💀 ${damage.reducedDamage} DMG (KILL)`;
+                                  } else {
+                                    return `⚔️ ${damage.reducedDamage} DMG`;
+                                  }
                                 } else {
-                                  return `⚔️ ${damage.reducedDamage} DMG`;
+                                  // Other special abilities - show repair/heal effect
+                                  return `🔧 Repair ${damage.reducedDamage} HP`;
                                 }
-                              })()}
-                            </div>
-                          )}
+                              } else if (damage.reactorCritical) {
+                                return "⚡ Reactor Critical +1";
+                              } else if (damage.willKill) {
+                                return `💀 ${damage.reducedDamage} DMG (KILL)`;
+                              } else {
+                                return `⚔️ ${damage.reducedDamage} DMG`;
+                              }
+                            })()}
+                          </div>
+                        )}
 
                         {/* Health bar for damaged ships */}
                         {(() => {

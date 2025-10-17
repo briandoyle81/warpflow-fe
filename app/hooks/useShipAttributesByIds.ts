@@ -9,17 +9,13 @@ interface CachedAttributes {
   shipIds: string[];
 }
 
-const CACHE_KEY = "ship-attributes-cache";
+const CACHE_KEY = "ship-attributes-cache-v2"; // v2: order-sensitive cache key
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
 
 export function useShipAttributesByIds(shipIds: bigint[]) {
   // Convert shipIds to strings for caching
   const shipIdsString = React.useMemo(
-    () =>
-      shipIds
-        .map((id) => id.toString())
-        .sort()
-        .join(","),
+    () => shipIds.map((id) => id.toString()).join(","),
     [shipIds]
   );
 
@@ -34,7 +30,7 @@ export function useShipAttributesByIds(shipIds: bigint[]) {
       const parsed: CachedAttributes = JSON.parse(cached);
       const now = Date.now();
 
-      // Check if cache is still valid (within 1 week and same ship IDs)
+      // Check if cache is still valid (within 1 week and same ship IDs in same order)
       if (
         now - parsed.timestamp < CACHE_DURATION &&
         parsed.shipIds.join(",") === shipIdsString
@@ -78,7 +74,7 @@ export function useShipAttributesByIds(shipIds: bigint[]) {
         const cacheData: CachedAttributes = {
           data: contractData as Attributes[],
           timestamp: Date.now(),
-          shipIds: shipIds.map((id) => id.toString()).sort(),
+          shipIds: shipIds.map((id) => id.toString()), // preserve order
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
         console.log("Cached ship attributes for 1 week");

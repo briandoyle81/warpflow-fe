@@ -817,7 +817,7 @@ const Lobbies: React.FC = () => {
         }
       `}</style>
       <h3 className="text-2xl font-bold mb-6 tracking-wider text-center">
-        [LOBBIES]
+        [CREATE AND JOIN NEW GAMES]
       </h3>
 
       {/* Player Status */}

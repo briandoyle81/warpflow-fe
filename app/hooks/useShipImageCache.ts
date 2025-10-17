@@ -9,6 +9,7 @@ const CACHE_EXPIRY_TIME = 7 * 24 * 60 * 60 * 1000; // 7 days
 const MAX_CACHE_SIZE = 50; // Reduced from 1000 to prevent quota issues
 const CACHE_KEY_PREFIX = "warpflow-ship-image-";
 const MAX_CACHE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB limit
+const SHIPS_ADDRESS_STORAGE_KEY = "warpflow-ships-contract-address";
 
 // Rate limiting configuration
 const REQUEST_DELAY = 100; // 100ms between requests
@@ -130,7 +131,9 @@ export function useShipImageCache(ship: Ship) {
   const [renderKey, setRenderKey] = useState(0);
 
   const publicClient = usePublicClient();
-  const cacheKey = `${CACHE_KEY_PREFIX}${ship.id.toString()}`;
+  const cacheKey = `${CACHE_KEY_PREFIX}${
+    CONTRACT_ADDRESSES.SHIPS
+  }:${ship.id.toString()}`;
   const abortControllerRef = useRef<AbortController | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shipId = ship.id.toString();
@@ -639,6 +642,18 @@ const initializeCacheSystem = () => {
 
     // Check and cleanup cache
     checkAndCleanupCache();
+
+    // Flush cache if Ships contract address changed
+    try {
+      const currentAddress = (CONTRACT_ADDRESSES.SHIPS as string) || "";
+      const storedAddress = localStorage.getItem(SHIPS_ADDRESS_STORAGE_KEY);
+      if (storedAddress && storedAddress !== currentAddress) {
+        clearAllShipImageCache();
+      }
+      if (currentAddress && storedAddress !== currentAddress) {
+        localStorage.setItem(SHIPS_ADDRESS_STORAGE_KEY, currentAddress);
+      }
+    } catch {}
 
     debugLog("🚀 Cache system initialized");
   }

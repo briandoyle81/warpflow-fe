@@ -25,6 +25,52 @@ const Info: React.FC = () => {
             Visit warpflow.com for more information
           </p>
         </div>
+        <div className="border border-purple-400 bg-black/40 rounded-lg p-4">
+          <h4 className="text-lg font-bold text-purple-400">
+            🎵 AUDIO CREDITS
+          </h4>
+          <div className="text-sm opacity-80 space-y-3">
+            <p>
+              <span className="text-purple-300 font-semibold">
+                UI Sound Effect:
+              </span>
+            </p>
+            <p className="ml-4">
+              &ldquo;UI_6 Tonal beep.Aliens.Proximity
+              alert(63osc,chrs,cmpr).wav&rdquo;
+            </p>
+            <p className="ml-4">
+              <span className="text-gray-400">by</span> newlocknew
+            </p>
+            <p className="ml-4">
+              <span className="text-gray-400">Source:</span>{" "}
+              <a
+                href="https://freesound.org/s/563864/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-300 hover:text-blue-200 underline"
+              >
+                freesound.org/s/563864/
+              </a>
+            </p>
+            <p className="ml-4">
+              <span className="text-gray-400">License:</span> Attribution 4.0
+            </p>
+            <div className="mt-4 pt-3 border-t border-purple-500/30">
+              <p>
+                <span className="text-purple-300 font-semibold">
+                  Background Music:
+                </span>
+              </p>
+              <p className="ml-4">
+                &ldquo;synthwave-80s-robot-swarm-218092.mp3&rdquo;
+              </p>
+              <p className="ml-4 text-gray-400">
+                Additional credits to be added
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

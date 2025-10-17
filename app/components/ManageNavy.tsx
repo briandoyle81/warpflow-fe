@@ -775,6 +775,12 @@ const ManageNavy: React.FC = () => {
                           return (
                             <>
                               <div className="flex justify-between">
+                                <span className="opacity-60">Weapon:</span>
+                                <span className="ml-2">
+                                  {getMainWeaponName(ship.equipment.mainWeapon)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
                                 <span className="opacity-60">Range:</span>
                                 <span className="ml-2">
                                   {inGameAttrs.range}

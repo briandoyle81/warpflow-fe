@@ -356,7 +356,7 @@ Attributes: Loading...`;
 
   return (
     <div
-      className={`bg-gray-900 rounded-lg relative w-full h-full flex items-center justify-center ${className}`}
+      className={`bg-gray-900 rounded-lg relative w-full h-full flex flex-col items-center justify-center ${className}`}
     >
       <div
         className="w-full"
@@ -561,6 +561,32 @@ Attributes: Loading...`;
                 }}
               />
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Key/Legend */}
+      <div className="mt-4 w-full">
+        <div className="flex flex-wrap gap-4 text-xs text-gray-300">
+          <div className="flex items-center gap-2">
+            <div className="w-[20px] h-[20px] bg-gray-900 border-2 border-purple-400"></div>
+            <span>Blocked (LOS) - Thick purple border</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-[20px] h-[20px] bg-blue-400 border border-gray-600"></div>
+            <span>Scoring (reusable)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-[20px] h-[20px] bg-yellow-400 border border-gray-600"></div>
+            <span>Scoring (once only)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-[20px] h-[20px] bg-blue-400 border-2 border-purple-400"></div>
+            <span>Blocked + Scoring</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-[20px] h-[20px] bg-gray-900 border border-gray-600"></div>
+            <span>Empty</span>
           </div>
         </div>
       </div>
