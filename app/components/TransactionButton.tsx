@@ -62,6 +62,10 @@ export function TransactionButton({
     setIsHydrated(true);
   }, []);
 
+  // Check if this button is the active transaction
+  const isActiveTransaction =
+    transactionState.activeTransactionId === transactionId;
+
   // Wait for transaction receipt
   const {
     isLoading: isConfirming,
@@ -71,17 +75,16 @@ export function TransactionButton({
   } = useWaitForTransactionReceipt({
     hash,
     query: {
-      enabled: !!hash && isHydrated, // Only enable when we have a hash and are hydrated
+      enabled: !!hash && isHydrated && isActiveTransaction, // Only enable when we have a hash, are hydrated, and this is the active transaction
     },
   });
-
-  // Check if this button is the active transaction
-  const isActiveTransaction =
-    transactionState.activeTransactionId === transactionId;
 
   // Fallback timeout for transaction completion
   const [fallbackTimeout, setFallbackTimeout] =
     React.useState<NodeJS.Timeout | null>(null);
+
+  // Local state to track if we should consider the transaction as pending
+  const [isLocallyPending, setIsLocallyPending] = React.useState(false);
 
   React.useEffect(() => {
     if (
@@ -126,7 +129,8 @@ export function TransactionButton({
   ]);
   const isTransactionPending =
     (transactionState.isPending && isActiveTransaction) ||
-    (isHydrated && isConfirming);
+    (isHydrated && isConfirming && isActiveTransaction) ||
+    isLocallyPending;
   const hasTransactionError = transactionState.error && isActiveTransaction;
 
   // Debug logging
@@ -175,6 +179,7 @@ export function TransactionButton({
 
       // Start transaction tracking
       startTransaction(transactionId);
+      setIsLocallyPending(true); // Set local pending state
 
       // Execute the contract call
       await writeContract({
@@ -189,6 +194,7 @@ export function TransactionButton({
       // Note: We'll handle completion in a useEffect when isPending changes
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
+      setIsLocallyPending(false); // Reset local pending state on error
       completeTransaction(transactionId, false, error);
       onError?.(error);
     }
@@ -199,6 +205,7 @@ export function TransactionButton({
     if (isActiveTransaction && isHydrated && isConfirmed) {
       // Transaction confirmed on blockchain
       console.log(`Transaction ${transactionId} confirmed on blockchain`);
+      setIsLocallyPending(false); // Reset local pending state
       completeTransaction(transactionId, true);
       onSuccess?.();
     } else if (isActiveTransaction && isHydrated && receiptError) {
@@ -207,6 +214,7 @@ export function TransactionButton({
         `Transaction ${transactionId} failed during confirmation:`,
         receiptError
       );
+      setIsLocallyPending(false); // Reset local pending state
       completeTransaction(transactionId, false, receiptError);
       onError?.(receiptError);
     } else if (isActiveTransaction && !isPending && error) {
@@ -215,6 +223,7 @@ export function TransactionButton({
         `Transaction ${transactionId} failed during submission:`,
         error
       );
+      setIsLocallyPending(false); // Reset local pending state
       completeTransaction(transactionId, false, error);
       onError?.(error);
     }
@@ -239,6 +248,15 @@ export function TransactionButton({
       }
     };
   }, [isActiveTransaction, transactionId, clearError]);
+
+  // Reset transaction state when transaction ID changes
+  React.useEffect(() => {
+    // Clear any stale transaction state when the transaction ID changes
+    if (transactionState.activeTransactionId !== transactionId) {
+      clearError(transactionId);
+      setIsLocallyPending(false); // Reset local pending state
+    }
+  }, [transactionId, transactionState.activeTransactionId, clearError]);
 
   // Determine button state
   const isDisabled =

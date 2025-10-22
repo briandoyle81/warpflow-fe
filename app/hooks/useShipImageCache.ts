@@ -288,6 +288,12 @@ export function useShipImageCache(ship: Ship) {
             setRenderKey((prev) => prev + 1);
             debugLog(`🔄 Updated state for ship ${ship.id.toString()}`);
 
+            // Clear the request state since we successfully loaded the image
+            shipRequestStates.delete(shipId);
+            debugLog(
+              `✅ Cleared request state for successfully loaded ship ${shipId}`
+            );
+
             resolve();
           };
           testImg.onerror = () => {
@@ -304,9 +310,25 @@ export function useShipImageCache(ship: Ship) {
           error
         );
 
-        // Always retry, but with proper delay
+        // Check if we should stop retrying
+        if (retryCount >= MAX_RETRIES) {
+          debugLog(
+            `🚫 Ship ${shipId} exceeded max retries, stopping retry loop`
+          );
+          setImageState((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: `Failed to load image after ${MAX_RETRIES} attempts`,
+            retryCount: retryCount,
+          }));
+          // Clear the request state to allow re-fetching in the future
+          shipRequestStates.delete(shipId);
+          return;
+        }
+
+        // Continue retrying with proper delay
         const nextRetryCount = retryCount + 1;
-        const delay = retryCount < MAX_RETRIES ? RETRY_DELAY : RETRY_DELAY * 2; // Longer delay after max retries
+        const delay = RETRY_DELAY;
 
         debugLog(
           `⏳ Retrying ship ${ship.id.toString()} image in ${delay}ms (attempt ${
@@ -317,10 +339,7 @@ export function useShipImageCache(ship: Ship) {
         setImageState((prev) => ({
           ...prev,
           isLoading: true,
-          error:
-            retryCount >= MAX_RETRIES
-              ? `Failed after ${MAX_RETRIES} attempts, retrying...`
-              : `Retrying... (attempt ${nextRetryCount + 1})`,
+          error: `Retrying... (attempt ${nextRetryCount + 1})`,
           retryCount: nextRetryCount,
         }));
 

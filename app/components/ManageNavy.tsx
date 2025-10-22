@@ -41,7 +41,7 @@ const ManageNavy: React.FC = () => {
   const { transactionState } = useTransaction();
   const { ships, isLoading, error, hasShips, shipCount, refetch } =
     useOwnedShips();
-  const { fleetStats } = useShipDetails();
+  const { fleetStats, shipsByStatus } = useShipDetails();
 
   // Read the recycle reward amount from the contract
   const { data: recycleReward } = useShipsRead("recycleReward");
@@ -361,23 +361,46 @@ const ManageNavy: React.FC = () => {
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-4 mb-8 justify-center">
-        <ShipActionButton
-          action="constructAll"
-          className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={fleetStats.unconstructedShips === 0}
-          onSuccess={() => {
-            // Show success toast
-            toast.success("Ships constructed successfully!");
-            // Clear image cache for all ships to force refresh
-            ships.forEach((ship) => {
-              clearShipImageCacheForShip(ship.id.toString());
-            });
-            // Refetch ships data after successful construction
-            refetch();
-          }}
-        >
-          [CONSTRUCT ALL SHIPS]
-        </ShipActionButton>
+        {fleetStats.unconstructedShips > 150 ? (
+          <ShipActionButton
+            action="constructShips"
+            shipIds={shipsByStatus.unconstructed
+              .slice(0, 150)
+              .map((ship: Ship) => ship.id)}
+            className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={fleetStats.unconstructedShips === 0}
+            onSuccess={() => {
+              // Show success toast
+              toast.success("150 ships construction started!");
+              // Clear image cache for all ships to force refresh
+              ships.forEach((ship) => {
+                clearShipImageCacheForShip(ship.id.toString());
+              });
+              // Refetch ships data after successful construction
+              refetch();
+            }}
+          >
+            [CONSTRUCT 150 SHIPS]
+          </ShipActionButton>
+        ) : (
+          <ShipActionButton
+            action="constructAll"
+            className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={fleetStats.unconstructedShips === 0}
+            onSuccess={() => {
+              // Show success toast
+              toast.success("Ships constructed successfully!");
+              // Clear image cache for all ships to force refresh
+              ships.forEach((ship) => {
+                clearShipImageCacheForShip(ship.id.toString());
+              });
+              // Refetch ships data after successful construction
+              refetch();
+            }}
+          >
+            [CONSTRUCT ALL SHIPS]
+          </ShipActionButton>
+        )}
 
         <button
           onClick={() => setShowShipPurchase(true)}

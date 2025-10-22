@@ -6,7 +6,7 @@ import { CONTRACT_ADDRESSES } from "../config/contracts";
 import type { Abi } from "viem";
 
 interface ShipActionButtonProps {
-  action: "construct" | "constructAll" | "recycle";
+  action: "construct" | "constructAll" | "constructShips" | "recycle";
   shipId?: bigint;
   shipIds?: bigint[];
   children: React.ReactNode;
@@ -35,6 +35,24 @@ const SHIP_ACTION_CONFIG = {
       {
         inputs: [],
         name: "constructAllMyShips",
+        outputs: [],
+        stateMutability: "nonpayable",
+        type: "function",
+      },
+    ] as Abi,
+  },
+  constructShips: {
+    functionName: "constructShips",
+    abi: [
+      {
+        inputs: [
+          {
+            internalType: "uint256[]",
+            name: "_ids",
+            type: "uint256[]",
+          },
+        ],
+        name: "constructShips",
         outputs: [],
         stateMutability: "nonpayable",
         type: "function",
@@ -80,6 +98,8 @@ export function ShipActionButton({
         return `construct-ship-${shipId}`;
       case "constructAll":
         return "construct-all-ships";
+      case "constructShips":
+        return `construct-ships-${shipIds?.length || 0}`;
       case "recycle":
         return `recycle-ships-${shipIds?.join("-")}`;
       default:
@@ -94,6 +114,8 @@ export function ShipActionButton({
         return shipId ? [shipId] : [];
       case "constructAll":
         return [];
+      case "constructShips":
+        return shipIds ? [shipIds] : [];
       case "recycle":
         return shipIds ? [shipIds] : [];
       default:
@@ -110,6 +132,11 @@ export function ShipActionButton({
         }
         return true;
       case "constructAll":
+        return true;
+      case "constructShips":
+        if (!shipIds || shipIds.length === 0) {
+          return "No ships selected for construction";
+        }
         return true;
       case "recycle":
         if (!shipIds || shipIds.length === 0) {
