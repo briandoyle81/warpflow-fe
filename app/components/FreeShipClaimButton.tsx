@@ -1,10 +1,9 @@
 "use client";
 
 import React from "react";
-import { TransactionButton } from "./TransactionButton";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import { useFreeShipClaiming } from "../hooks/useFreeShipClaiming";
 import { useAccount } from "wagmi";
-import type { Abi } from "viem";
+import { toast } from "react-hot-toast";
 
 interface FreeShipClaimButtonProps {
   isEligible: boolean;
@@ -24,32 +23,40 @@ export function FreeShipClaimButton({
   onError,
 }: FreeShipClaimButtonProps) {
   const { address } = useAccount();
+  const { claimFreeShips, isPending, error } = useFreeShipClaiming();
 
-  const validateBeforeTransaction = React.useCallback(() => {
+  const handleClick = async () => {
     if (!address) {
-      return "Please connect your wallet";
+      toast.error("Please connect your wallet");
+      return;
     }
     if (!isEligible) {
-      return "You are not eligible for free ships or have already claimed them";
+      toast.error(
+        "You are not eligible for free ships or have already claimed them"
+      );
+      return;
     }
-    return true;
-  }, [address, isEligible]);
+
+    try {
+      await claimFreeShips();
+      onSuccess?.();
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      onError?.(error);
+    }
+  };
+
+  const isDisabled = disabled || !isEligible || isPending;
 
   return (
-    <TransactionButton
-      transactionId={`claim-free-ships-${address}`}
-      contractAddress={CONTRACT_ADDRESSES.SHIPS as `0x${string}`}
-      abi={CONTRACT_ABIS.SHIPS as Abi}
-      functionName="claimFreeShips"
-      className={className}
-      disabled={disabled || !isEligible}
-      loadingText="[CLAIMING...]"
-      errorText="[ERROR CLAIMING]"
-      onSuccess={onSuccess}
-      onError={onError}
-      validateBeforeTransaction={validateBeforeTransaction}
+    <button
+      onClick={handleClick}
+      disabled={isDisabled}
+      className={`${className} ${
+        isDisabled ? "opacity-50 cursor-not-allowed" : ""
+      }`}
     >
-      {children}
-    </TransactionButton>
+      {isPending ? "[CLAIMING...]" : children}
+    </button>
   );
 }

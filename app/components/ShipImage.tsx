@@ -78,7 +78,8 @@ export function ShipImage({
   }
 
   // Handle loading state for constructed ships (including retries)
-  if (isLoading && showLoadingState) {
+  // Only show loading if we don't have dataUrl (to prevent flash when re-rendering)
+  if (isLoading && showLoadingState && !dataUrl) {
     return (
       <div
         className={`flex items-center justify-center bg-gray-800/50 border border-gray-600 rounded ${className}`}
@@ -93,7 +94,8 @@ export function ShipImage({
   }
 
   // Handle error or no data for constructed ships - keep showing loading instead of fallback
-  if (error || !dataUrl) {
+  // Only show loading if we don't have dataUrl (to prevent flash when re-rendering)
+  if ((error || !dataUrl) && !dataUrl) {
     return (
       <div
         className={`flex items-center justify-center bg-gray-800/50 border border-gray-600 rounded ${className}`}
