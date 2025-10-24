@@ -1306,40 +1306,66 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             </span>
                           </>
                         ) : (
-                          <>
-                            <span className="text-red-400 font-mono">
-                              Target: #{targetShipId.toString()}
-                            </span>
-                            {(() => {
-                              const damage = calculateDamage(targetShipId);
-                              if (selectedWeaponType === "special") {
-                                // Special abilities - show repair/heal effect
-                                return (
+                          (() => {
+                            // Check if this is an assist action
+                            const isAssistAction =
+                              assistableTargets.some(
+                                (target) => target.shipId === targetShipId
+                              ) ||
+                              assistableTargetsFromStart.some(
+                                (target) => target.shipId === targetShipId
+                              );
+
+                            if (isAssistAction) {
+                              return (
+                                <>
+                                  <span className="text-blue-400 font-mono">
+                                    Assist: #{targetShipId.toString()}
+                                  </span>
                                   <span className="ml-2 text-blue-400">
-                                    🔧 Repair {damage.reducedDamage} HP
+                                    🆘 Assist Ship
                                   </span>
-                                );
-                              } else if (damage.reactorCritical) {
-                                return (
-                                  <span className="ml-2 text-yellow-400">
-                                    ⚡ Reactor Critical +1
-                                  </span>
-                                );
-                              } else if (damage.willKill) {
-                                return (
-                                  <span className="ml-2 text-red-400">
-                                    💀 {damage.reducedDamage} DMG (KILL)
-                                  </span>
-                                );
-                              } else {
-                                return (
-                                  <span className="ml-2 text-orange-400">
-                                    ⚔️ {damage.reducedDamage} DMG
-                                  </span>
-                                );
-                              }
-                            })()}
-                          </>
+                                </>
+                              );
+                            }
+
+                            return (
+                              <>
+                                <span className="text-red-400 font-mono">
+                                  Target: #{targetShipId.toString()}
+                                </span>
+                                {(() => {
+                                  const damage = calculateDamage(targetShipId);
+                                  if (selectedWeaponType === "special") {
+                                    // Special abilities - show repair/heal effect
+                                    return (
+                                      <span className="ml-2 text-blue-400">
+                                        🔧 Repair {damage.reducedDamage} HP
+                                      </span>
+                                    );
+                                  } else if (damage.reactorCritical) {
+                                    return (
+                                      <span className="ml-2 text-yellow-400">
+                                        ⚡ Reactor Critical +1
+                                      </span>
+                                    );
+                                  } else if (damage.willKill) {
+                                    return (
+                                      <span className="ml-2 text-red-400">
+                                        💀 {damage.reducedDamage} DMG (KILL)
+                                      </span>
+                                    );
+                                  } else {
+                                    return (
+                                      <span className="ml-2 text-orange-400">
+                                        ⚔️ {damage.reducedDamage} DMG
+                                      </span>
+                                    );
+                                  }
+                                })()}
+                              </>
+                            );
+                          })()
                         )}
                       </>
                     ) : null}
@@ -1381,7 +1407,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 </div>
 
                 {/* Target Selection */}
-                {validTargets.length > 0 && (
+                {(validTargets.length > 0 ||
+                  assistableTargets.length > 0 ||
+                  assistableTargetsFromStart.length > 0) && (
                   <div className="mb-4 p-3 bg-gray-800 rounded border border-gray-600">
                     <h4 className="text-sm text-gray-300 mb-2">
                       Select Target (Optional)
@@ -1408,10 +1436,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             <button
                               key={target.shipId.toString()}
                               onClick={() => setTargetShipId(target.shipId)}
-                              className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
+                              className={`px-3 py-1 text-xs rounded font-mono transition-colors border-2 ${
                                 targetShipId === target.shipId
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                                  ? "bg-red-600 text-white border-red-400"
+                                  : "bg-gray-700 text-red-300 hover:bg-gray-600 border-red-400"
                               }`}
                             >
                               ⚡ EMP{" "}
@@ -1421,43 +1449,78 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           );
                         })
                       ) : (
-                        validTargets.map((target) => {
-                          const targetShip = shipMap.get(target.shipId);
-                          const damage = calculateDamage(target.shipId);
-                          return (
-                            <button
-                              key={target.shipId.toString()}
-                              onClick={() => setTargetShipId(target.shipId)}
-                              className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
-                                targetShipId === target.shipId
-                                  ? selectedWeaponType === "special"
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-red-600 text-white"
-                                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                              }`}
-                            >
-                              Target #{target.shipId.toString()}
-                              {targetShip && ` (${targetShip.name})`}
-                              {selectedWeaponType === "special" ? (
-                                <span className="ml-1 text-blue-400">
-                                  🔧 {damage.reducedDamage}
-                                </span>
-                              ) : damage.reactorCritical ? (
-                                <span className="ml-1 text-yellow-400">
-                                  ⚡ +1
-                                </span>
-                              ) : damage.willKill ? (
-                                <span className="ml-1 text-red-400">
-                                  💀 {damage.reducedDamage}
-                                </span>
-                              ) : (
-                                <span className="ml-1 text-orange-400">
-                                  ⚔️ {damage.reducedDamage}
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })
+                        <>
+                          {/* Regular targets */}
+                          {validTargets.map((target) => {
+                            const targetShip = shipMap.get(target.shipId);
+                            const damage = calculateDamage(target.shipId);
+                            return (
+                              <button
+                                key={target.shipId.toString()}
+                                onClick={() => setTargetShipId(target.shipId)}
+                                className={`px-3 py-1 text-xs rounded font-mono transition-colors border-2 ${
+                                  targetShipId === target.shipId
+                                    ? selectedWeaponType === "special"
+                                      ? "bg-blue-600 text-white border-blue-400"
+                                      : "bg-red-600 text-white border-red-400"
+                                    : "bg-gray-700 text-red-300 hover:bg-gray-600 border-red-400"
+                                }`}
+                              >
+                                Target #{target.shipId.toString()}
+                                {targetShip && ` (${targetShip.name})`}
+                                {selectedWeaponType === "special" ? (
+                                  <span className="ml-1 text-blue-400">
+                                    🔧 {damage.reducedDamage}
+                                  </span>
+                                ) : damage.reactorCritical ? (
+                                  <span className="ml-1 text-yellow-400">
+                                    ⚡ +1
+                                  </span>
+                                ) : damage.willKill ? (
+                                  <span className="ml-1 text-red-400">
+                                    💀 {damage.reducedDamage}
+                                  </span>
+                                ) : (
+                                  <span className="ml-1 text-red-400">
+                                    ⚔️ {damage.reducedDamage}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+
+                          {/* Assistable targets */}
+                          {(assistableTargets.length > 0 ||
+                            assistableTargetsFromStart.length > 0) && (
+                            <>
+                              {[
+                                ...assistableTargets,
+                                ...assistableTargetsFromStart,
+                              ].map((target) => {
+                                const targetShip = shipMap.get(target.shipId);
+                                return (
+                                  <button
+                                    key={`assist-${target.shipId.toString()}`}
+                                    onClick={() =>
+                                      setTargetShipId(target.shipId)
+                                    }
+                                    className={`px-3 py-1 text-xs rounded font-mono transition-colors border-2 ${
+                                      targetShipId === target.shipId
+                                        ? "bg-blue-600 text-white border-blue-400"
+                                        : "bg-gray-700 text-blue-300 hover:bg-gray-600 border-blue-400"
+                                    }`}
+                                  >
+                                    Assist #{target.shipId.toString()}
+                                    {targetShip && ` (${targetShip.name})`}
+                                    <span className="ml-1 text-blue-400">
+                                      🆘 Assist
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </>
+                          )}
+                        </>
                       )}
                       <button
                         onClick={() => setTargetShipId(null)}
@@ -1606,6 +1669,25 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     Submit{" "}
                     {previewPosition
                       ? (() => {
+                          // Check if this is an assist action when moving
+                          const isAssistAction =
+                            targetShipId !== null &&
+                            (assistableTargets.some(
+                              (target) => target.shipId === targetShipId
+                            ) ||
+                              assistableTargetsFromStart.some(
+                                (target) => target.shipId === targetShipId
+                              ));
+
+                          if (isAssistAction) {
+                            return scoringGrid[previewPosition.row] &&
+                              scoringGrid[previewPosition.row][
+                                previewPosition.col
+                              ] > 0
+                              ? "(Move + Score + Assist)"
+                              : "(Move + Assist)";
+                          }
+
                           // Check if flak is selected when moving
                           if (
                             selectedWeaponType === "special" &&
@@ -1637,7 +1719,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               (target) => target.shipId === targetShipId
                             );
                           if (isAssistAction) {
-                            return "(Assist)";
+                            return "(Assist Only)";
                           }
                           // Check if this is flak (targetShipId === 0n)
                           if (
