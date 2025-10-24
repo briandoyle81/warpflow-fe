@@ -2430,9 +2430,37 @@ Attributes:
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-1">
-                            <span className="text-white font-mono text-xs truncate">
-                              {ship?.name || `Ship #${shipId.toString()}`}
-                            </span>
+                            {(() => {
+                              const isAssistableTarget =
+                                selectedShipId &&
+                                (assistableTargets.some(
+                                  (target) => target.shipId === shipId
+                                ) ||
+                                  assistableTargetsFromStart.some(
+                                    (target) => target.shipId === shipId
+                                  ));
+
+                              if (isAssistableTarget) {
+                                return (
+                                  <button
+                                    onClick={() => {
+                                      setTargetShipId(shipId);
+                                      setSelectedWeaponType("weapon"); // Reset to weapon for assist
+                                    }}
+                                    className="text-blue-400 font-mono text-xs truncate hover:text-blue-300 hover:underline cursor-pointer"
+                                    title="Click to assist this ship"
+                                  >
+                                    {ship?.name || `Ship #${shipId.toString()}`}
+                                  </button>
+                                );
+                              }
+
+                              return (
+                                <span className="text-white font-mono text-xs truncate">
+                                  {ship?.name || `Ship #${shipId.toString()}`}
+                                </span>
+                              );
+                            })()}
                             {movedShipIdsSet.has(shipId) && (
                               <span className="px-1 py-0.5 bg-gray-600 text-white text-xs rounded font-mono">
                                 M
