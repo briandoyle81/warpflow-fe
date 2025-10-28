@@ -1232,14 +1232,38 @@ const Lobbies: React.FC = () => {
                       </div>
                     )}
 
-                  {/* Leave button - only show if no joiner has joined */}
-                  {lobby.players.joiner ===
-                    "0x0000000000000000000000000000000000000000" && (
+                  {/* Leave button - show for all pre-game scenarios */}
+                  {lobby.state.status !== LobbyStatus.InGame && (
                     <LobbyLeaveButton
                       lobbyId={lobby.basic.id}
                       className="flex-1 px-4 py-2 rounded-lg border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       onSuccess={() => {
                         console.log("Left lobby successfully!");
+                        // If leaving from fleet selection modal, close it
+                        if (selectedLobby === lobby.basic.id) {
+                          setSelectedLobby(null);
+                          setSelectedShips([]);
+                          setShipPositions([]);
+                          setSelectedShipId(null);
+                          setFiltersExpanded(false);
+                          setShowFleetConfirmation(false);
+                          setFleetFilters({
+                            showShiny: true,
+                            showCommon: true,
+                            showUnavailable: false,
+                            minCost: 0,
+                            maxCost: 10000,
+                            minAccuracy: 0,
+                            maxAccuracy: 2,
+                            minHull: 0,
+                            maxHull: 2,
+                            minSpeed: 0,
+                            maxSpeed: 2,
+                            weaponType: "all",
+                            defenseType: "all",
+                            specialType: "all",
+                          });
+                        }
                         // Refresh lobby list
                         loadLobbies();
                       }}
@@ -1247,7 +1271,7 @@ const Lobbies: React.FC = () => {
                         console.error("Failed to leave lobby:", error);
                       }}
                     >
-                      LEAVE
+                      LEAVE LOBBY
                     </LobbyLeaveButton>
                   )}
                 </div>
@@ -1340,6 +1364,41 @@ const Lobbies: React.FC = () => {
                     >
                       {totalCost}/{costLimit}
                     </div>
+                    {/* Leave Lobby Button (in fleet selection modal) */}
+                    <LobbyLeaveButton
+                      lobbyId={selectedLobby}
+                      className="px-3 py-1 text-sm font-bold text-red-400 border border-red-400 rounded hover:text-red-300 hover:border-red-300 transition-colors"
+                      onSuccess={() => {
+                        setSelectedLobby(null);
+                        setSelectedShips([]);
+                        setShipPositions([]);
+                        setSelectedShipId(null);
+                        setFiltersExpanded(false);
+                        setShowFleetConfirmation(false);
+                        setFleetFilters({
+                          showShiny: true,
+                          showCommon: true,
+                          showUnavailable: false,
+                          minCost: 0,
+                          maxCost: 10000,
+                          minAccuracy: 0,
+                          maxAccuracy: 2,
+                          minHull: 0,
+                          maxHull: 2,
+                          minSpeed: 0,
+                          maxSpeed: 2,
+                          weaponType: "all",
+                          defenseType: "all",
+                          specialType: "all",
+                        });
+                        loadLobbies();
+                      }}
+                      onError={(error) => {
+                        console.error("Failed to leave lobby:", error);
+                      }}
+                    >
+                      LEAVE LOBBY
+                    </LobbyLeaveButton>
                     {/* Close Button */}
                     <button
                       onClick={() => {
@@ -1366,7 +1425,7 @@ const Lobbies: React.FC = () => {
                           specialType: "all",
                         });
                       }}
-                      className="px-3 py-1 text-sm font-bold text-red-400 border border-red-400 rounded hover:text-red-300 hover:border-red-300 transition-colors"
+                      className="px-3 py-1 text-sm font-bold text-gray-400 border border-gray-400 rounded hover:text-gray-300 hover:border-gray-300 transition-colors"
                     >
                       ✕
                     </button>

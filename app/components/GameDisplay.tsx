@@ -43,6 +43,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   onBack,
   refetch,
 }) => {
+  // Debug mode toggle
+  const [showDebug, setShowDebug] = React.useState(false);
   const { address } = useAccount();
   const { clearAllTransactions } = useTransaction();
   const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
@@ -1585,6 +1587,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               ? ActionType.Special
                               : ActionType.Shoot;
                           })()
+                        : selectedWeaponType === "special" && specialType === 3
+                        ? ActionType.Special // Flak AOE (targetShipId is 0n)
                         : ActionType.Pass,
                       targetShipId || 0n,
                     ]}
@@ -1772,12 +1776,83 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         })()}
                   </TransactionButton>
                 </div>
+
+                {/* Debug: show moveShip params under the buttons */}
+                {showDebug && (
+                  <div className="mt-2 text-xs text-gray-400 font-mono">
+                    {(() => {
+                      const currentPosition = game.shipPositions.find(
+                        (pos) => pos.shipId === selectedShipId
+                      );
+                      const row = previewPosition
+                        ? previewPosition.row
+                        : currentPosition
+                        ? currentPosition.position.row
+                        : 0;
+                      const col = previewPosition
+                        ? previewPosition.col
+                        : currentPosition
+                        ? currentPosition.position.col
+                        : 0;
+
+                      const isAssistAction =
+                        targetShipId !== null &&
+                        (assistableTargets.some(
+                          (target) => target.shipId === targetShipId
+                        ) ||
+                          assistableTargetsFromStart.some(
+                            (target) => target.shipId === targetShipId
+                          ));
+
+                      const actionType = targetShipId
+                        ? isAssistAction
+                          ? ActionType.Assist
+                          : selectedWeaponType === "special"
+                          ? ActionType.Special
+                          : ActionType.Shoot
+                        : selectedWeaponType === "special" && specialType === 3
+                        ? ActionType.Special // Flak AOE
+                        : ActionType.Pass;
+
+                      const params = [
+                        String(game.metadata.gameId),
+                        String(selectedShipId || 0n),
+                        row,
+                        col,
+                        actionType,
+                        String(targetShipId || 0n),
+                      ];
+
+                      return (
+                        <div>
+                          <span className="opacity-60 mr-1">Debug params:</span>
+                          <span>
+                            [gameId: {params[0]}, shipId: {params[1]}, row:{" "}
+                            {row}, col: {col}, actionType: {actionType}, target:{" "}
+                            {params[5]}]
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
             </div>
           )}
 
         {/* Debug buttons and Emergency Flee */}
         <div className="flex items-center space-x-4">
+          {/* Debug Toggle */}
+          <label className="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showDebug}
+              onChange={(e) => setShowDebug(e.target.checked)}
+              className="rounded"
+            />
+            <span>Show Debug</span>
+          </label>
+
           {/* Emergency Flee Safety Switch */}
           {game.metadata.winner ===
             "0x0000000000000000000000000000000000000000" && (
