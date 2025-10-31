@@ -2,6 +2,8 @@
 
 WarpFlow is a blockchain-based strategic space combat game where players command fleets of customizable ships in tactical battles across carefully designed maps. Built on Flow blockchain, the game combines real-time strategy with NFT ship ownership and turn-based combat mechanics. The entire frontend has been vibe-coded for maximum development velocity and creative flow.
 
+Contracts here: https://github.com/briandoyle81/warpflow-contracts
+
 ## Game Overview
 
 ### Core Gameplay
