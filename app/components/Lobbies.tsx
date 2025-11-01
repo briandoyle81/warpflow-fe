@@ -10,6 +10,7 @@ import { useShipsRead } from "../hooks/useShipsContract";
 import { LobbyStatus, Ship, Attributes } from "../types/types";
 import { toast } from "react-hot-toast";
 import { ShipImage } from "./ShipImage";
+import ShipCard from "./ShipCard";
 import {
   getMainWeaponName,
   getSpecialName,
@@ -1331,20 +1332,60 @@ const Lobbies: React.FC = () => {
           return (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
               <div className="bg-black border border-cyan-400 rounded-lg p-6 w-[100vw] h-[100vh] flex flex-col">
-                <div className="flex justify-between items-start mb-2">
+                <div className="relative flex justify-between items-center mb-2">
                   <h4 className="text-lg font-bold text-cyan-400">
                     SELECT FLEET
                   </h4>
+                  {/* Centered buttons */}
+                  <div className="absolute left-1/2 transform -translate-x-1/2 flex gap-2 items-center">
+                    <button
+                      onClick={() => handleCreateFleet(selectedLobby)}
+                      disabled={
+                        selectedShips.length === 0 ||
+                        isCreatingFleet ||
+                        isUnder90Percent
+                      }
+                      className="px-4 py-2 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isCreatingFleet
+                        ? "CREATING FLEET..."
+                        : isUnder90Percent
+                        ? `NEED ${Math.round(costLimit * 0.9)} POINTS`
+                        : `CREATE FLEET (${selectedShips.length})`}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (isCreatingFleet) return; // Prevent closing during transaction
+                        setSelectedLobby(null);
+                        setSelectedShips([]);
+                        setShipPositions([]);
+                        setSelectedShipId(null);
+                        setFiltersExpanded(false);
+                        setShowFleetConfirmation(false);
+                        setFleetFilters({
+                          showShiny: true,
+                          showCommon: true,
+                          showUnavailable: false,
+                          minCost: 0,
+                          maxCost: 10000,
+                          minAccuracy: 0,
+                          maxAccuracy: 2,
+                          minHull: 0,
+                          maxHull: 2,
+                          minSpeed: 0,
+                          maxSpeed: 2,
+                          weaponType: "all",
+                          defenseType: "all",
+                          specialType: "all",
+                        });
+                      }}
+                      disabled={isCreatingFleet}
+                      className="px-4 py-2 border border-red-400 text-red-400 rounded hover:bg-red-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      CANCEL
+                    </button>
+                  </div>
                   <div className="flex items-center gap-3">
-                    {/* Debug Info */}
-                    <div className="text-xs text-gray-400">
-                      Ships:{" "}
-                      {selectedShips.map((id) => id.toString()).join(", ")} |
-                      Positions:{" "}
-                      {shipPositions
-                        .map((pos) => `(${pos.row},${pos.col})`)
-                        .join(", ")}
-                    </div>
                     {/* Filter Button */}
                     <button
                       onClick={() => setFiltersExpanded(!filtersExpanded)}
@@ -1798,8 +1839,8 @@ const Lobbies: React.FC = () => {
                   </div>
                 ) : (
                   <div className="flex gap-4 flex-1">
-                    {/* Ship Selection Grid - 1/5 width */}
-                    <div className="w-1/5 h-full">
+                    {/* Ship Selection Grid - 1/4 width */}
+                    <div className="w-1/4 h-full">
                       <div className="grid grid-cols-1 gap-4 mb-6 overflow-y-auto content-start max-h-[80vh]">
                         {filteredShips
                           .sort((a, b) => {
@@ -1813,297 +1854,50 @@ const Lobbies: React.FC = () => {
                             // Within each group, sort by ship ID
                             return Number(a.id - b.id);
                           })
-                          .map((ship) => (
-                            <div
-                              key={ship.id.toString()}
-                              className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 self-start ${
-                                selectedShips.includes(ship.id)
-                                  ? "border-green-400 bg-green-400/20"
-                                  : ship.shipData.timestampDestroyed > 0n
-                                  ? "border-red-400 bg-black/60 opacity-50 cursor-not-allowed"
-                                  : ship.shipData.inFleet
-                                  ? "border-orange-400 bg-orange-400/20 opacity-50 cursor-not-allowed"
-                                  : ship.shipData.constructed
-                                  ? "border-gray-400 bg-black/40 hover:border-cyan-400 hover:bg-cyan-400/10"
-                                  : "border-gray-400 bg-black/60 opacity-50 cursor-not-allowed"
-                              }`}
-                              onClick={() => {
-                                // Don't allow selection of destroyed, unconstructed, or ships already in a fleet
-                                if (
-                                  ship.shipData.timestampDestroyed > 0n ||
-                                  !ship.shipData.constructed ||
-                                  ship.shipData.inFleet
-                                ) {
-                                  return;
-                                }
+                          .map((ship) => {
+                            const canSelect =
+                              ship.shipData.timestampDestroyed === 0n &&
+                              ship.shipData.constructed &&
+                              !ship.shipData.inFleet;
 
-                                if (selectedShips.includes(ship.id)) {
-                                  removeShipFromFleet(ship.id);
-                                } else {
-                                  addShipToFleet(ship.id);
-                                }
-                              }}
-                            >
-                              {/* Ship Image */}
-                              <div className="mb-3">
-                                <ShipImage
-                                  key={`${ship.id.toString()}-${
-                                    ship.shipData.constructed
-                                      ? "constructed"
-                                      : "unconstructed"
-                                  }`}
-                                  ship={ship}
-                                  className="w-full h-32 rounded border border-gray-600"
-                                  showLoadingState={true}
-                                />
-                              </div>
+                            const handleCardClick = () => {
+                              if (!canSelect) return;
+                              if (selectedShips.includes(ship.id)) {
+                                removeShipFromFleet(ship.id);
+                              } else {
+                                addShipToFleet(ship.id);
+                              }
+                            };
 
-                              <div className="flex justify-between items-start mb-3">
-                                <div className="flex items-center gap-2">
-                                  <h5 className="font-bold text-sm">
-                                    {ship.name || `Ship #${ship.id}`}
-                                  </h5>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={`text-xs px-2 py-1 rounded ${
-                                      ship.shipData.shiny
-                                        ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
-                                        : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
-                                    }`}
-                                  >
-                                    {ship.shipData.shiny
-                                      ? "SHINY ✨"
-                                      : "COMMON"}
-                                  </span>
-                                  {/* Rank */}
-                                  {ship.shipData.constructed && (
-                                    <span
-                                      className={`text-xs px-2 py-1 rounded border ${getRankColor(
-                                        calculateShipRank(ship).rank
-                                      )}`}
-                                    >
-                                      R{calculateShipRank(ship).rank}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Ship Stats */}
-                              {ship.shipData.constructed ? (
-                                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
-                                  {showInGameProperties ? (
-                                    // In-Game Properties
-                                    (() => {
-                                      const inGameAttrs = attributesMap.get(
-                                        ship.id
-                                      );
-                                      if (!inGameAttrs) {
-                                        return (
-                                          <div className="col-span-2 text-center text-gray-400 text-xs">
-                                            {attributesLoading
-                                              ? "Loading attributes..."
-                                              : "Attributes not available"}
-                                          </div>
-                                        );
-                                      }
-
-                                      return (
-                                        <>
-                                          <div className="flex justify-between">
-                                            <span className="opacity-60">
-                                              Range:
-                                            </span>
-                                            <span className="ml-2">
-                                              {inGameAttrs.range}
-                                            </span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span className="opacity-60">
-                                              Damage:
-                                            </span>
-                                            <span className="ml-2">
-                                              {inGameAttrs.gunDamage}
-                                            </span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span className="opacity-60">
-                                              Hull:
-                                            </span>
-                                            <span className="ml-2">
-                                              {inGameAttrs.hullPoints}/
-                                              {inGameAttrs.maxHullPoints}
-                                            </span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span className="opacity-60">
-                                              Move:
-                                            </span>
-                                            <span className="ml-2">
-                                              {inGameAttrs.movement}
-                                            </span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span className="opacity-60">
-                                              Armor:
-                                            </span>
-                                            <span className="ml-2">
-                                              {inGameAttrs.damageReduction}%
-                                            </span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span className="opacity-60">
-                                              Special:
-                                            </span>
-                                            <span className="ml-2">
-                                              {getSpecialName(
-                                                ship.equipment.special
-                                              )}
-                                            </span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                            <span className="opacity-60">
-                                              Cost:
-                                            </span>
-                                            <span className="ml-2">
-                                              {ship.shipData.cost}
-                                            </span>
-                                          </div>
-                                          <div className="flex justify-between col-span-2">
-                                            <span className="opacity-60">
-                                              Status:
-                                            </span>
-                                            <span
-                                              className={`ml-2 ${
-                                                ship.shipData
-                                                  .timestampDestroyed > 0n
-                                                  ? "text-red-400"
-                                                  : ship.shipData.inFleet
-                                                  ? "text-orange-400"
-                                                  : "text-green-400"
-                                              }`}
-                                            >
-                                              {ship.shipData
-                                                .timestampDestroyed > 0n
-                                                ? "DESTROYED"
-                                                : ship.shipData.inFleet
-                                                ? "IN FLEET"
-                                                : "READY"}
-                                            </span>
-                                          </div>
-                                        </>
-                                      );
-                                    })()
-                                  ) : (
-                                    // NFT Properties (original)
-                                    <>
-                                      <div className="flex justify-between">
-                                        <span className="opacity-60">Acc:</span>
-                                        <span className="ml-2">
-                                          {ship.traits.accuracy}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="opacity-60">
-                                          Hull:
-                                        </span>
-                                        <span className="ml-2">
-                                          {ship.traits.hull}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="opacity-60">
-                                          Speed:
-                                        </span>
-                                        <span className="ml-2">
-                                          {ship.traits.speed}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="opacity-60">
-                                          Cost:
-                                        </span>
-                                        <span className="ml-2">
-                                          {ship.shipData.cost}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="opacity-60">Wpn:</span>
-                                        <span className="ml-2">
-                                          {getMainWeaponName(
-                                            ship.equipment.mainWeapon
-                                          )}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="opacity-60">
-                                          {ship.equipment.shields > 0
-                                            ? "Shd:"
-                                            : "Arm:"}
-                                        </span>
-                                        <span className="ml-2">
-                                          {ship.equipment.shields > 0
-                                            ? getShieldName(
-                                                ship.equipment.shields
-                                              )
-                                            : getArmorName(
-                                                ship.equipment.armor
-                                              )}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="opacity-60">Spc:</span>
-                                        <span className="ml-2">
-                                          {getSpecialName(
-                                            ship.equipment.special
-                                          )}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between col-span-2">
-                                        <span className="opacity-60">
-                                          Status:
-                                        </span>
-                                        <span
-                                          className={`ml-2 ${
-                                            ship.shipData.timestampDestroyed >
-                                            0n
-                                              ? "text-red-400"
-                                              : ship.shipData.inFleet
-                                              ? "text-orange-400"
-                                              : "text-green-400"
-                                          }`}
-                                        >
-                                          {ship.shipData.timestampDestroyed > 0n
-                                            ? "DESTROYED"
-                                            : ship.shipData.inFleet
-                                            ? "IN FLEET"
-                                            : "READY"}
-                                        </span>
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="text-center text-yellow-400 text-sm">
-                                  UNDER CONSTRUCTION
-                                </div>
-                              )}
-
-                              {/* Selection Indicator */}
-                              {selectedShips.includes(ship.id) && (
-                                <div className="mt-2 text-center">
-                                  <span className="text-green-400 text-sm font-bold">
-                                    ✓ SELECTED
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                            return (
+                              <ShipCard
+                                key={ship.id.toString()}
+                                ship={ship}
+                                isStarred={false}
+                                onToggleStar={() => {}}
+                                isSelected={selectedShips.includes(ship.id)}
+                                onToggleSelection={() => {
+                                  if (canSelect) {
+                                    handleCardClick();
+                                  }
+                                }}
+                                onRecycleClick={() => {}}
+                                showInGameProperties={showInGameProperties}
+                                inGameAttributes={attributesMap.get(ship.id)}
+                                attributesLoading={attributesLoading}
+                                selectionMode={true}
+                                hideRecycle={true}
+                                hideCheckbox={true}
+                                onCardClick={handleCardClick}
+                                canSelect={canSelect}
+                              />
+                            );
+                          })}
                       </div>
                     </div>
 
-                    {/* Empty space - 4/5 width */}
-                    <div className="w-4/5 h-full flex items-center justify-center">
+                    {/* Empty space - 3/4 width */}
+                    <div className="w-3/4 h-full flex items-center justify-center">
                       {/* Map Display */}
                       {currentLobby && (
                         <MapDisplay
@@ -2146,59 +1940,6 @@ const Lobbies: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                <div className="flex gap-2 mt-4 flex-shrink-0">
-                  <button
-                    onClick={() => handleCreateFleet(selectedLobby)}
-                    disabled={
-                      selectedShips.length === 0 ||
-                      isCreatingFleet ||
-                      isUnder90Percent
-                    }
-                    className="flex-1 px-6 py-3 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isCreatingFleet
-                      ? "CREATING FLEET..."
-                      : isUnder90Percent
-                      ? `NEED ${Math.round(
-                          costLimit * 0.9
-                        )} POINTS (${Math.round(
-                          (totalCost / costLimit) * 100
-                        )}%)`
-                      : `CREATE FLEET (${selectedShips.length} ships)`}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (isCreatingFleet) return; // Prevent closing during transaction
-                      setSelectedLobby(null);
-                      setSelectedShips([]);
-                      setShipPositions([]);
-                      setSelectedShipId(null);
-                      setFiltersExpanded(false);
-                      setShowFleetConfirmation(false);
-                      setFleetFilters({
-                        showShiny: true,
-                        showCommon: true,
-                        showUnavailable: false,
-                        minCost: 0,
-                        maxCost: 10000,
-                        minAccuracy: 0,
-                        maxAccuracy: 2,
-                        minHull: 0,
-                        maxHull: 2,
-                        minSpeed: 0,
-                        maxSpeed: 2,
-                        weaponType: "all",
-                        defenseType: "all",
-                        specialType: "all",
-                      });
-                    }}
-                    disabled={isCreatingFleet}
-                    className="px-4 py-2 border border-red-400 text-red-400 rounded hover:bg-red-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    CANCEL
-                  </button>
-                </div>
               </div>
             </div>
           );
