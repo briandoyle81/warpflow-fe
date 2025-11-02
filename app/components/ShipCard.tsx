@@ -28,6 +28,12 @@ interface ShipCardProps {
   hideCheckbox?: boolean; // Hide the checkbox for recycling selection
   onCardClick?: () => void;
   canSelect?: boolean; // Whether the ship can be selected in selection mode
+  tooltipMode?: boolean; // Use fully opaque backgrounds for tooltip display
+  isCurrentPlayerShip?: boolean; // Whether this ship belongs to the current player (for tooltip border color)
+  flipShip?: boolean; // Whether to flip the ship image horizontally (for joiner ships in tooltip)
+  reactorCriticalStatus?: "none" | "warning" | "critical"; // Reactor critical status for game view borders
+  hasMoved?: boolean; // Whether the ship has moved (for game view status display)
+  gameViewMode?: boolean; // Explicitly mark this as game view for styling
 }
 
 const ShipCard: React.FC<ShipCardProps> = ({
@@ -45,27 +51,72 @@ const ShipCard: React.FC<ShipCardProps> = ({
   hideCheckbox = false,
   onCardClick,
   canSelect = true,
+  tooltipMode = false,
+  isCurrentPlayerShip = false,
+  flipShip = false,
+  reactorCriticalStatus = "none",
+  hasMoved = false,
+  gameViewMode = false,
 }) => {
   // Determine border class based on selection mode and ship state
   const getBorderClass = () => {
+    // Reactor critical status takes priority (for game view)
+    if (reactorCriticalStatus === "critical") {
+      return "border-red-500 bg-gray-900";
+    }
+    if (reactorCriticalStatus === "warning") {
+      return "border-yellow-500 bg-gray-900";
+    }
+
+    // Game view (tooltip or Ship Details): blue for current player, red for opponent
+    const isInGameView = tooltipMode || gameViewMode;
+
+    if (
+      isInGameView &&
+      ship.shipData.constructed &&
+      !ship.shipData.timestampDestroyed
+    ) {
+      return tooltipMode
+        ? isCurrentPlayerShip
+          ? "border-blue-400 bg-gray-900"
+          : "border-red-400 bg-gray-900"
+        : isCurrentPlayerShip
+        ? "border-blue-400 bg-blue-400/20"
+        : "border-red-400 bg-red-400/20";
+    }
+
     if (selectionMode && isSelected) {
-      return "border-green-400 bg-green-400/20";
+      return tooltipMode
+        ? "border-green-400 bg-gray-900"
+        : "border-green-400 bg-green-400/20";
     }
     if (ship.shipData.timestampDestroyed > 0n) {
-      return "border-red-400 bg-black/60";
+      return tooltipMode
+        ? "border-red-400 bg-gray-900"
+        : "border-red-400 bg-black/60";
     }
     if (ship.shipData.inFleet) {
-      return "border-orange-400 bg-orange-400/20";
+      return tooltipMode
+        ? "border-orange-400 bg-gray-900"
+        : "border-orange-400 bg-orange-400/20";
     }
     if (ship.shipData.constructed) {
       if (selectionMode) {
-        return canSelect
+        return tooltipMode
+          ? canSelect
+            ? "border-gray-400 bg-gray-900"
+            : "border-gray-400 bg-gray-900 opacity-50 cursor-not-allowed"
+          : canSelect
           ? "border-gray-400 bg-black/40 hover:border-cyan-400 hover:bg-cyan-400/10"
           : "border-gray-400 bg-black/40 opacity-50 cursor-not-allowed";
       }
-      return "border-green-400 bg-black/40";
+      return tooltipMode
+        ? "border-green-400 bg-gray-900"
+        : "border-green-400 bg-black/40";
     }
-    return "border-gray-400 bg-black/60";
+    return tooltipMode
+      ? "border-gray-400 bg-gray-900"
+      : "border-gray-400 bg-black/60";
   };
 
   const handleCardClick = () => {
@@ -84,7 +135,10 @@ const ShipCard: React.FC<ShipCardProps> = ({
       onClick={handleCardClick}
     >
       {/* Ship Image - Bigger */}
-      <div className="mb-3">
+      <div
+        className="mb-3 relative"
+        style={flipShip ? { transform: "scaleX(-1)" } : undefined}
+      >
         <ShipImage
           key={`${ship.id.toString()}-${
             ship.shipData.constructed ? "constructed" : "unconstructed"
@@ -93,6 +147,69 @@ const ShipCard: React.FC<ShipCardProps> = ({
           className="w-full h-48 rounded border border-gray-600"
           showLoadingState={true}
         />
+
+        {/* Game view indicators for tooltip */}
+        {(tooltipMode || gameViewMode) && inGameAttributes && (
+          <>
+            {/* Health bar for damaged ships */}
+            {inGameAttributes.hullPoints < inGameAttributes.maxHullPoints && (
+              <div className="absolute -top-2 left-0 right-0 z-10">
+                <div className="w-full h-1 bg-gray-700 rounded-sm">
+                  <div
+                    className={`h-full rounded-sm transition-all duration-300 ${
+                      (inGameAttributes.hullPoints /
+                        inGameAttributes.maxHullPoints) *
+                        100 <=
+                      25
+                        ? "bg-red-500"
+                        : "bg-green-500"
+                    }`}
+                    style={{
+                      width: `${
+                        (inGameAttributes.hullPoints /
+                          inGameAttributes.maxHullPoints) *
+                        100
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Moved badge */}
+            {hasMoved && (
+              <div
+                className={`absolute ${
+                  flipShip ? "bottom-0 right-0" : "bottom-0 left-0"
+                } m-1 w-4 h-4 rounded-full text-[10px] font-mono flex items-center justify-center ${
+                  isCurrentPlayerShip ? "bg-blue-700/80" : "bg-red-700/80"
+                } text-white`}
+              >
+                M
+              </div>
+            )}
+
+            {/* Reactor critical skulls */}
+            {inGameAttributes.reactorCriticalTimer > 0 && (
+              <div
+                className={`absolute ${
+                  flipShip ? "bottom-0 left-0" : "bottom-0 right-0"
+                } m-1 text-[10px] font-mono`}
+              >
+                {"💀".repeat(
+                  Math.min(inGameAttributes.reactorCriticalTimer, 3)
+                )}
+              </div>
+            )}
+
+            {/* Zero HP indicator */}
+            {inGameAttributes.hullPoints === 0 && (
+              <div className="absolute top-0 right-0 m-1 w-5 h-5 rounded-full bg-red-500/90 text-white flex items-center justify-center animate-pulse">
+                <span className="text-xs">💀</span>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       <div className="flex justify-between items-start mb-3">
@@ -258,6 +375,10 @@ const ShipCard: React.FC<ShipCardProps> = ({
                           className={`ml-2 ${
                             ship.shipData.timestampDestroyed > 0n
                               ? "text-red-400"
+                              : hasMoved
+                              ? "text-orange-400"
+                              : gameViewMode || tooltipMode
+                              ? "text-blue-400" // Unmoved in game view
                               : ship.shipData.inFleet
                               ? "text-orange-400"
                               : "text-green-400"
@@ -265,6 +386,10 @@ const ShipCard: React.FC<ShipCardProps> = ({
                         >
                           {ship.shipData.timestampDestroyed > 0n
                             ? "DESTROYED"
+                            : hasMoved
+                            ? "MOVED"
+                            : gameViewMode || tooltipMode
+                            ? "READY" // Unmoved in game view
                             : ship.shipData.inFleet
                             ? "IN FLEET"
                             : "READY"}
@@ -324,6 +449,10 @@ const ShipCard: React.FC<ShipCardProps> = ({
                       className={`ml-2 ${
                         ship.shipData.timestampDestroyed > 0n
                           ? "text-red-400"
+                          : hasMoved
+                          ? "text-orange-400"
+                          : gameViewMode || tooltipMode
+                          ? "text-blue-400" // Unmoved in game view
                           : ship.shipData.inFleet
                           ? "text-orange-400"
                           : "text-green-400"
@@ -331,6 +460,10 @@ const ShipCard: React.FC<ShipCardProps> = ({
                     >
                       {ship.shipData.timestampDestroyed > 0n
                         ? "DESTROYED"
+                        : hasMoved
+                        ? "MOVED"
+                        : gameViewMode || tooltipMode
+                        ? "READY" // Unmoved in game view
                         : ship.shipData.inFleet
                         ? "IN FLEET"
                         : "READY"}

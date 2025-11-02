@@ -13,6 +13,7 @@ import {
 } from "../types/types";
 import { useShipsByIds } from "../hooks/useShipsByIds";
 import { ShipImage } from "./ShipImage";
+import ShipCard from "./ShipCard";
 import { useGetGameMapState } from "../hooks/useMapsContract";
 import { gameContractConfig, useGetGame } from "../hooks/useGameContract";
 import {
@@ -56,6 +57,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   const [selectedWeaponType, setSelectedWeaponType] = useState<
     "weapon" | "special"
   >("weapon");
+  const [hoveredCell, setHoveredCell] = useState<{
+    shipId: bigint;
+    row: number;
+    col: number;
+    mouseX: number;
+    mouseY: number;
+    isCreator: boolean;
+  } | null>(null);
 
   // Fetch the current game data to get real-time updates
   const {
@@ -2141,56 +2150,42 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         : "bg-gray-950"
                     }`}
                     onClick={handleCellClick}
-                    title={
+                    onMouseEnter={
                       cell
-                        ? (() => {
-                            const attributes = getShipAttributes(cell.shipId);
+                        ? (e) => {
                             const ship = shipMap.get(cell.shipId);
-                            const gunName = ship
-                              ? getMainWeaponName(ship.equipment.mainWeapon)
-                              : "Unknown";
-                            const shipName = ship?.name || "Unknown Ship";
-                            const moved = movedShipIdsSet.has(cell.shipId)
-                              ? "Yes"
-                              : "No";
-                            const criticalWarning =
-                              attributes && attributes.hullPoints === 0
-                                ? `
-🚨 CRITICAL: This ship will be destroyed at the end of the round unless healed or assisted to flee!`
-                                : "";
-
-                            const movedWarning =
-                              hasShipMoved &&
-                              isCurrentPlayerTurn &&
-                              isShipOwnedByCurrentPlayer(cell.shipId)
-                                ? `
-⚠️ This ship has already moved this round and cannot be selected for moves!`
-                                : "";
-
-                            return `${shipName} (${
-                              cell.isCreator ===
-                              (address === game.metadata.creator)
-                                ? "My Fleet"
-                                : "Enemy Fleet"
-                            }) ${
-                              isSelected ? "(Selected)" : ""
-                            }${criticalWarning}${movedWarning}
-${
-  attributes
-    ? `
-Attributes:
-• Gun: ${gunName}
-• Movement: ${attributes.movement}
-• Range: ${attributes.range}
-• Gun Damage: ${attributes.gunDamage}
-• Hull: ${attributes.hullPoints}/${attributes.maxHullPoints}
-• Damage Reduction: ${attributes.damageReduction}
-• Reactor Critical: ${attributes.reactorCriticalTimer}/3
-• Moved this round: ${moved}`
-    : "Attributes: Loading..."
-}`;
-                          })()
-                        : onlyOnceGrid[rowIndex][colIndex]
+                            if (ship) {
+                              setHoveredCell({
+                                shipId: cell.shipId,
+                                row: rowIndex,
+                                col: colIndex,
+                                mouseX: e.clientX,
+                                mouseY: e.clientY,
+                                isCreator: cell.isCreator,
+                              });
+                            }
+                          }
+                        : undefined
+                    }
+                    onMouseMove={
+                      cell
+                        ? (e) => {
+                            if (
+                              hoveredCell &&
+                              hoveredCell.shipId === cell.shipId
+                            ) {
+                              setHoveredCell({
+                                ...hoveredCell,
+                                mouseX: e.clientX,
+                                mouseY: e.clientY,
+                              });
+                            }
+                          }
+                        : undefined
+                    }
+                    onMouseLeave={cell ? () => setHoveredCell(null) : undefined}
+                    {...(!cell && {
+                      title: onlyOnceGrid[rowIndex][colIndex]
                         ? `Crystal Deposit: ${scoringGrid[rowIndex][colIndex]} points (only once) (${rowIndex}, ${colIndex})`
                         : scoringGrid[rowIndex][colIndex] > 0
                         ? `Gold Deposit: ${scoringGrid[rowIndex][colIndex]} points (${rowIndex}, ${colIndex})`
@@ -2204,8 +2199,8 @@ Attributes:
                         ? `Click to assist this ship (${rowIndex}, ${colIndex})`
                         : isValidTarget
                         ? `Click to target this ship (${rowIndex}, ${colIndex})`
-                        : `Empty (${rowIndex}, ${colIndex})`
-                    }
+                        : `Empty (${rowIndex}, ${colIndex})`,
+                    })}
                   >
                     {/* Blocked line of sight tile - lowest layer */}
                     {blockedGrid[rowIndex][colIndex] && (
@@ -2451,6 +2446,57 @@ Attributes:
           </div>
         </div>
 
+        {/* Ship Tooltip */}
+        {hoveredCell &&
+          (() => {
+            const ship = shipMap.get(hoveredCell.shipId);
+            const attributes = getShipAttributes(hoveredCell.shipId);
+            if (!ship) return null;
+
+            return (
+              <div
+                className="fixed z-[100] pointer-events-none opacity-100"
+                style={{
+                  left: `${Math.min(
+                    hoveredCell.mouseX + 15,
+                    typeof window !== "undefined"
+                      ? window.innerWidth - 400
+                      : hoveredCell.mouseX + 15
+                  )}px`,
+                  top: `${Math.min(
+                    hoveredCell.mouseY + 15,
+                    typeof window !== "undefined"
+                      ? window.innerHeight - 500
+                      : hoveredCell.mouseY + 15
+                  )}px`,
+                }}
+              >
+                <div className="w-80 opacity-100">
+                  <ShipCard
+                    ship={ship}
+                    isStarred={false}
+                    onToggleStar={() => {}}
+                    isSelected={false}
+                    onToggleSelection={() => {}}
+                    onRecycleClick={() => {}}
+                    showInGameProperties={true}
+                    inGameAttributes={attributes || undefined}
+                    attributesLoading={!attributes}
+                    hideRecycle={true}
+                    hideCheckbox={true}
+                    tooltipMode={true}
+                    isCurrentPlayerShip={isShipOwnedByCurrentPlayer(
+                      hoveredCell.shipId
+                    )}
+                    flipShip={hoveredCell.isCreator}
+                    hasMoved={movedShipIdsSet.has(hoveredCell.shipId)}
+                    gameViewMode={true}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+
         {/* Legend and Test Controls Row */}
         <div className="flex items-center justify-between mt-4 text-sm">
           <div className="flex items-center space-x-6">
@@ -2560,123 +2606,63 @@ Attributes:
                 const attributes = getShipAttributes(shipId);
                 const ship = shipMap.get(shipId);
 
-                if (!shipPosition || !attributes) return null;
+                if (!shipPosition || !attributes || !ship) return null;
+
+                // Determine reactor critical status
+                const reactorCriticalStatus =
+                  attributes.reactorCriticalTimer > 0 &&
+                  attributes.hullPoints === 0
+                    ? "critical" // Red outline for reactor critical + 0 HP
+                    : attributes.reactorCriticalTimer > 0
+                    ? "warning" // Yellow outline for reactor critical
+                    : "none";
 
                 return (
-                  <div
-                    key={shipId.toString()}
-                    className={`bg-gray-800 rounded p-2 border ${
-                      attributes.reactorCriticalTimer > 0 &&
-                      attributes.hullPoints === 0
-                        ? "border-red-500" // Red outline for reactor critical + 0 HP
-                        : attributes.reactorCriticalTimer > 0
-                        ? "border-yellow-500" // Yellow outline for reactor critical
-                        : "border-gray-700" // Default gray outline
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      {ship && (
-                        <div className="w-64 h-64 flex-shrink-0">
-                          <ShipImage
-                            ship={ship}
-                            className="w-full h-full"
-                            showLoadingState={true}
-                          />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-1">
-                            {(() => {
-                              const isAssistableTarget =
-                                selectedShipId &&
-                                (assistableTargets.some(
-                                  (target) => target.shipId === shipId
-                                ) ||
-                                  assistableTargetsFromStart.some(
-                                    (target) => target.shipId === shipId
-                                  ));
+                  <div key={shipId.toString()}>
+                    <ShipCard
+                      ship={ship}
+                      isStarred={false}
+                      onToggleStar={() => {}}
+                      isSelected={false}
+                      onToggleSelection={() => {}}
+                      onRecycleClick={() => {}}
+                      showInGameProperties={true}
+                      inGameAttributes={attributes}
+                      attributesLoading={false}
+                      hideRecycle={true}
+                      hideCheckbox={true}
+                      isCurrentPlayerShip={true}
+                      flipShip={game.metadata.creator === address}
+                      reactorCriticalStatus={reactorCriticalStatus}
+                      hasMoved={movedShipIdsSet.has(shipId)}
+                      gameViewMode={true}
+                    />
+                    {(() => {
+                      const isAssistableTarget =
+                        selectedShipId &&
+                        (assistableTargets.some(
+                          (target) => target.shipId === shipId
+                        ) ||
+                          assistableTargetsFromStart.some(
+                            (target) => target.shipId === shipId
+                          ));
 
-                              if (isAssistableTarget) {
-                                return (
-                                  <button
-                                    onClick={() => {
-                                      setTargetShipId(shipId);
-                                      setSelectedWeaponType("weapon"); // Reset to weapon for assist
-                                    }}
-                                    className="text-blue-400 font-mono text-xs truncate hover:text-blue-300 hover:underline cursor-pointer"
-                                    title="Click to assist this ship"
-                                  >
-                                    {ship?.name || `Ship #${shipId.toString()}`}
-                                  </button>
-                                );
-                              }
-
-                              return (
-                                <span className="text-white font-mono text-xs truncate">
-                                  {ship?.name || `Ship #${shipId.toString()}`}
-                                </span>
-                              );
-                            })()}
-                            {movedShipIdsSet.has(shipId) && (
-                              <span className="px-1 py-0.5 bg-gray-600 text-white text-xs rounded font-mono">
-                                M
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs text-gray-400">
-                            ({shipPosition.position.row},{" "}
-                            {shipPosition.position.col})
-                          </span>
-                        </div>
-                        {attributes.reactorCriticalTimer > 0 && (
-                          <div className="text-xs text-red-400 mt-1">
-                            Reactor Critical: {attributes.reactorCriticalTimer}
-                            /3
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1 text-xs">
-                      <div>
-                        <span className="text-gray-400">Hull:</span>
-                        <span className="text-white ml-1">
-                          {attributes.hullPoints}/{attributes.maxHullPoints}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Range:</span>
-                        <span className="text-white ml-1">
-                          {attributes.range}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Armor:</span>
-                        <span className="text-white ml-1">
-                          {attributes.damageReduction}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Movement:</span>
-                        <span className="text-white ml-1">
-                          {attributes.movement}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Damage:</span>
-                        <span className="text-white ml-1">
-                          {attributes.gunDamage}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Special:</span>
-                        <span className="text-white ml-1">
-                          {ship
-                            ? getSpecialName(ship.equipment.special)
-                            : "None"}
-                        </span>
-                      </div>
-                    </div>
+                      if (isAssistableTarget) {
+                        return (
+                          <button
+                            onClick={() => {
+                              setTargetShipId(shipId);
+                              setSelectedWeaponType("weapon"); // Reset to weapon for assist
+                            }}
+                            className="mt-2 w-full text-blue-400 font-mono text-xs hover:text-blue-300 hover:underline cursor-pointer"
+                            title="Click to assist this ship"
+                          >
+                            Click to assist this ship
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 );
               })}
@@ -2706,95 +2692,37 @@ Attributes:
                 const attributes = getShipAttributes(shipId);
                 const ship = shipMap.get(shipId);
 
-                if (!shipPosition || !attributes) return null;
+                if (!shipPosition || !attributes || !ship) return null;
+
+                // Determine reactor critical status
+                const reactorCriticalStatus =
+                  attributes.reactorCriticalTimer > 0 &&
+                  attributes.hullPoints === 0
+                    ? "critical" // Red outline for reactor critical + 0 HP
+                    : attributes.reactorCriticalTimer > 0
+                    ? "warning" // Yellow outline for reactor critical
+                    : "none";
 
                 return (
-                  <div
-                    key={shipId.toString()}
-                    className={`bg-gray-800 rounded p-2 border ${
-                      attributes.reactorCriticalTimer > 0 &&
-                      attributes.hullPoints === 0
-                        ? "border-red-500" // Red outline for reactor critical + 0 HP
-                        : attributes.reactorCriticalTimer > 0
-                        ? "border-yellow-500" // Yellow outline for reactor critical
-                        : "border-gray-700" // Default gray outline
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      {ship && (
-                        <div className="w-64 h-64 flex-shrink-0">
-                          <ShipImage
-                            ship={ship}
-                            className="w-full h-full"
-                            showLoadingState={true}
-                          />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-1">
-                            <span className="text-white font-mono text-xs truncate">
-                              {ship?.name || `Ship #${shipId.toString()}`}
-                            </span>
-                            {movedShipIdsSet.has(shipId) && (
-                              <span className="px-1 py-0.5 bg-gray-600 text-white text-xs rounded font-mono">
-                                M
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs text-gray-400">
-                            ({shipPosition.position.row},{" "}
-                            {shipPosition.position.col})
-                          </span>
-                        </div>
-                        {attributes.reactorCriticalTimer > 0 && (
-                          <div className="text-xs text-red-400 mt-1">
-                            Reactor Critical: {attributes.reactorCriticalTimer}
-                            /3
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1 text-xs">
-                      <div>
-                        <span className="text-gray-400">Hull:</span>
-                        <span className="text-white ml-1">
-                          {attributes.hullPoints}/{attributes.maxHullPoints}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Range:</span>
-                        <span className="text-white ml-1">
-                          {attributes.range}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Armor:</span>
-                        <span className="text-white ml-1">
-                          {attributes.damageReduction}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Movement:</span>
-                        <span className="text-white ml-1">
-                          {attributes.movement}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Damage:</span>
-                        <span className="text-white ml-1">
-                          {attributes.gunDamage}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Special:</span>
-                        <span className="text-white ml-1">
-                          {ship
-                            ? getSpecialName(ship.equipment.special)
-                            : "None"}
-                        </span>
-                      </div>
-                    </div>
+                  <div key={shipId.toString()}>
+                    <ShipCard
+                      ship={ship}
+                      isStarred={false}
+                      onToggleStar={() => {}}
+                      isSelected={false}
+                      onToggleSelection={() => {}}
+                      onRecycleClick={() => {}}
+                      showInGameProperties={true}
+                      inGameAttributes={attributes}
+                      attributesLoading={false}
+                      hideRecycle={true}
+                      hideCheckbox={true}
+                      isCurrentPlayerShip={false}
+                      flipShip={game.metadata.creator !== address}
+                      reactorCriticalStatus={reactorCriticalStatus}
+                      hasMoved={movedShipIdsSet.has(shipId)}
+                      gameViewMode={true}
+                    />
                   </div>
                 );
               })}

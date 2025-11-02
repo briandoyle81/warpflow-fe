@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useAccount } from "wagmi";
 import { usePlayerGames } from "../hooks/usePlayerGames";
 import { useContractEvents } from "../hooks/useContractEvents";
@@ -12,60 +12,143 @@ const Games: React.FC = () => {
   const { games, isLoading, error, refetch } = usePlayerGames();
   const [selectedGame, setSelectedGame] = useState<GameDataView | null>(null);
 
+  // Track if component has mounted (client-side only)
+  const [isMounted, setIsMounted] = useState(false);
+
   // Enable real-time event listening for game updates
   useContractEvents();
 
-  // Persist selected game in localStorage
+  // Persist selectedGame to localStorage
+  const storageKey = useMemo(
+    () => `selectedGameId-${address || "anonymous"}`,
+    [address]
+  );
+
+  // Track if we've attempted restoration
+  const hasAttemptedRestore = useRef(false);
+
+  // Mark component as mounted after hydration
   useEffect(() => {
-    if (selectedGame) {
-      localStorage.setItem(
-        "selectedGameId",
-        selectedGame.metadata.gameId.toString()
+    setIsMounted(true);
+  }, []);
+
+  // Restore selectedGame from localStorage once wallet is connected and games are loaded
+  // Only restore after component has mounted to avoid hydration mismatches
+  useEffect(() => {
+    if (
+      isMounted &&
+      typeof window !== "undefined" &&
+      isConnected &&
+      address &&
+      !isLoading &&
+      !selectedGame &&
+      games.length > 0
+    ) {
+      const saved = localStorage.getItem(storageKey);
+      console.log(
+        `[Games] Checking restoration: saved=${saved}, games.length=${games.length}, isLoading=${isLoading}, isConnected=${isConnected}, address=${address}`
       );
-    } else {
-      localStorage.removeItem("selectedGameId");
-    }
-  }, [selectedGame]);
 
-  // Restore selected game from localStorage on page load
-  useEffect(() => {
-    const savedGameId = localStorage.getItem("selectedGameId");
-    console.log(
-      `Checking for saved game ID: ${savedGameId}, isLoading: ${isLoading}, games.length: ${
-        games.length
-      }, selectedGame: ${selectedGame ? "exists" : "null"}`
-    );
-
-    if (savedGameId && !selectedGame) {
-      if (games.length > 0) {
-        const gameToRestore = games.find(
-          (game) => game.metadata.gameId.toString() === savedGameId
-        );
-        if (gameToRestore) {
-          console.log(`Restoring game ${savedGameId} from localStorage`);
-          setSelectedGame(gameToRestore);
-        } else {
-          // Game not found, clear the saved ID
-          console.log(
-            `Game ${savedGameId} not found in current games, clearing saved ID`
+      if (saved) {
+        try {
+          const gameId = saved;
+          const gameToRestore = games.find(
+            (game) => game.metadata.gameId.toString() === gameId
           );
-          localStorage.removeItem("selectedGameId");
+          if (gameToRestore) {
+            console.log(`Restoring game ${gameId} from localStorage`);
+            setSelectedGame(gameToRestore);
+          } else if (!hasAttemptedRestore.current) {
+            // Game not found, clear the saved ID (only once)
+            console.log(
+              `Game ${gameId} not found in current games, clearing saved ID`
+            );
+            localStorage.removeItem(storageKey);
+            hasAttemptedRestore.current = true;
+          }
+        } catch (error) {
+          console.warn("Failed to restore selectedGame:", error);
+          if (!hasAttemptedRestore.current) {
+            localStorage.removeItem(storageKey);
+            hasAttemptedRestore.current = true;
+          }
         }
-      } else if (!isLoading) {
-        // Games are loaded but empty, clear the saved ID
-        console.log(`No games found, clearing saved game ID`);
-        localStorage.removeItem("selectedGameId");
       }
     }
-  }, [games, selectedGame, isLoading]);
+  }, [
+    isMounted,
+    games,
+    isLoading,
+    selectedGame,
+    address,
+    storageKey,
+    isConnected,
+  ]);
 
-  // Clear selected game when user disconnects
+  // Reset restoration flag when address changes
   useEffect(() => {
-    if (!isConnected) {
-      setSelectedGame(null);
-      localStorage.removeItem("selectedGameId");
+    hasAttemptedRestore.current = false;
+  }, [address]);
+
+  // Validate restored game - ensure user is still part of it
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      address &&
+      selectedGame &&
+      games.length > 0
+    ) {
+      const game = games.find(
+        (g) =>
+          g.metadata.gameId.toString() ===
+          selectedGame.metadata.gameId.toString()
+      );
+      if (!game) {
+        // Game no longer exists, clear it
+        setSelectedGame(null);
+        localStorage.removeItem(storageKey);
+      }
     }
-  }, [isConnected]);
+  }, [selectedGame, address, storageKey, games]);
+
+  // Track previous selectedGame to detect explicit clears
+  const prevSelectedGameRef = useRef<GameDataView | null>(null);
+
+  // Save selectedGame to localStorage when it changes
+  // Only save after component has mounted to avoid hydration mismatches
+  useEffect(() => {
+    if (isMounted && typeof window !== "undefined" && address) {
+      if (selectedGame) {
+        const gameId = selectedGame.metadata.gameId.toString();
+        console.log(
+          `[Games] Saving game to localStorage: key=${storageKey}, gameId=${gameId}`
+        );
+        localStorage.setItem(storageKey, gameId);
+      } else if (prevSelectedGameRef.current) {
+        // Only clear if selectedGame was previously set (explicit clear)
+        // Don't clear on initial mount when it's null
+        console.log(
+          `[Games] Clearing game from localStorage: key=${storageKey}`
+        );
+        localStorage.removeItem(storageKey);
+      }
+      prevSelectedGameRef.current = selectedGame;
+    }
+  }, [isMounted, selectedGame, address, storageKey]);
+
+  // Clear selected game only when address becomes null (explicit disconnect)
+  // Don't clear on temporary disconnects during page refresh
+  const prevAddressRef = useRef<string | undefined>(address);
+  useEffect(() => {
+    // If address changes from something to null/undefined, it's an explicit disconnect
+    if (prevAddressRef.current && !address) {
+      setSelectedGame(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(storageKey);
+      }
+    }
+    prevAddressRef.current = address;
+  }, [address, storageKey]);
 
   // If a game is selected, show the game display
   if (selectedGame) {

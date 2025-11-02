@@ -23,11 +23,12 @@ export function useContractEvents() {
   const { refetch: refetchShips } = useOwnedShips();
   const { refetch: refetchGames } = usePlayerGames();
 
-  console.log("Setting up contract event watchers for address:", address);
-  console.log("Game contract address:", CONTRACT_ADDRESSES.GAME);
+  // Only set up watchers if address is available
+  const shouldWatch = !!address;
 
-  // Watch ship transfer events
+  // Watch ship transfer events (only when address is available)
   useWatchContractEvent({
+    enabled: shouldWatch,
     address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
     abi: [
       {
@@ -65,8 +66,8 @@ export function useContractEvents() {
   });
 
   // Watch game move events
-  console.log("Setting up Move event watcher");
   useWatchContractEvent({
+    enabled: shouldWatch,
     address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
     abi: [
       {
@@ -140,8 +141,8 @@ export function useContractEvents() {
   });
 
   // Watch game update events
-  console.log("Setting up GameUpdate event watcher");
   useWatchContractEvent({
+    enabled: shouldWatch,
     address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
     abi: [
       {

@@ -7,16 +7,14 @@ import {
   ScoringPosition,
   Ship,
   Attributes,
-  getMainWeaponName,
-  getArmorName,
-  getShieldName,
-  getSpecialName,
 } from "../types/types";
 import {
   useGetPresetMap,
   useGetPresetScoringMap,
 } from "../hooks/useMapsContract";
 import { ShipImage } from "./ShipImage";
+import ShipCard from "./ShipCard";
+import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
 
 interface MapDisplayProps {
   mapId: number;
@@ -137,6 +135,30 @@ export function MapDisplay({
     return map;
   }, [ships]);
 
+  // Get full Ship objects (not simple {id, name} objects) for attributes
+  const fullShips = React.useMemo(() => {
+    return ships.filter((ship): ship is Ship => "equipment" in ship) as Ship[];
+  }, [ships]);
+
+  // Get ship attributes for tooltip
+  const shipIds = React.useMemo(
+    () => fullShips.map((ship) => ship.id),
+    [fullShips]
+  );
+  const { attributes, isLoading: attributesLoading } =
+    useShipAttributesByIds(shipIds);
+
+  // Create a map of ship ID to attributes for quick lookup
+  const attributesMap = React.useMemo(() => {
+    const map = new Map<bigint, Attributes>();
+    fullShips.forEach((ship, index) => {
+      if (attributes[index]) {
+        map.set(ship.id, attributes[index]);
+      }
+    });
+    return map;
+  }, [fullShips, attributes]);
+
   // Helper function to get ship at a position
   const getShipAtPosition = (row: number, col: number) => {
     if (!shipPositions || !ships) return null;
@@ -150,16 +172,6 @@ export function MapDisplay({
     if (!ship || !ship.id) return null;
 
     return ship;
-  };
-
-  // Helper function to get ship attributes
-  const getShipAttributes = (shipId: bigint) => {
-    if (!shipAttributes || !ships) return null;
-
-    const shipIndex = ships.findIndex((ship) => ship.id === shipId);
-    if (shipIndex === -1 || !shipAttributes[shipIndex]) return null;
-
-    return shipAttributes[shipIndex];
   };
 
   // Helper to validate allowed deployment columns based on viewer role
@@ -178,60 +190,6 @@ export function MapDisplay({
     return isCreatorViewer
       ? col >= 0 && col <= 4
       : col >= GRID_DIMENSIONS.WIDTH - 5 && col < GRID_DIMENSIONS.WIDTH;
-  };
-
-  // Helper function to create ship tooltip
-  const createShipTooltip = (
-    ship: Ship | { id: bigint; name: string; imageUrl?: string },
-    row: number,
-    col: number
-  ) => {
-    if (!ship) return `Row: ${row}, Col: ${col}`;
-
-    const attributes = getShipAttributes(ship.id);
-    const shipName = ship.name || "Unknown Ship";
-    const fleetType = isCreator ? "My Fleet" : "Enemy Fleet";
-    const isSelected = selectedShipId === ship.id;
-
-    const gunName =
-      "equipment" in ship && ship.equipment?.mainWeapon !== undefined
-        ? getMainWeaponName(ship.equipment.mainWeapon)
-        : "Unknown";
-    const defenseLabel =
-      "equipment" in ship && ship.equipment?.shields > 0 ? "Shield" : "Armor";
-    const defenseName =
-      "equipment" in ship && ship.equipment?.shields > 0
-        ? getShieldName(ship.equipment.shields)
-        : getArmorName(
-            ("equipment" in ship ? ship.equipment?.armor : undefined) ?? 0
-          );
-    const specialName =
-      "equipment" in ship && ship.equipment?.special !== undefined
-        ? getSpecialName(ship.equipment.special)
-        : "Unknown";
-
-    let tooltip = `${shipName} (${fleetType})${
-      isSelected ? " (Selected)" : ""
-    }`;
-
-    if (attributes) {
-      tooltip += `
-Attributes:
-• Gun: ${gunName}
-• ${defenseLabel}: ${defenseName}
-• Special: ${specialName}
-• Movement: ${attributes.movement}
-• Range: ${attributes.range}
-• Gun Damage: ${attributes.gunDamage}
-• Hull: ${attributes.hullPoints}/${attributes.maxHullPoints}
-• Damage Reduction: ${attributes.damageReduction}
-• Reactor Critical: ${attributes.reactorCriticalTimer}/3`;
-    } else {
-      tooltip += `
-Attributes: Loading...`;
-    }
-
-    return tooltip;
   };
 
   // Handle cell click
@@ -255,36 +213,59 @@ Attributes: Loading...`;
     }
   };
 
-  // Lightweight custom tooltip with shorter delay
-  const [hoveredTooltip, setHoveredTooltip] = useState<{
+  // Ship tooltip state
+  const [hoveredCell, setHoveredCell] = useState<{
+    shipId: bigint;
     row: number;
     col: number;
-    text: string;
-    visible: boolean;
+    mouseX: number;
+    mouseY: number;
+    isCreatorShip: boolean; // Whether this is a creator ship (for flip and border color)
   } | null>(null);
-  const hoverTimerRef = React.useRef<number | null>(null);
 
-  const handleCellEnter = (row: number, col: number) => {
-    // Prepare text immediately but show after shorter delay (~250ms)
+  const handleCellEnter = (
+    row: number,
+    col: number,
+    e: React.MouseEvent<HTMLDivElement>
+  ) => {
     const ship = getShipAtPosition(row, col);
-    const text = ship
-      ? createShipTooltip(ship, row, col)
-      : `Row: ${row}, Col: ${col}`;
-    if (hoverTimerRef.current) {
-      window.clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
+    // Only show tooltip for full Ship objects (not simple {id, name} objects)
+    if (ship && "equipment" in ship) {
+      const isFlipped =
+        flippedShipIds && flippedShipIds.some((id) => id === ship.id);
+      // If viewer is creator, flipped ships are joiner ships, non-flipped are creator ships
+      // If viewer is joiner, flipped ships are creator ships, non-flipped are joiner ships
+      const isCreatorShip = isCreator ? !isFlipped : isFlipped;
+
+      setHoveredCell({
+        shipId: ship.id,
+        row,
+        col,
+        mouseX: e.clientX,
+        mouseY: e.clientY,
+        isCreatorShip,
+      });
+    } else {
+      setHoveredCell(null);
     }
-    hoverTimerRef.current = window.setTimeout(() => {
-      setHoveredTooltip({ row, col, text, visible: true });
-    }, 250);
+  };
+
+  const handleCellMove = (
+    row: number,
+    col: number,
+    e: React.MouseEvent<HTMLDivElement>
+  ) => {
+    if (hoveredCell && hoveredCell.row === row && hoveredCell.col === col) {
+      setHoveredCell({
+        ...hoveredCell,
+        mouseX: e.clientX,
+        mouseY: e.clientY,
+      });
+    }
   };
 
   const handleCellLeave = () => {
-    if (hoverTimerRef.current) {
-      window.clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
-    setHoveredTooltip(null);
+    setHoveredCell(null);
   };
 
   // Get tile class based on state
@@ -406,7 +387,8 @@ Attributes: Loading...`;
                   key={`${row}-${col}`}
                   className={getTileClass(row, col)}
                   onClick={() => handleCellClick(row, col)}
-                  onMouseEnter={() => handleCellEnter(row, col)}
+                  onMouseEnter={(e) => handleCellEnter(row, col, e)}
+                  onMouseMove={(e) => handleCellMove(row, col, e)}
                   onMouseLeave={handleCellLeave}
                 >
                   {/* Score value display */}
@@ -445,16 +427,6 @@ Attributes: Loading...`;
                       </div>
                     );
                   })()}
-
-                  {/* Custom tooltip (short delay) */}
-                  {hoveredTooltip &&
-                    hoveredTooltip.visible &&
-                    hoveredTooltip.row === row &&
-                    hoveredTooltip.col === col && (
-                      <div className="absolute z-20 bottom-0 left-0 translate-y-full mt-1 max-w-[260px] whitespace-pre-wrap pointer-events-none bg-black/90 text-gray-200 text-xs border border-gray-600 rounded p-2 shadow-lg">
-                        {hoveredTooltip.text}
-                      </div>
-                    )}
                 </div>
               ))}
             </div>
@@ -564,6 +536,57 @@ Attributes: Loading...`;
           </div>
         </div>
       </div>
+
+      {/* Ship Tooltip */}
+      {hoveredCell &&
+        (() => {
+          const ship = shipMap.get(hoveredCell.shipId);
+          // Only show tooltip for full Ship objects
+          if (!ship || !("equipment" in ship)) return null;
+
+          const attributes = attributesMap.get(hoveredCell.shipId);
+          const isCurrentPlayerShip =
+            selectableShipIds?.some((id) => id === hoveredCell.shipId) ?? false;
+
+          return (
+            <div
+              className="fixed z-[100] pointer-events-none opacity-100"
+              style={{
+                left: `${Math.min(
+                  hoveredCell.mouseX + 15,
+                  typeof window !== "undefined"
+                    ? window.innerWidth - 400
+                    : hoveredCell.mouseX + 15
+                )}px`,
+                top: `${Math.min(
+                  hoveredCell.mouseY + 15,
+                  typeof window !== "undefined"
+                    ? window.innerHeight - 500
+                    : hoveredCell.mouseY + 15
+                )}px`,
+              }}
+            >
+              <div className="w-80 opacity-100">
+                <ShipCard
+                  ship={ship as Ship}
+                  isStarred={false}
+                  onToggleStar={() => {}}
+                  isSelected={false}
+                  onToggleSelection={() => {}}
+                  onRecycleClick={() => {}}
+                  showInGameProperties={true}
+                  inGameAttributes={attributes || undefined}
+                  attributesLoading={attributesLoading && !attributes}
+                  hideRecycle={true}
+                  hideCheckbox={true}
+                  tooltipMode={true}
+                  isCurrentPlayerShip={isCurrentPlayerShip}
+                  flipShip={hoveredCell.isCreatorShip}
+                />
+              </div>
+            </div>
+          );
+        })()}
 
       {/* Key/Legend */}
       <div className="mt-4 w-full">

@@ -40,7 +40,7 @@ const Info: React.FC = () => {
               alert(63osc,chrs,cmpr).wav&rdquo;
             </p>
             <p className="ml-4">
-              <span className="text-gray-400">by</span> newlocknew
+              <span className="text-gray-400">by</span>
             </p>
             <p className="ml-4">
               <span className="text-gray-400">Source:</span>{" "}

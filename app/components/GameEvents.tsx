@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useWatchContractEvent, usePublicClient } from "wagmi";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
 import { ActionType, ShipPosition } from "../types/types";
@@ -29,24 +29,40 @@ export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
   const publicClient = usePublicClient();
+  const hasFetchedRef = useRef<bigint | null>(null);
 
-  // Fetch historical events on mount
+  // Mark component as mounted after hydration
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Fetch historical events on mount (only once per gameId)
   useEffect(() => {
     const fetchHistoricalEvents = async () => {
-      if (!publicClient) return;
+      if (!publicClient || !isMounted) return;
+
+      // Prevent duplicate fetches for the same gameId
+      // Reset flag if gameId changed
+      if (hasFetchedRef.current !== null && hasFetchedRef.current !== gameId) {
+        hasFetchedRef.current = null;
+      }
+      if (hasFetchedRef.current === gameId) return;
 
       try {
         setIsLoadingHistory(true);
+        hasFetchedRef.current = gameId;
         console.log("Fetching historical Move events for game:", gameId);
 
         const moveEventAbi = parseAbiItem(
           "event Move(uint256 indexed gameId, uint256 shipId, int16 newRow, int16 newCol, uint8 actionType, uint256 targetShipId)"
         );
 
-        // Get current block number and limit to last 10,000 blocks to respect RPC limits
+        // Get current block number and limit to last 5,000 blocks to respect RPC limits
+        // Reduced from 10,000 to minimize rate limit issues
         const latestBlock = await publicClient.getBlockNumber();
-        const startBlock = latestBlock > 10000n ? latestBlock - 10000n : 0n;
+        const startBlock = latestBlock > 5000n ? latestBlock - 5000n : 0n;
 
         console.log(
           `Fetching events from block ${startBlock.toString()} to ${latestBlock.toString()}`
@@ -122,10 +138,13 @@ export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
     };
 
     fetchHistoricalEvents();
-  }, [gameId, publicClient]);
+  }, [gameId, publicClient, isMounted]);
 
   // Watch for new Move events
+  // Note: This is a duplicate watcher of useContractEvents, but it filters by gameId
+  // Increased polling interval to reduce load on RPC
   useWatchContractEvent({
+    enabled: isMounted,
     address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
     abi: [
       {
@@ -174,7 +193,7 @@ export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
     ],
     eventName: "Move",
     poll: true,
-    pollingInterval: 2000, // Poll every 2 seconds for more responsive updates
+    pollingInterval: 10000, // Poll every 10 seconds to reduce RPC load (longer than useContractEvents' 5s)
     onLogs: (logs) => {
       if (!Array.isArray(logs) || logs.length === 0) return;
 

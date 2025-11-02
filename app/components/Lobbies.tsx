@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { useAccount } from "wagmi";
 import { formatEther } from "viem";
 import { useLobbies } from "../hooks/useLobbies";
@@ -68,6 +74,95 @@ const Lobbies: React.FC = () => {
   >([]);
   const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
   const [showFleetConfirmation, setShowFleetConfirmation] = useState(false);
+
+  // Track if component has mounted (client-side only)
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Persist selectedLobby to localStorage
+  const storageKey = useMemo(
+    () => `selectedLobby-${address || "anonymous"}`,
+    [address]
+  );
+
+  // Track if we've restored from localStorage to avoid repeated restorations
+  const hasRestoredRef = useRef(false);
+
+  // Mark component as mounted after hydration
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Initialize selectedLobby from localStorage on mount
+  // Only restore after component has mounted to avoid hydration mismatches
+  useEffect(() => {
+    if (
+      isMounted &&
+      typeof window !== "undefined" &&
+      address &&
+      !hasRestoredRef.current
+    ) {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const lobbyId = BigInt(saved);
+          // Restore immediately, validate later
+          console.log(
+            "Restoring selectedLobby from localStorage:",
+            lobbyId.toString()
+          );
+          setSelectedLobby(lobbyId);
+          hasRestoredRef.current = true;
+        } catch (error) {
+          console.warn(
+            "Failed to restore selectedLobby from localStorage:",
+            error
+          );
+          localStorage.removeItem(storageKey);
+          hasRestoredRef.current = true;
+        }
+      } else {
+        hasRestoredRef.current = true; // No saved value, mark as restored
+      }
+    }
+  }, [isMounted, address, storageKey]);
+
+  // Validate restored lobby once lobbies are loaded
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      address &&
+      selectedLobby &&
+      lobbyList.lobbies.length > 0
+    ) {
+      const lobby = lobbyList.lobbies.find(
+        (l) =>
+          l.basic.id === selectedLobby &&
+          (l.basic.creator === address || l.players.joiner === address)
+      );
+      if (!lobby) {
+        // Lobby no longer exists or user is not part of it, clear it
+        setSelectedLobby(null);
+        localStorage.removeItem(storageKey);
+      }
+    }
+  }, [selectedLobby, address, storageKey, lobbyList.lobbies]);
+
+  // Reset restoration flag when address changes
+  useEffect(() => {
+    hasRestoredRef.current = false;
+  }, [address]);
+
+  // Save selectedLobby to localStorage when it changes
+  // Only save after component has mounted to avoid hydration mismatches
+  useEffect(() => {
+    if (isMounted && typeof window !== "undefined" && address) {
+      if (selectedLobby) {
+        localStorage.setItem(storageKey, selectedLobby.toString());
+      } else {
+        localStorage.removeItem(storageKey);
+      }
+    }
+  }, [isMounted, selectedLobby, address, storageKey]);
   const [isCreatingFleet, setIsCreatingFleet] = useState(false);
   const [showFleetView, setShowFleetView] = useState(false);
   const [viewingFleetId, setViewingFleetId] = useState<bigint | null>(null);
@@ -1319,6 +1414,9 @@ const Lobbies: React.FC = () => {
           const currentLobby = lobbyList.lobbies.find(
             (lobby) => lobby.basic.id === selectedLobby
           );
+          const isCreator = currentLobby
+            ? currentLobby.basic.creator === address
+            : false;
           const totalCost = selectedShips.reduce((sum, shipId) => {
             const ship = ships.find((s) => s.id === shipId);
             return sum + (ship ? Number(ship.shipData.cost) : 0);
@@ -1328,6 +1426,20 @@ const Lobbies: React.FC = () => {
             : 1000;
           const isOverLimit = totalCost > costLimit;
           const isUnder90Percent = totalCost < costLimit * 0.9;
+
+          // Check if all ships are not in the default column
+          // Creator default: column 0, Joiner default: column 24
+          const hasMovedShip =
+            shipPositions.length > 0 &&
+            shipPositions.some((pos) => {
+              if (isCreator) {
+                // Creator: at least one ship must not be in column 0
+                return pos.col !== 0;
+              } else {
+                // Joiner: at least one ship must not be in column 24
+                return pos.col !== 24;
+              }
+            });
 
           return (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
@@ -1343,7 +1455,8 @@ const Lobbies: React.FC = () => {
                       disabled={
                         selectedShips.length === 0 ||
                         isCreatingFleet ||
-                        isUnder90Percent
+                        isUnder90Percent ||
+                        !hasMovedShip
                       }
                       className="px-4 py-2 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -1351,6 +1464,8 @@ const Lobbies: React.FC = () => {
                         ? "CREATING FLEET..."
                         : isUnder90Percent
                         ? `NEED ${Math.round(costLimit * 0.9)} POINTS`
+                        : !hasMovedShip
+                        ? "MOVE AT LEAST ONE SHIP FORWARD"
                         : `CREATE FLEET (${selectedShips.length})`}
                     </button>
                     <button
@@ -1839,105 +1954,233 @@ const Lobbies: React.FC = () => {
                   </div>
                 ) : (
                   <div className="flex gap-4 flex-1">
-                    {/* Ship Selection Grid - 1/4 width */}
-                    <div className="w-1/4 h-full">
-                      <div className="grid grid-cols-1 gap-4 mb-6 overflow-y-auto content-start max-h-[80vh]">
-                        {filteredShips
-                          .sort((a, b) => {
-                            // Selected ships first
-                            const aSelected = selectedShips.includes(a.id);
-                            const bSelected = selectedShips.includes(b.id);
+                    {isCreator ? (
+                      <>
+                        {/* Ship Selection Grid - 1/4 width */}
+                        <div className="w-1/4 h-full">
+                          <div className="grid grid-cols-1 gap-4 mb-6 overflow-y-auto content-start max-h-[80vh]">
+                            {filteredShips
+                              .sort((a, b) => {
+                                // Selected ships first
+                                const aSelected = selectedShips.includes(a.id);
+                                const bSelected = selectedShips.includes(b.id);
 
-                            if (aSelected && !bSelected) return -1;
-                            if (!aSelected && bSelected) return 1;
+                                if (aSelected && !bSelected) return -1;
+                                if (!aSelected && bSelected) return 1;
 
-                            // Within each group, sort by ship ID
-                            return Number(a.id - b.id);
-                          })
-                          .map((ship) => {
-                            const canSelect =
-                              ship.shipData.timestampDestroyed === 0n &&
-                              ship.shipData.constructed &&
-                              !ship.shipData.inFleet;
+                                // Within each group, sort by ship ID
+                                return Number(a.id - b.id);
+                              })
+                              .map((ship) => {
+                                const canSelect =
+                                  ship.shipData.timestampDestroyed === 0n &&
+                                  ship.shipData.constructed &&
+                                  !ship.shipData.inFleet;
 
-                            const handleCardClick = () => {
-                              if (!canSelect) return;
-                              if (selectedShips.includes(ship.id)) {
-                                removeShipFromFleet(ship.id);
-                              } else {
-                                addShipToFleet(ship.id);
-                              }
-                            };
-
-                            return (
-                              <ShipCard
-                                key={ship.id.toString()}
-                                ship={ship}
-                                isStarred={false}
-                                onToggleStar={() => {}}
-                                isSelected={selectedShips.includes(ship.id)}
-                                onToggleSelection={() => {
-                                  if (canSelect) {
-                                    handleCardClick();
+                                const handleCardClick = () => {
+                                  if (!canSelect) return;
+                                  if (selectedShips.includes(ship.id)) {
+                                    removeShipFromFleet(ship.id);
+                                  } else {
+                                    addShipToFleet(ship.id);
                                   }
-                                }}
-                                onRecycleClick={() => {}}
-                                showInGameProperties={showInGameProperties}
-                                inGameAttributes={attributesMap.get(ship.id)}
-                                attributesLoading={attributesLoading}
-                                selectionMode={true}
-                                hideRecycle={true}
-                                hideCheckbox={true}
-                                onCardClick={handleCardClick}
-                                canSelect={canSelect}
-                              />
-                            );
-                          })}
-                      </div>
-                    </div>
+                                };
 
-                    {/* Empty space - 3/4 width */}
-                    <div className="w-3/4 h-full flex items-center justify-center">
-                      {/* Map Display */}
-                      {currentLobby && (
-                        <MapDisplay
-                          mapId={Number(currentLobby.gameConfig.selectedMapId)}
-                          className="w-full h-full"
-                          showPlayerOverlay={true}
-                          isCreator={currentLobby.basic.creator === address}
-                          isCreatorViewer={
-                            currentLobby.basic.creator === address
-                          }
-                          shipPositions={
-                            showFleetView && viewingFleetOwner && viewingFleetId
-                              ? opponentPositions
-                              : combinedPositions
-                          }
-                          ships={
-                            showFleetView && viewingFleetOwner && viewingFleetId
-                              ? opponentShips
-                              : combinedShips
-                          }
-                          shipAttributes={
-                            showFleetView && viewingFleetOwner && viewingFleetId
-                              ? (opponentViewAttributes as Attributes[])
-                              : (combinedAttributes as Attributes[])
-                          }
-                          selectedShipId={selectedShipId}
-                          onShipSelect={handleShipSelect}
-                          onShipMove={handleShipMove}
-                          allowSelection={
-                            !(
-                              showFleetView &&
-                              viewingFleetId &&
-                              viewingFleetOwner
-                            )
-                          }
-                          selectableShipIds={selectableShipIds}
-                          flippedShipIds={flippedShipIds as bigint[]}
-                        />
-                      )}
-                    </div>
+                                return (
+                                  <ShipCard
+                                    key={ship.id.toString()}
+                                    ship={ship}
+                                    isStarred={false}
+                                    onToggleStar={() => {}}
+                                    isSelected={selectedShips.includes(ship.id)}
+                                    onToggleSelection={() => {
+                                      if (canSelect) {
+                                        handleCardClick();
+                                      }
+                                    }}
+                                    onRecycleClick={() => {}}
+                                    showInGameProperties={showInGameProperties}
+                                    inGameAttributes={attributesMap.get(
+                                      ship.id
+                                    )}
+                                    attributesLoading={attributesLoading}
+                                    selectionMode={true}
+                                    hideRecycle={true}
+                                    hideCheckbox={true}
+                                    onCardClick={handleCardClick}
+                                    canSelect={canSelect}
+                                    flipShip={isCreator}
+                                  />
+                                );
+                              })}
+                          </div>
+                        </div>
+
+                        {/* Map Display - 3/4 width */}
+                        <div className="w-3/4 h-full flex items-center justify-center">
+                          {/* Map Display */}
+                          {currentLobby && (
+                            <MapDisplay
+                              mapId={Number(
+                                currentLobby.gameConfig.selectedMapId
+                              )}
+                              className="w-full h-full"
+                              showPlayerOverlay={true}
+                              isCreator={currentLobby.basic.creator === address}
+                              isCreatorViewer={
+                                currentLobby.basic.creator === address
+                              }
+                              shipPositions={
+                                showFleetView &&
+                                viewingFleetOwner &&
+                                viewingFleetId
+                                  ? opponentPositions
+                                  : combinedPositions
+                              }
+                              ships={
+                                showFleetView &&
+                                viewingFleetOwner &&
+                                viewingFleetId
+                                  ? opponentShips
+                                  : combinedShips
+                              }
+                              shipAttributes={
+                                showFleetView &&
+                                viewingFleetOwner &&
+                                viewingFleetId
+                                  ? (opponentViewAttributes as Attributes[])
+                                  : (combinedAttributes as Attributes[])
+                              }
+                              selectedShipId={selectedShipId}
+                              onShipSelect={handleShipSelect}
+                              onShipMove={handleShipMove}
+                              allowSelection={
+                                !(
+                                  showFleetView &&
+                                  viewingFleetId &&
+                                  viewingFleetOwner
+                                )
+                              }
+                              selectableShipIds={selectableShipIds}
+                              flippedShipIds={flippedShipIds as bigint[]}
+                            />
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Map Display - 3/4 width (left for joiner) */}
+                        <div className="w-3/4 h-full flex items-center justify-center">
+                          {/* Map Display */}
+                          {currentLobby && (
+                            <MapDisplay
+                              mapId={Number(
+                                currentLobby.gameConfig.selectedMapId
+                              )}
+                              className="w-full h-full"
+                              showPlayerOverlay={true}
+                              isCreator={currentLobby.basic.creator === address}
+                              isCreatorViewer={
+                                currentLobby.basic.creator === address
+                              }
+                              shipPositions={
+                                showFleetView &&
+                                viewingFleetOwner &&
+                                viewingFleetId
+                                  ? opponentPositions
+                                  : combinedPositions
+                              }
+                              ships={
+                                showFleetView &&
+                                viewingFleetOwner &&
+                                viewingFleetId
+                                  ? opponentShips
+                                  : combinedShips
+                              }
+                              shipAttributes={
+                                showFleetView &&
+                                viewingFleetOwner &&
+                                viewingFleetId
+                                  ? (opponentViewAttributes as Attributes[])
+                                  : (combinedAttributes as Attributes[])
+                              }
+                              selectedShipId={selectedShipId}
+                              onShipSelect={handleShipSelect}
+                              onShipMove={handleShipMove}
+                              allowSelection={
+                                !(
+                                  showFleetView &&
+                                  viewingFleetId &&
+                                  viewingFleetOwner
+                                )
+                              }
+                              selectableShipIds={selectableShipIds}
+                              flippedShipIds={flippedShipIds as bigint[]}
+                            />
+                          )}
+                        </div>
+
+                        {/* Ship Selection Grid - 1/4 width (right for joiner) */}
+                        <div className="w-1/4 h-full">
+                          <div className="grid grid-cols-1 gap-4 mb-6 overflow-y-auto content-start max-h-[80vh]">
+                            {filteredShips
+                              .sort((a, b) => {
+                                // Selected ships first
+                                const aSelected = selectedShips.includes(a.id);
+                                const bSelected = selectedShips.includes(b.id);
+
+                                if (aSelected && !bSelected) return -1;
+                                if (!aSelected && bSelected) return 1;
+
+                                // Within each group, sort by ship ID
+                                return Number(a.id - b.id);
+                              })
+                              .map((ship) => {
+                                const canSelect =
+                                  ship.shipData.timestampDestroyed === 0n &&
+                                  ship.shipData.constructed &&
+                                  !ship.shipData.inFleet;
+
+                                const handleCardClick = () => {
+                                  if (!canSelect) return;
+                                  if (selectedShips.includes(ship.id)) {
+                                    removeShipFromFleet(ship.id);
+                                  } else {
+                                    addShipToFleet(ship.id);
+                                  }
+                                };
+
+                                return (
+                                  <ShipCard
+                                    key={ship.id.toString()}
+                                    ship={ship}
+                                    isStarred={false}
+                                    onToggleStar={() => {}}
+                                    isSelected={selectedShips.includes(ship.id)}
+                                    onToggleSelection={() => {
+                                      if (canSelect) {
+                                        handleCardClick();
+                                      }
+                                    }}
+                                    onRecycleClick={() => {}}
+                                    showInGameProperties={showInGameProperties}
+                                    inGameAttributes={attributesMap.get(
+                                      ship.id
+                                    )}
+                                    attributesLoading={attributesLoading}
+                                    selectionMode={true}
+                                    hideRecycle={true}
+                                    hideCheckbox={true}
+                                    onCardClick={handleCardClick}
+                                    canSelect={canSelect}
+                                    flipShip={isCreator}
+                                  />
+                                );
+                              })}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
