@@ -83,7 +83,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Register this game's refetch function for global event handling
   React.useEffect(() => {
     const gameId = Number(game.metadata.gameId);
-    console.log(`Registering refetch function for game ${gameId}`);
 
     // Create a refetch function that also clears targeting state
     const refetchWithClear = () => {
@@ -95,7 +94,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
     // Cleanup: unregister when component unmounts
     return () => {
-      console.log(`Unregistering refetch function for game ${gameId}`);
       unregisterGameRefetch(gameId);
     };
   }, [refetchGame, game.metadata.gameId, setTargetShipId]);
@@ -146,7 +144,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
     // Process blocked positions
     if (blockedPositions && Array.isArray(blockedPositions)) {
-      console.log(`Processing ${blockedPositions.length} blocked positions`);
       blockedPositions.forEach((pos: { row: number; col: number }) => {
         if (
           pos.row >= 0 &&
@@ -161,7 +158,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
     // Process scoring positions
     if (scoringPositions && Array.isArray(scoringPositions)) {
-      console.log(`Processing ${scoringPositions.length} scoring positions`);
       scoringPositions.forEach(
         (pos: {
           row: number;
@@ -184,16 +180,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         }
       );
     }
-
-    // Count positions
-    const blockedCount = blockedGrid.flat().filter(Boolean).length;
-    const scoringCount = scoringGrid
-      .flat()
-      .filter((points) => points > 0).length;
-    const onlyOnceCount = onlyOnceGrid.flat().filter(Boolean).length;
-    console.log(
-      `Map loaded: ${blockedCount} blocked, ${scoringCount} scoring positions, ${onlyOnceCount} only-once positions`
-    );
 
     return { blockedGrid, scoringGrid, onlyOnceGrid };
   }, [gameMapState]);
@@ -1030,8 +1016,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       // Only play sound when turn changes from opponent to player
       const audio = new Audio("/sound/alert.mp3");
       audio.volume = 0.5; // Set volume to 50%
-      audio.play().catch((error) => {
-        console.log("Could not play alert sound:", error);
+      audio.play().catch(() => {
         // Silently fail - some browsers block autoplay
       });
     }
@@ -2372,9 +2357,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         {/* Reactor damage skulls */}
                         {(() => {
                           const attributes = getShipAttributes(cell.shipId);
-                          console.log(
-                            `Ship ${cell.shipId}: reactorTimer=${attributes?.reactorCriticalTimer}`
-                          );
                           if (
                             !attributes ||
                             attributes.reactorCriticalTimer === 0
@@ -2544,7 +2526,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => {
-                  console.log("Manual refetch triggered");
                   refetchGame();
                 }}
                 className="px-2 py-1 border border-cyan-400 text-cyan-400 rounded font-mono hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10"
@@ -2553,13 +2534,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               </button>
               <button
                 onClick={() => {
-                  console.log(
-                    "Testing event system - triggering refetch for all games"
-                  );
-                  globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
-                    console.log(
-                      `Manually triggering refetch for game ${gameId}`
-                    );
+                  globalGameRefetchFunctions.forEach((refetchFn) => {
                     refetchFn();
                   });
                 }}

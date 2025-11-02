@@ -40,14 +40,7 @@ export function useLobbyList() {
 
   // Process the lobby data when it changes
   useEffect(() => {
-    console.log("=== Lobby List Debug ===");
-    console.log("Address:", address);
-    console.log("Lobbies data:", lobbiesData.data);
-    console.log("Loading:", lobbiesData.isLoading);
-    console.log("Error:", lobbiesData.error);
-
     if (!lobbiesData.data || !Array.isArray(lobbiesData.data)) {
-      console.log("No lobbies data or not array, setting loading/error state");
       setIsLoading(lobbiesData.isLoading);
       setError(lobbiesData.error?.message || null);
       return;
@@ -73,19 +66,12 @@ export function useLobbyList() {
           if (!seenIds.has(lobbyId)) {
             seenIds.add(lobbyId);
             fetchedLobbies.push(lobby);
-            console.log(`Successfully converted lobby ${lobbyId}:`, lobby);
-          } else {
-            console.log(`Skipping duplicate lobby ${lobbyId}`);
           }
         } catch (err) {
           console.error(`Error converting lobby at index ${index}:`, err);
         }
-      } else {
-        console.log(`Invalid lobby data at index ${index}:`, lobbyData);
       }
     });
-
-    console.log("Final fetched lobbies (deduplicated):", fetchedLobbies);
 
     setLobbies(fetchedLobbies);
     setIsLoading(lobbiesData.isLoading);
@@ -93,7 +79,6 @@ export function useLobbyList() {
   }, [lobbiesData.data, lobbiesData.isLoading, lobbiesData.error, address]);
 
   const refetch = () => {
-    console.log("Refetching lobbies...");
     lobbiesData.refetch();
   };
 

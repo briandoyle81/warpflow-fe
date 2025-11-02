@@ -53,7 +53,6 @@ export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
       try {
         setIsLoadingHistory(true);
         hasFetchedRef.current = gameId;
-        console.log("Fetching historical Move events for game:", gameId);
 
         const moveEventAbi = parseAbiItem(
           "event Move(uint256 indexed gameId, uint256 shipId, int16 newRow, int16 newCol, uint8 actionType, uint256 targetShipId)"
@@ -64,10 +63,6 @@ export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
         const latestBlock = await publicClient.getBlockNumber();
         const startBlock = latestBlock > 5000n ? latestBlock - 5000n : 0n;
 
-        console.log(
-          `Fetching events from block ${startBlock.toString()} to ${latestBlock.toString()}`
-        );
-
         const logs = await publicClient.getLogs({
           address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
           event: moveEventAbi,
@@ -77,8 +72,6 @@ export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
           fromBlock: startBlock,
           toBlock: latestBlock,
         });
-
-        console.log(`Found ${logs.length} historical Move events`);
 
         // Get unique block numbers to fetch their timestamps
         const uniqueBlockNumbers = Array.from(

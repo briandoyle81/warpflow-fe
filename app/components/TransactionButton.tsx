@@ -97,9 +97,6 @@ export function TransactionButton({
     ) {
       // Set a fallback timeout if transaction seems stuck
       const timeout = setTimeout(() => {
-        console.log(
-          `Transaction ${transactionId} fallback timeout - assuming success`
-        );
         completeTransaction(transactionId, true);
         onSuccess?.();
       }, 30000); // 30 second fallback
@@ -132,38 +129,6 @@ export function TransactionButton({
     (isHydrated && isConfirming && isActiveTransaction) ||
     isLocallyPending;
   const hasTransactionError = transactionState.error && isActiveTransaction;
-
-  // Debug logging
-  React.useEffect(() => {
-    if (isActiveTransaction) {
-      console.log(`Transaction ${transactionId} state:`, {
-        isPending,
-        isConfirming,
-        isConfirmed,
-        error,
-        receiptError,
-        receiptData,
-        transactionStatePending: transactionState.isPending,
-        isActiveTransaction,
-        isTransactionPending,
-        hasTransactionError,
-        hash,
-      });
-    }
-  }, [
-    isPending,
-    isConfirming,
-    isConfirmed,
-    error,
-    receiptError,
-    receiptData,
-    transactionState.isPending,
-    isActiveTransaction,
-    isTransactionPending,
-    hasTransactionError,
-    transactionId,
-    hash,
-  ]);
 
   // Handle transaction execution
   const handleTransaction = async () => {
@@ -204,25 +169,16 @@ export function TransactionButton({
   React.useEffect(() => {
     if (isActiveTransaction && isHydrated && isConfirmed) {
       // Transaction confirmed on blockchain
-      console.log(`Transaction ${transactionId} confirmed on blockchain`);
       setIsLocallyPending(false); // Reset local pending state
       completeTransaction(transactionId, true);
       onSuccess?.();
     } else if (isActiveTransaction && isHydrated && receiptError) {
       // Transaction failed during confirmation
-      console.log(
-        `Transaction ${transactionId} failed during confirmation:`,
-        receiptError
-      );
       setIsLocallyPending(false); // Reset local pending state
       completeTransaction(transactionId, false, receiptError);
       onError?.(receiptError);
     } else if (isActiveTransaction && !isPending && error) {
       // Transaction failed during submission
-      console.log(
-        `Transaction ${transactionId} failed during submission:`,
-        error
-      );
       setIsLocallyPending(false); // Reset local pending state
       completeTransaction(transactionId, false, error);
       onError?.(error);

@@ -68,9 +68,6 @@ export function MapEditor({
           } else {
             // Clear invalid cached data
             localStorage.removeItem("mapEditorState");
-            console.log(
-              "Cleared invalid map editor cache due to dimension mismatch"
-            );
           }
         }
       } catch (error) {
@@ -112,11 +109,6 @@ export function MapEditor({
   // Load map data when editing
   useEffect(() => {
     if (isEditing && blockedPositions && scoringPositions) {
-      console.log("Loading map data for editing:", {
-        blockedPositions,
-        scoringPositions,
-      });
-
       // Initialize arrays
       const newBlockedTiles = Array(GRID_DIMENSIONS.HEIGHT)
         .fill(null)
@@ -215,10 +207,6 @@ export function MapEditor({
         return;
       }
 
-      console.log(
-        `Tile clicked: row=${row}, col=${col}, tool=${editorState.selectedTool}`
-      );
-
       setEditorState((prev) => {
         // Create deep copies of the arrays to avoid mutation
         const newBlockedTiles = prev.blockedTiles.map((rowArray) => [
@@ -242,30 +230,22 @@ export function MapEditor({
             // Toggle blocking
             newBlockedTiles[posRow][posCol] =
               !prev.blockedTiles[posRow][posCol];
-            console.log(
-              `Toggled blocking for ${posRow},${posCol}: ${newBlockedTiles[posRow][posCol]}`
-            );
           } else if (prev.selectedTool === "score") {
             // Toggle scoring - if already scoring, clear it; otherwise set it
             if (prev.scoringTiles[posRow][posCol] > 0) {
               // Clear scoring tile
               newScoringTiles[posRow][posCol] = 0;
               newOnlyOnceTiles[posRow][posCol] = false;
-              console.log(`Cleared scoring for ${posRow},${posCol}`);
             } else {
               // Set scoring tile
               newScoringTiles[posRow][posCol] = prev.selectedScoreValue;
               newOnlyOnceTiles[posRow][posCol] = prev.selectedOnlyOnce;
-              console.log(
-                `Set scoring for ${posRow},${posCol}: ${prev.selectedScoreValue} points, once=${prev.selectedOnlyOnce}`
-              );
             }
           } else if (prev.selectedTool === "erase") {
             // Clear everything
             newBlockedTiles[posRow][posCol] = false;
             newScoringTiles[posRow][posCol] = 0;
             newOnlyOnceTiles[posRow][posCol] = false;
-            console.log(`Erased tile ${posRow},${posCol}`);
           }
         });
 
@@ -306,9 +286,6 @@ export function MapEditor({
 
           positions.forEach(({ row: posRow, col: posCol }) => {
             newBlockedTiles[posRow][posCol] = true;
-            console.log(
-              `Painted blocking for ${posRow},${posCol}: ${newBlockedTiles[posRow][posCol]}`
-            );
           });
 
           return {
@@ -346,9 +323,6 @@ export function MapEditor({
           positions.forEach(({ row: posRow, col: posCol }) => {
             // Set blocking to true (paint mode)
             newBlockedTiles[posRow][posCol] = true;
-            console.log(
-              `Painted blocking for ${posRow},${posCol}: ${newBlockedTiles[posRow][posCol]}`
-            );
           });
 
           return {
@@ -400,16 +374,12 @@ export function MapEditor({
       }
 
       e.preventDefault();
-      console.log(`Tile right-clicked: row=${row}, col=${col}`);
       setEditorState((prev) => {
         // Create deep copy of the blocked tiles array
         const newBlockedTiles = prev.blockedTiles.map((rowArray) => [
           ...rowArray,
         ]);
         newBlockedTiles[row][col] = !prev.blockedTiles[row][col];
-        console.log(
-          `Right-click toggled blocking for ${row},${col}: ${newBlockedTiles[row][col]}`
-        );
         return {
           ...prev,
           blockedTiles: newBlockedTiles,
@@ -647,13 +617,6 @@ export function MapEditor({
     } else {
       // Empty
       baseClass += " bg-gray-900";
-    }
-
-    // Debug logging for first few tiles
-    if (row < 3 && col < 3) {
-      console.log(
-        `Tile ${row},${col}: blocked=${isBlocked}, score=${scoreValue}, once=${isOnlyOnce}, class=${baseClass}`
-      );
     }
 
     return baseClass;

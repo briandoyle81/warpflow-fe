@@ -106,10 +106,6 @@ const Lobbies: React.FC = () => {
         try {
           const lobbyId = BigInt(saved);
           // Restore immediately, validate later
-          console.log(
-            "Restoring selectedLobby from localStorage:",
-            lobbyId.toString()
-          );
           setSelectedLobby(lobbyId);
           hasRestoredRef.current = true;
         } catch (error) {
@@ -289,17 +285,7 @@ const Lobbies: React.FC = () => {
       col: pos.col,
     }));
 
-    console.log("Adding ship to fleet:", {
-      shipId: shipId.toString(),
-      isCreator,
-      existingPositions,
-      address,
-      creator: currentLobby.basic.creator,
-    });
-
     const position = findNextPosition(isCreator, existingPositions);
-
-    console.log("Found position:", position);
 
     if (position) {
       setSelectedShips((prev) => [...prev, shipId]);
@@ -1081,7 +1067,6 @@ const Lobbies: React.FC = () => {
                 className="flex-1 px-6 py-3 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200"
                 onSuccess={() => {
                   // Show success toast
-                  console.log("Lobby created successfully!");
                   // Close the form
                   setShowCreateForm(false);
                   // Refresh lobby list
@@ -1284,7 +1269,6 @@ const Lobbies: React.FC = () => {
                       className="w-full px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       onSuccess={() => {
                         // Show success toast
-                        console.log("Joined lobby successfully!");
                         // Refresh lobby list
                         loadLobbies();
                       }}
@@ -1334,7 +1318,6 @@ const Lobbies: React.FC = () => {
                       lobbyId={lobby.basic.id}
                       className="flex-1 px-4 py-2 rounded-lg border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       onSuccess={() => {
-                        console.log("Left lobby successfully!");
                         // If leaving from fleet selection modal, close it
                         if (selectedLobby === lobby.basic.id) {
                           setSelectedLobby(null);

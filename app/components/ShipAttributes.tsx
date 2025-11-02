@@ -64,28 +64,7 @@ const ShipAttributes: React.FC = () => {
   const special2 = useSpecialData(2); // Repair Drones
   const special3 = useSpecialData(3); // Flak Array
 
-  // Debug: Log special data loading status
-  React.useEffect(() => {
-    console.log("Special data loading status:", {
-      special0: special0.data,
-      special1: special1.data,
-      special2: special2.data,
-      special3: special3.data,
-      special0Loading: special0.isLoading,
-      special1Loading: special1.isLoading,
-      special2Loading: special2.isLoading,
-      special3Loading: special3.isLoading,
-    });
-  }, [
-    special0.data,
-    special1.data,
-    special2.data,
-    special3.data,
-    special0.isLoading,
-    special1.isLoading,
-    special2.isLoading,
-    special3.isLoading,
-  ]);
+  // Special data hooks are ready for use
 
   // State for editing
   const [editingCosts, setEditingCosts] = useState(false);

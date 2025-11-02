@@ -3,7 +3,6 @@ import React from "react";
 const PayButton: React.FC = () => {
   const handlePay = () => {
     // TODO: Implement payment functionality
-    console.log("Pay button clicked");
   };
 
   return (

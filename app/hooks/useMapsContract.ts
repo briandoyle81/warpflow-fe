@@ -78,23 +78,12 @@ export function useGetGameMapState(gameId: number) {
   hookCallCount++;
   gameIdCallCounts[gameId] = (gameIdCallCounts[gameId] || 0) + 1;
 
-  console.log(
-    `🔍 useGetGameMapState called for gameId: ${gameId} (Total calls: ${hookCallCount}, This gameId calls: ${gameIdCallCounts[gameId]})`
-  );
-
   const result = useMapsRead("getGameMapState", [BigInt(gameId)], {
     query: {
       enabled: gameId > 0,
       // Note: staleTime and gcTime may not be supported by wagmi's useReadContract
       // The caching is handled by React Query internally
     },
-  });
-
-  console.log(`📊 Contract call result for gameId ${gameId}:`, {
-    isLoading: result.isLoading,
-    isFetching: result.isFetching,
-    data: result.data ? "Data received" : "No data",
-    error: result.error,
   });
 
   return result;

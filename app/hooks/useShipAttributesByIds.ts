@@ -35,7 +35,6 @@ export function useShipAttributesByIds(shipIds: bigint[]) {
         now - parsed.timestamp < CACHE_DURATION &&
         parsed.shipIds.join(",") === shipIdsString
       ) {
-        console.log("Using cached ship attributes");
         return parsed.data;
       }
 
@@ -77,7 +76,6 @@ export function useShipAttributesByIds(shipIds: bigint[]) {
           shipIds: shipIds.map((id) => id.toString()), // preserve order
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-        console.log("Cached ship attributes for 1 week");
       } catch (error) {
         console.warn("Failed to cache ship attributes:", error);
       }

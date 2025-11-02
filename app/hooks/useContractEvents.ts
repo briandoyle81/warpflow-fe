@@ -56,7 +56,6 @@ export function useContractEvents() {
         });
 
         if (relevantLogs.length > 0) {
-          console.log("Ship transfer detected, refetching data...");
           refetchShips();
         }
       } catch (error) {
@@ -118,20 +117,13 @@ export function useContractEvents() {
     poll: true, // Force polling since WebSockets not available
     pollingInterval: 5000, // Poll every 5 seconds
     onLogs: (logs) => {
-      console.log("Move event logs received:", logs);
       if (!Array.isArray(logs) || logs.length === 0) return;
 
       try {
-        console.log("Game Move event detected, refetching game data...");
-        console.log(
-          "Registered game refetch functions:",
-          globalGameRefetchFunctions.size
-        );
         refetchGames();
 
         // Also refetch individual game data for all registered games
-        globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
-          console.log(`Refetching individual game data for game ${gameId}`);
+        globalGameRefetchFunctions.forEach((refetchFn) => {
           refetchFn();
         });
       } catch (error) {
@@ -163,20 +155,13 @@ export function useContractEvents() {
     poll: true, // Force polling since WebSockets not available
     pollingInterval: 5000, // Poll every 5 seconds
     onLogs: (logs) => {
-      console.log("GameUpdate event logs received:", logs);
       if (!Array.isArray(logs) || logs.length === 0) return;
 
       try {
-        console.log("Game Update event detected, refetching game data...");
-        console.log(
-          "Registered game refetch functions:",
-          globalGameRefetchFunctions.size
-        );
         refetchGames();
 
         // Also refetch individual game data for all registered games
-        globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
-          console.log(`Refetching individual game data for game ${gameId}`);
+        globalGameRefetchFunctions.forEach((refetchFn) => {
           refetchFn();
         });
       } catch (error) {

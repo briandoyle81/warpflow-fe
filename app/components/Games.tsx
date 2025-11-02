@@ -45,9 +45,6 @@ const Games: React.FC = () => {
       games.length > 0
     ) {
       const saved = localStorage.getItem(storageKey);
-      console.log(
-        `[Games] Checking restoration: saved=${saved}, games.length=${games.length}, isLoading=${isLoading}, isConnected=${isConnected}, address=${address}`
-      );
 
       if (saved) {
         try {
@@ -56,13 +53,9 @@ const Games: React.FC = () => {
             (game) => game.metadata.gameId.toString() === gameId
           );
           if (gameToRestore) {
-            console.log(`Restoring game ${gameId} from localStorage`);
             setSelectedGame(gameToRestore);
           } else if (!hasAttemptedRestore.current) {
             // Game not found, clear the saved ID (only once)
-            console.log(
-              `Game ${gameId} not found in current games, clearing saved ID`
-            );
             localStorage.removeItem(storageKey);
             hasAttemptedRestore.current = true;
           }
@@ -120,16 +113,10 @@ const Games: React.FC = () => {
     if (isMounted && typeof window !== "undefined" && address) {
       if (selectedGame) {
         const gameId = selectedGame.metadata.gameId.toString();
-        console.log(
-          `[Games] Saving game to localStorage: key=${storageKey}, gameId=${gameId}`
-        );
         localStorage.setItem(storageKey, gameId);
       } else if (prevSelectedGameRef.current) {
         // Only clear if selectedGame was previously set (explicit clear)
         // Don't clear on initial mount when it's null
-        console.log(
-          `[Games] Clearing game from localStorage: key=${storageKey}`
-        );
         localStorage.removeItem(storageKey);
       }
       prevSelectedGameRef.current = selectedGame;

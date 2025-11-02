@@ -72,13 +72,6 @@ export function useLobbies() {
         ? (additionalLobbyFee as bigint) || 0n
         : 0n;
 
-      console.log("=== Lobby Creation Debug ===");
-      console.log("Current active lobbies:", currentActiveLobbies);
-      console.log("Free games per address:", Number(freeGamesPerAddress || 0n));
-      console.log("Needs payment:", needsPayment);
-      console.log("Additional lobby fee:", additionalLobbyFee?.toString());
-      console.log("Value to send:", value.toString());
-
       await writeContract({
         ...lobbiesContractConfig,
         functionName: "createLobby",

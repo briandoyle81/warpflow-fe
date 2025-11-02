@@ -225,17 +225,6 @@ export function useFreeShipClaiming() {
       })()
     : false;
 
-  // Debug logging
-  console.log("Free Ship Claiming Debug:", {
-    address,
-    hasClaimedFreeShips,
-    isLoadingClaimStatus,
-    claimStatusError,
-    isEligible,
-    eligibilityCache: address ? eligibilityCache[address] : null,
-    contractAddress: CONTRACT_ADDRESSES.SHIPS,
-  });
-
   // Claim free ships function
   const claimFreeShips = async () => {
     if (!address) {

@@ -86,7 +86,6 @@ const ManageNavy: React.FC = () => {
   // Clear cache when user disconnects
   useEffect(() => {
     if (!address) {
-      console.log("🚪 User disconnected, clearing cache");
       clearCacheOnLogout();
     }
   }, [address]);
@@ -230,16 +229,6 @@ const ManageNavy: React.FC = () => {
       );
     }
   };
-
-  // Debug connection state
-  console.log("ManageNavy Debug:", {
-    wagmiAddress: address,
-    isConnected: isConnected,
-  });
-
-  console.log("Address", address);
-  console.log("Chain", chain);
-  console.log("Is Connected", isConnected);
 
   if (!address || !isConnected) {
     return (
@@ -457,7 +446,6 @@ const ManageNavy: React.FC = () => {
             <button
               onClick={() => {
                 const status = getQueueStatus();
-                console.log("📊 Queue Status:", status);
                 toast.success(
                   `Queue: ${status.queueLength} pending, ${status.activeRequests} active`
                 );
@@ -801,9 +789,6 @@ const ManageNavy: React.FC = () => {
                     args={[[shipToRecycle.id]]}
                     className="px-6 py-2 border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 rounded font-mono font-bold transition-all duration-200"
                     onSuccess={() => {
-                      console.log(
-                        "Ship recycling transaction confirmed, calling onSuccess"
-                      );
                       // Show success toast
                       toast.success("Ship recycled successfully!");
                       // Close modal and refetch ships data
@@ -811,7 +796,6 @@ const ManageNavy: React.FC = () => {
                       setShipToRecycle(null);
                       // Add a small delay to ensure blockchain state is updated
                       setTimeout(() => {
-                        console.log("Calling refetch after ship recycling");
                         refetch();
                       }, 1000);
                     }}
