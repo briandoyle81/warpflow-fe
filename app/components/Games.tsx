@@ -15,12 +15,48 @@ const Games: React.FC = () => {
   // Track if component has mounted (client-side only)
   const [isMounted, setIsMounted] = useState(false);
 
+  // Ticker to update countdown timers
+  const [, setTick] = useState(0);
+
   // Enable real-time event listening for game updates
   useContractEvents();
+
+  // Update ticker every second to refresh countdown timers
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Helper function to calculate time remaining for a game
+  const calculateTimeRemaining = (game: GameDataView): number => {
+    const turnTimeSec = Number(game.turnState.turnTime || 0n);
+    const turnStartSec = Number(game.turnState.turnStartTime || 0n);
+    if (!turnTimeSec || !turnStartSec) return 0;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const elapsed = Math.max(0, nowSec - turnStartSec);
+    return Math.max(0, turnTimeSec - elapsed);
+  };
+
+  // Helper function to format seconds as mm:ss
+  const formatSeconds = (total: number): string => {
+    const m = Math.floor(total / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = (total % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
   // Persist selectedGame to localStorage
   const storageKey = useMemo(
     () => `selectedGameId-${address || "anonymous"}`,
+    [address]
+  );
+
+  // Persist view mode (list | detail) to avoid unintended restores
+  const viewModeKey = useMemo(
+    () => `gamesViewMode-${address || "anonymous"}`,
     [address]
   );
 
@@ -44,6 +80,10 @@ const Games: React.FC = () => {
       !selectedGame &&
       games.length > 0
     ) {
+      // Only restore if the last view mode was 'detail'
+      const viewMode = localStorage.getItem(viewModeKey);
+      if (viewMode !== "detail") return;
+
       const saved = localStorage.getItem(storageKey);
 
       if (saved) {
@@ -75,6 +115,7 @@ const Games: React.FC = () => {
     selectedGame,
     address,
     storageKey,
+    viewModeKey,
     isConnected,
   ]);
 
@@ -114,14 +155,16 @@ const Games: React.FC = () => {
       if (selectedGame) {
         const gameId = selectedGame.metadata.gameId.toString();
         localStorage.setItem(storageKey, gameId);
+        localStorage.setItem(viewModeKey, "detail");
       } else if (prevSelectedGameRef.current) {
         // Only clear if selectedGame was previously set (explicit clear)
         // Don't clear on initial mount when it's null
         localStorage.removeItem(storageKey);
+        localStorage.setItem(viewModeKey, "list");
       }
       prevSelectedGameRef.current = selectedGame;
     }
-  }, [isMounted, selectedGame, address, storageKey]);
+  }, [isMounted, selectedGame, address, storageKey, viewModeKey]);
 
   // Clear selected game only when address becomes null (explicit disconnect)
   // Don't clear on temporary disconnects during page refresh
@@ -142,7 +185,13 @@ const Games: React.FC = () => {
     return (
       <GameDisplay
         game={selectedGame}
-        onBack={() => setSelectedGame(null)}
+        onBack={() => {
+          setSelectedGame(null);
+          if (typeof window !== "undefined") {
+            localStorage.removeItem(storageKey);
+            localStorage.setItem(viewModeKey, "list");
+          }
+        }}
         refetch={refetch}
       />
     );
@@ -266,6 +315,26 @@ const Games: React.FC = () => {
                         ? "YOU"
                         : "OPPONENT"}
                     </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="opacity-60">Time Remaining:</span>
+                    {(() => {
+                      const isFinished =
+                        game.metadata.winner !==
+                        "0x0000000000000000000000000000000000000000";
+                      const remaining = isFinished
+                        ? 0
+                        : calculateTimeRemaining(game);
+                      return (
+                        <span
+                          className={`font-mono text-xs ${
+                            remaining <= 10 ? "text-red-400" : "text-gray-300"
+                          }`}
+                        >
+                          {isFinished ? "--:--" : formatSeconds(remaining)}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
 

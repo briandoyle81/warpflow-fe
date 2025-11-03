@@ -98,6 +98,41 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     };
   }, [refetchGame, game.metadata.gameId, setTargetShipId]);
 
+  // Countdown for remaining turn time (in seconds)
+  const [turnSecondsLeft, setTurnSecondsLeft] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    // Helper to compute remaining seconds
+    const computeRemaining = (): number => {
+      const turnTimeSec = Number(game.turnState.turnTime || 0n);
+      const turnStartSec = Number(game.turnState.turnStartTime || 0n);
+      if (!turnTimeSec || !turnStartSec) return 0;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const elapsed = Math.max(0, nowSec - turnStartSec);
+      return Math.max(0, turnTimeSec - elapsed);
+    };
+
+    // Initialize immediately
+    setTurnSecondsLeft(computeRemaining());
+
+    // Update every second
+    const interval = setInterval(() => {
+      setTurnSecondsLeft(computeRemaining());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [game.turnState.turnTime, game.turnState.turnStartTime]);
+
+  const formatSeconds = (total: number): string => {
+    const m = Math.floor(total / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = Math.floor(total % 60)
+      .toString()
+      .padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
   // Clear targeting state when game data changes (after successful moves)
   React.useEffect(() => {
     if (gameData && gameData !== initialGame) {
@@ -1150,15 +1185,60 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 Round {game.turnState.currentRound.toString()}
               </span>
             </h1>
-            {/* Turn Indicator */}
+            {/* Turn Indicator and Countdown / Seize Turn */}
             {game.metadata.winner ===
-              "0x0000000000000000000000000000000000000000" && (
-              <div className="text-sm text-gray-400">
-                <span className={isMyTurn ? "text-blue-400" : "text-red-400"}>
-                  {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
-                </span>
-              </div>
-            )}
+              "0x0000000000000000000000000000000000000000" &&
+              (() => {
+                const isParticipant =
+                  game.metadata.creator === address ||
+                  game.metadata.joiner === address;
+                const canSeizeTurn =
+                  !isMyTurn && isParticipant && turnSecondsLeft <= 0;
+
+                if (canSeizeTurn) {
+                  return (
+                    <div className="text-sm">
+                      <TransactionButton
+                        transactionId={`seize-${game.metadata.gameId.toString()}`}
+                        contractAddress={gameContractConfig.address}
+                        abi={gameContractConfig.abi}
+                        functionName="forceMoveOnTimeout"
+                        args={[game.metadata.gameId]}
+                        className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded font-mono transition-colors"
+                        loadingText="Seizing..."
+                        errorText="Failed"
+                        onSuccess={() => {
+                          toast.success("Turn seized. Opponent timed out.");
+                          refetchGame();
+                          refetch?.();
+                        }}
+                      >
+                        Seize Turn
+                      </TransactionButton>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="text-sm text-gray-400 flex items-center gap-2">
+                    <span
+                      className={isMyTurn ? "text-blue-400" : "text-red-400"}
+                    >
+                      {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
+                    </span>
+                    <span className="text-gray-300">•</span>
+                    <span
+                      className={
+                        turnSecondsLeft <= 10
+                          ? "text-red-400 font-mono"
+                          : "text-cyan-400 font-mono"
+                      }
+                    >
+                      {formatSeconds(turnSecondsLeft)}
+                    </span>
+                  </div>
+                );
+              })()}
           </div>
           {/* Scores box aligned left, to the right of title */}
           <div className="ml-6 bg-gray-800 rounded p-2 border border-gray-700 w-48 text-lg">
@@ -2296,28 +2376,50 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           </div>
                         )}
 
-                        {/* Health bar for damaged ships */}
+                        {/* Health bar inside cell top, adjacent to team dot */}
                         {(() => {
                           const attributes = getShipAttributes(cell.shipId);
-                          if (
-                            !attributes ||
-                            attributes.hullPoints >= attributes.maxHullPoints
-                          )
-                            return null;
+                          if (!attributes) return null;
+                          if (attributes.hullPoints <= 0) return null; // show skull only
+                          if (attributes.hullPoints >= attributes.maxHullPoints)
+                            return null; // full health - no bar
 
                           const healthPercentage =
                             (attributes.hullPoints / attributes.maxHullPoints) *
                             100;
                           const isLowHealth = healthPercentage <= 25;
 
+                          // Position: fill the top edge excluding the team dot side
+                          // Dot is w-2 (0.5rem) with m-0.5 (0.125rem). Add an extra 0.125rem gap.
+                          const dotOffset = "0.75rem"; // 0.5 + 0.125 + 0.125
+                          const topOffset = "0.125rem"; // align with dot's margin
+
+                          const style = cell.isCreator
+                            ? { top: topOffset, left: dotOffset, right: 0 }
+                            : { top: topOffset, left: 0, right: dotOffset };
+
                           return (
-                            <div className="absolute -top-2 left-0 right-0 z-15">
-                              <div className="w-full h-1 bg-gray-700 rounded-sm">
+                            <div className="absolute z-15" style={style}>
+                              <div className="w-full h-1 bg-gray-700 rounded-sm overflow-hidden relative">
                                 <div
-                                  className={`h-full rounded-sm transition-all duration-300 ${
+                                  className={`h-full transition-all duration-300 ${
                                     isLowHealth ? "bg-red-500" : "bg-green-500"
                                   }`}
-                                  style={{ width: `${healthPercentage}%` }}
+                                  style={
+                                    cell.isCreator
+                                      ? {
+                                          width: `${healthPercentage}%`,
+                                          left: 0,
+                                          right: "auto",
+                                          position: "absolute",
+                                        }
+                                      : {
+                                          width: `${healthPercentage}%`,
+                                          right: 0,
+                                          left: "auto",
+                                          position: "absolute",
+                                        }
+                                  }
                                 />
                               </div>
                             </div>
