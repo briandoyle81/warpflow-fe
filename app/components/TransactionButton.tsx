@@ -214,6 +214,14 @@ export function TransactionButton({
     }
   }, [transactionId, transactionState.activeTransactionId, clearError]);
 
+  // Reset local pending state when all transactions are cleared (activeTransactionId becomes null)
+  // This ensures the button is re-enabled after clearAllTransactions() is called
+  React.useEffect(() => {
+    if (!transactionState.activeTransactionId && !transactionState.isPending) {
+      setIsLocallyPending(false);
+    }
+  }, [transactionState.activeTransactionId, transactionState.isPending]);
+
   // Determine button state
   const isDisabled =
     disabled ||
