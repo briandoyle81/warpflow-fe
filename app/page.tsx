@@ -10,6 +10,7 @@ import Profile from "./components/Profile";
 import Info from "./components/Info";
 import Maps from "./components/Maps";
 import ShipAttributes from "./components/ShipAttributes";
+import ShipConstructor from "./components/ShipConstructor";
 import { useShipAttributesOwner } from "./hooks/useShipAttributesContract";
 
 export default function Home() {
@@ -33,6 +34,7 @@ export default function Home() {
       "Profile",
       "Info",
       "Maps",
+      "Ship Constructor",
     ];
     if (isOwner) {
       validTabs.push("Ship Attributes");
@@ -97,6 +99,7 @@ export default function Home() {
                 "Profile",
                 "Info",
                 "Maps",
+                "Ship Constructor",
               ];
               if (isOwner) {
                 tabs.push("Ship Attributes");
@@ -137,6 +140,7 @@ export default function Home() {
               {activeTab === "Profile" && <Profile />}
               {activeTab === "Info" && <Info />}
               {activeTab === "Ship Attributes" && <ShipAttributes />}
+              {activeTab === "Ship Constructor" && <ShipConstructor />}
             </div>
           )}
         </div>
