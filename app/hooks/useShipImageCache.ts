@@ -3,6 +3,7 @@ import { usePublicClient } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import type { Abi } from "viem";
 import { Ship } from "../types/types";
+import { renderShip } from "../utils/shipRenderer";
 
 // Cache configuration
 const CACHE_EXPIRY_TIME = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -17,6 +18,22 @@ const MAX_CONCURRENT_REQUESTS = 3; // Maximum concurrent requests
 
 // Debug flag - set to false to disable console logs
 const DEBUG_CACHE = false;
+
+// Local storage key for rendering mode
+const USE_LOCAL_RENDERING_KEY = "warpflow-use-local-rendering";
+
+// Get rendering mode from localStorage
+export function getUseLocalRendering(): boolean {
+  if (typeof window === "undefined") return false;
+  const stored = localStorage.getItem(USE_LOCAL_RENDERING_KEY);
+  return stored === "true";
+}
+
+// Set rendering mode in localStorage
+export function setUseLocalRendering(useLocal: boolean): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(USE_LOCAL_RENDERING_KEY, useLocal ? "true" : "false");
+}
 
 // Debug logging function
 function debugLog(...args: unknown[]) {
@@ -213,6 +230,47 @@ export function useShipImageCache(ship: Ship) {
     },
     [cacheKey, ship.id]
   );
+
+  // Generate image locally using TypeScript renderer
+  const generateImageLocally = useCallback((): string | null => {
+    try {
+      debugLog(`🎨 Generating image locally for ship ${ship.id.toString()}`);
+      const dataUrl = renderShip(ship);
+
+      // Test the image before saving
+      const testImg = new Image();
+      testImg.onload = () => {
+        debugLog(`✅ Successfully generated local image for ship ${ship.id.toString()}`);
+        saveToCache(dataUrl);
+        setImageState({
+          dataUrl,
+          isLoading: false,
+          error: null,
+          retryCount: 0,
+        });
+        setRenderKey((prev) => prev + 1);
+      };
+      testImg.onerror = () => {
+        debugLog(`❌ Generated local image for ship ${ship.id.toString()} is invalid`);
+        setImageState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: "Failed to generate image locally",
+        }));
+      };
+      testImg.src = dataUrl;
+
+      return dataUrl;
+    } catch (error) {
+      debugLog(`❌ Error generating local image for ship ${ship.id.toString()}:`, error);
+      setImageState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error.message : "Failed to generate image",
+      }));
+      return null;
+    }
+  }, [ship, saveToCache]);
 
   // Fetch image from contract with retry logic
   const fetchImageFromContract = useCallback(async () => {
@@ -416,11 +474,24 @@ export function useShipImageCache(ship: Ship) {
       };
       testImg.src = cached;
     } else if (!shipRequestStates.get(shipId)) {
-      // Add to queue if not cached and not already requested
-      debugLog(`📤 No cache for ship ${shipId}, adding to request queue`);
-      shipRequestStates.set(shipId, true);
-      requestQueue.push(fetchImageFromContract);
-      processQueue();
+      // Check if we should use local rendering
+      const useLocalRendering = getUseLocalRendering();
+
+      if (useLocalRendering) {
+        debugLog(`🎨 Using local rendering for ship ${shipId}`);
+        setImageState((prev) => ({ ...prev, isLoading: true }));
+        const localImage = generateImageLocally();
+        if (localImage) {
+          // Image generation is async via Image.onload, state will update there
+          return;
+        }
+      } else {
+        // Add to queue if not cached and not already requested
+        debugLog(`📤 No cache for ship ${shipId}, adding to request queue`);
+        shipRequestStates.set(shipId, true);
+        requestQueue.push(fetchImageFromContract);
+        processQueue();
+      }
     } else {
       debugLog(
         `⚠️ Ship ${shipId} already requested, skipping - this might be the problem!`
@@ -433,6 +504,7 @@ export function useShipImageCache(ship: Ship) {
   }, [
     getCachedImage,
     fetchImageFromContract,
+    generateImageLocally,
     cacheKey,
     shipId,
     ship.shipData.constructed,

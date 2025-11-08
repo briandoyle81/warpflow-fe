@@ -14,6 +14,8 @@ import {
   restartQueueProcessing,
   getQueueStatus,
   clearCacheOnLogout,
+  getUseLocalRendering,
+  setUseLocalRendering,
 } from "../hooks";
 import { useAccount } from "wagmi";
 import { formatEther } from "viem";
@@ -103,6 +105,9 @@ const ManageNavy: React.FC = () => {
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
   const [showDebugButtons, setShowDebugButtons] = React.useState(false);
   const [showInGameProperties, setShowInGameProperties] = React.useState(true);
+  const [useLocalRendering, setUseLocalRenderingState] = React.useState(
+    getUseLocalRendering()
+  );
 
   // State for starred ships
   const [starredShips, setStarredShips] = React.useState<Set<string>>(
@@ -635,6 +640,23 @@ const ManageNavy: React.FC = () => {
                 {isFromCache && (
                   <span className="text-xs text-green-400 ml-1">(cached)</span>
                 )}
+              </span>
+            </label>
+            <label className="flex items-center gap-2 text-sm text-cyan-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useLocalRendering}
+                onChange={(e) => {
+                  const newValue = e.target.checked;
+                  setUseLocalRenderingState(newValue);
+                  setUseLocalRendering(newValue);
+                  // Clear cache when switching modes to force regeneration
+                  clearAllShipImageCache();
+                }}
+                className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 rounded focus:ring-cyan-400 focus:ring-2"
+              />
+              <span className="text-sm font-bold text-cyan-400">
+                LOCAL RENDERING
               </span>
             </label>
           </div>

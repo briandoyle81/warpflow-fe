@@ -44,6 +44,8 @@ export {
   getQueueStatus,
   clearCacheOnLogout,
   getShipImageCacheStats,
+  getUseLocalRendering,
+  setUseLocalRendering,
 } from "./useShipImageCache";
 
 // Types
