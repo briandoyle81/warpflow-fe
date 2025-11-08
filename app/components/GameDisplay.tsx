@@ -66,6 +66,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     isCreator: boolean;
   } | null>(null);
 
+  // Drag and drop state
+  const [draggedShipId, setDraggedShipId] = useState<bigint | null>(null);
+  const [dragOverCell, setDragOverCell] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
+
   // Fetch the current game data to get real-time updates
   const {
     data: gameData,
@@ -1039,6 +1046,227 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     specialType,
   ]);
 
+  // Calculate valid targets from drag position (when dragging a ship)
+  const dragValidTargets = React.useMemo(() => {
+    if (!draggedShipId || !dragOverCell || !gameShips) return [];
+
+    const attributes = getShipAttributes(draggedShipId);
+    if (!attributes) return [];
+
+    // Use special range if special is selected, otherwise use weapon range
+    const shootingRange =
+      selectedWeaponType === "special" && specialRange !== undefined
+        ? specialRange
+        : attributes.range || 1;
+
+    const startRow = dragOverCell.row;
+    const startCol = dragOverCell.col;
+
+    const targets: {
+      shipId: bigint;
+      position: { row: number; col: number };
+    }[] = [];
+
+    // Check all ships within shooting range
+    game.shipPositions.forEach((shipPosition) => {
+      const ship = shipMap.get(shipPosition.shipId);
+      if (!ship) return;
+
+      // Filter targets based on weapon type
+      if (selectedWeaponType === "special") {
+        // Flak targets ALL ships in range (friendly and enemy) except itself
+        if (specialType === 3) {
+          // Flak hits everything except the ship using flak
+          if (shipPosition.shipId === draggedShipId) return; // Don't target self
+        } else if (specialType === 1) {
+          // EMP targets enemy ships
+          if (ship.owner === address) return; // Don't target friendly ships
+        } else {
+          // Other special abilities target friendly ships (allies)
+          if (ship.owner !== address) return;
+        }
+      } else {
+        // Weapons target enemy ships
+        if (ship.owner === address) return;
+      }
+
+      const targetRow = shipPosition.position.row;
+      const targetCol = shipPosition.position.col;
+      const distance =
+        Math.abs(targetRow - startRow) + Math.abs(targetCol - startCol);
+
+      // Ships can always shoot enemies that are exactly 1 square away
+      // OR within their normal shooting range
+      const canShoot = distance === 1 || distance <= shootingRange;
+
+      if (canShoot && distance > 0) {
+        // Ships can always shoot adjacent enemies (distance === 1) regardless of nebula squares
+        // OR special abilities ignore nebula squares
+        // OR regular weapons need line of sight
+        const shouldCheckLineOfSight =
+          distance > 1 && // Not adjacent
+          (selectedWeaponType !== "special" ||
+            (specialType !== 1 && specialType !== 2 && specialType !== 3)); // Not EMP, Repair, or Flak
+
+        if (
+          !shouldCheckLineOfSight ||
+          hasLineOfSight(startRow, startCol, targetRow, targetCol, blockedGrid)
+        ) {
+          targets.push({
+            shipId: shipPosition.shipId,
+            position: { row: targetRow, col: targetCol },
+          });
+        }
+      }
+    });
+
+    return targets;
+  }, [
+    draggedShipId,
+    dragOverCell,
+    gameShips,
+    shipMap,
+    address,
+    getShipAttributes,
+    selectedWeaponType,
+    specialRange,
+    specialType,
+    game.shipPositions,
+    blockedGrid,
+    hasLineOfSight,
+  ]);
+
+  // Calculate shooting range from drag position (when dragging a ship)
+  const dragShootingRange = React.useMemo(() => {
+    if (!draggedShipId || !dragOverCell || !gameShips) return [];
+
+    const ship = shipMap.get(draggedShipId);
+    if (!ship) return [];
+
+    const attributes = getShipAttributes(draggedShipId);
+    if (!attributes) return [];
+
+    // Use special range if special is selected, otherwise use weapon range
+    const shootingRange =
+      selectedWeaponType === "special" && specialRange !== undefined
+        ? specialRange
+        : attributes.range || 1;
+
+    const startRow = dragOverCell.row;
+    const startCol = dragOverCell.col;
+
+    const validShootingPositions: { row: number; col: number }[] = [];
+
+    // First, add all positions that are exactly 1 square away
+    for (
+      let row = Math.max(0, startRow - 1);
+      row <= Math.min(GRID_HEIGHT - 1, startRow + 1);
+      row++
+    ) {
+      for (
+        let col = Math.max(0, startCol - 1);
+        col <= Math.min(GRID_WIDTH - 1, startCol + 1);
+        col++
+      ) {
+        const distance = Math.abs(row - startRow) + Math.abs(col - startCol);
+        if (distance === 1) {
+          const isOccupied = game.shipPositions.some(
+            (pos) => pos.position.row === row && pos.position.col === col
+          );
+          if (!isOccupied) {
+            validShootingPositions.push({ row, col });
+          }
+        }
+      }
+    }
+
+    // Then check all positions within shooting range
+    for (
+      let row = Math.max(0, startRow - shootingRange);
+      row <= Math.min(GRID_HEIGHT - 1, startRow + shootingRange);
+      row++
+    ) {
+      for (
+        let col = Math.max(0, startCol - shootingRange);
+        col <= Math.min(GRID_WIDTH - 1, startCol + shootingRange);
+        col++
+      ) {
+        const distance = Math.abs(row - startRow) + Math.abs(col - startCol);
+        if (distance <= shootingRange && distance > 1) {
+          const isOccupied = game.shipPositions.some(
+            (pos) => pos.position.row === row && pos.position.col === col
+          );
+          if (!isOccupied) {
+            const shouldCheckLineOfSight =
+              distance > 1 &&
+              (selectedWeaponType !== "special" ||
+                (specialType !== 1 && specialType !== 2 && specialType !== 3));
+
+            if (
+              !shouldCheckLineOfSight ||
+              hasLineOfSight(startRow, startCol, row, col, blockedGrid)
+            ) {
+              validShootingPositions.push({ row, col });
+            }
+          }
+        }
+      }
+    }
+
+    return validShootingPositions;
+  }, [
+    draggedShipId,
+    dragOverCell,
+    gameShips,
+    shipMap,
+    getShipAttributes,
+    selectedWeaponType,
+    specialRange,
+    specialType,
+    game.shipPositions,
+    blockedGrid,
+    hasLineOfSight,
+  ]);
+
+  // Auto-set Flak to target all ships when Flak is first selected
+  // Use a ref to track if we've already set it for this selection
+  const flakAutoSetRef = React.useRef<{
+    shipId: bigint | null;
+    weaponType: string;
+  }>({
+    shipId: null,
+    weaponType: "weapon",
+  });
+
+  React.useEffect(() => {
+    if (
+      selectedShipId &&
+      selectedWeaponType === "special" &&
+      specialType === 3
+    ) {
+      // Only auto-set if this is a new selection (ship changed or weapon type changed to special)
+      const isNewSelection =
+        flakAutoSetRef.current.shipId !== selectedShipId ||
+        (flakAutoSetRef.current.weaponType !== "special" &&
+          selectedWeaponType === "special");
+
+      if (isNewSelection && targetShipId !== null) {
+        // Automatically set target to 0n (all ships) for Flak
+        setTargetShipId(0n);
+        flakAutoSetRef.current = {
+          shipId: selectedShipId,
+          weaponType: selectedWeaponType,
+        };
+      }
+    } else {
+      // Reset the ref when not Flak
+      flakAutoSetRef.current = {
+        shipId: selectedShipId,
+        weaponType: selectedWeaponType,
+      };
+    }
+  }, [selectedShipId, selectedWeaponType, specialType, targetShipId]);
+
   // Check if it's the current player's turn
   const isMyTurn = game.turnState.currentTurn === address;
 
@@ -1089,6 +1317,25 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     setTargetShipId(null);
     setSelectedWeaponType("weapon");
   };
+
+  // Handle Escape key to deselect ship and reset preview position
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedShipId(null);
+        setPreviewPosition(null);
+        setTargetShipId(null);
+        setSelectedWeaponType("weapon");
+        setDraggedShipId(null);
+        setDragOverCell(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   // Show loading state if game data is being fetched
   if (gameLoading) {
@@ -1493,16 +1740,30 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     <div className="flex flex-wrap gap-2">
                       {selectedWeaponType === "special" && specialType === 3 ? (
                         // Flak special - show area-of-effect button
-                        <button
-                          onClick={() => setTargetShipId(0n)}
-                          className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
-                            targetShipId === 0n
-                              ? "bg-orange-600 text-white"
-                              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                          }`}
-                        >
-                          💥 Flak All Ships ({validTargets.length} targets)
-                        </button>
+                        <>
+                          <button
+                            onClick={() => setTargetShipId(0n)}
+                            className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
+                              targetShipId === 0n
+                                ? "bg-orange-600 text-white"
+                                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                            }`}
+                          >
+                            💥 Flak All Ships ({validTargets.length} targets)
+                          </button>
+                          {previewPosition && (
+                            <button
+                              onClick={() => setTargetShipId(null)}
+                              className={`px-3 py-1 text-xs rounded font-mono transition-colors ${
+                                targetShipId === null
+                                  ? "bg-gray-500 text-white"
+                                  : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+                              }`}
+                            >
+                              Move Only Instead
+                            </button>
+                          )}
+                        </>
                       ) : selectedWeaponType === "special" &&
                         specialType === 1 ? (
                         // EMP special - show individual target buttons
@@ -1598,12 +1859,20 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           )}
                         </>
                       )}
-                      <button
-                        onClick={() => setTargetShipId(null)}
-                        className="px-3 py-1 text-xs rounded font-mono bg-gray-600 text-gray-300 hover:bg-gray-500"
-                      >
-                        {previewPosition ? "Move Only Instead" : "Stay Instead"}
-                      </button>
+                      {!(
+                        selectedWeaponType === "special" &&
+                        specialType === 3 &&
+                        previewPosition
+                      ) && (
+                        <button
+                          onClick={() => setTargetShipId(null)}
+                          className="px-3 py-1 text-xs rounded font-mono bg-gray-600 text-gray-300 hover:bg-gray-500"
+                        >
+                          {previewPosition
+                            ? "Move Only Instead"
+                            : "Stay Instead"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1615,35 +1884,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   >
                     Cancel
                   </button>
-                  <TransactionButton
-                    transactionId={`move-ship-${selectedShipId}-${game.metadata.gameId}`}
-                    contractAddress={gameContractConfig.address}
-                    abi={gameContractConfig.abi}
-                    functionName="moveShip"
-                    args={[
-                      game.metadata.gameId,
-                      selectedShipId,
-                      previewPosition
-                        ? (previewPosition.row as number)
-                        : (() => {
-                            const currentPosition = game.shipPositions.find(
-                              (pos) => pos.shipId === selectedShipId
-                            );
-                            return currentPosition
-                              ? currentPosition.position.row
-                              : 0;
-                          })(),
-                      previewPosition
-                        ? (previewPosition.col as number)
-                        : (() => {
-                            const currentPosition = game.shipPositions.find(
-                              (pos) => pos.shipId === selectedShipId
-                            );
-                            return currentPosition
-                              ? currentPosition.position.col
-                              : 0;
-                          })(),
-                      targetShipId
+                  {(() => {
+                    // Compute the actual actionType that will be submitted (same as args)
+                    const computedActionType =
+                      targetShipId !== null && targetShipId !== 0n
                         ? (() => {
                             // Check if this is an assist action (friendly ship with 0 HP)
                             const isAssistAction =
@@ -1661,194 +1905,240 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               ? ActionType.Special
                               : ActionType.Shoot;
                           })()
-                        : selectedWeaponType === "special" && specialType === 3
+                        : targetShipId === 0n &&
+                          selectedWeaponType === "special" &&
+                          specialType === 3
                         ? ActionType.Special // Flak AOE (targetShipId is 0n)
-                        : ActionType.Pass,
-                      targetShipId || 0n,
-                    ]}
-                    className="px-6 py-2 bg-green-600 text-white rounded font-mono hover:bg-green-700 transition-colors"
-                    loadingText="Submitting..."
-                    errorText="Error"
-                    onSuccess={() => {
-                      toast.success("Move submitted successfully!");
-                      setPreviewPosition(null);
-                      setSelectedShipId(null);
-                      setTargetShipId(null);
-                      setSelectedWeaponType("weapon");
-                      // Refetch both the specific game and the game list
-                      refetchGame();
-                      refetch?.();
-                    }}
-                    onError={(error) => {
-                      console.error("Error submitting move:", error);
-                      const errorMessage =
-                        (error as Error)?.message ||
-                        String(error) ||
-                        "Unknown error";
+                        : ActionType.Pass; // Stay instead (targetShipId is null) or no target
 
-                      if (
-                        errorMessage.includes("User rejected") ||
-                        errorMessage.includes("User denied")
-                      ) {
-                        toast.error("Transaction declined by user");
-                      } else if (errorMessage.includes("insufficient funds")) {
-                        toast.error("Insufficient funds for transaction");
-                      } else if (errorMessage.includes("gas")) {
-                        toast.error(
-                          "Transaction failed due to gas estimation error"
-                        );
-                      } else if (errorMessage.includes("execution reverted")) {
-                        toast.error(
-                          "Transaction reverted - check if it&apos;s your turn and ship is valid"
-                        );
-                      } else if (errorMessage.includes("NotYourTurn")) {
-                        toast.error("It&apos;s not your turn to move");
-                      } else if (errorMessage.includes("ShipNotFound")) {
-                        toast.error("Ship not found in this game");
-                      } else if (errorMessage.includes("InvalidMove")) {
-                        toast.error(
-                          "Invalid move - check ship position and movement range"
-                        );
-                      } else if (errorMessage.includes("PositionOccupied")) {
-                        toast.error("Target position is already occupied");
-                      } else {
-                        toast.error(`Transaction failed: ${errorMessage}`);
-                      }
-                    }}
-                    validateBeforeTransaction={() => {
-                      if (!selectedShipId) {
-                        return "No ship selected";
-                      }
-                      if (
-                        !game.metadata.gameId ||
-                        game.metadata.gameId === 0n
-                      ) {
-                        return "Invalid game ID";
-                      }
-                      if (!isShipOwnedByCurrentPlayer(selectedShipId)) {
-                        return "You can only move your own ships";
-                      }
-                      if (movedShipIdsSet.has(selectedShipId)) {
-                        return "This ship has already moved this round";
-                      }
+                    const computedRow = previewPosition
+                      ? previewPosition.row
+                      : (() => {
+                          const currentPosition = game.shipPositions.find(
+                            (pos) => pos.shipId === selectedShipId
+                          );
+                          return currentPosition
+                            ? currentPosition.position.row
+                            : 0;
+                        })();
+                    const computedCol = previewPosition
+                      ? previewPosition.col
+                      : (() => {
+                          const currentPosition = game.shipPositions.find(
+                            (pos) => pos.shipId === selectedShipId
+                          );
+                          return currentPosition
+                            ? currentPosition.position.col
+                            : 0;
+                        })();
+
+                    // Determine button text based on computed actionType
+                    const getButtonText = () => {
                       if (previewPosition) {
-                        if (
-                          previewPosition.row < 0 ||
-                          previewPosition.row >= GRID_HEIGHT ||
-                          previewPosition.col < 0 ||
-                          previewPosition.col >= GRID_WIDTH
-                        ) {
-                          return "Invalid position coordinates";
+                        // Moving
+                        if (computedActionType === ActionType.Assist) {
+                          return scoringGrid[computedRow] &&
+                            scoringGrid[computedRow][computedCol] > 0
+                            ? "(Move + Score + Assist)"
+                            : "(Move + Assist)";
                         }
-                      }
-                      return true;
-                    }}
-                  >
-                    Submit{" "}
-                    {previewPosition
-                      ? (() => {
-                          // Check if this is an assist action when moving
-                          const isAssistAction =
-                            targetShipId !== null &&
-                            (assistableTargets.some(
-                              (target) => target.shipId === targetShipId
-                            ) ||
-                              assistableTargetsFromStart.some(
-                                (target) => target.shipId === targetShipId
-                              ));
-
-                          if (isAssistAction) {
-                            return scoringGrid[previewPosition.row] &&
-                              scoringGrid[previewPosition.row][
-                                previewPosition.col
-                              ] > 0
-                              ? "(Move + Score + Assist)"
-                              : "(Move + Assist)";
-                          }
-
-                          // Check if flak is selected when moving
-                          if (
-                            selectedWeaponType === "special" &&
-                            specialType === 3
-                          ) {
-                            return scoringGrid[previewPosition.row] &&
-                              scoringGrid[previewPosition.row][
-                                previewPosition.col
-                              ] > 0
-                              ? "(Move + Score + Flak)"
-                              : "(Move + Flak)";
-                          }
-                          // Regular move logic
-                          return scoringGrid[previewPosition.row] &&
-                            scoringGrid[previewPosition.row][
-                              previewPosition.col
-                            ] > 0
-                            ? "(Move + Score)"
-                            : "(Move Only)";
-                        })()
-                      : targetShipId !== null
-                      ? (() => {
-                          // Check if this is an assist action
-                          const isAssistAction =
-                            assistableTargets.some(
-                              (target) => target.shipId === targetShipId
-                            ) ||
-                            assistableTargetsFromStart.some(
-                              (target) => target.shipId === targetShipId
-                            );
-                          if (isAssistAction) {
-                            return "(Assist Only)";
-                          }
-                          // Check if this is flak (targetShipId === 0n)
-                          if (
-                            targetShipId === 0n &&
-                            selectedWeaponType === "special" &&
-                            specialType === 3
-                          ) {
-                            return "(Flak)";
-                          }
-                          // Otherwise show weapon type
-                          return selectedWeaponType === "special"
-                            ? specialType === 3
-                              ? "(Flak)"
-                              : specialType === 1
-                              ? "(EMP)"
-                              : `(${
+                        if (
+                          computedActionType === ActionType.Special &&
+                          specialType === 3
+                        ) {
+                          return scoringGrid[computedRow] &&
+                            scoringGrid[computedRow][computedCol] > 0
+                            ? "(Move + Score + Flak)"
+                            : "(Move + Flak)";
+                        }
+                        if (computedActionType === ActionType.Special) {
+                          return scoringGrid[computedRow] &&
+                            scoringGrid[computedRow][computedCol] > 0
+                            ? specialType === 1
+                              ? "(Move + Score + EMP)"
+                              : `(Move + Score + ${
                                   selectedShip
                                     ? getSpecialName(
                                         selectedShip.equipment.special
                                       )
                                     : "Special"
                                 })`
-                            : "(Shoot)";
-                        })()
-                      : (() => {
-                          const currentPosition = game.shipPositions.find(
-                            (pos) => pos.shipId === selectedShipId
-                          );
-                          // Check if flak is selected when staying
+                            : specialType === 1
+                            ? "(Move + EMP)"
+                            : `(Move + ${
+                                selectedShip
+                                  ? getSpecialName(
+                                      selectedShip.equipment.special
+                                    )
+                                  : "Special"
+                              })`;
+                        }
+                        if (computedActionType === ActionType.Shoot) {
+                          return scoringGrid[computedRow] &&
+                            scoringGrid[computedRow][computedCol] > 0
+                            ? "(Move + Score + Shoot)"
+                            : "(Move + Shoot)";
+                        }
+                        // Pass (shouldn't happen with previewPosition, but handle it)
+                        return scoringGrid[computedRow] &&
+                          scoringGrid[computedRow][computedCol] > 0
+                          ? "(Move + Score)"
+                          : "(Move Only)";
+                      } else {
+                        // Not moving (staying in place)
+                        const currentPosition = game.shipPositions.find(
+                          (pos) => pos.shipId === selectedShipId
+                        );
+                        const isOnScoringTile =
+                          currentPosition &&
+                          scoringGrid[currentPosition.position.row] &&
+                          scoringGrid[currentPosition.position.row][
+                            currentPosition.position.col
+                          ] > 0;
+
+                        if (computedActionType === ActionType.Pass) {
+                          return isOnScoringTile ? "(Stay + Score)" : "(Pass)";
+                        }
+                        if (computedActionType === ActionType.Assist) {
+                          return "(Assist Only)";
+                        }
+                        if (
+                          computedActionType === ActionType.Special &&
+                          specialType === 3
+                        ) {
+                          return isOnScoringTile
+                            ? "(Stay + Score + Flak)"
+                            : "(Flak)";
+                        }
+                        if (computedActionType === ActionType.Special) {
+                          return isOnScoringTile
+                            ? specialType === 1
+                              ? "(Stay + Score + EMP)"
+                              : `(Stay + Score + ${
+                                  selectedShip
+                                    ? getSpecialName(
+                                        selectedShip.equipment.special
+                                      )
+                                    : "Special"
+                                })`
+                            : specialType === 1
+                            ? "(EMP)"
+                            : `(${
+                                selectedShip
+                                  ? getSpecialName(
+                                      selectedShip.equipment.special
+                                    )
+                                  : "Special"
+                              })`;
+                        }
+                        if (computedActionType === ActionType.Shoot) {
+                          return "(Shoot)";
+                        }
+                        return "(Pass)";
+                      }
+                    };
+
+                    return (
+                      <TransactionButton
+                        transactionId={`move-ship-${selectedShipId}-${game.metadata.gameId}`}
+                        contractAddress={gameContractConfig.address}
+                        abi={gameContractConfig.abi}
+                        functionName="moveShip"
+                        args={[
+                          game.metadata.gameId,
+                          selectedShipId,
+                          computedRow,
+                          computedCol,
+                          computedActionType,
+                          targetShipId || 0n,
+                        ]}
+                        className="px-6 py-2 bg-green-600 text-white rounded font-mono hover:bg-green-700 transition-colors"
+                        loadingText="Submitting..."
+                        errorText="Error"
+                        onSuccess={() => {
+                          toast.success("Move submitted successfully!");
+                          setPreviewPosition(null);
+                          setSelectedShipId(null);
+                          setTargetShipId(null);
+                          setSelectedWeaponType("weapon");
+                          // Refetch both the specific game and the game list
+                          refetchGame();
+                          refetch?.();
+                        }}
+                        onError={(error) => {
+                          console.error("Error submitting move:", error);
+                          const errorMessage =
+                            (error as Error)?.message ||
+                            String(error) ||
+                            "Unknown error";
+
                           if (
-                            selectedWeaponType === "special" &&
-                            specialType === 3
+                            errorMessage.includes("User rejected") ||
+                            errorMessage.includes("User denied")
                           ) {
-                            return currentPosition &&
-                              scoringGrid[currentPosition.position.row] &&
-                              scoringGrid[currentPosition.position.row][
-                                currentPosition.position.col
-                              ] > 0
-                              ? "(Stay + Score + Flak)"
-                              : "(Flak)";
+                            toast.error("Transaction declined by user");
+                          } else if (
+                            errorMessage.includes("insufficient funds")
+                          ) {
+                            toast.error("Insufficient funds for transaction");
+                          } else if (errorMessage.includes("gas")) {
+                            toast.error(
+                              "Transaction failed due to gas estimation error"
+                            );
+                          } else if (
+                            errorMessage.includes("execution reverted")
+                          ) {
+                            toast.error(
+                              "Transaction reverted - check if it&apos;s your turn and ship is valid"
+                            );
+                          } else if (errorMessage.includes("NotYourTurn")) {
+                            toast.error("It&apos;s not your turn to move");
+                          } else if (errorMessage.includes("ShipNotFound")) {
+                            toast.error("Ship not found in this game");
+                          } else if (errorMessage.includes("InvalidMove")) {
+                            toast.error(
+                              "Invalid move - check ship position and movement range"
+                            );
+                          } else if (
+                            errorMessage.includes("PositionOccupied")
+                          ) {
+                            toast.error("Target position is already occupied");
+                          } else {
+                            toast.error(`Transaction failed: ${errorMessage}`);
                           }
-                          // Regular stay logic
-                          return currentPosition &&
-                            scoringGrid[currentPosition.position.row] &&
-                            scoringGrid[currentPosition.position.row][
-                              currentPosition.position.col
-                            ] > 0
-                            ? "(Stay + Score)"
-                            : "(Pass)";
-                        })()}
-                  </TransactionButton>
+                        }}
+                        validateBeforeTransaction={() => {
+                          // Validate based on computed values (same logic as args that will be submitted)
+                          if (!selectedShipId) {
+                            return "No ship selected";
+                          }
+                          if (
+                            !game.metadata.gameId ||
+                            game.metadata.gameId === 0n
+                          ) {
+                            return "Invalid game ID";
+                          }
+                          if (!isShipOwnedByCurrentPlayer(selectedShipId)) {
+                            return "You can only move your own ships";
+                          }
+                          if (movedShipIdsSet.has(selectedShipId)) {
+                            return "This ship has already moved this round";
+                          }
+                          if (
+                            computedRow < 0 ||
+                            computedRow >= GRID_HEIGHT ||
+                            computedCol < 0 ||
+                            computedCol >= GRID_WIDTH
+                          ) {
+                            return "Invalid position coordinates";
+                          }
+                          return true;
+                        }}
+                      >
+                        Submit {getButtonText()}
+                      </TransactionButton>
+                    );
+                  })()}
                 </div>
 
                 {/* Debug: show moveShip params under the buttons */}
@@ -1878,15 +2168,18 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             (target) => target.shipId === targetShipId
                           ));
 
-                      const actionType = targetShipId
-                        ? isAssistAction
-                          ? ActionType.Assist
-                          : selectedWeaponType === "special"
-                          ? ActionType.Special
-                          : ActionType.Shoot
-                        : selectedWeaponType === "special" && specialType === 3
-                        ? ActionType.Special // Flak AOE
-                        : ActionType.Pass;
+                      const actionType =
+                        targetShipId !== null && targetShipId !== 0n
+                          ? isAssistAction
+                            ? ActionType.Assist
+                            : selectedWeaponType === "special"
+                            ? ActionType.Special
+                            : ActionType.Shoot
+                          : targetShipId === 0n &&
+                            selectedWeaponType === "special" &&
+                            specialType === 3
+                          ? ActionType.Special // Flak AOE (targetShipId is 0n)
+                          : ActionType.Pass; // Stay instead (targetShipId is null) or no target
 
                       const params = [
                         String(game.metadata.gameId),
@@ -2249,6 +2542,22 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         : undefined
                     }
                     onMouseLeave={cell ? () => setHoveredCell(null) : undefined}
+                    onDragOver={(e) => {
+                      if (draggedShipId) {
+                        e.preventDefault();
+                        setDragOverCell({ row: rowIndex, col: colIndex });
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedShipId && isMovementTile) {
+                        // Update preview position - works whether dragging from original or preview position
+                        setPreviewPosition({ row: rowIndex, col: colIndex });
+                        setTargetShipId(null);
+                        setDraggedShipId(null);
+                        setDragOverCell(null);
+                      }
+                    }}
                     {...(!cell && {
                       title: onlyOnceGrid[rowIndex][colIndex]
                         ? `Crystal Deposit: ${scoringGrid[rowIndex][colIndex]} points (only once) (${rowIndex}, ${colIndex})`
@@ -2314,6 +2623,22 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       <div className="absolute inset-0 z-2 border-2 border-orange-400 bg-orange-500/20 pointer-events-none" />
                     )}
 
+                    {/* Drag range highlight - show range from drag position */}
+                    {draggedShipId && dragOverCell && (
+                      <>
+                        {dragShootingRange.some(
+                          (pos) => pos.row === rowIndex && pos.col === colIndex
+                        ) && (
+                          <div className="absolute inset-0 z-2 border-2 border-orange-400 bg-orange-500/20 pointer-events-none" />
+                        )}
+                        {/* Green outline on the cell being dragged over */}
+                        {dragOverCell.row === rowIndex &&
+                          dragOverCell.col === colIndex && (
+                            <div className="absolute inset-0 z-3 border-4 border-green-400 bg-green-500/10 pointer-events-none" />
+                          )}
+                      </>
+                    )}
+
                     {/* Critical hull glow effect */}
                     {cell &&
                       (() => {
@@ -2324,17 +2649,114 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       )}
 
                     {cell && ship ? (
-                      <div className="w-full h-full relative z-10">
+                      <div
+                        className="w-full h-full relative z-10"
+                        draggable={
+                          isCurrentPlayerTurn &&
+                          isShipOwnedByCurrentPlayer(cell.shipId) &&
+                          !movedShipIdsSet.has(cell.shipId)
+                        }
+                        onDragStart={(e) => {
+                          if (
+                            isCurrentPlayerTurn &&
+                            isShipOwnedByCurrentPlayer(cell.shipId) &&
+                            !movedShipIdsSet.has(cell.shipId)
+                          ) {
+                            setDraggedShipId(cell.shipId);
+                            setSelectedShipId(cell.shipId);
+
+                            // If dragging from preview position, capture it and use as starting point
+                            // Otherwise start at current cell position
+                            const startPosition =
+                              cell.isPreview && previewPosition
+                                ? {
+                                    row: previewPosition.row,
+                                    col: previewPosition.col,
+                                  }
+                                : { row: rowIndex, col: colIndex };
+
+                            // Clear preview position when starting drag - enter positioning state
+                            // The preview will be replaced by the drag state
+                            setPreviewPosition(null);
+                            // Start dragOverCell at the position we're dragging from (preview or original)
+                            // This ensures ranges calculate from the correct starting position
+                            setDragOverCell(startPosition);
+                            e.dataTransfer.effectAllowed = "move";
+                            e.dataTransfer.setData(
+                              "text/plain",
+                              cell.shipId.toString()
+                            );
+
+                            // Create custom drag image that preserves ship orientation
+                            // Find the ship image element (it's inside a div with class "relative")
+                            const shipImageContainer =
+                              e.currentTarget.querySelector(
+                                ".relative img"
+                              ) as HTMLImageElement;
+                            if (
+                              shipImageContainer &&
+                              shipImageContainer.complete &&
+                              shipImageContainer.naturalWidth > 0
+                            ) {
+                              // Create a canvas to capture the ship image with its current transform
+                              const canvas = document.createElement("canvas");
+                              canvas.width = 64;
+                              canvas.height = 64;
+                              const ctx = canvas.getContext("2d");
+
+                              if (ctx) {
+                                // Apply flip transformation if needed (creator ships are flipped)
+                                if (cell.isCreator) {
+                                  ctx.translate(64, 0);
+                                  ctx.scale(-1, 1);
+                                }
+
+                                // Draw the ship image
+                                ctx.drawImage(shipImageContainer, 0, 0, 64, 64);
+
+                                // Create a temporary element for the drag image
+                                const dragImage = document.createElement("img");
+                                dragImage.src = canvas.toDataURL();
+                                dragImage.style.position = "absolute";
+                                dragImage.style.top = "-1000px";
+                                dragImage.style.width = "64px";
+                                dragImage.style.height = "64px";
+                                document.body.appendChild(dragImage);
+
+                                // Set the drag image with offset to center it
+                                e.dataTransfer.setDragImage(dragImage, 32, 32);
+
+                                // Clean up after a short delay
+                                setTimeout(() => {
+                                  if (document.body.contains(dragImage)) {
+                                    document.body.removeChild(dragImage);
+                                  }
+                                }, 0);
+                              }
+                            }
+                          }
+                        }}
+                        onDragEnd={() => {
+                          setDraggedShipId(null);
+                          setDragOverCell(null);
+                          // If we were dragging from preview position and didn't drop, keep preview
+                          // If we dropped, previewPosition will be updated in onDrop handler
+                        }}
+                      >
                         {/* Damage display for selected target or flak targets */}
                         {((isSelectedTarget &&
                           (previewPosition ||
                             selectedWeaponType === "special")) ||
                           (selectedWeaponType === "special" &&
                             specialType === 3 &&
-                            targetShipId === 0n &&
-                            validTargets.some(
-                              (target) => target.shipId === cell.shipId
-                            ))) && (
+                            (targetShipId === 0n || previewPosition) &&
+                            (draggedShipId && dragOverCell
+                              ? dragValidTargets.some(
+                                  (target) => target.shipId === cell.shipId
+                                )
+                              : validTargets.some(
+                                  (target) => target.shipId === cell.shipId
+                                )))) && (
                           <div
                             className={`absolute -top-8 left-1/2 transform -translate-x-1/2 z-20 rounded px-2 py-1 text-xs font-mono text-white whitespace-nowrap ${
                               selectedWeaponType === "special"
