@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useShipsRead } from "./useShipsContract";
 import { Ship } from "../types/types";
+import { cacheShipsData } from "./useShipDataCache";
 
 export function useOwnedShips() {
   const { address } = useAccount();
@@ -16,6 +18,16 @@ export function useOwnedShips() {
     "getShipsByIds",
     shipIdsResult.data ? [shipIdsResult.data] : undefined
   );
+
+  // Cache ship data when it's fetched
+  useEffect(() => {
+    if (shipsDataResult.data && Array.isArray(shipsDataResult.data)) {
+      const ships = shipsDataResult.data as Ship[];
+      if (ships.length > 0) {
+        cacheShipsData(ships);
+      }
+    }
+  }, [shipsDataResult.data]);
 
   // Combine loading states
   const isLoading = shipIdsResult.isLoading || shipsDataResult.isLoading;

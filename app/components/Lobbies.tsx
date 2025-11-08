@@ -15,6 +15,7 @@ import { useFleetsRead } from "../hooks/useFleetsContract";
 import { useShipsRead } from "../hooks/useShipsContract";
 import { LobbyStatus, Ship, Attributes } from "../types/types";
 import { toast } from "react-hot-toast";
+import { cacheShipsData } from "../hooks/useShipDataCache";
 import { ShipImage } from "./ShipImage";
 import ShipCard from "./ShipCard";
 import {
@@ -29,6 +30,7 @@ import { LobbyLeaveButton } from "./LobbyLeaveButton";
 import { useTransaction } from "../providers/TransactionContext";
 import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
 import { calculateShipRank, getRankColor } from "../utils/shipLevel";
+import { formatDestroyedDate } from "../utils/dateUtils";
 import { MapDisplay } from "./MapDisplay";
 
 const Lobbies: React.FC = () => {
@@ -184,6 +186,16 @@ const Lobbies: React.FC = () => {
       : undefined
   );
 
+  // Cache fleet ships data
+  React.useEffect(() => {
+    if (fleetShips && Array.isArray(fleetShips)) {
+      const ships = fleetShips as Ship[];
+      if (ships.length > 0) {
+        cacheShipsData(ships);
+      }
+    }
+  }, [fleetShips]);
+
   // Determine the player's existing fleet ID when fleet selection modal is open
   const playerFleetId = React.useMemo(() => {
     if (!selectedLobby || !address) return null;
@@ -224,9 +236,18 @@ const Lobbies: React.FC = () => {
     isLoading: playerFleetShipsLoading
   } = useShipsRead(
     "getShipsByIds",
-    playerFleetShipIds.length > 0 ? [playerFleetShipIds] : undefined,
-    { query: { enabled: playerFleetShipIds.length > 0 } }
+    playerFleetShipIds.length > 0 ? [playerFleetShipIds] : undefined
   );
+
+  // Cache player fleet ships data
+  React.useEffect(() => {
+    if (playerFleetShipsData && Array.isArray(playerFleetShipsData)) {
+      const ships = playerFleetShipsData as Ship[];
+      if (ships.length > 0) {
+        cacheShipsData(ships);
+      }
+    }
+  }, [playerFleetShipsData]);
 
   // Normalize player fleet ships
   const playerFleetShips = React.useMemo(() => {
@@ -308,6 +329,16 @@ const Lobbies: React.FC = () => {
       ? [opponentPositions.map((p) => p.shipId)]
       : undefined
   );
+
+  // Cache opponent ships data
+  React.useEffect(() => {
+    if (opponentShipsData && Array.isArray(opponentShipsData)) {
+      const ships = opponentShipsData as Ship[];
+      if (ships.length > 0) {
+        cacheShipsData(ships);
+      }
+    }
+  }, [opponentShipsData]);
   // Use existing image caching via ShipImage component; just shape into array
   const opponentShips = React.useMemo(
     () => (opponentShipsData as Ship[]) || [],
@@ -788,6 +819,16 @@ const Lobbies: React.FC = () => {
       ? [opponentGridPositionsFromHook.map((p) => p.shipId)]
       : undefined
   );
+
+  // Cache opponent grid ships data
+  React.useEffect(() => {
+    if (opponentGridShipsData && Array.isArray(opponentGridShipsData)) {
+      const ships = opponentGridShipsData as Ship[];
+      if (ships.length > 0) {
+        cacheShipsData(ships);
+      }
+    }
+  }, [opponentGridShipsData]);
 
   // Opponent attributes (grid preview)
   const opponentGridShipIds = React.useMemo(
@@ -2555,7 +2596,7 @@ const Lobbies: React.FC = () => {
                         ) : (
                           <div className="text-center text-yellow-400 text-sm">
                             {shipData.shipData?.timestampDestroyed > 0n
-                              ? "DESTROYED"
+                              ? `DESTROYED ${formatDestroyedDate(shipData.shipData.timestampDestroyed)}`
                               : "UNDER CONSTRUCTION"}
                           </div>
                         )}

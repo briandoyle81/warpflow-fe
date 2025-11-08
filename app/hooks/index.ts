@@ -29,7 +29,7 @@ export { useNavyOptimization } from "./useNavyOptimization";
 export { useShipPurchasing } from "./useShipPurchasing";
 export { useFreeShipClaiming } from "./useFreeShipClaiming";
 
-// Ship Image Caching
+// Ship Image Caching (legacy - kept for backward compatibility)
 export {
   useShipImageCache,
   clearShipImageCache,
@@ -47,6 +47,27 @@ export {
   getUseLocalRendering,
   setUseLocalRendering,
 } from "./useShipImageCache";
+
+// Ship Renderer (new - uses local rendering with ship data cache)
+export {
+  useShipRenderer,
+  getCachedShipData,
+  cacheShipData,
+  clearShipDataCache,
+  clearAllShipDataCache,
+  getShipDataCacheStats,
+  cacheShipsData,
+} from "./useShipRenderer";
+
+// Ship Data Cache (direct access)
+export {
+  getCachedShipData as getCachedShipDataDirect,
+  cacheShipData as cacheShipDataDirect,
+  clearShipDataCache as clearShipDataCacheDirect,
+  clearAllShipDataCache as clearAllShipDataCacheDirect,
+  getShipDataCacheStats as getShipDataCacheStatsDirect,
+  cacheShipsData as cacheShipsDataDirect,
+} from "./useShipDataCache";
 
 // Types
 export type { ShipsReadFunction, ShipsWriteFunction } from "./useShipsContract";

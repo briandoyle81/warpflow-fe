@@ -27,27 +27,80 @@ const SVG_END = "</svg>";
  * @returns Data URI string (data:image/svg+xml;base64,...)
  */
 export function renderShip(ship: Ship): string {
-  // Return appropriate image URI based on ship state
-  if (ship.shipData.timestampDestroyed > BigInt(0)) {
-    return DESTROYED_IMAGE;
-  } else if (!ship.shipData.constructed) {
-    return UNCONSTRUCTED_IMAGE;
+  try {
+    // Return appropriate image URI based on ship state
+    if (ship.shipData.timestampDestroyed > BigInt(0)) {
+      return DESTROYED_IMAGE;
+    } else if (!ship.shipData.constructed) {
+      return UNCONSTRUCTED_IMAGE;
+    }
+
+    // Validate ship structure
+    if (!ship.equipment || !ship.traits || !ship.shipData) {
+      console.error("Invalid ship structure:", ship);
+      throw new Error("Ship missing required properties (equipment, traits, or shipData)");
+    }
+
+    // For constructed and non-destroyed ships, render the SVG
+    let svg = BASE_SVG;
+
+    // Call each renderer in sequence from bottom to top
+    try {
+      svg += renderSpecial(ship); // Special effects (bottom)
+    } catch (error) {
+      console.error("Error in renderSpecial:", error);
+      throw error;
+    }
+
+    try {
+      svg += renderAft(ship); // Aft section
+    } catch (error) {
+      console.error("Error in renderAft:", error);
+      throw error;
+    }
+
+    try {
+      svg += renderWeapon(ship); // Weapons
+    } catch (error) {
+      console.error("Error in renderWeapon:", error);
+      throw error;
+    }
+
+    try {
+      svg += renderBody(ship); // Body
+    } catch (error) {
+      console.error("Error in renderBody:", error);
+      throw error;
+    }
+
+    try {
+      svg += renderFore(ship); // Fore section (top)
+    } catch (error) {
+      console.error("Error in renderFore:", error);
+      throw error;
+    }
+
+    // Close the SVG
+    svg += SVG_END;
+
+    // Validate SVG before encoding
+    if (!svg || svg.length === 0) {
+      throw new Error("Generated SVG is empty");
+    }
+
+    // Convert SVG to base64 data URI
+    // Use simple btoa encoding (SVG should be ASCII-compatible)
+    try {
+      const base64Svg = btoa(svg);
+      return `data:image/svg+xml;base64,${base64Svg}`;
+    } catch (encodingError) {
+      console.error("Error encoding SVG to base64:", encodingError);
+      // Fallback: use data URI without base64 (less efficient but should work)
+      const encodedSvg = encodeURIComponent(svg);
+      return `data:image/svg+xml,${encodedSvg}`;
+    }
+  } catch (error) {
+    console.error("Error rendering ship:", error, ship);
+    throw error;
   }
-
-  // For constructed and non-destroyed ships, render the SVG
-  let svg = BASE_SVG;
-
-  // Call each renderer in sequence from bottom to top
-  svg += renderSpecial(ship); // Special effects (bottom)
-  svg += renderAft(ship); // Aft section
-  svg += renderWeapon(ship); // Weapons
-  svg += renderBody(ship); // Body
-  svg += renderFore(ship); // Fore section (top)
-
-  // Close the SVG
-  svg += SVG_END;
-
-  // Convert SVG to base64 data URI
-  const base64Svg = btoa(svg);
-  return `data:image/svg+xml;base64,${base64Svg}`;
 }

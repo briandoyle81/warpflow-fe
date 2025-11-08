@@ -1,5 +1,5 @@
 import React from "react";
-import { useShipImageCache } from "../hooks/useShipImageCache";
+import { useShipRenderer } from "../hooks/useShipRenderer";
 import { Ship } from "../types/types";
 
 // Debug flag - set to false to disable console logs
@@ -23,7 +23,7 @@ export function ShipImage({
   className = "",
   showLoadingState = true,
 }: ShipImageProps) {
-  const { dataUrl, isLoading, error, renderKey } = useShipImageCache(ship);
+  const { dataUrl, isLoading, error, renderKey } = useShipRenderer(ship);
 
   // Debug logging
   debugLog(
@@ -38,7 +38,7 @@ export function ShipImage({
   );
 
   // Check ship state
-  const isDestroyed = ship.shipData.timestampDestroyed > 0n;
+  const isDestroyed = ship.shipData.timestampDestroyed > BigInt(0);
   const isNotConstructed = !ship.shipData.constructed;
 
   // Handle destroyed ships

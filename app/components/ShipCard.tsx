@@ -10,6 +10,7 @@ import {
   getShieldName,
 } from "../types/types";
 import { calculateShipRank, getRankColor } from "../utils/shipLevel";
+import { formatDestroyedDate } from "../utils/dateUtils";
 import { Attributes } from "../types/types";
 
 interface ShipCardProps {
@@ -385,7 +386,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                           }`}
                         >
                           {ship.shipData.timestampDestroyed > 0n
-                            ? "DESTROYED"
+                            ? `DESTROYED ${formatDestroyedDate(ship.shipData.timestampDestroyed)}`
                             : hasMoved
                             ? "MOVED"
                             : gameViewMode || tooltipMode
@@ -459,7 +460,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                       }`}
                     >
                       {ship.shipData.timestampDestroyed > 0n
-                        ? "DESTROYED"
+                        ? `DESTROYED ${formatDestroyedDate(ship.shipData.timestampDestroyed)}`
                         : hasMoved
                         ? "MOVED"
                         : gameViewMode || tooltipMode
