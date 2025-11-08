@@ -48,6 +48,18 @@ export default function Home() {
     }
   }, [isOwner]);
 
+  // Listen for navigation events from Lobbies component
+  useEffect(() => {
+    const handleNavigateToGames = () => {
+      setActiveTab("Games");
+    };
+
+    window.addEventListener("warpflow-navigate-to-games", handleNavigateToGames);
+    return () => {
+      window.removeEventListener("warpflow-navigate-to-games", handleNavigateToGames);
+    };
+  }, []);
+
   // Save tab to localStorage whenever it changes (only after hydration)
   useEffect(() => {
     if (isHydrated) {

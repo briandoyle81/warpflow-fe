@@ -32,6 +32,7 @@ import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
 import { calculateShipRank, getRankColor } from "../utils/shipLevel";
 import { formatDestroyedDate } from "../utils/dateUtils";
 import { MapDisplay } from "./MapDisplay";
+import { usePlayerGames } from "../hooks/usePlayerGames";
 
 const Lobbies: React.FC = () => {
   const { address, isConnected, status } = useAccount();
@@ -51,6 +52,7 @@ const Lobbies: React.FC = () => {
   } = useLobbies();
 
   const { ships, isLoading: shipsLoading } = useOwnedShips();
+  const { games: playerGames, refetch: refetchGames } = usePlayerGames();
 
   // Check if wallet is connecting
   const isConnecting = status === "connecting" || status === "reconnecting";
@@ -544,6 +546,40 @@ const Lobbies: React.FC = () => {
     setDragOverPosition(null);
   };
 
+  // Function to navigate to game
+  const navigateToGame = useCallback((lobbyId: bigint) => {
+    const findAndNavigate = () => {
+      // Refetch games to get the latest data
+      refetchGames().then(() => {
+        // Wait a moment for state to update, then check games
+        setTimeout(() => {
+          // Get fresh games from the hook
+          const game = playerGames.find((g) => g.metadata.lobbyId === lobbyId);
+          if (game) {
+            // Set selected game in localStorage
+            const storageKey = `selectedGameId-${address || "anonymous"}`;
+            localStorage.setItem(storageKey, game.metadata.gameId.toString());
+
+            // Set view mode to detail
+            const viewModeKey = `gamesViewMode-${address || "anonymous"}`;
+            localStorage.setItem(viewModeKey, "detail");
+
+            // Navigate to Games tab
+            localStorage.setItem("warpflow-active-tab", "Games");
+
+            // Trigger a custom event to notify page.tsx to switch tabs
+            window.dispatchEvent(new CustomEvent("warpflow-navigate-to-games"));
+          } else {
+            // Game not found yet, try again after a delay
+            setTimeout(findAndNavigate, 2000);
+          }
+        }, 500);
+      });
+    };
+
+    findAndNavigate();
+  }, [playerGames, address, refetchGames]);
+
   // Create a map of ship ID to attributes for quick lookup
   const attributesMap = React.useMemo(() => {
     const map = new Map<bigint, (typeof shipAttributes)[0]>();
@@ -788,6 +824,25 @@ const Lobbies: React.FC = () => {
       setSelectedShipId(null);
       toast.success("Fleet created successfully!");
       setShowFleetConfirmation(false);
+
+      // Check if both fleets are now selected - if so, navigate to game
+      // Wait a moment for the transaction to be processed
+      setTimeout(() => {
+        loadLobbies();
+        setTimeout(() => {
+          const currentLobby = lobbyList.lobbies.find(
+            (lobby) => lobby.basic.id === lobbyId
+          );
+          if (
+            currentLobby &&
+            currentLobby.players.creatorFleetId > 0n &&
+            currentLobby.players.joinerFleetId > 0n
+          ) {
+            // Both fleets selected - navigate to game
+            navigateToGame(lobbyId);
+          }
+        }, 2000);
+      }, 1000);
     } catch (error) {
       console.error("Failed to create fleet:", error);
     } finally {
@@ -1536,10 +1591,23 @@ const Lobbies: React.FC = () => {
               {/* Show action buttons for creator */}
               {lobby.basic.creator === address && (
                 <div className="flex flex-col sm:flex-row gap-2">
+                  {/* Go to Game button - show when both fleets are selected */}
+                  {lobby.players.creatorFleetId > 0n &&
+                    lobby.players.joinerFleetId > 0n && (
+                      <button
+                        onClick={() => navigateToGame(lobby.basic.id)}
+                        disabled={transactionState.isPending}
+                        className="flex-1 px-4 py-2 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        GO TO GAME
+                      </button>
+                    )}
+
                   {/* Fleet selection button - only show if no fleet selected AND joiner has joined */}
                   {lobby.players.creatorFleetId === 0n &&
                     lobby.players.joiner !==
-                      "0x0000000000000000000000000000000000000000" && (
+                      "0x0000000000000000000000000000000000000000" &&
+                    lobby.players.joinerFleetId === 0n && (
                       <button
                         onClick={() => setSelectedLobby(lobby.basic.id)}
                         disabled={transactionState.isPending}
@@ -1549,16 +1617,17 @@ const Lobbies: React.FC = () => {
                       </button>
                     )}
 
-                  {/* View Fleet Selection button - show if fleet is selected */}
-                  {lobby.players.creatorFleetId > 0n && (
-                    <button
-                      onClick={() => setSelectedLobby(lobby.basic.id)}
-                      disabled={transactionState.isPending}
-                      className="flex-1 px-4 py-2 rounded-lg border border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      VIEW FLEET SELECTION
-                    </button>
-                  )}
+                  {/* View Fleet Selection button - show if fleet is selected but other player hasn't */}
+                  {lobby.players.creatorFleetId > 0n &&
+                    lobby.players.joinerFleetId === 0n && (
+                      <button
+                        onClick={() => setSelectedLobby(lobby.basic.id)}
+                        disabled={transactionState.isPending}
+                        className="flex-1 px-4 py-2 rounded-lg border border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        VIEW FLEET SELECTION
+                      </button>
+                    )}
 
                   {/* Show waiting message if no joiner has joined yet */}
                   {lobby.players.creatorFleetId === 0n &&
