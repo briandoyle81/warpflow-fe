@@ -31,6 +31,9 @@ interface MapDisplayProps {
   allowSelection?: boolean;
   selectableShipIds?: bigint[]; // which ships are allowed to be selected
   flippedShipIds?: bigint[]; // specific ships to flip horizontally
+  onDragOver?: (row: number, col: number, e: React.DragEvent) => void;
+  onDrop?: (row: number, col: number, e?: React.DragEvent) => void;
+  dragOverPosition?: { row: number; col: number } | null;
 }
 
 export function MapDisplay({
@@ -48,6 +51,9 @@ export function MapDisplay({
   allowSelection = true,
   selectableShipIds,
   flippedShipIds = [],
+  onDragOver,
+  onDrop,
+  dragOverPosition = null,
 }: MapDisplayProps) {
   // Only fetch map data if mapId is valid
   const { data: blockedPositions } = useGetPresetMap(mapId);
@@ -382,14 +388,39 @@ export function MapDisplay({
 
           {Array.from({ length: GRID_DIMENSIONS.HEIGHT }, (_, row) => (
             <div key={`row-${row}`} className="contents">
-              {Array.from({ length: GRID_DIMENSIONS.WIDTH }, (_, col) => (
+              {Array.from({ length: GRID_DIMENSIONS.WIDTH }, (_, col) => {
+                const ship = getShipAtPosition(row, col);
+                const isDragOver = dragOverPosition?.row === row && dragOverPosition?.col === col;
+                const isShipDraggable = ship && allowSelection && selectableShipIds?.some((id) => id === ship.id);
+
+                return (
                 <div
                   key={`${row}-${col}`}
-                  className={getTileClass(row, col)}
+                  className={`${getTileClass(row, col)} ${isDragOver ? "ring-2 ring-cyan-400 ring-inset" : ""} ${isShipDraggable ? "cursor-move" : ""}`}
                   onClick={() => handleCellClick(row, col)}
                   onMouseEnter={(e) => handleCellEnter(row, col, e)}
                   onMouseMove={(e) => handleCellMove(row, col, e)}
                   onMouseLeave={handleCellLeave}
+                  onDragOver={(e) => {
+                    if (onDragOver && isValidShipPosition(row, col)) {
+                      onDragOver(row, col, e);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (onDrop && isValidShipPosition(row, col)) {
+                      onDrop(row, col, e);
+                    }
+                  }}
+                  draggable={isShipDraggable}
+                  onDragStart={(e) => {
+                    if (isShipDraggable && ship && "id" in ship) {
+                      e.dataTransfer.effectAllowed = "move";
+                      // Store ship ID in data transfer
+                      e.dataTransfer.setData("text/plain", ship.id.toString());
+                      // Note: Parent component will read from dataTransfer in onDrop
+                    }
+                  }}
                 >
                   {/* Score value display */}
                   {mapState.scoringTiles[row][col] > 0 && (
@@ -428,7 +459,8 @@ export function MapDisplay({
                     );
                   })()}
                 </div>
-              ))}
+                );
+              })}
             </div>
           ))}
 

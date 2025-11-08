@@ -77,6 +77,10 @@ const Lobbies: React.FC = () => {
   const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
   const [showFleetConfirmation, setShowFleetConfirmation] = useState(false);
 
+  // Drag and drop state
+  const [draggedShipId, setDraggedShipId] = useState<bigint | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<{ row: number; col: number } | null>(null);
+
   // Track if component has mounted (client-side only)
   const [isMounted, setIsMounted] = useState(false);
 
@@ -368,6 +372,11 @@ const Lobbies: React.FC = () => {
 
   // Get ship attributes for in-game properties
   const shipIds = React.useMemo(() => ships.map((ship) => ship.id), [ships]);
+  const {
+    attributes: shipAttributes,
+    isLoading: attributesLoading,
+    isFromCache,
+  } = useShipAttributesByIds(shipIds);
 
   // Helper function to find next available position for a ship
   const findNextPosition = (
@@ -445,7 +454,36 @@ const Lobbies: React.FC = () => {
   const handleShipMove = (shipId: bigint, row: number, col: number) => {
     // Check if the ship is already in the fleet
     if (!selectedShips.includes(shipId)) {
-      return; // Ship not in fleet, can't move
+      // Ship not in fleet - try to add it
+      const currentLobby = lobbyList.lobbies.find(
+        (lobby) => lobby.basic.id === selectedLobby
+      );
+      if (!currentLobby) return;
+
+      const isCreator = currentLobby.basic.creator === address;
+
+      // Check if position is valid for this player
+      const isValidPosition = isCreator
+        ? (row >= 0 && row < 13 && col >= 0 && col < 25)
+        : (row >= 0 && row < 13 && col >= 0 && col < 25);
+
+      if (!isValidPosition) return;
+
+      // Check if position is already occupied
+      const existingPosition = shipPositions.find(
+        (pos) => pos.row === row && pos.col === col
+      );
+      if (existingPosition) {
+        return; // Position already occupied
+      }
+
+      // Add ship to fleet at this position
+      setSelectedShips((prev) => [...prev, shipId]);
+      setShipPositions((prev) => [
+        ...prev,
+        { shipId, row, col },
+      ]);
+      return;
     }
 
     // Check if position is already occupied
@@ -464,11 +502,47 @@ const Lobbies: React.FC = () => {
     // Clear selection after moving
     setSelectedShipId(null);
   };
-  const {
-    attributes: shipAttributes,
-    isLoading: attributesLoading,
-    isFromCache,
-  } = useShipAttributesByIds(shipIds);
+
+  // Drag and drop handlers
+  const handleDragStart = (shipId: bigint) => {
+    setDraggedShipId(shipId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedShipId(null);
+    setDragOverPosition(null);
+  };
+
+  const handleDragOver = (row: number, col: number, e: React.DragEvent) => {
+    e.preventDefault(); // Allow drop
+    setDragOverPosition({ row, col });
+  };
+
+  const handleDrop = (row: number, col: number, e?: React.DragEvent) => {
+    // Try to get ship ID from draggedShipId state first (from ship list)
+    let shipIdToMove = draggedShipId;
+
+    // If not in state, try to get from dataTransfer (from grid drag)
+    if (!shipIdToMove && e) {
+      const data = e.dataTransfer.getData("text/plain");
+      if (data) {
+        try {
+          shipIdToMove = BigInt(data);
+        } catch (error) {
+          console.error("Failed to parse ship ID from drag data:", error);
+        }
+      }
+    }
+
+    if (!shipIdToMove) return;
+
+    // Use handleShipMove to handle the drop
+    handleShipMove(shipIdToMove, row, col);
+
+    // Clear drag state
+    setDraggedShipId(null);
+    setDragOverPosition(null);
+  };
 
   // Create a map of ship ID to attributes for quick lookup
   const attributesMap = React.useMemo(() => {
@@ -2183,30 +2257,42 @@ const Lobbies: React.FC = () => {
                                 };
 
                                 return (
-                                  <ShipCard
+                                  <div
                                     key={ship.id.toString()}
-                                    ship={ship}
-                                    isStarred={false}
-                                    onToggleStar={() => {}}
-                                    isSelected={selectedShips.includes(ship.id)}
-                                    onToggleSelection={() => {
+                                    draggable={canSelect}
+                                    onDragStart={(e) => {
                                       if (canSelect) {
-                                        handleCardClick();
+                                        handleDragStart(ship.id);
+                                        e.dataTransfer.effectAllowed = "move";
                                       }
                                     }}
-                                    onRecycleClick={() => {}}
-                                    showInGameProperties={showInGameProperties}
-                                    inGameAttributes={attributesMap.get(
-                                      ship.id
-                                    )}
-                                    attributesLoading={attributesLoading}
-                                    selectionMode={true}
-                                    hideRecycle={true}
-                                    hideCheckbox={true}
-                                    onCardClick={handleCardClick}
-                                    canSelect={canSelect}
-                                    flipShip={isCreator}
-                                  />
+                                    onDragEnd={handleDragEnd}
+                                    className={canSelect ? "cursor-move" : ""}
+                                  >
+                                    <ShipCard
+                                      ship={ship}
+                                      isStarred={false}
+                                      onToggleStar={() => {}}
+                                      isSelected={selectedShips.includes(ship.id)}
+                                      onToggleSelection={() => {
+                                        if (canSelect) {
+                                          handleCardClick();
+                                        }
+                                      }}
+                                      onRecycleClick={() => {}}
+                                      showInGameProperties={showInGameProperties}
+                                      inGameAttributes={attributesMap.get(
+                                        ship.id
+                                      )}
+                                      attributesLoading={attributesLoading}
+                                      selectionMode={true}
+                                      hideRecycle={true}
+                                      hideCheckbox={true}
+                                      onCardClick={handleCardClick}
+                                      canSelect={canSelect}
+                                      flipShip={isCreator}
+                                    />
+                                  </div>
                                 );
                               })}
                           </div>
@@ -2259,6 +2345,9 @@ const Lobbies: React.FC = () => {
                               }
                               selectableShipIds={selectableShipIds}
                               flippedShipIds={flippedShipIds as bigint[]}
+                              onDragOver={handleDragOver}
+                              onDrop={handleDrop}
+                              dragOverPosition={dragOverPosition}
                             />
                           )}
                         </div>
@@ -2312,6 +2401,9 @@ const Lobbies: React.FC = () => {
                               }
                               selectableShipIds={selectableShipIds}
                               flippedShipIds={flippedShipIds as bigint[]}
+                              onDragOver={handleDragOver}
+                              onDrop={handleDrop}
+                              dragOverPosition={dragOverPosition}
                             />
                           )}
                         </div>
@@ -2347,30 +2439,42 @@ const Lobbies: React.FC = () => {
                                 };
 
                                 return (
-                                  <ShipCard
+                                  <div
                                     key={ship.id.toString()}
-                                    ship={ship}
-                                    isStarred={false}
-                                    onToggleStar={() => {}}
-                                    isSelected={selectedShips.includes(ship.id)}
-                                    onToggleSelection={() => {
+                                    draggable={canSelect}
+                                    onDragStart={(e) => {
                                       if (canSelect) {
-                                        handleCardClick();
+                                        handleDragStart(ship.id);
+                                        e.dataTransfer.effectAllowed = "move";
                                       }
                                     }}
-                                    onRecycleClick={() => {}}
-                                    showInGameProperties={showInGameProperties}
-                                    inGameAttributes={attributesMap.get(
-                                      ship.id
-                                    )}
-                                    attributesLoading={attributesLoading}
-                                    selectionMode={true}
-                                    hideRecycle={true}
-                                    hideCheckbox={true}
-                                    onCardClick={handleCardClick}
-                                    canSelect={canSelect}
-                                    flipShip={isCreator}
-                                  />
+                                    onDragEnd={handleDragEnd}
+                                    className={canSelect ? "cursor-move" : ""}
+                                  >
+                                    <ShipCard
+                                      ship={ship}
+                                      isStarred={false}
+                                      onToggleStar={() => {}}
+                                      isSelected={selectedShips.includes(ship.id)}
+                                      onToggleSelection={() => {
+                                        if (canSelect) {
+                                          handleCardClick();
+                                        }
+                                      }}
+                                      onRecycleClick={() => {}}
+                                      showInGameProperties={showInGameProperties}
+                                      inGameAttributes={attributesMap.get(
+                                        ship.id
+                                      )}
+                                      attributesLoading={attributesLoading}
+                                      selectionMode={true}
+                                      hideRecycle={true}
+                                      hideCheckbox={true}
+                                      onCardClick={handleCardClick}
+                                      canSelect={canSelect}
+                                      flipShip={isCreator}
+                                    />
+                                  </div>
                                 );
                               })}
                           </div>
