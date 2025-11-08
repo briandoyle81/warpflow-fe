@@ -27,6 +27,7 @@ interface TransactionButtonProps {
   // Callbacks
   onSuccess?: () => void;
   onError?: (error: Error) => void;
+  onTransactionSent?: (hash: `0x${string}`) => void; // Called when transaction is sent (hash available)
 
   // Validation
   validateBeforeTransaction?: () => boolean | string; // Return true or error message
@@ -46,6 +47,7 @@ export function TransactionButton({
   errorText = "Error",
   onSuccess,
   onError,
+  onTransactionSent,
   validateBeforeTransaction,
 }: TransactionButtonProps) {
   const { writeContract, isPending, error, data: hash } = useWriteContract();
@@ -85,6 +87,9 @@ export function TransactionButton({
 
   // Local state to track if we should consider the transaction as pending
   const [isLocallyPending, setIsLocallyPending] = React.useState(false);
+
+  // Track if we've already called onTransactionSent for this hash
+  const transactionSentHashRef = React.useRef<`0x${string}` | null>(null);
 
   React.useEffect(() => {
     if (
@@ -155,8 +160,8 @@ export function TransactionButton({
         value,
       });
 
-      // Transaction was submitted successfully
-      // Note: We'll handle completion in a useEffect when isPending changes
+      // Note: The hash will be available in the hash variable from useWriteContract
+      // We'll trigger onTransactionSent in a useEffect when hash becomes available
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       setIsLocallyPending(false); // Reset local pending state on error
@@ -221,6 +226,29 @@ export function TransactionButton({
       setIsLocallyPending(false);
     }
   }, [transactionState.activeTransactionId, transactionState.isPending]);
+
+  // Trigger onTransactionSent when hash becomes available (transaction sent, before receipt)
+  React.useEffect(() => {
+    if (
+      hash &&
+      isActiveTransaction &&
+      onTransactionSent &&
+      !isConfirmed &&
+      !isConfirming &&
+      transactionSentHashRef.current !== hash
+    ) {
+      // Hash is available - transaction was sent by wallet, but receipt not yet confirmed
+      transactionSentHashRef.current = hash;
+      onTransactionSent(hash);
+    }
+  }, [hash, isActiveTransaction, onTransactionSent, isConfirmed, isConfirming]);
+
+  // Reset the ref when transaction changes
+  React.useEffect(() => {
+    if (!isActiveTransaction) {
+      transactionSentHashRef.current = null;
+    }
+  }, [isActiveTransaction]);
 
   // Determine button state
   const isDisabled =

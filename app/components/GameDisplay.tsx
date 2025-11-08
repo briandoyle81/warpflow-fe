@@ -46,6 +46,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 }) => {
   // Debug mode toggle
   const [showDebug, setShowDebug] = React.useState(false);
+  // Tooltip disable toggle
+  const [disableTooltips, setDisableTooltips] = React.useState(false);
   const { address } = useAccount();
   const { clearAllTransactions } = useTransaction();
   const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
@@ -72,6 +74,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     row: number;
     col: number;
   } | null>(null);
+
+  // Ref for grid container to calculate accurate cell positions
+  const gridContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Fetch the current game data to get real-time updates
   const {
@@ -1289,16 +1294,19 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Clear any pending transaction state when turn changes
   React.useEffect(() => {
-    // Clear any stale transaction state when turn changes from opponent to player
-    if (isMyTurn && address && prevTurnRef.current === false) {
-      // Clear any pending transaction state that might be blocking the submit button
+    // Clear any stale transaction state when it becomes the player's turn
+    if (isMyTurn && address) {
+      // Always clear transaction state when it's the player's turn
+      // This ensures the submit button is enabled even if there was a pending transaction
       clearAllTransactions();
 
-      // Reset move-related state to ensure clean slate
-      setPreviewPosition(null);
-      setSelectedShipId(null);
-      setTargetShipId(null);
-      setSelectedWeaponType("weapon");
+      // Reset move-related state to ensure clean slate (only when transitioning from opponent)
+      if (prevTurnRef.current === false) {
+        setPreviewPosition(null);
+        setSelectedShipId(null);
+        setTargetShipId(null);
+        setSelectedWeaponType("weapon");
+      }
     }
   }, [isMyTurn, address, clearAllTransactions]);
 
@@ -1441,6 +1449,18 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   game.metadata.joiner === address;
                 const canSeizeTurn =
                   !isMyTurn && isParticipant && turnSecondsLeft <= 0;
+                const hasExceededTime =
+                  isMyTurn && isParticipant && turnSecondsLeft <= 0;
+
+                if (hasExceededTime) {
+                  return (
+                    <div className="text-sm">
+                      <span className="text-red-500 font-mono font-bold">
+                        Time Exceeded
+                      </span>
+                    </div>
+                  );
+                }
 
                 if (canSeizeTurn) {
                   return (
@@ -2056,11 +2076,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         loadingText="Submitting..."
                         errorText="Error"
                         onSuccess={() => {
-                          toast.success("Move submitted successfully!");
+                          // Deselect ship after transaction receipt is received
                           setPreviewPosition(null);
                           setSelectedShipId(null);
                           setTargetShipId(null);
                           setSelectedWeaponType("weapon");
+                          toast.success("Move submitted successfully!");
                           // Refetch both the specific game and the game list
                           refetchGame();
                           refetch?.();
@@ -2210,15 +2231,27 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         {/* Debug buttons and Emergency Flee */}
         <div className="flex items-center space-x-4">
           {/* Debug Toggle */}
-          <label className="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showDebug}
-              onChange={(e) => setShowDebug(e.target.checked)}
-              className="rounded"
-            />
-            <span>Show Debug</span>
-          </label>
+          <div className="flex flex-col space-y-2">
+            <label className="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showDebug}
+                onChange={(e) => setShowDebug(e.target.checked)}
+                className="rounded"
+              />
+              <span>Show Debug</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={disableTooltips}
+                onChange={(e) => setDisableTooltips(e.target.checked)}
+                className="rounded"
+              />
+              <span>Disable Tooltips</span>
+            </label>
+          </div>
 
           {/* Emergency Flee Safety Switch */}
           {game.metadata.winner ===
@@ -2269,6 +2302,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         {/* Map Grid */}
         <div className="w-full px-2">
           <div
+            ref={gridContainerRef}
             key="game-grid"
             className="grid gap-0 border border-gray-900 grid-cols-[repeat(25,1fr)] grid-rows-[repeat(13,1fr)] w-full"
           >
@@ -2769,9 +2803,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             {(() => {
                               const damage = calculateDamage(
                                 cell.shipId,
-                                "special",
-                                true
-                              ); // Show reduced damage for flak display
+                                selectedWeaponType,
+                                selectedWeaponType === "special" &&
+                                  specialType === 3
+                                  ? true
+                                  : undefined
+                              ); // Use actual weapon type, show reduced damage for flak display
                               if (selectedWeaponType === "special") {
                                 // Flak does damage, other special abilities repair/heal
                                 if (specialType === 3) {
@@ -2954,27 +2991,169 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
         {/* Ship Tooltip */}
         {hoveredCell &&
+          !disableTooltips &&
+          !draggedShipId &&
           (() => {
             const ship = shipMap.get(hoveredCell.shipId);
             const attributes = getShipAttributes(hoveredCell.shipId);
             if (!ship) return null;
 
+            // Calculate tooltip position to avoid covering the ship
+            // Tooltip is 320px wide (w-80 = 20rem = 320px) and approximately 400px tall
+            const tooltipWidth = 320;
+            const tooltipHeight = 400;
+            const offset = 15;
+
+            // Get ship cell position using grid container ref
+            let shipCellLeft = 0;
+            let shipCellTop = 0;
+            let shipCellRight = 64;
+            let shipCellBottom = 64;
+
+            if (gridContainerRef.current) {
+              const gridRect = gridContainerRef.current.getBoundingClientRect();
+              const cellWidth = gridRect.width / 25; // 25 columns
+              const cellHeight = gridRect.height / 13; // 13 rows
+
+              shipCellLeft = gridRect.left + hoveredCell.col * cellWidth;
+              shipCellTop = gridRect.top + hoveredCell.row * cellHeight;
+              shipCellRight = shipCellLeft + cellWidth;
+              shipCellBottom = shipCellTop + cellHeight;
+            } else {
+              // Fallback: estimate based on typical cell size
+              const cellSize = 64;
+              shipCellLeft = hoveredCell.col * cellSize;
+              shipCellTop = hoveredCell.row * cellSize;
+              shipCellRight = shipCellLeft + cellSize;
+              shipCellBottom = shipCellTop + cellSize;
+            }
+
+            // Calculate tooltip position
+            let tooltipLeft = hoveredCell.mouseX + offset;
+            let tooltipTop = hoveredCell.mouseY + offset;
+
+            // Check if tooltip would cover the ship horizontally
+            const tooltipRight = tooltipLeft + tooltipWidth;
+            const wouldCoverHorizontally =
+              tooltipLeft < shipCellRight && tooltipRight > shipCellLeft;
+
+            // Check if tooltip would cover the ship vertically
+            const tooltipBottom = tooltipTop + tooltipHeight;
+            const wouldCoverVertically =
+              tooltipTop < shipCellBottom && tooltipBottom > shipCellTop;
+
+            // If tooltip would cover ship, adjust position
+            // Prefer left for creator ships, right for joiner ships
+            const isCreatorShip = hoveredCell.isCreator;
+
+            if (wouldCoverHorizontally && wouldCoverVertically) {
+              // Try positioning based on ship type preference
+              if (isCreatorShip) {
+                // Creator ships: prefer left
+                if (shipCellLeft - tooltipWidth - offset > 0) {
+                  tooltipLeft = shipCellLeft - tooltipWidth - offset;
+                }
+                // Fallback to right
+                else if (
+                  shipCellRight + tooltipWidth + offset <
+                  (typeof window !== "undefined" ? window.innerWidth : 1000)
+                ) {
+                  tooltipLeft = shipCellRight + offset;
+                }
+                // Fallback to above
+                else if (shipCellTop - tooltipHeight - offset > 0) {
+                  tooltipTop = shipCellTop - tooltipHeight - offset;
+                  tooltipLeft = hoveredCell.mouseX;
+                }
+                // Fallback to below
+                else if (
+                  shipCellBottom + tooltipHeight + offset <
+                  (typeof window !== "undefined" ? window.innerHeight : 1000)
+                ) {
+                  tooltipTop = shipCellBottom + offset;
+                  tooltipLeft = hoveredCell.mouseX;
+                }
+              } else {
+                // Joiner ships: prefer right
+                if (
+                  shipCellRight + tooltipWidth + offset <
+                  (typeof window !== "undefined" ? window.innerWidth : 1000)
+                ) {
+                  tooltipLeft = shipCellRight + offset;
+                }
+                // Fallback to left
+                else if (shipCellLeft - tooltipWidth - offset > 0) {
+                  tooltipLeft = shipCellLeft - tooltipWidth - offset;
+                }
+                // Fallback to above
+                else if (shipCellTop - tooltipHeight - offset > 0) {
+                  tooltipTop = shipCellTop - tooltipHeight - offset;
+                  tooltipLeft = hoveredCell.mouseX;
+                }
+                // Fallback to below
+                else if (
+                  shipCellBottom + tooltipHeight + offset <
+                  (typeof window !== "undefined" ? window.innerHeight : 1000)
+                ) {
+                  tooltipTop = shipCellBottom + offset;
+                  tooltipLeft = hoveredCell.mouseX;
+                }
+              }
+            } else if (wouldCoverHorizontally) {
+              // Only horizontal overlap - prefer based on ship type
+              if (isCreatorShip) {
+                // Creator ships: prefer left
+                if (shipCellLeft - tooltipWidth - offset > 0) {
+                  tooltipLeft = shipCellLeft - tooltipWidth - offset;
+                } else {
+                  tooltipLeft = shipCellRight + offset;
+                }
+              } else {
+                // Joiner ships: prefer right
+                if (
+                  shipCellRight + tooltipWidth + offset <
+                  (typeof window !== "undefined" ? window.innerWidth : 1000)
+                ) {
+                  tooltipLeft = shipCellRight + offset;
+                } else {
+                  tooltipLeft = shipCellLeft - tooltipWidth - offset;
+                }
+              }
+            } else if (wouldCoverVertically) {
+              // Only vertical overlap - move above or below
+              if (shipCellTop - tooltipHeight - offset > 0) {
+                tooltipTop = shipCellTop - tooltipHeight - offset;
+              } else {
+                tooltipTop = shipCellBottom + offset;
+              }
+            }
+
+            // Ensure tooltip stays within viewport
+            tooltipLeft = Math.max(
+              0,
+              Math.min(
+                tooltipLeft,
+                typeof window !== "undefined"
+                  ? window.innerWidth - tooltipWidth
+                  : tooltipLeft
+              )
+            );
+            tooltipTop = Math.max(
+              0,
+              Math.min(
+                tooltipTop,
+                typeof window !== "undefined"
+                  ? window.innerHeight - tooltipHeight
+                  : tooltipTop
+              )
+            );
+
             return (
               <div
                 className="fixed z-[100] pointer-events-none opacity-100"
                 style={{
-                  left: `${Math.min(
-                    hoveredCell.mouseX + 15,
-                    typeof window !== "undefined"
-                      ? window.innerWidth - 400
-                      : hoveredCell.mouseX + 15
-                  )}px`,
-                  top: `${Math.min(
-                    hoveredCell.mouseY + 15,
-                    typeof window !== "undefined"
-                      ? window.innerHeight - 500
-                      : hoveredCell.mouseY + 15
-                  )}px`,
+                  left: `${tooltipLeft}px`,
+                  top: `${tooltipTop}px`,
                 }}
               >
                 <div className="w-80 opacity-100">
@@ -3082,151 +3261,248 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       {/* Ship Details */}
       <div className="bg-gray-900 rounded-lg p-4 border border-gray-700 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* My Fleet - Always on the left */}
-          <div>
-            <h4 className="text-blue-400 font-mono mb-3">
-              My Fleet
-              <span className="ml-2 text-gray-400">
-                (
-                {game.metadata.creator === address
-                  ? game.metadata.creator
-                  : game.metadata.joiner}
-                )
-              </span>
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(game.metadata.creator === address
-                ? game.creatorActiveShipIds
-                : game.joinerActiveShipIds
-              ).map((shipId) => {
-                const shipPosition = game.shipPositions.find(
-                  (sp) => sp.shipId === shipId
-                );
-                const attributes = getShipAttributes(shipId);
-                const ship = shipMap.get(shipId);
+          {/* Determine order based on player: creator has My Fleet left, joiner has Opponent's Fleet left */}
+          {game.metadata.creator === address ? (
+            <>
+              {/* My Fleet - Left for creator */}
+              <div>
+                <h4 className="text-blue-400 font-mono mb-3">
+                  My Fleet
+                  <span className="ml-2 text-gray-400">
+                    ({game.metadata.creator})
+                  </span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {game.creatorActiveShipIds.map((shipId) => {
+                    const shipPosition = game.shipPositions.find(
+                      (sp) => sp.shipId === shipId
+                    );
+                    const attributes = getShipAttributes(shipId);
+                    const ship = shipMap.get(shipId);
 
-                if (!shipPosition || !attributes || !ship) return null;
+                    if (!shipPosition || !attributes || !ship) return null;
 
-                // Determine reactor critical status
-                const reactorCriticalStatus =
-                  attributes.reactorCriticalTimer > 0 &&
-                  attributes.hullPoints === 0
-                    ? "critical" // Red outline for reactor critical + 0 HP
-                    : attributes.reactorCriticalTimer > 0
-                    ? "warning" // Yellow outline for reactor critical
-                    : "none";
+                    // Determine reactor critical status
+                    const reactorCriticalStatus =
+                      attributes.reactorCriticalTimer > 0 &&
+                      attributes.hullPoints === 0
+                        ? "critical" // Red outline for reactor critical + 0 HP
+                        : attributes.reactorCriticalTimer > 0
+                        ? "warning" // Yellow outline for reactor critical
+                        : "none";
 
-                return (
-                  <div key={shipId.toString()}>
-                    <ShipCard
-                      ship={ship}
-                      isStarred={false}
-                      onToggleStar={() => {}}
-                      isSelected={false}
-                      onToggleSelection={() => {}}
-                      onRecycleClick={() => {}}
-                      showInGameProperties={true}
-                      inGameAttributes={attributes}
-                      attributesLoading={false}
-                      hideRecycle={true}
-                      hideCheckbox={true}
-                      isCurrentPlayerShip={true}
-                      flipShip={game.metadata.creator === address}
-                      reactorCriticalStatus={reactorCriticalStatus}
-                      hasMoved={movedShipIdsSet.has(shipId)}
-                      gameViewMode={true}
-                    />
-                    {(() => {
-                      const isAssistableTarget =
-                        selectedShipId &&
-                        (assistableTargets.some(
-                          (target) => target.shipId === shipId
-                        ) ||
-                          assistableTargetsFromStart.some(
-                            (target) => target.shipId === shipId
-                          ));
+                    return (
+                      <div key={shipId.toString()}>
+                        <ShipCard
+                          ship={ship}
+                          isStarred={false}
+                          onToggleStar={() => {}}
+                          isSelected={false}
+                          onToggleSelection={() => {}}
+                          onRecycleClick={() => {}}
+                          showInGameProperties={true}
+                          inGameAttributes={attributes}
+                          attributesLoading={false}
+                          hideRecycle={true}
+                          hideCheckbox={true}
+                          isCurrentPlayerShip={true}
+                          flipShip={game.metadata.creator === address}
+                          reactorCriticalStatus={reactorCriticalStatus}
+                          hasMoved={movedShipIdsSet.has(shipId)}
+                          gameViewMode={true}
+                        />
+                        {(() => {
+                          const isAssistableTarget =
+                            selectedShipId &&
+                            (assistableTargets.some(
+                              (target) => target.shipId === shipId
+                            ) ||
+                              assistableTargetsFromStart.some(
+                                (target) => target.shipId === shipId
+                              ));
 
-                      if (isAssistableTarget) {
-                        return (
-                          <button
-                            onClick={() => {
-                              setTargetShipId(shipId);
-                              setSelectedWeaponType("weapon"); // Reset to weapon for assist
-                            }}
-                            className="mt-2 w-full text-blue-400 font-mono text-xs hover:text-blue-300 hover:underline cursor-pointer"
-                            title="Click to assist this ship"
-                          >
-                            Click to assist this ship
-                          </button>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                          if (isAssistableTarget) {
+                            return (
+                              <button
+                                onClick={() => {
+                                  setTargetShipId(shipId);
+                                  setSelectedWeaponType("weapon"); // Reset to weapon for assist
+                                }}
+                                className="mt-2 w-full text-blue-400 font-mono text-xs hover:text-blue-300 hover:underline cursor-pointer"
+                                title="Click to assist this ship"
+                              >
+                                Click to assist this ship
+                              </button>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Opponent's Fleet - Right for creator */}
+              <div>
+                <h4 className="text-red-400 font-mono mb-3">
+                  Opponent&apos;s Fleet
+                  <span className="ml-2 text-gray-400">
+                    ({game.metadata.joiner})
+                  </span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {game.joinerActiveShipIds.map((shipId) => {
+                    const shipPosition = game.shipPositions.find(
+                      (sp) => sp.shipId === shipId
+                    );
+                    const attributes = getShipAttributes(shipId);
+                    const ship = shipMap.get(shipId);
 
-          {/* Opponent's Fleet - Always on the right */}
-          <div>
-            <h4 className="text-red-400 font-mono mb-3">
-              Opponent&apos;s Fleet
-              <span className="ml-2 text-gray-400">
-                (
-                {game.metadata.creator === address
-                  ? game.metadata.joiner
-                  : game.metadata.creator}
-                )
-              </span>
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(game.metadata.creator === address
-                ? game.joinerActiveShipIds
-                : game.creatorActiveShipIds
-              ).map((shipId) => {
-                const shipPosition = game.shipPositions.find(
-                  (sp) => sp.shipId === shipId
-                );
-                const attributes = getShipAttributes(shipId);
-                const ship = shipMap.get(shipId);
+                    if (!shipPosition || !attributes || !ship) return null;
 
-                if (!shipPosition || !attributes || !ship) return null;
+                    // Determine reactor critical status
+                    const reactorCriticalStatus =
+                      attributes.reactorCriticalTimer > 0 &&
+                      attributes.hullPoints === 0
+                        ? "critical" // Red outline for reactor critical + 0 HP
+                        : attributes.reactorCriticalTimer > 0
+                        ? "warning" // Yellow outline for reactor critical
+                        : "none";
 
-                // Determine reactor critical status
-                const reactorCriticalStatus =
-                  attributes.reactorCriticalTimer > 0 &&
-                  attributes.hullPoints === 0
-                    ? "critical" // Red outline for reactor critical + 0 HP
-                    : attributes.reactorCriticalTimer > 0
-                    ? "warning" // Yellow outline for reactor critical
-                    : "none";
+                    return (
+                      <div key={shipId.toString()}>
+                        <ShipCard
+                          ship={ship}
+                          isStarred={false}
+                          onToggleStar={() => {}}
+                          isSelected={false}
+                          onToggleSelection={() => {}}
+                          onRecycleClick={() => {}}
+                          showInGameProperties={true}
+                          inGameAttributes={attributes}
+                          attributesLoading={false}
+                          hideRecycle={true}
+                          hideCheckbox={true}
+                          isCurrentPlayerShip={false}
+                          flipShip={false}
+                          reactorCriticalStatus={reactorCriticalStatus}
+                          hasMoved={movedShipIdsSet.has(shipId)}
+                          gameViewMode={true}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Opponent's Fleet - Left for joiner */}
+              <div>
+                <h4 className="text-red-400 font-mono mb-3">
+                  Opponent&apos;s Fleet
+                  <span className="ml-2 text-gray-400">
+                    ({game.metadata.creator})
+                  </span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {game.creatorActiveShipIds.map((shipId) => {
+                    const shipPosition = game.shipPositions.find(
+                      (sp) => sp.shipId === shipId
+                    );
+                    const attributes = getShipAttributes(shipId);
+                    const ship = shipMap.get(shipId);
 
-                return (
-                  <div key={shipId.toString()}>
-                    <ShipCard
-                      ship={ship}
-                      isStarred={false}
-                      onToggleStar={() => {}}
-                      isSelected={false}
-                      onToggleSelection={() => {}}
-                      onRecycleClick={() => {}}
-                      showInGameProperties={true}
-                      inGameAttributes={attributes}
-                      attributesLoading={false}
-                      hideRecycle={true}
-                      hideCheckbox={true}
-                      isCurrentPlayerShip={false}
-                      flipShip={game.metadata.creator !== address}
-                      reactorCriticalStatus={reactorCriticalStatus}
-                      hasMoved={movedShipIdsSet.has(shipId)}
-                      gameViewMode={true}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                    if (!shipPosition || !attributes || !ship) return null;
+
+                    // Determine reactor critical status
+                    const reactorCriticalStatus =
+                      attributes.reactorCriticalTimer > 0 &&
+                      attributes.hullPoints === 0
+                        ? "critical" // Red outline for reactor critical + 0 HP
+                        : attributes.reactorCriticalTimer > 0
+                        ? "warning" // Yellow outline for reactor critical
+                        : "none";
+
+                    return (
+                      <div key={shipId.toString()}>
+                        <ShipCard
+                          ship={ship}
+                          isStarred={false}
+                          onToggleStar={() => {}}
+                          isSelected={false}
+                          onToggleSelection={() => {}}
+                          onRecycleClick={() => {}}
+                          showInGameProperties={true}
+                          inGameAttributes={attributes}
+                          attributesLoading={false}
+                          hideRecycle={true}
+                          hideCheckbox={true}
+                          isCurrentPlayerShip={false}
+                          flipShip={true}
+                          reactorCriticalStatus={reactorCriticalStatus}
+                          hasMoved={movedShipIdsSet.has(shipId)}
+                          gameViewMode={true}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* My Fleet - Right for joiner */}
+              <div>
+                <h4 className="text-blue-400 font-mono mb-3">
+                  My Fleet
+                  <span className="ml-2 text-gray-400">
+                    ({game.metadata.joiner})
+                  </span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {game.joinerActiveShipIds.map((shipId) => {
+                    const shipPosition = game.shipPositions.find(
+                      (sp) => sp.shipId === shipId
+                    );
+                    const attributes = getShipAttributes(shipId);
+                    const ship = shipMap.get(shipId);
+
+                    if (!shipPosition || !attributes || !ship) return null;
+
+                    // Determine reactor critical status
+                    const reactorCriticalStatus =
+                      attributes.reactorCriticalTimer > 0 &&
+                      attributes.hullPoints === 0
+                        ? "critical" // Red outline for reactor critical + 0 HP
+                        : attributes.reactorCriticalTimer > 0
+                        ? "warning" // Yellow outline for reactor critical
+                        : "none";
+
+                    return (
+                      <div key={shipId.toString()}>
+                        <ShipCard
+                          ship={ship}
+                          isStarred={false}
+                          onToggleStar={() => {}}
+                          isSelected={false}
+                          onToggleSelection={() => {}}
+                          onRecycleClick={() => {}}
+                          showInGameProperties={true}
+                          inGameAttributes={attributes}
+                          attributesLoading={false}
+                          hideRecycle={true}
+                          hideCheckbox={true}
+                          isCurrentPlayerShip={true}
+                          flipShip={false}
+                          reactorCriticalStatus={reactorCriticalStatus}
+                          hasMoved={movedShipIdsSet.has(shipId)}
+                          gameViewMode={true}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
