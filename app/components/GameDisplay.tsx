@@ -1996,7 +1996,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         if (computedActionType === ActionType.Shoot) {
                           return scoringGrid[computedRow] &&
                             scoringGrid[computedRow][computedCol] > 0
-                            ? "(Move + Score + Shoot)"
+                            ? "(Move + Shoot + Score)"
                             : "(Move + Shoot)";
                         }
                         // Pass (shouldn't happen with previewPosition, but handle it)
