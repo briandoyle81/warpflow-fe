@@ -60,8 +60,6 @@ const Lobbies: React.FC = () => {
   const { ships, isLoading: shipsLoading } = useOwnedShips();
   const { games: playerGames, refetch: refetchGames } = usePlayerGames();
 
-  // Check if wallet is connecting
-  const isConnecting = status === "connecting" || status === "reconnecting";
 
   // Calculate player state from lobby list instead of blockchain
   const playerLobbies = lobbyList.lobbies.filter(
@@ -244,8 +242,7 @@ const Lobbies: React.FC = () => {
 
   // Fetch player's fleet Ship objects so they can be displayed on the grid
   const {
-    data: playerFleetShipsData,
-    isLoading: playerFleetShipsLoading
+    data: playerFleetShipsData
   } = useShipsRead(
     "getShipsByIds",
     playerFleetShipIds.length > 0 ? [playerFleetShipIds] : undefined
@@ -1056,7 +1053,7 @@ const Lobbies: React.FC = () => {
     });
 
     return Array.from(shipMap.values());
-  }, [ships, opponentGridShipsData, playerFleetShips, selectedShips, playerFleetId]);
+  }, [ships, opponentGridShipsData, playerFleetShips]);
 
   // Get attributes for player's fleet ships
   const { attributes: playerFleetAttributes } = useShipAttributesByIds(

@@ -23,7 +23,7 @@ export function FreeShipClaimButton({
   onError,
 }: FreeShipClaimButtonProps) {
   const { address } = useAccount();
-  const { claimFreeShips, isPending, error } = useFreeShipClaiming();
+  const { claimFreeShips, isPending } = useFreeShipClaiming();
 
   const handleClick = async () => {
     if (!address) {

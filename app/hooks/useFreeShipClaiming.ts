@@ -83,8 +83,6 @@ export function useFreeShipClaiming() {
     }
   }, [error]);
 
-  // Track previous isPending state to detect when claiming completes
-  const prevIsPending = useRef(isPending);
 
   // Save cache to localStorage whenever it changes
   const saveCacheToStorage = useCallback((cache: typeof eligibilityCache) => {

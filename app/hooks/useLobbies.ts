@@ -1,18 +1,14 @@
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
-import { parseEther } from "viem";
 import {
   useLobbiesWrite,
   useLobbyCount,
   usePlayerLobbyState,
   useLobbySettings,
-  useIsLobbyOpenForJoining,
-  useLobby,
   lobbiesContractConfig,
-  useLobbiesRead,
 } from "./useLobbiesContract";
 import { useLobbyList } from "./useLobbyList";
-import { Lobby, LobbyStatus } from "../types/types";
+import { Lobby } from "../types/types";
 
 export interface CreateLobbyParams {
   costLimit: bigint;

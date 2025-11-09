@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Ship } from "../types/types";
 import { renderShip } from "../utils/shipRenderer";
 import {

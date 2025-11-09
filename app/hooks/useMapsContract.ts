@@ -70,12 +70,9 @@ export function useMapExists(mapId: number) {
   });
 }
 
-// Track how many times the hook is called
-let hookCallCount = 0;
 const gameIdCallCounts: Record<number, number> = {};
 
 export function useGetGameMapState(gameId: number) {
-  hookCallCount++;
   gameIdCallCounts[gameId] = (gameIdCallCounts[gameId] || 0) + 1;
 
   const result = useMapsRead("getGameMapState", [BigInt(gameId)], {

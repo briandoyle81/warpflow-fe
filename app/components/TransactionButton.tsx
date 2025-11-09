@@ -73,7 +73,6 @@ export function TransactionButton({
     isLoading: isConfirming,
     isSuccess: isConfirmed,
     error: receiptError,
-    data: receiptData,
   } = useWaitForTransactionReceipt({
     hash,
     query: {

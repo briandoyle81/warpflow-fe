@@ -257,7 +257,7 @@ export function MapEditor({
         };
       });
     },
-    [editorState.selectedTool, getRadialSymmetryPositions, canEdit]
+    [getRadialSymmetryPositions, canEdit]
   );
 
   // Handle tile mouse down for drag start

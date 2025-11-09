@@ -30,7 +30,7 @@ import { CONTRACT_ADDRESSES } from "../config/contracts";
 import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
 
 const ManageNavy: React.FC = () => {
-  const { address, chain, isConnected, status } = useAccount();
+  const { address, isConnected, status } = useAccount();
   const { transactionState } = useTransaction();
   const { ships, isLoading, error, hasShips, shipCount, refetch } =
     useOwnedShips();

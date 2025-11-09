@@ -24,7 +24,6 @@ interface MapDisplayProps {
   isCreatorViewer?: boolean; // determines placement validity
   shipPositions?: Array<{ shipId: bigint; row: number; col: number }>;
   ships?: Array<Ship | { id: bigint; name: string; imageUrl?: string }>;
-  shipAttributes?: Array<Attributes>;
   selectedShipId?: bigint | null;
   onShipSelect?: (shipId: bigint) => void;
   onShipMove?: (shipId: bigint, row: number, col: number) => void;
@@ -44,7 +43,6 @@ export function MapDisplay({
   isCreatorViewer = false,
   shipPositions = [],
   ships = [],
-  shipAttributes = [],
   selectedShipId = null,
   onShipSelect,
   onShipMove,
@@ -412,7 +410,7 @@ export function MapDisplay({
                       onDrop(row, col, e);
                     }
                   }}
-                  draggable={isShipDraggable}
+                  draggable={!!isShipDraggable}
                   onDragStart={(e) => {
                     if (isShipDraggable && ship && "id" in ship) {
                       e.dataTransfer.effectAllowed = "move";

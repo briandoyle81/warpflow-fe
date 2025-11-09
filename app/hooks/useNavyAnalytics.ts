@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useOwnedShips } from "./useOwnedShips";
-import { Ship } from "../types/types";
 
 export interface NavyComposition {
   weaponTypes: Record<number, number>;

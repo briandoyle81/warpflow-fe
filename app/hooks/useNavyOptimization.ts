@@ -88,11 +88,13 @@ export function useNavyOptimization() {
     const startTime = performance.now();
 
     // Simulate some heavy computation
-    const processedShips = ships.map((ship) => ({
-      ...ship,
-      computedValue:
-        (ship.traits.accuracy + ship.traits.hull + ship.traits.speed) / 3,
-    }));
+    ships.forEach((ship) => {
+      // Process ships for metrics calculation
+      const computedValue =
+        (ship.traits.accuracy + ship.traits.hull + ship.traits.speed) / 3;
+      // Use computedValue if needed for metrics
+      void computedValue;
+    });
 
     const endTime = performance.now();
     const processingTime = endTime - startTime;
