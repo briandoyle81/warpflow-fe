@@ -7,7 +7,7 @@ import React, {
   useRef,
   useMemo,
 } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { formatEther } from "viem";
 import { useLobbies } from "../hooks/useLobbies";
 import { useOwnedShips } from "../hooks/useOwnedShips";
@@ -49,7 +49,13 @@ const Lobbies: React.FC = () => {
     createFleet,
     // quitWithPenalty,
     loadLobbies,
+    lastTransactionHash,
   } = useLobbies();
+
+  // Wait for transaction receipt for fleet creation
+  const { isSuccess: isFleetCreated, error: fleetCreationError } = useWaitForTransactionReceipt({
+    hash: lastTransactionHash,
+  });
 
   const { ships, isLoading: shipsLoading } = useOwnedShips();
   const { games: playerGames, refetch: refetchGames } = usePlayerGames();
@@ -803,30 +809,21 @@ const Lobbies: React.FC = () => {
     await createFleetWithConfirmation(lobbyId);
   };
 
-  const createFleetWithConfirmation = async (lobbyId: bigint) => {
-    if (!isConnected || selectedShips.length === 0) return;
+  // Track the last fleet creation lobby ID to show toast when receipt is received
+  const lastFleetCreationLobbyRef = React.useRef<bigint | null>(null);
 
-    setIsCreatingFleet(true);
-    try {
-      // Convert shipPositions to the format expected by the contract
-      const startingPositions = shipPositions.map((pos) => ({
-        row: pos.row,
-        col: pos.col,
-      }));
-
-      // Submit tx
-      await createFleet(lobbyId, selectedShips, startingPositions);
-
-      // Transaction submitted successfully - close modal
+  // Show toast when fleet creation receipt is received
+  React.useEffect(() => {
+    if (isFleetCreated && lastFleetCreationLobbyRef.current) {
+      const lobbyId = lastFleetCreationLobbyRef.current;
+      toast.success("Fleet created successfully!");
       setShowFleetView(false);
       setSelectedShips([]);
       setShipPositions([]);
       setSelectedShipId(null);
-      toast.success("Fleet created successfully!");
       setShowFleetConfirmation(false);
 
       // Check if both fleets are now selected - if so, navigate to game
-      // Wait a moment for the transaction to be processed
       setTimeout(() => {
         loadLobbies();
         setTimeout(() => {
@@ -843,8 +840,49 @@ const Lobbies: React.FC = () => {
           }
         }, 2000);
       }, 1000);
+
+      lastFleetCreationLobbyRef.current = null;
+    }
+  }, [isFleetCreated, loadLobbies, lobbyList.lobbies, navigateToGame]);
+
+  // Handle fleet creation errors
+  React.useEffect(() => {
+    if (fleetCreationError && lastFleetCreationLobbyRef.current) {
+      const errorMessage = fleetCreationError.message || "Transaction failed";
+      toast.error(`Fleet creation failed: ${errorMessage}`);
+      lastFleetCreationLobbyRef.current = null;
+    }
+  }, [fleetCreationError]);
+
+  const createFleetWithConfirmation = async (lobbyId: bigint) => {
+    if (!isConnected || selectedShips.length === 0) return;
+
+    setIsCreatingFleet(true);
+    try {
+      // Convert shipPositions to the format expected by the contract
+      const startingPositions = shipPositions.map((pos) => ({
+        row: pos.row,
+        col: pos.col,
+      }));
+
+      // Submit tx - store lobby ID to show toast when receipt is received
+      lastFleetCreationLobbyRef.current = lobbyId;
+      await createFleet(lobbyId, selectedShips, startingPositions);
+
+      // Don't show toast here - wait for receipt (handled in useEffect above)
     } catch (error) {
       console.error("Failed to create fleet:", error);
+      lastFleetCreationLobbyRef.current = null;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("User denied") ||
+        errorMessage.includes("rejected")
+      ) {
+        toast.error("Transaction declined by user");
+      } else {
+        toast.error(`Fleet creation failed: ${errorMessage}`);
+      }
     } finally {
       setIsCreatingFleet(false);
     }

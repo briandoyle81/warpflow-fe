@@ -1,4 +1,4 @@
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import type { Abi } from "viem";
 import { toast } from "react-hot-toast";
@@ -46,7 +46,12 @@ export function useFreeShipClaiming() {
   });
 
   // Write contract for claiming
-  const { writeContract, isPending, error } = useWriteContract();
+  const { writeContract, isPending, error, data: hash } = useWriteContract();
+
+  // Wait for transaction receipt
+  const { isLoading: isConfirming, isSuccess: isConfirmed, error: receiptError } = useWaitForTransactionReceipt({
+    hash,
+  });
 
   // Track if we should show the error (clear it after some time or on new attempts)
   const [showError, setShowError] = useState(false);
@@ -139,19 +144,21 @@ export function useFreeShipClaiming() {
     saveCacheToStorage,
   ]);
 
-  // Update cache only after successful claiming
+  // Show toast and update cache when receipt is received
   useEffect(() => {
-    // Check if isPending changed from true to false (claiming completed)
-    if (address && prevIsPending.current && !isPending) {
-      // Check if this address was previously eligible
-      const wasEligible = eligibilityCache[address]?.eligible;
+    if (isConfirmed && hash) {
+      // Transaction receipt received - show success toast
+      toast.success("Free ships claimed successfully!");
 
-      if (wasEligible && !error) {
+      // Check if this address was previously eligible
+      const wasEligible = eligibilityCache[address || ""]?.eligible;
+
+      if (wasEligible) {
         // Transaction was successful, update cache and refetch data
         setEligibilityCache((prev) => {
           const newCache = {
             ...prev,
-            [address]: {
+            [address || ""]: {
               eligible: false, // Now permanently ineligible
               timestamp: Date.now(),
               checked: true,
@@ -172,18 +179,23 @@ export function useFreeShipClaiming() {
         return () => clearTimeout(timer);
       }
     }
+  }, [isConfirmed, hash, address, refetch, refetchClaimStatus, saveCacheToStorage, eligibilityCache]);
 
-    // Update the ref for next render
-    prevIsPending.current = isPending;
-  }, [
-    address,
-    isPending,
-    error,
-    refetch,
-    refetchClaimStatus,
-    saveCacheToStorage,
-    eligibilityCache,
-  ]);
+  // Handle receipt errors
+  useEffect(() => {
+    if (receiptError) {
+      const errorMessage = receiptError.message || "Transaction failed";
+      if (
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("User denied") ||
+        errorMessage.includes("rejected")
+      ) {
+        toast.error("Transaction declined by user");
+      } else {
+        toast.error(`Transaction failed: ${errorMessage}`);
+      }
+    }
+  }, [receiptError]);
 
   // Check if cache entry is still valid
   const isCacheValid = (cacheEntry: {
@@ -244,13 +256,13 @@ export function useFreeShipClaiming() {
 
     try {
       // Call the smart contract to claim free ships
-      writeContract({
+      await writeContract({
         address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: CONTRACT_ABIS.SHIPS as Abi,
         functionName: "claimFreeShips",
       });
 
-      toast.success("Transaction submitted! Waiting for confirmation...");
+      // Toast will be shown when receipt is received (in useEffect below)
     } catch (err: unknown) {
       console.error("Error claiming free ships:", err);
 
@@ -281,8 +293,8 @@ export function useFreeShipClaiming() {
     claimFreeShips,
 
     // Contract state
-    isPending,
-    error: showError ? error : null, // Only show error when showError is true
+    isPending: isPending || isConfirming, // Include confirmation state
+    error: showError ? (error || receiptError) : null, // Only show error when showError is true
     claimStatusError, // Expose read contract error separately if needed
   };
 }

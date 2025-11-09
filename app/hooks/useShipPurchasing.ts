@@ -1,4 +1,4 @@
-import { useAccount, useBalance, useWriteContract } from "wagmi";
+import { useAccount, useBalance, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { CONTRACT_ADDRESSES, SHIP_PURCHASE_TIERS } from "../config/contracts";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
@@ -31,9 +31,14 @@ export function useShipPurchasing() {
   });
 
   // Write contract for purchasing
-  const { writeContract, isPending, error } = useWriteContract();
+  const { writeContract, isPending, error, data: hash } = useWriteContract();
 
-  // Handle write contract errors (including user rejection)
+  // Wait for transaction receipt
+  const { isLoading: isConfirming, isSuccess: isConfirmed, error: receiptError } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  // Handle write contract errors (including user rejection) - only for immediate errors
   useEffect(() => {
     if (error) {
       console.error("Write contract error:", error);
@@ -51,6 +56,31 @@ export function useShipPurchasing() {
       }
     }
   }, [error]);
+
+  // Show toast when receipt is received
+  useEffect(() => {
+    if (isConfirmed && hash) {
+      toast.success("Ships purchased successfully!");
+      // Refetch ships data after successful purchase
+      setTimeout(() => refetch(), 2000);
+    }
+  }, [isConfirmed, hash, refetch]);
+
+  // Handle receipt errors
+  useEffect(() => {
+    if (receiptError) {
+      const errorMessage = receiptError.message || "Transaction failed";
+      if (
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("User denied") ||
+        errorMessage.includes("rejected")
+      ) {
+        toast.error("Transaction declined by user");
+      } else {
+        toast.error(`Transaction failed: ${errorMessage}`);
+      }
+    }
+  }, [receiptError]);
 
   // Use hard-coded tier information
   const { tiers, shipsPerTier, prices } = SHIP_PURCHASE_TIERS;
@@ -93,10 +123,7 @@ export function useShipPurchasing() {
         value: tierPrice,
       });
 
-      toast.success(`Purchase initiated for tier ${tier} ships!`);
-
-      // Refetch ships data after successful purchase
-      setTimeout(() => refetch(), 3000);
+      // Toast will be shown when receipt is received (in useEffect above)
     } catch (err: unknown) {
       console.error("Error purchasing ships:", err);
 
@@ -168,7 +195,7 @@ export function useShipPurchasing() {
     canAfford,
 
     // Contract state
-    isPending,
-    error,
+    isPending: isPending || isConfirming, // Include confirmation state
+    error: error || receiptError,
   };
 }

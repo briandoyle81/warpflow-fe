@@ -30,7 +30,7 @@ export interface LobbyListState {
 
 export function useLobbies() {
   const { address } = useAccount();
-  const { writeContract } = useLobbiesWrite();
+  const { writeContract, data: hash } = useLobbiesWrite();
   const { data: lobbyCount } = useLobbyCount();
   const { playerState } = usePlayerLobbyState(address || "");
   const { freeGamesPerAddress, additionalLobbyFee, paused } =
@@ -207,6 +207,9 @@ export function useLobbies() {
     createFleet,
     quitWithPenalty,
     loadLobbies,
+
+    // Transaction hash for waiting on receipt
+    lastTransactionHash: hash,
 
     // Computed values
     canCreateLobby: !paused && address !== undefined,
