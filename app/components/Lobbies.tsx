@@ -2430,13 +2430,6 @@ const Lobbies: React.FC = () => {
                                   ? opponentShips
                                   : combinedShips
                               }
-                              shipAttributes={
-                                showFleetView &&
-                                viewingFleetOwner &&
-                                viewingFleetId
-                                  ? (opponentViewAttributes as Attributes[])
-                                  : (combinedAttributes as Attributes[])
-                              }
                               selectedShipId={selectedShipId}
                               onShipSelect={handleShipSelect}
                               onShipMove={handleShipMove}
@@ -2485,13 +2478,6 @@ const Lobbies: React.FC = () => {
                                 viewingFleetId
                                   ? opponentShips
                                   : combinedShips
-                              }
-                              shipAttributes={
-                                showFleetView &&
-                                viewingFleetOwner &&
-                                viewingFleetId
-                                  ? (opponentViewAttributes as Attributes[])
-                                  : (combinedAttributes as Attributes[])
                               }
                               selectedShipId={selectedShipId}
                               onShipSelect={handleShipSelect}
