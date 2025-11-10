@@ -92,13 +92,37 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Enable real-time event listening for game updates
   useContractEvents();
 
+  // Track previous game state to detect if state changed after event
+  const prevGameStateRef = React.useRef<{
+    currentTurn: string;
+    currentRound: bigint;
+  } | null>(null);
+
+  // Track if we're expecting a state change (got GameUpdate event)
+  const expectingStateChangeRef = React.useRef<boolean>(false);
+
+  // Track retry attempts with exponential backoff
+  const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const retryAttemptRef = React.useRef<number>(0);
+
+  // Track page visibility and polling intervals
+  const [isPageVisible, setIsPageVisible] = React.useState(true);
+  const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+  const pollingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const playerMoveTimeRef = React.useRef<number | null>(null);
+  const [playerMoveTimestamp, setPlayerMoveTimestamp] = React.useState<
+    number | null
+  >(null);
+
   // Register this game's refetch function for global event handling
   React.useEffect(() => {
     const gameId = Number(game.metadata.gameId);
 
     // Create a refetch function that also clears targeting state
+    // and marks that we're expecting a state change
     const refetchWithClear = () => {
       setTargetShipId(null);
+      expectingStateChangeRef.current = true;
       refetchGame();
     };
 
@@ -107,8 +131,211 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     // Cleanup: unregister when component unmounts
     return () => {
       unregisterGameRefetch(gameId);
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
     };
   }, [refetchGame, game.metadata.gameId, setTargetShipId]);
+
+  // Track page visibility and refetch immediately when tab regains focus
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      const wasHidden = !isPageVisible;
+      const isNowVisible = !document.hidden;
+      setIsPageVisible(isNowVisible);
+
+      // If tab was hidden and now has focus, refetch immediately
+      if (wasHidden && isNowVisible) {
+        refetchGame();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    setIsPageVisible(!document.hidden);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isPageVisible, refetchGame]);
+
+  // Set up polling based on page visibility and player moves
+  React.useEffect(() => {
+    // Clear any existing polling
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+      pollingTimeoutRef.current = null;
+    }
+
+    // Get turn time from game (in seconds, convert to milliseconds)
+    const turnTimeMs = Number(game.turnState.turnTime || 0n) * 1000;
+    const pollIntervalAfterMove = turnTimeMs / 10; // Poll every turnTime/10
+
+    if (playerMoveTimeRef.current) {
+      // Player just moved: poll every turnTime/10
+      const moveTime = playerMoveTimeRef.current;
+      const now = Date.now();
+      const timeSinceMove = now - moveTime;
+
+      // If turnTime has passed since move, do one more poll then switch to normal polling
+      if (timeSinceMove >= turnTimeMs) {
+        // Do one final poll, then switch to normal polling
+        const timeUntilNextPoll =
+          pollIntervalAfterMove - (timeSinceMove % pollIntervalAfterMove);
+        pollingTimeoutRef.current = setTimeout(() => {
+          refetchGame();
+          // Switch to normal polling
+          playerMoveTimeRef.current = null;
+          setPlayerMoveTimestamp(null);
+          const normalPollInterval = isPageVisible
+            ? 5 * 60 * 1000 // 5 minutes if tab active
+            : 60 * 60 * 1000; // 60 minutes if tab inactive
+          pollingIntervalRef.current = setInterval(() => {
+            refetchGame();
+          }, normalPollInterval);
+        }, timeUntilNextPoll);
+      } else {
+        // Still within turnTime: poll every turnTime/10
+        pollingIntervalRef.current = setInterval(() => {
+          refetchGame();
+          const now = Date.now();
+          const timeSinceMove = now - (playerMoveTimeRef.current || 0);
+
+          // If turnTime has passed, do one more poll then switch
+          if (timeSinceMove >= turnTimeMs) {
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            // Do one final poll
+            pollingTimeoutRef.current = setTimeout(() => {
+              refetchGame();
+              // Switch to normal polling
+              playerMoveTimeRef.current = null;
+              setPlayerMoveTimestamp(null);
+              const normalPollInterval = isPageVisible
+                ? 5 * 60 * 1000 // 5 minutes if tab active
+                : 60 * 60 * 1000; // 60 minutes if tab inactive
+              pollingIntervalRef.current = setInterval(() => {
+                refetchGame();
+              }, normalPollInterval);
+            }, pollIntervalAfterMove);
+          }
+        }, pollIntervalAfterMove);
+      }
+    } else {
+      // No recent move: poll at normal intervals
+      const normalPollInterval = isPageVisible
+        ? 5 * 60 * 1000 // 5 minutes if tab active
+        : 60 * 60 * 1000; // 60 minutes if tab inactive
+      pollingIntervalRef.current = setInterval(() => {
+        refetchGame();
+      }, normalPollInterval);
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+      }
+    };
+  }, [
+    isPageVisible,
+    playerMoveTimestamp,
+    refetchGame,
+    game.turnState.turnTime,
+  ]);
+
+  // Reset move time when turn changes (opponent moved)
+  React.useEffect(() => {
+    if (gameData) {
+      const gameDataTyped = gameData as GameDataView;
+      const isMyTurn = gameDataTyped.turnState.currentTurn === address;
+
+      // If it's not my turn, clear the move time (opponent's turn now)
+      if (!isMyTurn) {
+        playerMoveTimeRef.current = null;
+        setPlayerMoveTimestamp(null); // Trigger effect re-run
+      }
+    }
+  }, [gameData, address]);
+
+  // Initialize previous state on mount
+  React.useEffect(() => {
+    if (gameData && !prevGameStateRef.current) {
+      const gameDataTyped = gameData as GameDataView;
+      prevGameStateRef.current = {
+        currentTurn: gameDataTyped.turnState.currentTurn,
+        currentRound: gameDataTyped.turnState.currentRound,
+      };
+    }
+  }, [gameData]);
+
+  // Detect if state changed after event, and implement exponential backoff retry
+  React.useEffect(() => {
+    if (!gameData) return;
+
+    const gameDataTyped = gameData as GameDataView;
+    const currentState = {
+      currentTurn: gameDataTyped.turnState.currentTurn,
+      currentRound: gameDataTyped.turnState.currentRound,
+    };
+
+    // If we have previous state and we're expecting a change
+    if (prevGameStateRef.current && expectingStateChangeRef.current) {
+      const prevState = prevGameStateRef.current;
+
+      // Check if state actually changed
+      const stateChanged =
+        prevState.currentTurn !== currentState.currentTurn ||
+        prevState.currentRound !== currentState.currentRound;
+
+      if (!stateChanged) {
+        // Got event but state didn't change - log error and retry
+        const retryDelay = Math.pow(2, retryAttemptRef.current) * 1000; // 2s, 4s, 8s, etc.
+        console.error(
+          `[GameDisplay] GameUpdate event received but state unchanged. ` +
+            `GameId: ${game.metadata.gameId}, ` +
+            `Previous: turn=${prevState.currentTurn}, round=${prevState.currentRound}, ` +
+            `Current: turn=${currentState.currentTurn}, round=${currentState.currentRound}. ` +
+            `Retrying in ${retryDelay}ms (attempt ${
+              retryAttemptRef.current + 1
+            })`
+        );
+
+        // Clear any existing retry timeout
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current);
+        }
+
+        // Schedule retry with exponential backoff
+        retryTimeoutRef.current = setTimeout(() => {
+          retryAttemptRef.current++;
+          expectingStateChangeRef.current = true; // Keep expecting change on retry
+          refetchGame();
+        }, retryDelay);
+      } else {
+        // State changed - reset retry counter and clear expecting flag
+        retryAttemptRef.current = 0;
+        expectingStateChangeRef.current = false;
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current);
+          retryTimeoutRef.current = null;
+        }
+      }
+    }
+
+    // Update previous state
+    prevGameStateRef.current = currentState;
+  }, [gameData, game.metadata.gameId, refetchGame]);
 
   // Countdown for remaining turn time (in seconds)
   const [turnSecondsLeft, setTurnSecondsLeft] = React.useState<number>(0);
@@ -2082,6 +2309,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           setTargetShipId(null);
                           setSelectedWeaponType("weapon");
                           toast.success("Move submitted successfully!");
+                          // Track when player moved to trigger polling schedule
+                          const moveTime = Date.now();
+                          playerMoveTimeRef.current = moveTime;
+                          setPlayerMoveTimestamp(moveTime); // Trigger effect re-run
                           // Refetch both the specific game and the game list
                           refetchGame();
                           refetch?.();

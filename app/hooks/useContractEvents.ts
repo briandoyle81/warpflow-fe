@@ -64,74 +64,6 @@ export function useContractEvents() {
     },
   });
 
-  // Watch game move events
-  useWatchContractEvent({
-    enabled: shouldWatch,
-    address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
-    abi: [
-      {
-        anonymous: false,
-        inputs: [
-          {
-            indexed: true,
-            internalType: "uint256",
-            name: "gameId",
-            type: "uint256",
-          },
-          {
-            indexed: false,
-            internalType: "uint256",
-            name: "shipId",
-            type: "uint256",
-          },
-          {
-            indexed: false,
-            internalType: "int16",
-            name: "newRow",
-            type: "int16",
-          },
-          {
-            indexed: false,
-            internalType: "int16",
-            name: "newCol",
-            type: "int16",
-          },
-          {
-            indexed: false,
-            internalType: "enum ActionType",
-            name: "actionType",
-            type: "uint8",
-          },
-          {
-            indexed: false,
-            internalType: "uint256",
-            name: "targetShipId",
-            type: "uint256",
-          },
-        ],
-        name: "Move",
-        type: "event",
-      },
-    ],
-    eventName: "Move",
-    poll: true, // Force polling since WebSockets not available
-    pollingInterval: 5000, // Poll every 5 seconds
-    onLogs: (logs) => {
-      if (!Array.isArray(logs) || logs.length === 0) return;
-
-      try {
-        refetchGames();
-
-        // Also refetch individual game data for all registered games
-        globalGameRefetchFunctions.forEach((refetchFn) => {
-          refetchFn();
-        });
-      } catch (error) {
-        console.error("Error processing game move logs:", error);
-      }
-    },
-  });
-
   // Watch game update events
   useWatchContractEvent({
     enabled: shouldWatch,
@@ -158,12 +90,27 @@ export function useContractEvents() {
       if (!Array.isArray(logs) || logs.length === 0) return;
 
       try {
-        refetchGames();
-
-        // Also refetch individual game data for all registered games
-        globalGameRefetchFunctions.forEach((refetchFn) => {
-          refetchFn();
+        // Extract game IDs from the events
+        const gameIds = new Set<number>();
+        logs.forEach((log) => {
+          if (log.args && typeof log.args.gameId === "bigint") {
+            gameIds.add(Number(log.args.gameId));
+          }
         });
+
+        // Add 1 second delay to allow RPC to index the state change
+        setTimeout(() => {
+          refetchGames();
+
+          // Also refetch individual game data for all registered games
+          // Pass gameIds so each game can check if the event was for them
+          globalGameRefetchFunctions.forEach((refetchFn, gameId) => {
+            if (gameIds.has(gameId)) {
+              // This event was for this game - call the refetch function
+              refetchFn();
+            }
+          });
+        }, 1000);
       } catch (error) {
         console.error("Error processing game update logs:", error);
       }
