@@ -1,0 +1,96 @@
+# WarpFlow Frontend Coding Standards
+
+## RPC/Blockchain Query Optimization
+
+### CRITICAL: Memoize All Contract Event Watchers and RPC Queries
+
+**Rule**: Never create inline config objects for `useWatchContractEvent`, `useReadContract`, or any wagmi hooks that trigger RPC calls. These must be memoized to prevent excessive RPC requests during UI interactions.
+
+**Why**: UI interactions (drag-and-drop, modal toggles, state updates) cause re-renders. If watcher/query configs are recreated on each render, wagmi will tear down and re-register watchers, causing:
+- Excessive RPC polling requests
+- Rate limiting (429 errors)
+- Unnecessary network traffic
+- Poor user experience
+
+**Required Pattern**:
+
+```typescript
+// ✅ CORRECT: Extract ABI to module level constant
+const MY_EVENT_ABI = [
+  {
+    type: "event",
+    name: "MyEvent",
+    inputs: [...],
+  },
+] as const;
+
+// ✅ CORRECT: Memoize handler with useCallback
+const handleLogs = useCallback(
+  (logs: unknown[]) => {
+    // Handle logs
+  },
+  [dependencies] // Only include actual dependencies
+);
+
+// ✅ CORRECT: Memoize watcher config with useMemo
+const eventConfig = useMemo(
+  () => ({
+    address: CONTRACT_ADDRESSES.MY_CONTRACT as `0x${string}`,
+    abi: MY_EVENT_ABI,
+    eventName: "MyEvent" as const,
+    poll: true as const,
+    pollingInterval: 5000,
+    enabled: shouldWatch,
+    onLogs: handleLogs,
+  }),
+  [shouldWatch, handleLogs] // Only include values that actually change
+);
+
+// ✅ CORRECT: Use memoized config
+useWatchContractEvent(eventConfig);
+```
+
+**❌ WRONG - Inline config (causes RPC spam)**:
+```typescript
+// ❌ BAD: Inline config recreated on every render
+useWatchContractEvent({
+  address: CONTRACT_ADDRESSES.GAME,
+  abi: [{ type: "event", name: "Move", ... }], // New array every render!
+  eventName: "Move",
+  poll: true,
+  pollingInterval: 5000,
+  onLogs: (logs) => { // New function every render!
+    // Handle logs
+  },
+});
+```
+
+### Additional Guidelines
+
+1. **ABI Constants**: Always extract ABI definitions to module-level `const` declarations with `as const` assertion
+2. **Handler Functions**: Use `useCallback` for all `onLogs`, `onSuccess`, `onError` handlers
+3. **Config Objects**: Use `useMemo` for watcher/query config objects
+4. **Dependencies**: Only include actual dependencies in dependency arrays - don't include stable values
+5. **Type Safety**: Use `as const` for literal types (`poll: true as const`, `eventName: "MyEvent" as const`)
+
+### Files Already Fixed
+
+- `app/hooks/useContractEvents.ts` - ✅ Memoized
+- `app/components/GameEvents.tsx` - ✅ Memoized
+
+### When Adding New Watchers
+
+Before creating any new `useWatchContractEvent` or similar hooks:
+1. Extract ABI to module-level constant
+2. Wrap handler in `useCallback`
+3. Wrap config in `useMemo`
+4. Verify dependencies are minimal and correct
+
+### Testing
+
+After implementing watchers, monitor:
+- Browser DevTools Network tab for excessive RPC requests
+- Console for 429 rate limit errors
+- Component re-renders (React DevTools Profiler)
+
+If you see RPC requests triggered by drag-and-drop, modal toggles, or other UI interactions, the watcher is NOT properly memoized.

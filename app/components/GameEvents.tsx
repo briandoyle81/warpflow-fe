@@ -1,10 +1,56 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useWatchContractEvent, usePublicClient } from "wagmi";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
 import { ActionType, ShipPosition } from "../types/types";
 import { parseAbiItem } from "viem";
+
+const MOVE_EVENT_ABI = [
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "gameId",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "shipId",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "int16",
+        name: "newRow",
+        type: "int16",
+      },
+      {
+        indexed: false,
+        internalType: "int16",
+        name: "newCol",
+        type: "int16",
+      },
+      {
+        indexed: false,
+        internalType: "enum ActionType",
+        name: "actionType",
+        type: "uint8",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "targetShipId",
+        type: "uint256",
+      },
+    ],
+    name: "Move",
+    type: "event",
+  },
+] as const;
 
 interface GameEvent {
   id: string;
@@ -133,89 +179,37 @@ export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
     fetchHistoricalEvents();
   }, [gameId, publicClient, isMounted]);
 
-  // Watch for new Move events
-  // Note: This is a duplicate watcher of useContractEvents, but it filters by gameId
-  // Increased polling interval to reduce load on RPC
-  useWatchContractEvent({
-    enabled: isMounted,
-    address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
-    abi: [
-      {
-        anonymous: false,
-        inputs: [
-          {
-            indexed: true,
-            internalType: "uint256",
-            name: "gameId",
-            type: "uint256",
-          },
-          {
-            indexed: false,
-            internalType: "uint256",
-            name: "shipId",
-            type: "uint256",
-          },
-          {
-            indexed: false,
-            internalType: "int16",
-            name: "newRow",
-            type: "int16",
-          },
-          {
-            indexed: false,
-            internalType: "int16",
-            name: "newCol",
-            type: "int16",
-          },
-          {
-            indexed: false,
-            internalType: "enum ActionType",
-            name: "actionType",
-            type: "uint8",
-          },
-          {
-            indexed: false,
-            internalType: "uint256",
-            name: "targetShipId",
-            type: "uint256",
-          },
-        ],
-        name: "Move",
-        type: "event",
-      },
-    ],
-    eventName: "Move",
-    poll: true,
-    pollingInterval: 10000, // Poll every 10 seconds to reduce RPC load (longer than useContractEvents' 5s)
-    onLogs: (logs) => {
+  // Memoized handler for Move events
+  const handleMoveLogs = useCallback(
+    (logs: unknown[]) => {
       if (!Array.isArray(logs) || logs.length === 0) return;
 
       try {
         const relevantLogs = logs.filter((log) => {
-          if (!log || !log.args) return false;
-          const args = log.args as {
-            gameId?: bigint;
-            shipId?: bigint;
-            newRow?: number;
-            newCol?: number;
-            actionType?: number;
-            targetShipId?: bigint;
-          };
+          if (!log || typeof log !== "object") return false;
+          const args = (log as { args?: { gameId?: bigint } }).args;
+          if (!args) return false;
           return args.gameId === gameId;
         });
 
         if (relevantLogs.length > 0) {
           const newEvents: GameEvent[] = relevantLogs.map((log) => {
-            const args = log.args as {
-              gameId: bigint;
-              shipId: bigint;
-              newRow: number;
-              newCol: number;
-              actionType: number;
-              targetShipId: bigint;
+            const logTyped = log as {
+              args?: {
+                gameId: bigint;
+                shipId: bigint;
+                newRow: number;
+                newCol: number;
+                actionType: number;
+                targetShipId: bigint;
+              };
+              transactionHash?: string;
+              logIndex?: number;
+              blockNumber?: bigint;
             };
+            const args = logTyped.args!;
             return {
-              id: `${log.transactionHash}-${log.logIndex}`,
+              id: `${logTyped.transactionHash}-${logTyped.logIndex}`,
               gameId: args.gameId,
               shipId: args.shipId,
               newRow: args.newRow,
@@ -223,7 +217,7 @@ export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
               actionType: args.actionType as ActionType,
               targetShipId: args.targetShipId,
               timestamp: Date.now(),
-              blockNumber: log.blockNumber || 0n,
+              blockNumber: logTyped.blockNumber || 0n,
             };
           });
 
@@ -247,7 +241,27 @@ export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
         console.error("Error processing Move event logs:", error);
       }
     },
-  });
+    [gameId]
+  );
+
+  // Memoized watcher config to prevent re-registration on re-renders
+  const moveEventConfig = useMemo(
+    () => ({
+      enabled: isMounted,
+      address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
+      abi: MOVE_EVENT_ABI,
+      eventName: "Move" as const,
+      poll: true as const,
+      pollingInterval: 10000, // Poll every 10 seconds to reduce RPC load (longer than useContractEvents' 5s)
+      onLogs: handleMoveLogs,
+    }),
+    [isMounted, handleMoveLogs]
+  );
+
+  // Watch for new Move events
+  // Note: This is a duplicate watcher of useContractEvents, but it filters by gameId
+  // Increased polling interval to reduce load on RPC
+  useWatchContractEvent(moveEventConfig);
 
   const formatEventDescription = (event: GameEvent): string => {
     const ship = shipMap.get(event.shipId);

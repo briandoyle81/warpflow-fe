@@ -1,6 +1,20 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
+import { OnboardingTutorial } from "./OnboardingTutorial";
 
 const Info: React.FC = () => {
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  if (showTutorial) {
+    return (
+      <OnboardingTutorial
+        onComplete={() => setShowTutorial(false)}
+        onSkip={() => setShowTutorial(false)}
+      />
+    );
+  }
+
   return (
     <div className="text-cyan-300 font-mono">
       <h3 className="text-2xl font-bold mb-6 tracking-wider text-center">
@@ -15,9 +29,15 @@ const Info: React.FC = () => {
         </div>
         <div className="border border-green-400 bg-black/40 rounded-lg p-4">
           <h4 className="text-lg font-bold text-green-400">📖 TUTORIAL</h4>
-          <p className="text-sm opacity-80">
+          <p className="text-sm opacity-80 mb-3">
             Learn the basics of navy management and combat
           </p>
+          <button
+            onClick={() => setShowTutorial(true)}
+            className="px-4 py-2 bg-green-600 text-white rounded font-mono hover:bg-green-700 transition-colors"
+          >
+            Start Tutorial
+          </button>
         </div>
         <div className="border border-blue-400 bg-black/40 rounded-lg p-4">
           <h4 className="text-lg font-bold text-blue-400">🌐 WEBSITE</h4>

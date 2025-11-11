@@ -86,6 +86,8 @@ const Lobbies: React.FC = () => {
   // Drag and drop state
   const [draggedShipId, setDraggedShipId] = useState<bigint | null>(null);
   const [dragOverPosition, setDragOverPosition] = useState<{ row: number; col: number } | null>(null);
+  // Track last drag over position to prevent excessive state updates
+  const lastDragOverPositionRef = useRef<{ row: number; col: number } | null>(null);
 
   // Track if component has mounted (client-side only)
   const [isMounted, setIsMounted] = useState(false);
@@ -516,11 +518,22 @@ const Lobbies: React.FC = () => {
   const handleDragEnd = () => {
     setDraggedShipId(null);
     setDragOverPosition(null);
+    lastDragOverPositionRef.current = null;
   };
 
   const handleDragOver = (row: number, col: number, e: React.DragEvent) => {
     e.preventDefault(); // Allow drop
-    setDragOverPosition({ row, col });
+    // Only update state if the position actually changed
+    const newPosition = { row, col };
+    const lastPosition = lastDragOverPositionRef.current;
+    if (
+      !lastPosition ||
+      lastPosition.row !== newPosition.row ||
+      lastPosition.col !== newPosition.col
+    ) {
+      lastDragOverPositionRef.current = newPosition;
+      setDragOverPosition(newPosition);
+    }
   };
 
   const handleDrop = (row: number, col: number, e?: React.DragEvent) => {
@@ -547,6 +560,7 @@ const Lobbies: React.FC = () => {
     // Clear drag state
     setDraggedShipId(null);
     setDragOverPosition(null);
+    lastDragOverPositionRef.current = null;
   };
 
   // Function to navigate to game
