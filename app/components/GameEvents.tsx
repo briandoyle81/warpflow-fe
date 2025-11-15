@@ -69,9 +69,10 @@ interface GameEventsProps {
   shipMap: Map<bigint, { name: string; owner: string }>;
   shipPositions: readonly ShipPosition[];
   address?: string;
+  onLatestEventChange?: (event: GameEvent | null) => void;
 }
 
-export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
+export function GameEvents({ gameId, shipMap, address, onLatestEventChange }: GameEventsProps) {
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
@@ -169,6 +170,12 @@ export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
           (a, b) => Number(a.blockNumber) - Number(b.blockNumber)
         );
         setEvents(historicalEvents);
+        // Notify parent of latest event
+        if (onLatestEventChange && historicalEvents.length > 0) {
+          onLatestEventChange(historicalEvents[historicalEvents.length - 1]);
+        } else if (onLatestEventChange) {
+          onLatestEventChange(null);
+        }
       } catch (error) {
         console.error("Error fetching historical events:", error);
       } finally {
@@ -234,14 +241,23 @@ export function GameEvents({ gameId, shipMap, address }: GameEventsProps) {
               (a, b) => Number(a.blockNumber) - Number(b.blockNumber)
             );
 
-            return allEvents.slice(-50); // Keep last 50 events
+            const updatedEvents = allEvents.slice(-50); // Keep last 50 events
+
+            // Notify parent of latest event
+            if (onLatestEventChange && updatedEvents.length > 0) {
+              onLatestEventChange(updatedEvents[updatedEvents.length - 1]);
+            } else if (onLatestEventChange) {
+              onLatestEventChange(null);
+            }
+
+            return updatedEvents;
           });
         }
       } catch (error) {
         console.error("Error processing Move event logs:", error);
       }
     },
-    [gameId]
+    [gameId, onLatestEventChange]
   );
 
   // Memoized watcher config to prevent re-registration on re-renders
