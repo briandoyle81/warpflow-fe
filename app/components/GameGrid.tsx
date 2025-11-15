@@ -46,6 +46,7 @@ interface GameGridProps {
   disableTooltips: boolean;
   address: string | undefined;
   currentTurn: string;
+  highlightedMovePosition?: { row: number; col: number } | null;
   setSelectedShipId: (shipId: bigint | null) => void;
   setPreviewPosition: (position: { row: number; col: number } | null) => void;
   setTargetShipId: (shipId: bigint | null) => void;
@@ -92,6 +93,7 @@ export function GameGrid({
   disableTooltips,
   address,
   currentTurn,
+  highlightedMovePosition,
   setSelectedShipId,
   setPreviewPosition,
   setTargetShipId,
@@ -122,6 +124,9 @@ export function GameGrid({
               const isMovementTile = movementRange.some(
                 (pos) => pos.row === rowIndex && pos.col === colIndex
               );
+              const isHighlightedMove = highlightedMovePosition &&
+                highlightedMovePosition.row === rowIndex &&
+                highlightedMovePosition.col === colIndex;
               const isShootingTile = shootingRange.some(
                 (pos) => pos.row === rowIndex && pos.col === colIndex
               );
@@ -470,7 +475,11 @@ export function GameGrid({
 
                   {/* Movement range highlight */}
                   {isMovementTile && (
-                    <div className="absolute inset-0 z-2 border-2 border-green-400 bg-green-500/20 pointer-events-none" />
+                    <div className={`absolute inset-0 z-2 border-2 pointer-events-none ${
+                      isHighlightedMove
+                        ? "border-yellow-400 bg-yellow-500/40 animate-pulse"
+                        : "border-green-400 bg-green-500/20"
+                    }`} />
                   )}
 
                   {/* Shooting range highlight */}

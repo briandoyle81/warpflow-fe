@@ -41,7 +41,9 @@ export function useSimulatedGameState() {
 
           // Check if position is a scoring tile and update score
           // For tutorial, we'll check if it's a known scoring position
-          const isScoringTile = action.position.row === 6 && action.position.col === 12;
+          const isScoringTile =
+            (action.position.row === 6 && action.position.col === 11) ||
+            (action.position.row === 6 && action.position.col === 12);
           if (isScoringTile && action.type === "moveShip") {
             newState.creatorScore = newState.creatorScore + 1n;
           }

@@ -42,8 +42,8 @@ export function SimulatedTransactionDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80">
-      <div className="bg-gray-900 border-2 border-cyan-400 rounded-lg p-6 max-w-md w-full mx-4 shadow-lg shadow-cyan-400/20">
+    <div className="fixed top-4 right-4 z-[200] pointer-events-auto">
+      <div className="bg-gray-900 border-2 border-cyan-400 rounded-lg p-6 max-w-md w-full shadow-lg shadow-cyan-400/20">
         <h3 className="text-xl font-bold text-cyan-300 mb-4 font-mono">
           [SIMULATED] Transaction Approval
         </h3>

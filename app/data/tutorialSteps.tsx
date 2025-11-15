@@ -67,7 +67,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
           <li>Weapon range and damage</li>
           <li>Equipment (weapon, armor, shields, special ability)</li>
         </ul>
-        <p className="text-yellow-300 font-bold">Try clicking on a ship now!</p>
+        <p className="text-yellow-300 font-bold">Try clicking on one of your ships now</p>
       </div>
     ),
     allowedActions: {
@@ -81,6 +81,35 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     },
   },
   {
+    id: "view-enemy",
+    title: "Viewing Enemy Ships",
+    description: "Learn to inspect enemy ships",
+    instructions: (
+      <div className="space-y-3">
+        <p className="text-lg font-bold text-cyan-300">Inspect Enemy Ships</p>
+        <p>Click on an enemy ship (on the right side) to view their capabilities.</p>
+        <p className="text-sm">When you select an enemy ship, you&apos;ll see:</p>
+        <ul className="list-disc list-inside space-y-1 text-sm">
+          <li><span className="text-green-400">Green tiles</span> = Their movement range (where they can move)</li>
+          <li><span className="text-orange-400">Orange tiles</span> = Their threat range (where they can shoot to)</li>
+          <li>Their ship stats (hull, weapons, equipment)</li>
+        </ul>
+        <p className="text-yellow-300 font-bold">Try clicking on one of the enemy ships now</p>
+      </div>
+    ),
+    allowedActions: {
+      selectShip: [2001n, 2002n, 2003n], // All enemy ships
+    },
+    highlightElements: {
+      ships: [2001n, 2002n, 2003n],
+    },
+    onStepComplete: (actionData) => {
+      return actionData?.type === "selectShip" &&
+             actionData?.shipId !== undefined &&
+             (actionData.shipId === 2001n || actionData.shipId === 2002n || actionData.shipId === 2003n);
+    },
+  },
+  {
     id: "move-ship",
     title: "Moving Ships",
     description: "Learn to move your ships",
@@ -89,7 +118,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
         <p className="text-lg font-bold text-cyan-300">Move Your Ship</p>
         <p>With a ship selected, click on a highlighted tile to move it.</p>
         <p className="text-sm">The highlighted tiles show your ship&apos;s movement range.</p>
-        <p className="text-yellow-300 font-bold">Select ship 1001 and move it forward!</p>
+        <p className="text-yellow-300 font-bold">Select the Tutorial Scout and move it toward the center lane!</p>
       </div>
     ),
     allowedActions: {
@@ -97,17 +126,16 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       moveShip: {
         shipId: 1001n,
         allowedPositions: [
-          { row: 5, col: 2 },
-          { row: 6, col: 3 },
-          { row: 6, col: 4 },
-          { row: 7, col: 2 },
+          { row: 6, col: 9 }, // Advance toward the center lane
         ],
       },
     },
     highlightElements: {
       ships: [1001n],
+      mapPositions: [{ row: 6, col: 9 }],
     },
     requiresTransaction: true,
+    showTransactionAfter: true, // Show transaction dialog after moving the ship
     onStepComplete: (actionData) => {
       return actionData?.type === "moveShip" && actionData?.shipId === 1001n;
     },
@@ -119,9 +147,10 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     instructions: (
       <div className="space-y-3">
         <p className="text-lg font-bold text-cyan-300">Claim Points</p>
-        <p>Move your ship to a scoring tile (yellow or blue) to automatically claim points!</p>
+        <p className="text-red-300 font-bold">⚠️ The Enemy Destroyer just scored points by sliding onto the scoring tile at (5, 13)!</p>
+        <p>Race to the middle of the map and claim the central scoring tile at (6, 11) before they snowball the lead.</p>
         <p className="text-sm">Points are claimed when you end your turn on a scoring tile.</p>
-        <p className="text-yellow-300 font-bold">Move ship 1001 to the highlighted scoring tile!</p>
+        <p className="text-yellow-300 font-bold">Move the Tutorial Scout onto the central scoring tile!</p>
       </div>
     ),
     allowedActions: {
@@ -129,19 +158,19 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       moveShip: {
         shipId: 1001n,
         allowedPositions: [
-          { row: 6, col: 12 }, // Scoring tile
+          { row: 6, col: 11 }, // Central scoring tile
         ],
       },
     },
     highlightElements: {
       ships: [1001n],
-      mapPositions: [{ row: 6, col: 12 }],
+      mapPositions: [{ row: 6, col: 11 }],
     },
     requiresTransaction: true,
     onStepComplete: (actionData) => {
       return actionData?.type === "moveShip" &&
              actionData?.position?.row === 6 &&
-             actionData?.position?.col === 12;
+             actionData?.position?.col === 11;
     },
   },
   {
@@ -153,11 +182,17 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
         <p className="text-lg font-bold text-cyan-300">Shoot at Enemy</p>
         <p>With a ship selected, click on an enemy ship within range to shoot it.</p>
         <p className="text-sm">The highlighted area shows your weapon range. Ships can always shoot adjacent enemies (1 tile away).</p>
-        <p className="text-yellow-300 font-bold">Select ship 1001, then click on enemy ship 2001 to shoot!</p>
+        <p className="text-yellow-300 font-bold">First, hop onto the single-use scoring crystal at (6, 12), then light up the Enemy Fighter!</p>
       </div>
     ),
     allowedActions: {
       selectShip: [1001n],
+      moveShip: {
+        shipId: 1001n,
+        allowedPositions: [
+          { row: 6, col: 12 }, // Single-use scoring tile
+        ],
+      },
       shoot: {
         shipId: 1001n,
         allowedTargets: [2001n],
@@ -165,6 +200,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     },
     highlightElements: {
       ships: [1001n, 2001n],
+      mapPositions: [{ row: 6, col: 12 }],
     },
     requiresTransaction: true,
     onStepComplete: (actionData) => {
@@ -181,8 +217,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       <div className="space-y-3">
         <p className="text-lg font-bold text-cyan-300">Use EMP</p>
         <p>EMP disables enemy ships, preventing them from acting.</p>
-        <p className="text-sm">Select ship 1002 (has EMP), switch to Special mode, then target an enemy.</p>
-        <p className="text-yellow-300 font-bold">Use EMP on enemy ship 2001!</p>
+        <p className="text-sm">Select the Tutorial EMP Vessel (has EMP), switch to Special mode, then target an enemy.</p>
+        <p className="text-yellow-300 font-bold">Use EMP on the Enemy Fighter!</p>
       </div>
     ),
     allowedActions: {
@@ -211,8 +247,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       <div className="space-y-3">
         <p className="text-lg font-bold text-cyan-300">Repair Friendly Ship</p>
         <p>Repair restores hull points to friendly ships.</p>
-        <p className="text-sm">Select ship 1003 (has Repair), switch to Special mode, then target ship 1001.</p>
-        <p className="text-yellow-300 font-bold">Repair ship 1001!</p>
+        <p className="text-sm">Select the Tutorial Support Ship (has Repair), switch to Special mode, then target the Tutorial Scout.</p>
+        <p className="text-yellow-300 font-bold">Repair the Tutorial Scout!</p>
       </div>
     ),
     allowedActions: {
@@ -242,7 +278,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
         <p className="text-lg font-bold text-cyan-300">Assist Disabled Ship</p>
         <p>Disabled ships (0 HP) will be destroyed unless assisted.</p>
         <p className="text-sm">Move next to a disabled friendly ship and assist it to prevent destruction.</p>
-        <p className="text-yellow-300 font-bold">First, we&apos;ll disable ship 1001, then assist it with ship 1003!</p>
+        <p className="text-yellow-300 font-bold">First, we&apos;ll disable the Tutorial Scout, then assist it with the Tutorial Support Ship!</p>
       </div>
     ),
     allowedActions: {
@@ -270,8 +306,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       <div className="space-y-3">
         <p className="text-lg font-bold text-cyan-300">Destroy Disabled Enemy</p>
         <p>Shooting a disabled enemy ship (0 HP) will destroy it and increase reactor overload.</p>
-        <p className="text-sm">Enemy ship 2002 is already disabled. Shoot it to destroy it!</p>
-        <p className="text-yellow-300 font-bold">Select ship 1001 and shoot enemy ship 2002!</p>
+        <p className="text-sm">The Disabled Enemy is already disabled. Shoot it to destroy it!</p>
+        <p className="text-yellow-300 font-bold">Select the Tutorial Scout and shoot the Disabled Enemy!</p>
       </div>
     ),
     allowedActions: {

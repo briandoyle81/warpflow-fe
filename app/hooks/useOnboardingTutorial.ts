@@ -3,12 +3,34 @@ import { TutorialStep, TutorialAction, TutorialContextValue } from "../types/onb
 import { TUTORIAL_STEPS } from "../data/tutorialSteps";
 import { useSimulatedGameState } from "./useSimulatedGameState";
 
+const TUTORIAL_STEP_STORAGE_KEY = "warpflow-tutorial-step-index";
+
 export function useOnboardingTutorial() {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  // Load saved step index from localStorage, default to 0
+  const [currentStepIndex, setCurrentStepIndex] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(TUTORIAL_STEP_STORAGE_KEY);
+      if (saved !== null) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed < TUTORIAL_STEPS.length) {
+          return parsed;
+        }
+      }
+    }
+    return 0;
+  });
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<TutorialAction | null>(null);
+  const [lastAction, setLastAction] = useState<TutorialAction | null>(null);
 
   const { gameState, updateGameState, applyAction, resetState } = useSimulatedGameState();
+
+  // Save step index to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(TUTORIAL_STEP_STORAGE_KEY, currentStepIndex.toString());
+    }
+  }, [currentStepIndex]);
 
   const currentStep = useMemo(() => {
     return TUTORIAL_STEPS[currentStepIndex] || null;
@@ -101,8 +123,32 @@ export function useOnboardingTutorial() {
       return { success: false, message: validation.message };
     }
 
+    // If step requires transaction and should show after, execute first then show dialog
+    // Only show transaction dialog for moveShip actions, not for selectShip
+    if (
+      currentStep?.requiresTransaction &&
+      currentStep?.showTransactionAfter &&
+      action.type === "moveShip"
+    ) {
+      applyAction(action);
+      setLastAction(action); // Track the last action for step completion checking
+      setPendingAction(action);
+      // Delay showing the transaction dialog to allow the UI to update first
+      // Use requestAnimationFrame to ensure the ship has visually moved
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsTransactionDialogOpen(true);
+        });
+      });
+      return { success: true, pending: true };
+    }
+
     // If step requires transaction, show dialog first
-    if (currentStep?.requiresTransaction) {
+    // Only show transaction dialog for actions that require it (not selectShip)
+    if (
+      currentStep?.requiresTransaction &&
+      action.type !== "selectShip"
+    ) {
       setPendingAction(action);
       setIsTransactionDialogOpen(true);
       return { success: true, pending: true };
@@ -110,6 +156,7 @@ export function useOnboardingTutorial() {
 
     // Otherwise, execute immediately
     applyAction(action);
+    setLastAction(action); // Track the last action for step completion checking
 
     return { success: true };
   }, [currentStep, validateAction, applyAction]);
@@ -118,7 +165,14 @@ export function useOnboardingTutorial() {
     if (!pendingAction) return;
 
     setIsTransactionDialogOpen(false);
-    applyAction(pendingAction);
+
+    // If action was already executed (showTransactionAfter), just close the dialog
+    // Otherwise, execute the action now
+    if (!currentStep?.showTransactionAfter) {
+      applyAction(pendingAction);
+      setLastAction(pendingAction); // Track the last action for step completion checking
+    }
+    // Note: If showTransactionAfter is true, action was already executed and lastAction was already set
 
     setPendingAction(null);
   }, [pendingAction, currentStep, applyAction]);
@@ -139,19 +193,49 @@ export function useOnboardingTutorial() {
   }, []);
 
   const nextStep = useCallback(() => {
-    setCurrentStepIndex((prev) => Math.min(prev + 1, TUTORIAL_STEPS.length - 1));
+    setCurrentStepIndex((prev) => {
+      const nextIndex = Math.min(prev + 1, TUTORIAL_STEPS.length - 1);
+      // Reset last action when moving to next step
+      if (nextIndex !== prev) {
+        setLastAction(null);
+      }
+      return nextIndex;
+    });
   }, []);
 
   const previousStep = useCallback(() => {
-    setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
-  }, []);
+    setCurrentStepIndex((prev) => {
+      const prevIndex = Math.max(prev - 1, 0);
+      // Reset last action when moving to previous step
+      if (prevIndex !== prev) {
+        setLastAction(null);
+        // Reset game state to initial when going back
+        // The step-specific useEffect will then apply the correct state for the previous step
+        resetState();
+      }
+      return prevIndex;
+    });
+  }, [resetState]);
 
   const resetTutorial = useCallback(() => {
     setCurrentStepIndex(0);
     setIsTransactionDialogOpen(false);
     setPendingAction(null);
+    setLastAction(null);
     resetState();
+    // Clear saved step index from localStorage
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(TUTORIAL_STEP_STORAGE_KEY);
+    }
   }, [resetState]);
+
+  // Check if current step is complete
+  const isStepComplete = useMemo(() => {
+    if (!currentStep?.onStepComplete) {
+      return true; // If no completion condition, step is always "complete" (can proceed)
+    }
+    return currentStep.onStepComplete(lastAction);
+  }, [currentStep, lastAction]);
 
   // Step-specific simulated state adjustments
   useEffect(() => {
@@ -221,10 +305,37 @@ export function useOnboardingTutorial() {
           });
           break;
         }
+        case "score-points": {
+          // Move opponent ship 2003 (Enemy Destroyer) to the scoring tile at (5, 13) and update opponent score
+          // Note: This preserves all other ship positions (e.g., Tutorial Scout from step 5)
+          ensureStateClone();
+          updatedState.shipPositions = updatedState.shipPositions.map((pos) => {
+            if (pos.shipId === 2003n) {
+              return {
+                ...pos,
+                position: { row: 5, col: 13 },
+              };
+            }
+            // Preserve all other ship positions unchanged
+            return pos;
+          });
+          // Mark ship as moved
+          if (!updatedState.joinerMovedShipIds.includes(2003n)) {
+            updatedState.joinerMovedShipIds = [...updatedState.joinerMovedShipIds, 2003n];
+          }
+          // Increment opponent score
+          updatedState.joinerScore = updatedState.joinerScore + 1n;
+          // Allow the Tutorial Scout to move again on the next step
+          updatedState.creatorMovedShipIds = updatedState.creatorMovedShipIds.filter((id) => id !== 1001n);
+          break;
+        }
         default:
+          // For steps without specific state adjustments, preserve all current state
+          // This ensures ship positions from previous steps are maintained
           return state;
       }
 
+      // Return updated state (which may be the same as original state if no modifications were made)
       return updatedState;
     });
   }, [currentStep, updateGameState]);
@@ -235,6 +346,7 @@ export function useOnboardingTutorial() {
     gameState,
     isTransactionDialogOpen,
     pendingAction,
+    isStepComplete,
     updateGameState,
     validateAction,
     executeAction,
@@ -251,6 +363,7 @@ export function useOnboardingTutorial() {
     gameState,
     isTransactionDialogOpen,
     pendingAction,
+    isStepComplete,
     updateGameState,
     validateAction,
     executeAction,

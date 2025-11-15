@@ -20,10 +20,11 @@ export interface TutorialStep {
     mapPositions?: Position[];
     uiElements?: string[];
   };
-  requiresTransaction?: boolean;
-  onStepComplete?: (actionData: TutorialAction | null) => boolean; // Return true if step should progress
-  nextStepCondition?: (gameState: SimulatedGameState) => boolean;
-  autoAdvance?: boolean; // Automatically advance after action
+      requiresTransaction?: boolean;
+      showTransactionAfter?: boolean; // Show transaction dialog after executing action (instead of before)
+      onStepComplete?: (actionData: TutorialAction | null) => boolean; // Return true if step should progress
+      nextStepCondition?: (gameState: SimulatedGameState) => boolean;
+      autoAdvance?: boolean; // Automatically advance after action
 }
 
 export interface SimulatedGameState {
@@ -72,6 +73,7 @@ export interface TutorialContextValue {
   gameState: SimulatedGameState;
   isTransactionDialogOpen: boolean;
   pendingAction: TutorialAction | null;
+  isStepComplete: boolean;
   updateGameState: (updater: (state: SimulatedGameState) => SimulatedGameState) => void;
   validateAction: (action: TutorialAction) => { valid: boolean; message?: string };
   executeAction: (action: TutorialAction) => void;

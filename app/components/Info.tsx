@@ -3,8 +3,18 @@
 import React, { useState } from "react";
 import { OnboardingTutorial } from "./OnboardingTutorial";
 
+const TUTORIAL_STEP_STORAGE_KEY = "warpflow-tutorial-step-index";
+
 const Info: React.FC = () => {
-  const [showTutorial, setShowTutorial] = useState(false);
+  // Check if there's a saved tutorial step on mount
+  const [showTutorial, setShowTutorial] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(TUTORIAL_STEP_STORAGE_KEY);
+      // Auto-show tutorial if there's a saved step (user was in progress)
+      return saved !== null;
+    }
+    return false;
+  });
 
   if (showTutorial) {
     return (

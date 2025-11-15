@@ -2565,6 +2565,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           disableTooltips={disableTooltips}
           address={address}
           currentTurn={game.turnState.currentTurn}
+          highlightedMovePosition={null}
           setSelectedShipId={setSelectedShipId}
           setPreviewPosition={setPreviewPosition}
           setTargetShipId={setTargetShipId}

@@ -7,18 +7,22 @@ interface TutorialStepOverlayProps {
   step: TutorialStep;
   currentStepIndex: number;
   totalSteps: number;
+  isStepComplete: boolean;
   onNext: () => void;
   onPrevious: () => void;
   onSkip?: () => void;
+  onReset?: () => void;
 }
 
 export function TutorialStepOverlay({
   step,
   currentStepIndex,
   totalSteps,
+  isStepComplete,
   onNext,
   onPrevious,
   onSkip,
+  onReset,
 }: TutorialStepOverlayProps) {
   return (
     <div className="fixed inset-0 z-[150] pointer-events-none">
@@ -36,6 +40,14 @@ export function TutorialStepOverlay({
               </p>
             </div>
             <div className="flex gap-2">
+              {onReset && (
+                <button
+                  onClick={onReset}
+                  className="px-3 py-1 text-xs bg-yellow-700 text-yellow-200 rounded font-mono hover:bg-yellow-600 transition-colors"
+                >
+                  Reset Tutorial
+                </button>
+              )}
               {onSkip && (
                 <button
                   onClick={onSkip}
@@ -77,7 +89,7 @@ export function TutorialStepOverlay({
             </button>
             <button
               onClick={onNext}
-              disabled={currentStepIndex === totalSteps - 1}
+              disabled={currentStepIndex === totalSteps - 1 || !isStepComplete}
               className="px-4 py-2 bg-cyan-600 text-white rounded font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
             >
               {currentStepIndex === totalSteps - 1 ? "Finish" : "Next →"}
