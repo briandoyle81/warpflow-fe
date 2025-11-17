@@ -263,13 +263,13 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
     }
 
     // Check if this step has specific move constraints
+    const allowedMoveAction = currentStep?.allowedActions.moveShip;
     const hasMoveConstraints =
-      currentStep?.allowedActions.moveShip &&
-      currentStep.allowedActions.moveShip.shipId === selectedShipId;
+      allowedMoveAction && allowedMoveAction.shipId === selectedShipId;
 
     const allowedPositionsSet = hasMoveConstraints
       ? new Set(
-          currentStep.allowedActions.moveShip.allowedPositions.map(
+          (allowedMoveAction?.allowedPositions || []).map(
             (pos) => `${pos.row}-${pos.col}`
           )
         )
@@ -305,7 +305,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
             } else if (currentStep?.id === "move-ship") {
               // Step 5: Show all valid moves
               validMoves.push({ row, col });
-            } else if (allowedPositionsSet!.has(`${row}-${col}`)) {
+            } else if (allowedPositionsSet?.has(`${row}-${col}`)) {
               // Other steps: Only show allowed positions
               validMoves.push({ row, col });
             }

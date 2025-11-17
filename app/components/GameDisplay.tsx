@@ -1650,6 +1650,18 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     if (shouldShowMovePreview && latestGameEvent) {
       const eventShip = shipMap.get(latestGameEvent.shipId);
       if (eventShip) {
+        // When we receive a new move event, capture the previous position
+        // The ship is currently at newRow/newCol, so we need to store the previous position
+        // before it gets updated
+        const currentPos = game.shipPositions.find(
+          (pos) => pos.shipId === latestGameEvent.shipId
+        );
+        if (currentPos) {
+          // If the current position matches the new position from the event,
+          // the ship has already moved. We need to capture the position before the move.
+          // This is handled by the position tracking effect above.
+        }
+
         // Set preview position
         setPreviewPosition({
           row: latestGameEvent.newRow,
@@ -1677,7 +1689,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         setTargetShipId(null);
       }
     }
-  }, [shouldShowMovePreview, latestGameEvent, shipMap, selectedShipId]);
+  }, [
+    shouldShowMovePreview,
+    latestGameEvent,
+    shipMap,
+    selectedShipId,
+    game.shipPositions,
+  ]);
 
   const highlightedMovePosition =
     shouldShowMovePreview && latestGameEvent
@@ -2053,6 +2071,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               {/* Left: Ship Info */}
               <div className="flex flex-col gap-2 min-w-0 flex-shrink-0">
                 <div className="flex items-center gap-3">
+                  {shouldShowMovePreview && (
+                    <span className="text-xs text-gray-400 uppercase tracking-wide">
+                      Last Move
+                    </span>
+                  )}
                   <span className="text-white font-semibold">
                     {(() => {
                       if (shouldShowMovePreview && latestGameEvent) {
@@ -2074,7 +2097,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   </span>
                   <span className="text-gray-500">→</span>
                   <span className="text-gray-300 font-mono">
-                    {previewPosition
+                    {shouldShowMovePreview && latestGameEvent
+                      ? `Unknown → (${latestGameEvent.newRow}, ${latestGameEvent.newCol})`
+                      : previewPosition
                       ? `(${previewPosition.row}, ${previewPosition.col})`
                       : (() => {
                           const currentPosition = game.shipPositions.find(
