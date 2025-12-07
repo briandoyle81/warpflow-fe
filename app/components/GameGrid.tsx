@@ -610,17 +610,16 @@ export function GameGrid({
                       }}
                     >
                       {/* Damage display for selected target or valid targets when dragging/previewing */}
-                      {((isSelectedTarget &&
-                        (previewPosition ||
-                          selectedWeaponType === "special")) ||
-                        ((draggedShipId && dragOverCell &&
+                      {(isSelectedTarget ||
+                        ((draggedShipId &&
+                          dragOverCell &&
                           dragValidTargets.some(
                             (target) => target.shipId === cell.shipId
                           )) ||
-                        (previewPosition &&
-                          validTargets.some(
-                            (target) => target.shipId === cell.shipId
-                          )))) && (
+                          (previewPosition &&
+                            validTargets.some(
+                              (target) => target.shipId === cell.shipId
+                            )))) && (
                         <div
                           className={`absolute -top-8 left-1/2 transform -translate-x-1/2 z-20 rounded px-2 py-1 text-xs font-mono text-white whitespace-nowrap ${
                             selectedWeaponType === "special"
