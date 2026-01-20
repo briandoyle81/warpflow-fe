@@ -51,7 +51,9 @@ export type LobbiesWriteFunction =
   | "leaveLobby"
   | "timeoutJoiner"
   | "createFleet"
-  | "quitWithPenalty";
+  | "quitWithPenalty"
+  | "acceptGame"
+  | "rejectGame";
 
 // Helper hooks for common operations
 export function useLobby(lobbyId: bigint) {
@@ -75,6 +77,8 @@ export function useLobby(lobbyId: bigint) {
           players: {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             joiner: (data as any)[2],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            reservedJoiner: (data as any).players?.reservedJoiner || "0x0000000000000000000000000000000000000000",
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             creatorFleetId: (data as any)[7],
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

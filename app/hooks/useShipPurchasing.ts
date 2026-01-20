@@ -1,4 +1,9 @@
-import { useAccount, useBalance, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useAccount,
+  useBalance,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { CONTRACT_ADDRESSES, SHIP_PURCHASE_TIERS } from "../config/contracts";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
@@ -10,8 +15,9 @@ const shipsContractABI = [
   {
     inputs: [
       { internalType: "address", name: "_to", type: "address" },
-      { internalType: "uint256", name: "_tier", type: "uint256" },
+      { internalType: "uint8", name: "_tier", type: "uint8" },
       { internalType: "address", name: "_referral", type: "address" },
+      { internalType: "uint16", name: "_variant", type: "uint16" },
     ],
     name: "purchaseWithFlow",
     outputs: [],
@@ -34,7 +40,11 @@ export function useShipPurchasing() {
   const { writeContract, isPending, error, data: hash } = useWriteContract();
 
   // Wait for transaction receipt
-  const { isLoading: isConfirming, isSuccess: isConfirmed, error: receiptError } = useWaitForTransactionReceipt({
+  const {
+    isLoading: isConfirming,
+    isSuccess: isConfirmed,
+    error: receiptError,
+  } = useWaitForTransactionReceipt({
     hash,
   });
 
@@ -86,20 +96,21 @@ export function useShipPurchasing() {
   const { tiers, shipsPerTier, prices } = SHIP_PURCHASE_TIERS;
 
   // Purchase ships function - note: contract handles count internally
+  // Tiers are now 0-based (0-4) instead of 1-based (1-5)
   const purchaseShips = async (tier: number) => {
     if (!address) {
       toast.error("Please connect your wallet");
       return;
     }
 
-    if (tier < 1 || tier > tiers.length) {
+    // Validate 0-based tier (0-4)
+    if (tier < 0 || tier >= tiers.length) {
       toast.error("Invalid tier selected");
       return;
     }
 
-    // Convert 1-based tier to 0-based index for prices array
-    const tierIndex = tier - 1;
-    const tierPrice = prices[tierIndex] || BigInt(0);
+    // Tier is already 0-based, use directly as index
+    const tierPrice = prices[tier] || BigInt(0);
     if (tierPrice === BigInt(0)) {
       toast.error("Invalid tier price");
       return;
@@ -119,7 +130,7 @@ export function useShipPurchasing() {
         address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: shipsContractABI,
         functionName: "purchaseWithFlow",
-        args: [address, BigInt(tier), referralAddress],
+        args: [address, tier as number, referralAddress, 1], // tier is 0-based uint8, variant defaults to 1
         value: tierPrice,
       });
 
@@ -146,12 +157,13 @@ export function useShipPurchasing() {
   const purchaseMultipleShips = (tier: number) => purchaseShips(tier);
 
   // Calculate costs for different quantities in a tier
+  // Tiers are now 0-based (0-4)
   const getPurchaseCosts = (tier: number, maxCount: number = 10) => {
-    const tierIndex = tier - 1; // Convert to 0-based index
-    if (!prices[tierIndex]) return [];
+    // Tier is already 0-based, use directly as index
+    if (!prices[tier]) return [];
 
-    const tierPrice = prices[tierIndex];
-    const shipsInTier = Number(shipsPerTier[tierIndex] || 1);
+    const tierPrice = prices[tier];
+    const shipsInTier = Number(shipsPerTier[tier] || 1);
     const costs = [];
 
     for (let i = 1; i <= Math.min(maxCount, shipsInTier); i++) {
@@ -167,10 +179,11 @@ export function useShipPurchasing() {
   };
 
   // Check if user can afford a certain quantity in a tier
+  // Tiers are now 0-based (0-4)
   const canAfford = (tier: number, count: number) => {
-    const tierIndex = tier - 1; // Convert to 0-based index
-    if (!prices[tierIndex] || !flowBalance) return false;
-    const tierPrice = prices[tierIndex];
+    // Tier is already 0-based, use directly as index
+    if (!prices[tier] || !flowBalance) return false;
+    const tierPrice = prices[tier];
     const totalCost = tierPrice * BigInt(count);
     return flowBalance.value >= totalCost;
   };

@@ -16,9 +16,11 @@ import PayButton from "./PayButton";
 import { toast } from "react-hot-toast";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import type { Abi } from "viem";
+import UTCPurchaseModal from "./UTCPurchaseModal";
 
 const Header: React.FC = () => {
   const [isHydrated, setIsHydrated] = useState(false);
+  const [showUTCPurchaseModal, setShowUTCPurchaseModal] = useState(false);
 
   const account = useAccount();
   const { data: balance } = useBalance({
@@ -200,14 +202,17 @@ const Header: React.FC = () => {
 
                     {/* UTC Balance and Network */}
                     <div className="flex items-center gap-2">
-                      {/* UTC Balance */}
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-yellow-400 shadow-lg shadow-yellow-400/30 h-8 w-40 justify-center">
+                      {/* UTC Balance - Clickable */}
+                      <button
+                        onClick={() => setShowUTCPurchaseModal(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-yellow-400 shadow-lg shadow-yellow-400/30 h-8 w-40 justify-center hover:border-yellow-300 hover:bg-yellow-400/10 transition-all duration-200 cursor-pointer"
+                      >
                         <span className="text-yellow-400 text-xs font-mono font-bold tracking-wider">
                           {utcBalance
                             ? `${formatEther(utcBalance as bigint)} UTC`
                             : "0.00 UTC"}
                         </span>
-                      </div>
+                      </button>
                       {/* Network (moved here) */}
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-cyan-400 shadow-lg shadow-cyan-400/30 h-8 w-32 justify-center">
                         <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
@@ -262,6 +267,11 @@ const Header: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* UTC Purchase Modal */}
+      {showUTCPurchaseModal && (
+        <UTCPurchaseModal onClose={() => setShowUTCPurchaseModal(false)} />
+      )}
     </header>
   );
 };

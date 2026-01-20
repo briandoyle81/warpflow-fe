@@ -27,6 +27,8 @@ import {
 import { LobbyCreateButton } from "./LobbyCreateButton";
 import { LobbyJoinButton } from "./LobbyJoinButton";
 import { LobbyLeaveButton } from "./LobbyLeaveButton";
+import { LobbyAcceptButton } from "./LobbyAcceptButton";
+import { LobbyRejectButton } from "./LobbyRejectButton";
 import { useTransaction } from "../providers/TransactionContext";
 import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
 import { calculateShipRank, getRankColor } from "../utils/shipLevel";
@@ -784,6 +786,7 @@ const Lobbies: React.FC = () => {
     selectedMapId: "1",
     maxScore: "100",
     creatorGoesFirst: false,
+    reservedJoiner: "", // Optional: address to reserve for (empty for open lobby)
   });
 
   // const handleLeaveLobby = async (lobbyId: bigint) => {
@@ -1396,6 +1399,28 @@ const Lobbies: React.FC = () => {
                 min="1"
               />
             </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">
+                Reserve for Player (Optional)
+              </label>
+              <input
+                type="text"
+                value={createForm.reservedJoiner}
+                onChange={(e) => {
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    reservedJoiner: e.target.value,
+                  }));
+                }}
+                className="w-full px-3 py-2 bg-black/60 border border-yellow-400 rounded text-cyan-300"
+                placeholder="0x0000... (leave empty for open lobby)"
+              />
+              <p className="text-xs text-yellow-400 mt-1">
+                {createForm.reservedJoiner
+                  ? "⚠️ Requires 1 UTC to reserve game for this player"
+                  : "Leave empty to create an open lobby"}
+              </p>
+            </div>
             <div className="p-3 bg-gray-800/50 rounded border border-gray-600">
               <p className="text-sm text-gray-300">
                 <span className="text-yellow-400">⚡ Turn Order:</span> The
@@ -1414,11 +1439,25 @@ const Lobbies: React.FC = () => {
                     ? (additionalLobbyFee as bigint) || 0n
                     : 0n
                 }
+                reservedJoiner={
+                  createForm.reservedJoiner.trim()
+                    ? (createForm.reservedJoiner.trim() as `0x${string}`)
+                    : undefined
+                }
                 className="flex-1 px-6 py-3 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200"
                 onSuccess={() => {
                   // Show success toast
                   // Close the form
                   setShowCreateForm(false);
+                  // Reset form
+                  setCreateForm({
+                    costLimit: "1000",
+                    turnTime: "300",
+                    selectedMapId: "1",
+                    maxScore: "100",
+                    creatorGoesFirst: false,
+                    reservedJoiner: "",
+                  });
                   // Refresh lobby list
                   loadLobbies();
                 }}
@@ -1517,6 +1556,21 @@ const Lobbies: React.FC = () => {
                       {lobby.players.joiner.slice(-4)}
                     </p>
                   )}
+                  {/* Reservation Status */}
+                  {lobby.players.reservedJoiner &&
+                    lobby.players.reservedJoiner !==
+                      "0x0000000000000000000000000000000000000000" &&
+                    typeof lobby.players.reservedJoiner === "string" && (
+                      <div className="mt-2">
+                        <span className="px-2 py-1 text-xs bg-yellow-400/20 text-yellow-400 rounded border border-yellow-400/50">
+                          🔒 RESERVED
+                        </span>
+                        <p className="text-xs text-yellow-400 mt-1">
+                          Reserved for: {lobby.players.reservedJoiner.slice(0, 6)}...
+                          {lobby.players.reservedJoiner.slice(-4)}
+                        </p>
+                      </div>
+                    )}
 
                   {/* Fleet Selection Indicators */}
                   <div className="flex gap-2 mt-2">
@@ -1613,26 +1667,106 @@ const Lobbies: React.FC = () => {
                 lobby.basic.creator !== address &&
                 lobby.players.joiner !== address && (
                   <div className="space-y-2">
-                    <LobbyJoinButton
-                      lobbyId={lobby.basic.id}
-                      disabled={hasActiveLobby}
-                      className="w-full px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onSuccess={() => {
-                        // Show success toast
-                        // Refresh lobby list
-                        loadLobbies();
-                      }}
-                      onError={(error) => {
-                        console.error("Failed to join lobby:", error);
-                      }}
-                    >
-                      JOIN LOBBY
-                    </LobbyJoinButton>
-                    {hasActiveLobby && (
-                      <p className="text-xs text-yellow-400 text-center">
-                        You already have an active lobby. Complete it before
-                        joining another.
-                      </p>
+                    {/* Check if lobby is reserved */}
+                    {lobby.players.reservedJoiner &&
+                    typeof lobby.players.reservedJoiner === "string" &&
+                    lobby.players.reservedJoiner !==
+                      "0x0000000000000000000000000000000000000000" ? (
+                      // Reserved lobby
+                      address &&
+                      lobby.players.reservedJoiner.toLowerCase() ===
+                        address.toLowerCase() ? (
+                        // Reserved for current user - show accept/reject
+                        <div className="space-y-2">
+                          <p className="text-sm text-yellow-400 text-center font-mono">
+                            🎮 Game reserved for you!
+                          </p>
+                          <div className="flex gap-2">
+                            <LobbyAcceptButton
+                              lobbyId={lobby.basic.id}
+                              disabled={hasActiveLobby}
+                              className="flex-1 px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              onSuccess={() => {
+                                toast.success("Game accepted!");
+                                loadLobbies();
+                              }}
+                              onError={(error) => {
+                                console.error("Failed to accept game:", error);
+                                const errorMessage = error.message || "";
+                                if (errorMessage.includes("NotReservedJoiner") || errorMessage.includes("LobbyNotReserved")) {
+                                  toast.error("This game is no longer reserved for you");
+                                } else {
+                                  toast.error("Failed to accept game");
+                                }
+                              }}
+                            >
+                              ACCEPT
+                            </LobbyAcceptButton>
+                            <LobbyRejectButton
+                              lobbyId={lobby.basic.id}
+                              disabled={hasActiveLobby}
+                              className="flex-1 px-6 py-3 rounded-lg border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              onSuccess={() => {
+                                toast.success("Game rejected. Lobby is now open.");
+                                loadLobbies();
+                              }}
+                              onError={(error) => {
+                                console.error("Failed to reject game:", error);
+                                toast.error("Failed to reject game");
+                              }}
+                            >
+                              REJECT
+                            </LobbyRejectButton>
+                          </div>
+                          {hasActiveLobby && (
+                            <p className="text-xs text-yellow-400 text-center">
+                              You already have an active lobby. Complete it before
+                              accepting another.
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        // Reserved for someone else
+                        <div className="text-center">
+                          <p className="text-sm text-yellow-400 font-mono mb-2">
+                            🔒 This game is reserved for another player
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            Reserved for: {lobby.players.reservedJoiner.slice(0, 6)}...
+                            {lobby.players.reservedJoiner.slice(-4)}
+                          </p>
+                        </div>
+                      )
+                    ) : (
+                      // Open lobby - show join button
+                      <>
+                        <LobbyJoinButton
+                          lobbyId={lobby.basic.id}
+                          disabled={hasActiveLobby}
+                          className="w-full px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onSuccess={() => {
+                            toast.success("Joined lobby successfully!");
+                            loadLobbies();
+                          }}
+                          onError={(error) => {
+                            console.error("Failed to join lobby:", error);
+                            const errorMessage = error.message || "";
+                            if (errorMessage.includes("NotReservedJoiner")) {
+                              toast.error("This game is reserved for another player");
+                            } else {
+                              toast.error("Failed to join lobby");
+                            }
+                          }}
+                        >
+                          JOIN LOBBY
+                        </LobbyJoinButton>
+                        {hasActiveLobby && (
+                          <p className="text-xs text-yellow-400 text-center">
+                            You already have an active lobby. Complete it before
+                            joining another.
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                 )}

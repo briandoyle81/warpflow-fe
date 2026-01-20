@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useFreeShipClaiming } from "../hooks/useFreeShipClaiming";
 import { useAccount } from "wagmi";
 import { toast } from "react-hot-toast";
@@ -23,7 +23,23 @@ export function FreeShipClaimButton({
   onError,
 }: FreeShipClaimButtonProps) {
   const { address } = useAccount();
-  const { claimFreeShips, isPending } = useFreeShipClaiming();
+  const { claimFreeShips, isPending, isConfirmed } = useFreeShipClaiming();
+  const hasCalledOnSuccess = useRef(false);
+
+  // Call onSuccess when transaction is confirmed (only once)
+  useEffect(() => {
+    if (isConfirmed && onSuccess && !hasCalledOnSuccess.current) {
+      hasCalledOnSuccess.current = true;
+      onSuccess();
+    }
+  }, [isConfirmed, onSuccess]);
+
+  // Reset the ref when starting a new transaction
+  useEffect(() => {
+    if (isPending) {
+      hasCalledOnSuccess.current = false;
+    }
+  }, [isPending]);
 
   const handleClick = async () => {
     if (!address) {
@@ -39,7 +55,7 @@ export function FreeShipClaimButton({
 
     try {
       await claimFreeShips();
-      onSuccess?.();
+      // Don't call onSuccess here - wait for confirmation via useEffect
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       onError?.(error);

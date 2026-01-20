@@ -16,6 +16,7 @@ export interface CreateLobbyParams {
   creatorGoesFirst: boolean;
   selectedMapId: bigint;
   maxScore: bigint;
+  reservedJoiner?: Address; // Optional: address to reserve for (address(0) for open lobby)
 }
 
 export interface LobbyListState {
@@ -77,6 +78,7 @@ export function useLobbies() {
           params.creatorGoesFirst,
           params.selectedMapId,
           params.maxScore,
+          params.reservedJoiner || "0x0000000000000000000000000000000000000000", // Use zero address if not specified
         ],
         value,
       });
@@ -177,6 +179,44 @@ export function useLobbies() {
     }
   };
 
+  // Accept a reserved game
+  const acceptGame = async (lobbyId: bigint) => {
+    if (!address) throw new Error("No wallet connected");
+
+    try {
+      await writeContract({
+        ...lobbiesContractConfig,
+        functionName: "acceptGame",
+        args: [lobbyId],
+      });
+
+      // Refresh the lobby list after accepting
+      loadLobbies();
+    } catch (error) {
+      console.error("Failed to accept game:", error);
+      throw error;
+    }
+  };
+
+  // Reject a reserved game
+  const rejectGame = async (lobbyId: bigint) => {
+    if (!address) throw new Error("No wallet connected");
+
+    try {
+      await writeContract({
+        ...lobbiesContractConfig,
+        functionName: "rejectGame",
+        args: [lobbyId],
+      });
+
+      // Refresh the lobby list after rejecting
+      loadLobbies();
+    } catch (error) {
+      console.error("Failed to reject game:", error);
+      throw error;
+    }
+  };
+
   // Update lobby list when the lobby list hook data changes
   useEffect(() => {
     setLobbyList({
@@ -202,6 +242,8 @@ export function useLobbies() {
     timeoutJoiner,
     createFleet,
     quitWithPenalty,
+    acceptGame,
+    rejectGame,
     loadLobbies,
 
     // Transaction hash for waiting on receipt

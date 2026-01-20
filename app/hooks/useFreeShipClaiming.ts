@@ -3,7 +3,7 @@ import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import type { Abi } from "viem";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // Cache expiration time (24 hours) - only for unclaimed addresses
 const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -32,16 +32,16 @@ export function useFreeShipClaiming() {
     return {};
   });
 
-  // Check if user can claim free ships
+  // Check if user can claim free ships (using lastClaimTimestamp)
   const {
-    data: hasClaimedFreeShips,
+    data: lastClaimTimestamp,
     isLoading: isLoadingClaimStatus,
     error: claimStatusError,
     refetch: refetchClaimStatus,
   } = useReadContract({
     address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
     abi: CONTRACT_ABIS.SHIPS as Abi,
-    functionName: "hasClaimedFreeShips",
+    functionName: "lastClaimTimestamp",
     args: address ? [address] : undefined,
   });
 
@@ -119,12 +119,17 @@ export function useFreeShipClaiming() {
 
   // Update cache when eligibility status changes (only on successful reads)
   useEffect(() => {
-    if (address && hasClaimedFreeShips !== undefined && !claimStatusError) {
+    if (address && lastClaimTimestamp !== undefined && !claimStatusError) {
+      // Check if cooldown period has passed (28 days = 2419200 seconds)
+      const cooldownPeriod = 28 * 24 * 60 * 60; // 28 days in seconds
+      const currentTimestamp = Math.floor(Date.now() / 1000);
+      const canClaim = lastClaimTimestamp === 0n || (currentTimestamp - Number(lastClaimTimestamp)) >= cooldownPeriod;
+
       setEligibilityCache((prevCache) => {
         const newCache = {
           ...prevCache,
           [address]: {
-            eligible: !hasClaimedFreeShips,
+            eligible: canClaim,
             timestamp: Date.now(),
             checked: true,
           },
@@ -136,7 +141,7 @@ export function useFreeShipClaiming() {
     }
   }, [
     address,
-    hasClaimedFreeShips,
+    lastClaimTimestamp,
     claimStatusError,
     cleanupExpiredCache,
     saveCacheToStorage,
@@ -221,7 +226,12 @@ export function useFreeShipClaiming() {
           // If there's a read error, assume eligible (let them try)
           return true;
         }
-        return hasClaimedFreeShips !== undefined ? !hasClaimedFreeShips : false;
+        // Check if cooldown period has passed
+        if (lastClaimTimestamp === undefined) return false;
+        if (lastClaimTimestamp === 0n) return true; // Never claimed
+        const cooldownPeriod = 28 * 24 * 60 * 60; // 28 days in seconds
+        const currentTimestamp = Math.floor(Date.now() / 1000);
+        return (currentTimestamp - Number(lastClaimTimestamp)) >= cooldownPeriod;
       })()
     : false;
 
@@ -253,11 +263,12 @@ export function useFreeShipClaiming() {
     setShowError(false);
 
     try {
-      // Call the smart contract to claim free ships
+      // Call the smart contract to claim free ships (with variant parameter)
       await writeContract({
         address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: CONTRACT_ABIS.SHIPS as Abi,
         functionName: "claimFreeShips",
+        args: [1], // Default variant (uint16)
       });
 
       // Toast will be shown when receipt is received (in useEffect below)
@@ -292,6 +303,7 @@ export function useFreeShipClaiming() {
 
     // Contract state
     isPending: isPending || isConfirming, // Include confirmation state
+    isConfirmed, // Transaction confirmed on chain
     error: showError ? (error || receiptError) : null, // Only show error when showError is true
     claimStatusError, // Expose read contract error separately if needed
   };

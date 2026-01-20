@@ -2,13 +2,13 @@ import { Ship } from "../types/types";
 
 /**
  * Calculate ship rank based on ships destroyed
- * 0 ships destroyed → Rank 1 (minimum)
- * 1-9 ships destroyed → Rank 1
- * 10-99 ships destroyed → Rank 2
- * 100-999 ships destroyed → Rank 3
- * 1,000-9,999 ships destroyed → Rank 4
- * 10,000-99,999 ships destroyed → Rank 5
- * 100,000+ ships destroyed → Rank 6+
+ * Uses new threshold-based system:
+ * 0-9 kills → Rank 1 (0% bonus)
+ * 10-29 kills → Rank 2 (10% bonus)
+ * 30-99 kills → Rank 3 (20% bonus)
+ * 100-299 kills → Rank 4 (30% bonus)
+ * 300-999 kills → Rank 5 (40% bonus)
+ * 1000+ kills → Rank 6 (50% bonus)
  */
 export function calculateShipRank(ship: Ship): {
   rank: number;
@@ -20,16 +20,16 @@ export function calculateShipRank(ship: Ship): {
 
   if (shipsDestroyed < 10) {
     rank = 1;
-  } else if (shipsDestroyed < 100) {
+  } else if (shipsDestroyed < 30) {
     rank = 2;
-  } else if (shipsDestroyed < 1000) {
+  } else if (shipsDestroyed < 100) {
     rank = 3;
-  } else if (shipsDestroyed < 10000) {
+  } else if (shipsDestroyed < 300) {
     rank = 4;
-  } else if (shipsDestroyed < 100000) {
+  } else if (shipsDestroyed < 1000) {
     rank = 5;
   } else {
-    rank = 6; // 6+ for 100,000+
+    rank = 6; // 1000+ kills
   }
 
   return {

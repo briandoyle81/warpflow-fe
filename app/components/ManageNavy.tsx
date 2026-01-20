@@ -109,6 +109,7 @@ const ManageNavy: React.FC = () => {
     new Set()
   );
   const [showShipPurchase, setShowShipPurchase] = React.useState(false);
+  const [paymentMethod, setPaymentMethod] = React.useState<"FLOW" | "UTC">("FLOW");
   const [showRecycleModal, setShowRecycleModal] = React.useState(false);
   const [shipToRecycle, setShipToRecycle] = React.useState<Ship | null>(null);
 
@@ -489,9 +490,7 @@ const ManageNavy: React.FC = () => {
             isEligible={true} // Allow trying even with read errors
             className="px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             onSuccess={() => {
-              // Show success toast
-              toast.success("Free ships claimed successfully!");
-              // Refetch ships data after successful claim
+              // Refetch ships data after successful claim (toast is shown by hook on confirmation)
               refetch();
             }}
           >
@@ -506,9 +505,7 @@ const ManageNavy: React.FC = () => {
               isEligible={isEligible}
               className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onSuccess={() => {
-                // Show success toast
-                toast.success("Free ships claimed successfully!");
-                // Refetch ships data after successful claim
+                // Refetch ships data after successful claim (toast is shown by hook on confirmation)
                 refetch();
               }}
             >
@@ -551,9 +548,36 @@ const ManageNavy: React.FC = () => {
       {showShipPurchase && (
         <div className="bg-black/40 border border-blue-400 rounded-lg p-6 mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h4 className="text-xl font-bold text-blue-400">
-              [SHIP PURCHASING]
-            </h4>
+            <div className="flex items-center gap-6">
+              <h4 className="text-xl font-bold text-blue-400">
+                [SHIP PURCHASING]
+              </h4>
+              <div className="flex items-center gap-3">
+                <span className="text-gray-300 font-mono text-sm">PAYMENT METHOD:</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPaymentMethod("FLOW")}
+                    className={`px-3 py-1 rounded-lg border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
+                      paymentMethod === "FLOW"
+                        ? "border-cyan-400 text-cyan-400 bg-cyan-400/10"
+                        : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
+                    }`}
+                  >
+                    FLOW
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod("UTC")}
+                    className={`px-3 py-1 rounded-lg border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
+                      paymentMethod === "UTC"
+                        ? "border-yellow-400 text-yellow-400 bg-yellow-400/10"
+                        : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
+                    }`}
+                  >
+                    UTC
+                  </button>
+                </div>
+              </div>
+            </div>
             <button
               onClick={() => setShowShipPurchase(false)}
               className="text-blue-400 hover:text-blue-300 text-2xl font-bold"
@@ -562,7 +586,11 @@ const ManageNavy: React.FC = () => {
             </button>
           </div>
 
-          <ShipPurchaseInterface onClose={() => setShowShipPurchase(false)} />
+          <ShipPurchaseInterface 
+            onClose={() => setShowShipPurchase(false)}
+            paymentMethod={paymentMethod}
+            onPaymentMethodChange={setPaymentMethod}
+          />
         </div>
       )}
 

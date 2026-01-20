@@ -1,21 +1,47 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useShipPurchasing } from "../hooks";
 import { useOwnedShips } from "../hooks/useOwnedShips";
 import { ShipPurchaseButton } from "./ShipPurchaseButton";
 
 interface ShipPurchaseInterfaceProps {
   onClose: () => void;
+  paymentMethod?: "FLOW" | "UTC";
+  onPaymentMethodChange?: (method: "FLOW" | "UTC") => void;
 }
 
-const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = () => {
+const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({ 
+  paymentMethod: externalPaymentMethod,
+  onPaymentMethodChange 
+}) => {
   const { tiers, prices, maxPerTier } = useShipPurchasing();
   const { refetch } = useOwnedShips();
+  const [internalPaymentMethod, setInternalPaymentMethod] = useState<"FLOW" | "UTC">("FLOW");
+  
+  // Use external payment method if provided, otherwise use internal state
+  const paymentMethod = externalPaymentMethod ?? internalPaymentMethod;
+  
+  // Update payment method handler
+  const handlePaymentMethodChange = (method: "FLOW" | "UTC") => {
+    if (onPaymentMethodChange) {
+      onPaymentMethodChange(method);
+    } else {
+      setInternalPaymentMethod(method);
+    }
+  };
 
-  // Get color classes based on tier
+  // Get color classes based on tier (0-based: 0-4)
   const getTierColors = (tier: number) => {
     switch (tier) {
+      case 0:
+        return {
+          border: "border-amber-400",
+          text: "text-amber-400",
+          hoverBorder: "hover:border-amber-300",
+          hoverText: "hover:text-amber-300",
+          hoverBg: "hover:bg-amber-400/10",
+        };
       case 1:
         return {
           border: "border-gray-400",
@@ -61,29 +87,33 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = () => {
 
   // Simple tier-based purchase interface
   return (
-    <div className="flex flex-wrap gap-2">
-      {tiers.map((tier: number, index: number) => {
-        const price = prices[index];
-        const shipsCount = maxPerTier[index];
-        const priceInFlow = price ? (Number(price) / 1e18).toFixed(2) : "0.00";
-        const colors = getTierColors(tier);
+    <div>
+      {/* Ship Purchase Buttons */}
+      <div className="flex flex-wrap gap-2">
+        {tiers.map((tier: number, index: number) => {
+          const price = prices[index];
+          const shipsCount = maxPerTier[index];
+          const priceFormatted = price ? (Number(price) / 1e18).toFixed(2) : "0.00";
+          const colors = getTierColors(tier);
 
-        return (
-          <ShipPurchaseButton
-            key={index}
-            tier={tier}
-            price={price || BigInt(0)}
-            className={`flex-1 min-w-[200px] px-4 py-2 rounded-lg border-2 ${colors.border} ${colors.text} ${colors.hoverBorder} ${colors.hoverText} ${colors.hoverBg} font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
-            refetch={refetch}
-          >
-            <div className="flex flex-col items-center space-y-1">
-              <span>TIER {tier}</span>
-              <span>{priceInFlow} FLOW</span>
-              <span>{shipsCount} SHIPS</span>
-            </div>
-          </ShipPurchaseButton>
-        );
-      })}
+          return (
+            <ShipPurchaseButton
+              key={index}
+              tier={tier}
+              price={price || BigInt(0)}
+              paymentMethod={paymentMethod}
+              className={`flex-1 min-w-[240px] px-4 py-2 rounded-lg border-2 ${colors.border} ${colors.text} ${colors.hoverBorder} ${colors.hoverText} ${colors.hoverBg} font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+              refetch={refetch}
+            >
+              <div className="flex flex-col items-center space-y-1">
+                <span>TIER {tier}</span>
+                <span>{priceFormatted} {paymentMethod}</span>
+                <span>{shipsCount} SHIPS</span>
+              </div>
+            </ShipPurchaseButton>
+          );
+        })}
+      </div>
     </div>
   );
 };

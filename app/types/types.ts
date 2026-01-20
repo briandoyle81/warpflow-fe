@@ -134,6 +134,7 @@ export interface LobbyBasic {
 
 export interface LobbyPlayers {
   joiner: Address;
+  reservedJoiner: Address; // Address of player this lobby is reserved for (address(0) if open)
   creatorFleetId: bigint;
   joinerFleetId: bigint;
   joinedAt: bigint;
