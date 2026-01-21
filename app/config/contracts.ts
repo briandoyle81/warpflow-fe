@@ -5,6 +5,7 @@ import GameContract from "../contracts/DeployModule#Game.json";
 import UniversalCreditsContract from "../contracts/DeployModule#UniversalCredits.json";
 import MapsContract from "../contracts/DeployModule#Maps.json";
 import ShipAttributesContract from "../contracts/DeployModule#ShipAttributes.json";
+import DroneYardContract from "../contracts/DeployModule#DroneYard.json";
 import deployedAddresses from "../contracts/deployed_addresses.json";
 
 // Contract addresses from deployed_addresses.json
@@ -17,6 +18,7 @@ export const CONTRACT_ADDRESSES = {
   MAPS: deployedAddresses["DeployModule#Maps"],
   SHIP_ATTRIBUTES: deployedAddresses["DeployModule#ShipAttributes"],
   SHIP_PURCHASER: deployedAddresses["DeployModule#ShipPurchaser"],
+  DRONE_YARD: deployedAddresses["DeployModule#DroneYard"],
 } as const;
 
 // Contract ABIs
@@ -28,6 +30,7 @@ export const CONTRACT_ABIS = {
   UNIVERSAL_CREDITS: UniversalCreditsContract.abi,
   MAPS: MapsContract.abi,
   SHIP_ATTRIBUTES: ShipAttributesContract.abi,
+   DRONE_YARD: DroneYardContract.abi,
 } as const;
 
 // Hard-coded ship purchase tiers (from Ships contract)
