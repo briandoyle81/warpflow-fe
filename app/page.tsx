@@ -34,7 +34,7 @@ export default function Home() {
       "Profile",
       "Info",
       "Maps",
-      "Ship Constructor",
+      "Customize Ship",
     ];
     if (isOwner) {
       validTabs.push("Ship Attributes");
@@ -111,7 +111,7 @@ export default function Home() {
                 "Profile",
                 "Info",
                 "Maps",
-                "Ship Constructor",
+                "Customize Ship",
               ];
               if (isOwner) {
                 tabs.push("Ship Attributes");
@@ -152,7 +152,7 @@ export default function Home() {
               {activeTab === "Profile" && <Profile />}
               {activeTab === "Info" && <Info />}
               {activeTab === "Ship Attributes" && <ShipAttributes />}
-              {activeTab === "Ship Constructor" && <ShipConstructor />}
+              {activeTab === "Customize Ship" && <ShipConstructor />}
             </div>
           )}
         </div>

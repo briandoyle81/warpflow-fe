@@ -47,6 +47,8 @@ interface GameGridProps {
   address: string | undefined;
   currentTurn: string;
   highlightedMovePosition?: { row: number; col: number } | null;
+  lastMoveShipId?: bigint | null; // Ship ID for the last move (to show pulse effect)
+  lastMoveOldPosition?: { row: number; col: number } | null; // Old position for last move preview
   setSelectedShipId: (shipId: bigint | null) => void;
   setPreviewPosition: (position: { row: number; col: number } | null) => void;
   setTargetShipId: (shipId: bigint | null) => void;
@@ -94,6 +96,8 @@ export function GameGrid({
   address,
   currentTurn,
   highlightedMovePosition,
+  lastMoveShipId,
+  lastMoveOldPosition,
   setSelectedShipId,
   setPreviewPosition,
   setTargetShipId,
@@ -316,17 +320,26 @@ export function GameGrid({
                       ? "border-2 border-yellow-400"
                       : "border-0"
                   } outline outline-1 outline-gray-900 relative cursor-pointer ${
-                    isSelected
-                      ? canMoveShip
-                        ? "bg-blue-900 ring-2 ring-blue-400"
-                        : "bg-purple-900 ring-2 ring-purple-400"
-                      : hasShipMoved &&
-                        isCurrentPlayerTurn &&
-                        isShipOwnedByCurrentPlayer(cell.shipId)
-                      ? "bg-gray-700 opacity-60 cursor-not-allowed"
-                      : isSelectedTarget
-                      ? (() => {
-                          // Check if this is an assist action
+                    (() => {
+                      // Check if this is the "from" position (original position when proposing a move)
+                      const isProposedMoveOriginal = selectedShipId === cell?.shipId && previewPosition;
+                      // Check if this is the "to" position (preview cell)
+                      const isProposedMovePreview = cell?.isPreview && previewPosition !== null && selectedShipId !== null;
+                      
+                      // Show blue background for "from" or "to" positions
+                      if (isProposedMoveOriginal || isProposedMovePreview) {
+                        // Add blue background, but still need to handle other conditions
+                        const baseBg = canMoveShip
+                          ? "bg-blue-900 ring-2 ring-blue-400"
+                          : "bg-purple-900 ring-2 ring-purple-400";
+                        
+                        // Check for other conditions that might override
+                        if (hasShipMoved &&
+                          isCurrentPlayerTurn &&
+                          isShipOwnedByCurrentPlayer(cell.shipId)) {
+                          return "bg-gray-700 opacity-60 cursor-not-allowed";
+                        }
+                        if (isSelectedTarget) {
                           const isAssistAction =
                             assistableTargets.some(
                               (target) => target.shipId === cell.shipId
@@ -337,24 +350,60 @@ export function GameGrid({
                           if (isAssistAction) {
                             return "bg-cyan-900 ring-2 ring-cyan-400";
                           }
-                          // Otherwise use weapon-based styling
                           return selectedWeaponType === "special"
                             ? specialType === 3 // Flak
-                              ? "bg-red-900 ring-2 ring-red-400" // Flak uses red highlighting like regular weapons
-                              : "bg-blue-900 ring-2 ring-blue-400" // Other specials use blue
+                              ? "bg-red-900 ring-2 ring-red-400"
+                              : "bg-blue-900 ring-2 ring-blue-400"
                             : "bg-red-900 ring-2 ring-red-400";
-                        })()
-                      : isValidTarget
-                      ? selectedWeaponType === "special"
-                        ? specialType === 3 // Flak
-                          ? "bg-red-900/50 ring-1 ring-red-400" // Flak uses red highlighting like regular weapons
-                          : "bg-blue-900/50 ring-1 ring-blue-400" // Other specials use blue
-                        : "bg-orange-900/50 ring-1 ring-orange-400"
-                      : isAssistableTarget
-                      ? "bg-cyan-900/50 ring-1 ring-cyan-400"
-                      : isMovementTile
-                      ? "bg-green-900/50"
-                      : "bg-gray-950"
+                        }
+                        // Return blue background for from/to positions
+                        return baseBg;
+                      }
+                      
+                      // Otherwise, apply normal selected styling
+                      if (isSelected) {
+                        return canMoveShip
+                          ? "bg-blue-900 ring-2 ring-blue-400"
+                          : "bg-purple-900 ring-2 ring-purple-400";
+                      }
+                      
+                      // Default styling chain
+                      return hasShipMoved &&
+                        isCurrentPlayerTurn &&
+                        isShipOwnedByCurrentPlayer(cell.shipId)
+                        ? "bg-gray-700 opacity-60 cursor-not-allowed"
+                        : isSelectedTarget
+                        ? (() => {
+                            // Check if this is an assist action
+                            const isAssistAction =
+                              assistableTargets.some(
+                                (target) => target.shipId === cell.shipId
+                              ) ||
+                              assistableTargetsFromStart.some(
+                                (target) => target.shipId === cell.shipId
+                              );
+                            if (isAssistAction) {
+                              return "bg-cyan-900 ring-2 ring-cyan-400";
+                            }
+                            // Otherwise use weapon-based styling
+                            return selectedWeaponType === "special"
+                              ? specialType === 3 // Flak
+                                ? "bg-red-900 ring-2 ring-red-400" // Flak uses red highlighting like regular weapons
+                                : "bg-blue-900 ring-2 ring-blue-400" // Other specials use blue
+                              : "bg-red-900 ring-2 ring-red-400";
+                          })()
+                        : isValidTarget
+                        ? selectedWeaponType === "special"
+                          ? specialType === 3 // Flak
+                            ? "bg-red-900/50 ring-1 ring-red-400" // Flak uses red highlighting like regular weapons
+                            : "bg-blue-900/50 ring-1 ring-blue-400" // Other specials use blue
+                          : "bg-orange-900/50 ring-1 ring-orange-400"
+                        : isAssistableTarget
+                        ? "bg-cyan-900/50 ring-1 ring-cyan-400"
+                        : isMovementTile
+                        ? "bg-green-900/50"
+                        : "bg-gray-950";
+                    })()
                   }`}
                   onClick={handleCellClick}
                   onMouseEnter={
@@ -716,15 +765,46 @@ export function GameGrid({
 
                       <ShipImage
                         ship={ship}
-                        className={`w-full h-full ${
+                        className={`w-full h-full relative z-10 ${
                           cell.isCreator ? "scale-x-[-1]" : ""
                         } ${
-                          cell.isPreview
-                            ? "animate-pulse-preview"
-                            : selectedShipId === cell.shipId &&
-                              previewPosition
-                            ? "animate-pulse-original"
-                            : ""
+                          (() => {
+                            // Check if this is the "from" position (original position when proposing a move)
+                            const isProposedMoveOriginal = selectedShipId === cell.shipId && previewPosition;
+                            
+                            // Check if this is a proposed move preview (to position)
+                            const isProposedMovePreview = cell.isPreview && 
+                              previewPosition !== null && 
+                              selectedShipId !== null &&
+                              !(lastMoveShipId === cell.shipId && 
+                                lastMoveOldPosition &&
+                                rowIndex === lastMoveOldPosition.row &&
+                                colIndex === lastMoveOldPosition.col);
+                            
+                            // "From" position: 50% opacity, no animation
+                            if (isProposedMoveOriginal) {
+                              return "opacity-50";
+                            }
+                            
+                            // Don't animate proposed move previews
+                            if (isProposedMovePreview) {
+                              return "";
+                            }
+                            
+                            // Last move old position: 50% opacity, no animation
+                            if (lastMoveShipId === cell.shipId &&
+                                lastMoveOldPosition &&
+                                rowIndex === lastMoveOldPosition.row &&
+                                colIndex === lastMoveOldPosition.col) {
+                              return "opacity-50";
+                            }
+                            
+                            // Apply animation for other cases
+                            if (cell.isPreview) {
+                              return "animate-pulse-preview";
+                            }
+                            return "";
+                          })()
                         }`}
                         showLoadingState={true}
                       />
@@ -789,26 +869,99 @@ export function GameGrid({
                             ? "bg-blue-500"
                             : "bg-red-500"
                         } ${
-                          cell.isPreview
-                            ? "animate-pulse-preview"
-                            : selectedShipId === cell.shipId &&
-                              previewPosition
-                            ? "animate-pulse-original"
-                            : ""
+                          (() => {
+                            // Check if this is the "from" position (original position when proposing a move)
+                            const isProposedMoveOriginal = selectedShipId === cell.shipId && previewPosition;
+                            
+                            // Check if this is a proposed move preview (to position)
+                            const isProposedMovePreview = cell.isPreview && 
+                              previewPosition !== null && 
+                              selectedShipId !== null &&
+                              !(lastMoveShipId === cell.shipId && 
+                                lastMoveOldPosition &&
+                                rowIndex === lastMoveOldPosition.row &&
+                                colIndex === lastMoveOldPosition.col);
+                            
+                            // "From" position: 50% opacity, no animation
+                            if (isProposedMoveOriginal) {
+                              return "opacity-50";
+                            }
+                            
+                            // Don't animate proposed move previews
+                            if (isProposedMovePreview) {
+                              return "";
+                            }
+                            
+                            // Last move old position: 50% opacity, no animation
+                            if (lastMoveShipId === cell.shipId &&
+                                lastMoveOldPosition &&
+                                rowIndex === lastMoveOldPosition.row &&
+                                colIndex === lastMoveOldPosition.col) {
+                              return "opacity-50";
+                            }
+                            
+                            // Apply animation for other cases
+                            if (cell.isPreview) {
+                              return "animate-pulse-preview";
+                            }
+                            return "";
+                          })()
                         }`}
                       />
                       {/* Movement path borders */}
-                      {(cell.isPreview ||
-                        (selectedShipId === cell.shipId &&
-                          previewPosition)) && (
-                        <div
-                          className={`absolute inset-0 border-2 border-yellow-400 border-dashed rounded-sm pointer-events-none ${
-                            cell.isPreview
-                              ? "animate-pulse-preview"
-                              : "animate-pulse-original"
-                          }`}
-                        />
-                      )}
+                      {(() => {
+                        const isPreviewCell = cell.isPreview;
+                        const isProposedMoveOriginal = selectedShipId === cell.shipId && previewPosition;
+                        const isLastMoveOldPosition = lastMoveShipId === cell.shipId && 
+                          lastMoveOldPosition &&
+                          rowIndex === lastMoveOldPosition.row &&
+                          colIndex === lastMoveOldPosition.col;
+                        const isLastMoveNewPosition = lastMoveShipId === cell.shipId &&
+                          lastMoveOldPosition &&
+                          !isLastMoveOldPosition; // New position is where the ship is but not at old position
+                        
+                        // Check if this is a proposed move preview (to position)
+                        // It's a proposed move preview if: it's a preview cell AND there's an active proposed move (previewPosition exists) AND it's not the last move old position
+                        const isProposedMovePreview = isPreviewCell && 
+                          previewPosition !== null && 
+                          selectedShipId !== null &&
+                          !isLastMoveOldPosition;
+                        
+                        const shouldShowBorder = isPreviewCell || isProposedMoveOriginal || isLastMoveOldPosition || isLastMoveNewPosition;
+                        
+                        if (!shouldShowBorder) return null;
+                        
+                        // For proposed moves: preview (to) is solid, original (from) is dashed
+                        // For last move: old position is dashed, new position is solid
+                        // Dashed for: proposed move original position, last move old position
+                        // Solid for: proposed move preview (to), last move new position
+                        const isDashed = isProposedMoveOriginal || isLastMoveOldPosition;
+                        // Don't animate "from" position, new position of last move, or last move old position
+                        const shouldAnimate = isPreviewCell && !isProposedMovePreview && !isLastMoveOldPosition;
+                        
+                        // Explicitly ensure proposed move previews are solid
+                        const borderStyle = isProposedMovePreview 
+                          ? "border-solid" 
+                          : (isDashed ? "border-dashed" : "border-solid");
+                        
+                        // Make proposed move preview borders thicker
+                        const borderWidth = isProposedMovePreview ? "border-4" : "border-2";
+                        
+                        // Don't animate proposed move previews (to position), but animate others
+                        const animationClass = isProposedMovePreview
+                          ? ""
+                          : (shouldAnimate
+                              ? (isPreviewCell
+                                  ? "animate-pulse-preview"
+                                  : "animate-pulse-original")
+                              : "");
+                        
+                        return (
+                          <div
+                            className={`absolute inset-0 ${borderWidth} border-yellow-400 rounded-sm pointer-events-none ${borderStyle} ${animationClass}`}
+                          />
+                        );
+                      })()}
                     </div>
                   ) : null}
                 </div>

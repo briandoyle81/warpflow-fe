@@ -366,6 +366,17 @@ export interface ShipPosition {
   isPreview?: boolean; // Optional flag for preview ships
 }
 
+export interface LastMove {
+  shipId: bigint;
+  oldRow: number;
+  oldCol: number;
+  newRow: number;
+  newCol: number;
+  actionType: ActionType;
+  targetShipId: bigint;
+  timestamp: bigint;
+}
+
 export interface GameDataView {
   metadata: GameMetadata;
   turnState: GameTurnState;
@@ -381,6 +392,7 @@ export interface GameDataView {
   // Ships that have moved this round
   creatorMovedShipIds: readonly bigint[]; // Creator ships that have moved this round
   joinerMovedShipIds: readonly bigint[]; // Joiner ships that have moved this round
+  lastMove?: LastMove; // Last move made in the game
 }
 
 export enum ActionType {

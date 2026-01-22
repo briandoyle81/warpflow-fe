@@ -1412,14 +1412,30 @@ const Lobbies: React.FC = () => {
                     reservedJoiner: e.target.value,
                   }));
                 }}
-                className="w-full px-3 py-2 bg-black/60 border border-yellow-400 rounded text-cyan-300"
+                className={`w-full px-3 py-2 bg-black/60 border rounded text-cyan-300 ${
+                  createForm.reservedJoiner.trim() &&
+                  address &&
+                  createForm.reservedJoiner.trim().toLowerCase() === address.toLowerCase()
+                    ? "border-red-400"
+                    : "border-yellow-400"
+                }`}
                 placeholder="0x0000... (leave empty for open lobby)"
               />
-              <p className="text-xs text-yellow-400 mt-1">
-                {createForm.reservedJoiner
-                  ? "⚠️ Requires 1 UTC to reserve game for this player"
-                  : "Leave empty to create an open lobby"}
-              </p>
+              {createForm.reservedJoiner.trim() &&
+              address &&
+              createForm.reservedJoiner.trim().toLowerCase() === address.toLowerCase() ? (
+                <p className="text-xs text-red-400 mt-1 font-bold">
+                  ❌ Cannot reserve a lobby for yourself! Please enter a different player&apos;s address or leave empty for an open lobby.
+                </p>
+              ) : createForm.reservedJoiner ? (
+                <p className="text-xs text-yellow-400 mt-1">
+                  ⚠️ Requires 1 UTC to reserve game for this player
+                </p>
+              ) : (
+                <p className="text-xs text-yellow-400 mt-1">
+                  Leave empty to create an open lobby
+                </p>
+              )}
             </div>
             <div className="p-3 bg-gray-800/50 rounded border border-gray-600">
               <p className="text-sm text-gray-300">
@@ -1444,7 +1460,14 @@ const Lobbies: React.FC = () => {
                     ? (createForm.reservedJoiner.trim() as `0x${string}`)
                     : undefined
                 }
-                className="flex-1 px-6 py-3 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200"
+                disabled={
+                  !!(
+                    createForm.reservedJoiner.trim() &&
+                    address &&
+                    createForm.reservedJoiner.trim().toLowerCase() === address.toLowerCase()
+                  )
+                }
+                className="flex-1 px-6 py-3 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-cyan-400 disabled:hover:text-cyan-400 disabled:hover:bg-transparent"
                 onSuccess={() => {
                   // Show success toast
                   // Close the form
@@ -1786,11 +1809,10 @@ const Lobbies: React.FC = () => {
                       </button>
                     )}
 
-                  {/* Fleet selection button - only show if no fleet selected AND joiner has joined */}
+                  {/* Fleet selection button - only show if creator hasn't selected fleet AND joiner has joined */}
                   {lobby.players.creatorFleetId === 0n &&
                     lobby.players.joiner !==
-                      "0x0000000000000000000000000000000000000000" &&
-                    lobby.players.joinerFleetId === 0n && (
+                      "0x0000000000000000000000000000000000000000" && (
                       <button
                         onClick={() => setSelectedLobby(lobby.basic.id)}
                         disabled={transactionState.isPending}

@@ -109,7 +109,9 @@ const ManageNavy: React.FC = () => {
     new Set()
   );
   const [showShipPurchase, setShowShipPurchase] = React.useState(false);
-  const [paymentMethod, setPaymentMethod] = React.useState<"FLOW" | "UTC">("FLOW");
+  const [paymentMethod, setPaymentMethod] = React.useState<"FLOW" | "UTC">(
+    "FLOW"
+  );
   const [showRecycleModal, setShowRecycleModal] = React.useState(false);
   const [shipToRecycle, setShipToRecycle] = React.useState<Ship | null>(null);
 
@@ -553,7 +555,9 @@ const ManageNavy: React.FC = () => {
                 [SHIP PURCHASING]
               </h4>
               <div className="flex items-center gap-3">
-                <span className="text-gray-300 font-mono text-sm">PAYMENT METHOD:</span>
+                <span className="text-gray-300 font-mono text-sm">
+                  PAYMENT METHOD:
+                </span>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPaymentMethod("FLOW")}
@@ -586,7 +590,7 @@ const ManageNavy: React.FC = () => {
             </button>
           </div>
 
-          <ShipPurchaseInterface 
+          <ShipPurchaseInterface
             onClose={() => setShowShipPurchase(false)}
             paymentMethod={paymentMethod}
             onPaymentMethodChange={setPaymentMethod}

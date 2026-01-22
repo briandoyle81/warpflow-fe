@@ -55,14 +55,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     col: number;
   } | null>(null);
   const [targetShipId, setTargetShipId] = useState<bigint | null>(null);
-  // Track latest game event for preview
-  const [latestGameEvent, setLatestGameEvent] = useState<{
-    shipId: bigint;
-    newRow: number;
-    newCol: number;
-    actionType: number;
-    targetShipId: bigint;
-  } | null>(null);
 
   const [selectedWeaponType, setSelectedWeaponType] = useState<
     "weapon" | "special"
@@ -541,21 +533,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     return map;
   }, [gameShips]);
 
-  // Callback to receive latest event from GameEvents
-  const handleLatestEventChange = React.useCallback(
-    (
-      event: {
-        shipId: bigint;
-        newRow: number;
-        newCol: number;
-        actionType: number;
-        targetShipId: bigint;
-      } | null
-    ) => {
-      setLatestGameEvent(event);
-    },
-    []
-  );
 
   // Get special range data for the selected ship
   const selectedShip = selectedShipId ? shipMap.get(selectedShipId) : null;
@@ -722,8 +699,61 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       }
     });
 
+    // Also show last move preview if we're displaying it (and not showing a proposed move)
+    // Check conditions directly to avoid dependency order issues
+    const isMyTurnNow = game.turnState.currentTurn === address;
+    const shouldShowLastMoveNow = 
+      game.metadata.winner === "0x0000000000000000000000000000000000000000" &&
+      game.lastMove &&
+      game.lastMove.shipId !== 0n &&
+      selectedShipId === null;
+    
+    const isShowingProposedMoveNow = (() => {
+      if (selectedShipId === null || !isMyTurnNow || previewPosition === null) {
+        return false;
+      }
+      const ship = shipMap.get(selectedShipId);
+      return ship ? ship.owner === address : false;
+    })();
+    
+    // Only show last move if not showing a proposed move
+    const canShowLastMove = shouldShowLastMoveNow && !isShowingProposedMoveNow;
+
+    if (canShowLastMove && game.lastMove) {
+      const lastMoveShipPosition = game.shipPositions.find(
+        (pos) => pos.shipId === game.lastMove!.shipId
+      );
+      
+      if (lastMoveShipPosition) {
+        // The ship is currently at its new position
+        // Show a preview copy at the old position (ghosted/flashing)
+        const oldPos = { row: game.lastMove.oldRow, col: game.lastMove.oldCol };
+        const newPos = { row: game.lastMove.newRow, col: game.lastMove.newCol };
+
+        // If the ship moved (old position != new position), show preview at old position
+        if (oldPos.row !== newPos.row || oldPos.col !== newPos.col) {
+          if (
+            oldPos.row >= 0 &&
+            oldPos.row < GRID_HEIGHT &&
+            oldPos.col >= 0 &&
+            oldPos.col < GRID_WIDTH &&
+            // Don't overwrite if there's already a ship there (shouldn't happen, but safety check)
+            !newGrid[oldPos.row][oldPos.col]
+          ) {
+            // Place preview ship at old position (ghosted/flashing effect)
+            newGrid[oldPos.row][oldPos.col] = {
+              ...lastMoveShipPosition,
+              position: oldPos,
+              isPreview: true, // Mark as preview for styling (ghosted/flashing)
+            };
+          }
+        }
+        // The ship at new position will show pulse effect via lastMoveShipId prop in GameGrid
+      }
+    }
+
     return newGrid;
-  }, [game.shipPositions, selectedShipId, previewPosition]);
+  }, [game.shipPositions, selectedShipId, previewPosition, game.lastMove, game.metadata.winner, game.turnState.currentTurn, address, shipMap]);
 
   // Calculate movement range for selected ship (any ship, for viewing)
   const movementRange = React.useMemo(() => {
@@ -1611,96 +1641,154 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Check if it's the current player's turn
   const isMyTurn = game.turnState.currentTurn === address;
 
-  // Determine if we should show move preview (opponent or player's own last move)
-  // Show if: no ship selected AND we have latest event AND ship is at that position
-  const shouldShowMovePreview = React.useMemo(() => {
-    if (
-      !selectedShipId &&
-      latestGameEvent !== null &&
-      game.metadata.winner === "0x0000000000000000000000000000000000000000"
-    ) {
-      // Check if the event ship exists
-      const eventShip = shipMap.get(latestGameEvent.shipId);
-      if (eventShip) {
-        // Verify the ship is actually at that position in the current game state
-        const currentPosition = game.shipPositions.find(
-          (pos) => pos.shipId === latestGameEvent.shipId
-        );
-        if (
-          currentPosition &&
-          currentPosition.position.row === latestGameEvent.newRow &&
-          currentPosition.position.col === latestGameEvent.newCol
-        ) {
-          return true;
-        }
-      }
+  // Track if we're currently displaying the last move (to avoid infinite loops)
+  const isDisplayingLastMoveRef = React.useRef(false);
+  const lastDisplayedMoveRef = React.useRef<{ shipId: bigint; newRow: number; newCol: number } | null>(null);
+
+  // Determine if we should show last move preview
+  // Show to both players UNLESS:
+  // - They have a ship selected, OR
+  // - It's their turn AND they have proposed but not submitted a move
+  const shouldShowLastMove = React.useMemo(() => {
+    // Don't show if game is won
+    if (game.metadata.winner !== "0x0000000000000000000000000000000000000000") {
+      return false;
     }
+
+    // Don't show if no last move exists
+    if (!game.lastMove || game.lastMove.shipId === 0n) {
+      return false;
+    }
+
+    // Don't show if player has a ship selected
+    if (selectedShipId !== null) {
+      return false;
+    }
+
+
+    // Check if the last move ship exists
+    const lastMoveShip = shipMap.get(game.lastMove.shipId);
+    if (!lastMoveShip) {
+      return false;
+    }
+
+    // Verify the ship is actually at the new position in the current game state
+    const currentPosition = game.shipPositions.find(
+      (pos) => pos.shipId === game.lastMove!.shipId
+    );
+    if (
+      currentPosition &&
+      currentPosition.position.row === game.lastMove.newRow &&
+      currentPosition.position.col === game.lastMove.newCol
+    ) {
+      return true;
+    }
+
     return false;
   }, [
-    selectedShipId,
-    latestGameEvent,
     game.metadata.winner,
+    game.lastMove,
     game.shipPositions,
+    selectedShipId,
     shipMap,
   ]);
 
-  // When showing move preview, set up the preview state
-  // to show the same view as before submit (with target selection, damage preview, etc.)
-  React.useEffect(() => {
-    if (shouldShowMovePreview && latestGameEvent) {
-      const eventShip = shipMap.get(latestGameEvent.shipId);
-      if (eventShip) {
-        // When we receive a new move event, capture the previous position
-        // The ship is currently at newRow/newCol, so we need to store the previous position
-        // before it gets updated
-        const currentPos = game.shipPositions.find(
-          (pos) => pos.shipId === latestGameEvent.shipId
-        );
-        if (currentPos) {
-          // If the current position matches the new position from the event,
-          // the ship has already moved. We need to capture the position before the move.
-          // This is handled by the position tracking effect above.
-        }
+  // Check if a ship belongs to the current player
+  const isShipOwnedByCurrentPlayer = React.useCallback((shipId: bigint): boolean => {
+    const ship = shipMap.get(shipId);
+    return ship ? ship.owner === address : false;
+  }, [shipMap, address]);
 
-        // Set preview position
+  // Track if we're showing a proposed move (not last move)
+  const isShowingProposedMove = React.useMemo(() => {
+    if (selectedShipId === null || !isMyTurn || previewPosition === null) {
+      return false;
+    }
+    return isShipOwnedByCurrentPlayer(selectedShipId);
+  }, [selectedShipId, isMyTurn, previewPosition, isShipOwnedByCurrentPlayer]);
+
+  // When showing last move, set up the preview state to display it
+  // This should NOT interfere with proposed moves
+  React.useEffect(() => {
+    // Don't show last move if user has selected a ship or is making a proposed move
+    if (selectedShipId !== null || isShowingProposedMove) {
+      if (isDisplayingLastMoveRef.current) {
+        isDisplayingLastMoveRef.current = false;
+        lastDisplayedMoveRef.current = null;
+        // Only clear preview if we're not showing a proposed move
+        if (!isShowingProposedMove) {
+          setPreviewPosition(null);
+          setTargetShipId(null);
+        }
+      }
+      return;
+    }
+
+    // Check if last move has changed
+    const lastMoveChanged = 
+      !lastDisplayedMoveRef.current ||
+      !game.lastMove ||
+      lastDisplayedMoveRef.current.shipId !== game.lastMove.shipId ||
+      lastDisplayedMoveRef.current.newRow !== game.lastMove.newRow ||
+      lastDisplayedMoveRef.current.newCol !== game.lastMove.newCol;
+
+    // Only set up last move preview if conditions are met
+    if (shouldShowLastMove && game.lastMove && lastMoveChanged) {
+      const lastMoveShip = shipMap.get(game.lastMove.shipId);
+      if (lastMoveShip) {
+        // Mark that we're displaying the last move
+        isDisplayingLastMoveRef.current = true;
+        lastDisplayedMoveRef.current = {
+          shipId: game.lastMove.shipId,
+          newRow: game.lastMove.newRow,
+          newCol: game.lastMove.newCol,
+        };
+
+        // Set preview position for last move
         setPreviewPosition({
-          row: latestGameEvent.newRow,
-          col: latestGameEvent.newCol,
+          row: game.lastMove.newRow,
+          col: game.lastMove.newCol,
         });
         // Set target if there is one
-        if (latestGameEvent.targetShipId !== 0n) {
-          setTargetShipId(latestGameEvent.targetShipId);
+        if (game.lastMove.targetShipId !== 0n) {
+          setTargetShipId(game.lastMove.targetShipId);
         } else {
           setTargetShipId(null);
         }
         // Set weapon type based on action
-        if (latestGameEvent.actionType === 1) {
-          // Shoot
+        if (game.lastMove.actionType === ActionType.Shoot) {
           setSelectedWeaponType("weapon");
-        } else if (latestGameEvent.actionType === 2) {
-          // Special
+        } else if (game.lastMove.actionType === ActionType.Special) {
           setSelectedWeaponType("special");
         }
       }
-    } else if (!shouldShowMovePreview) {
-      // Clear preview when not showing
-      if (!selectedShipId) {
-        setPreviewPosition(null);
-        setTargetShipId(null);
-      }
+    } else if (!shouldShowLastMove && isDisplayingLastMoveRef.current) {
+      // Clear preview when not showing last move
+      isDisplayingLastMoveRef.current = false;
+      lastDisplayedMoveRef.current = null;
+      setPreviewPosition(null);
+      setTargetShipId(null);
     }
   }, [
-    shouldShowMovePreview,
-    latestGameEvent,
+    shouldShowLastMove,
+    game.lastMove,
+    isShowingProposedMove,
     shipMap,
     selectedShipId,
-    game.shipPositions,
   ]);
 
   const highlightedMovePosition =
-    shouldShowMovePreview && latestGameEvent
-      ? { row: latestGameEvent.newRow, col: latestGameEvent.newCol }
+    shouldShowLastMove && game.lastMove && !isShowingProposedMove
+      ? { row: game.lastMove.newRow, col: game.lastMove.newCol }
       : null;
+
+  // Last move props for GameGrid
+  const lastMoveShipId = shouldShowLastMove && game.lastMove && !isShowingProposedMove
+    ? game.lastMove.shipId
+    : null;
+  const lastMoveOldPosition = shouldShowLastMove && game.lastMove && !isShowingProposedMove
+    ? { row: game.lastMove.oldRow, col: game.lastMove.oldCol }
+    : null;
 
   // Track previous turn state to detect turn changes
   const prevTurnRef = React.useRef<boolean | null>(null);
@@ -1729,6 +1817,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
       // Reset move-related state to ensure clean slate (only when transitioning from opponent)
       if (prevTurnRef.current === false) {
+        isDisplayingLastMoveRef.current = false;
+        lastDisplayedMoveRef.current = null;
         setPreviewPosition(null);
         setSelectedShipId(null);
         setTargetShipId(null);
@@ -1737,16 +1827,21 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     }
   }, [isMyTurn, address, clearAllTransactions]);
 
-  // Check if a ship belongs to the current player
-  const isShipOwnedByCurrentPlayer = (shipId: bigint): boolean => {
-    const ship = shipMap.get(shipId);
-    return ship ? ship.owner === address : false;
-  };
 
   // Handle move submission - now handled by TransactionButton
 
+  // Clear last move display when user selects a ship or makes a proposed move
+  React.useEffect(() => {
+    if (selectedShipId !== null || isShowingProposedMove) {
+      isDisplayingLastMoveRef.current = false;
+      lastDisplayedMoveRef.current = null;
+    }
+  }, [selectedShipId, isShowingProposedMove]);
+
   // Handle move cancellation
   const handleCancelMove = () => {
+    isDisplayingLastMoveRef.current = false;
+    lastDisplayedMoveRef.current = null;
     setPreviewPosition(null);
     setSelectedShipId(null);
     setTargetShipId(null);
@@ -1757,6 +1852,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        isDisplayingLastMoveRef.current = false;
+        lastDisplayedMoveRef.current = null;
         setSelectedShipId(null);
         setPreviewPosition(null);
         setTargetShipId(null);
@@ -2061,30 +2158,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         </div>
 
         {/* Move Confirmation UI - positioned between left and right sections */}
-        {/* Show for player's own moves OR move preview (opponent or player's last move) */}
-        {((selectedShipId &&
-          isMyTurn &&
-          isShipOwnedByCurrentPlayer(selectedShipId)) ||
-          (shouldShowMovePreview && latestGameEvent)) && (
+        {/* Show ONLY for player's own proposed moves, NOT for last move display */}
+        {isShowingProposedMove && (
           <div className="flex-1 mx-6 bg-gray-900 rounded-lg border border-gray-700">
             <div className="flex items-center gap-6 p-4">
               {/* Left: Ship Info */}
               <div className="flex flex-col gap-2 min-w-0 flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  {shouldShowMovePreview && (
-                    <span className="text-xs text-gray-400 uppercase tracking-wide">
-                      Last Move
-                    </span>
-                  )}
                   <span className="text-white font-semibold">
                     {(() => {
-                      if (shouldShowMovePreview && latestGameEvent) {
-                        const eventShip = shipMap.get(latestGameEvent.shipId);
-                        return (
-                          eventShip?.name ||
-                          `Ship #${latestGameEvent.shipId.toString()}`
-                        );
-                      }
                       if (selectedShipId) {
                         const selectedShip = shipMap.get(selectedShipId);
                         return (
@@ -2097,9 +2179,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   </span>
                   <span className="text-gray-500">→</span>
                   <span className="text-gray-300 font-mono">
-                    {shouldShowMovePreview && latestGameEvent
-                      ? `Unknown → (${latestGameEvent.newRow}, ${latestGameEvent.newCol})`
-                      : previewPosition
+                    {previewPosition
                       ? `(${previewPosition.row}, ${previewPosition.col})`
                       : (() => {
                           const currentPosition = game.shipPositions.find(
@@ -2301,10 +2381,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               )}
 
               {/* Right: Actions */}
-              {/* Always show this section to keep buttons on the right, but only show buttons when not in preview mode */}
+              {/* Show action buttons for proposed moves */}
               <div className="flex flex-col gap-2 flex-shrink-0 ml-auto">
-                {!shouldShowMovePreview && (
-                  <>
+                <>
                     {(() => {
                       // Compute the actual actionType that will be submitted (same as args)
                       const computedActionType =
@@ -2554,7 +2633,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       Cancel
                     </button>
                   </>
-                )}
               </div>
             </div>
 
@@ -2701,6 +2779,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           address={address}
           currentTurn={game.turnState.currentTurn}
           highlightedMovePosition={highlightedMovePosition}
+          lastMoveShipId={lastMoveShipId}
+          lastMoveOldPosition={lastMoveOldPosition}
           setSelectedShipId={setSelectedShipId}
           setPreviewPosition={setPreviewPosition}
           setTargetShipId={setTargetShipId}
@@ -2800,7 +2880,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       <GameEvents
         gameId={game.metadata.gameId}
         shipMap={shipMap}
-        onLatestEventChange={handleLatestEventChange}
         shipPositions={game.shipPositions}
         address={address}
       />

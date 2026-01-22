@@ -11,17 +11,19 @@ interface ShipPurchaseInterfaceProps {
   onPaymentMethodChange?: (method: "FLOW" | "UTC") => void;
 }
 
-const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({ 
+const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
   paymentMethod: externalPaymentMethod,
-  onPaymentMethodChange 
+  onPaymentMethodChange,
 }) => {
   const { tiers, prices, maxPerTier } = useShipPurchasing();
   const { refetch } = useOwnedShips();
-  const [internalPaymentMethod, setInternalPaymentMethod] = useState<"FLOW" | "UTC">("FLOW");
-  
+  const [internalPaymentMethod, setInternalPaymentMethod] = useState<
+    "FLOW" | "UTC"
+  >("FLOW");
+
   // Use external payment method if provided, otherwise use internal state
   const paymentMethod = externalPaymentMethod ?? internalPaymentMethod;
-  
+
   // Update payment method handler
   const handlePaymentMethodChange = (method: "FLOW" | "UTC") => {
     if (onPaymentMethodChange) {
@@ -93,7 +95,9 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
         {tiers.map((tier: number, index: number) => {
           const price = prices[index];
           const shipsCount = maxPerTier[index];
-          const priceFormatted = price ? (Number(price) / 1e18).toFixed(2) : "0.00";
+          const priceFormatted = price
+            ? (Number(price) / 1e18).toFixed(2)
+            : "0.00";
           const colors = getTierColors(tier);
 
           return (
@@ -107,7 +111,9 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
             >
               <div className="flex flex-col items-center space-y-1">
                 <span>TIER {tier}</span>
-                <span>{priceFormatted} {paymentMethod}</span>
+                <span>
+                  {priceFormatted} {paymentMethod}
+                </span>
                 <span>{shipsCount} SHIPS</span>
               </div>
             </ShipPurchaseButton>

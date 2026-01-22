@@ -385,9 +385,6 @@ const ShipConstructor: React.FC = () => {
     <div className="w-full max-w-7xl mx-auto">
       <div className="bg-gray-900 rounded-lg p-6 border border-cyan-400/30">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-cyan-400 font-mono">
-            [SHIP EXPLORER]
-          </h2>
           <div className="flex items-center gap-4">
             <div className="flex gap-2">
               <button

@@ -3,10 +3,16 @@
 import React, { useState, useCallback } from "react";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import type { Abi, Address } from "viem";
 import { parseEther, formatEther } from "viem";
 import { toast } from "react-hot-toast";
+import { useMapExists } from "../hooks/useMapsContract";
 
 interface LobbyCreateButtonProps {
   costLimit: bigint;
@@ -72,7 +78,9 @@ export function LobbyCreateButton({
   const [utcApproved, setUtcApproved] = useState(false);
 
   // Check if this is a reserved lobby
-  const isReserved = reservedJoiner && reservedJoiner !== "0x0000000000000000000000000000000000000000";
+  const isReserved =
+    reservedJoiner &&
+    reservedJoiner !== "0x0000000000000000000000000000000000000000";
   const zeroAddress = "0x0000000000000000000000000000000000000000" as Address;
 
   // Read UTC balance
@@ -88,23 +96,48 @@ export function LobbyCreateButton({
     address: CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`,
     abi: CONTRACT_ABIS.UNIVERSAL_CREDITS as Abi,
     functionName: "allowance",
-    args: address && CONTRACT_ADDRESSES.LOBBIES ? [address, CONTRACT_ADDRESSES.LOBBIES] : undefined,
+    args:
+      address && CONTRACT_ADDRESSES.LOBBIES
+        ? [address, CONTRACT_ADDRESSES.LOBBIES]
+        : undefined,
+  });
+
+  // Check if map exists
+  const { data: mapExists } = useMapExists(Number(selectedMapId));
+
+  // Check if contract is paused
+  const { data: paused } = useReadContract({
+    address: CONTRACT_ADDRESSES.LOBBIES as `0x${string}`,
+    abi: CONTRACT_ABIS.LOBBIES as Abi,
+    functionName: "paused",
   });
 
   const { writeContract: writeUTC, data: approveHash } = useWriteContract();
-  const { isLoading: isApproving, isSuccess: approveSuccess } = useWaitForTransactionReceipt({
-    hash: approveHash,
-  });
+  const { isLoading: isApproving, isSuccess: approveSuccess } =
+    useWaitForTransactionReceipt({
+      hash: approveHash,
+    });
+
+  // Calculate total UTC required: reservation fee (1 UTC) + additional lobby fee (if value > 0, it's in UTC)
+  const totalUtcRequired = React.useMemo(() => {
+    let total = 0n;
+    if (isReserved) {
+      total += parseEther("1"); // Reservation fee
+    }
+    if (value > 0n) {
+      total += value; // Additional lobby fee (in UTC, not FLOW)
+    }
+    return total;
+  }, [isReserved, value]);
 
   // Check if UTC is approved
   React.useEffect(() => {
-    if (isReserved && utcAllowance) {
-      const requiredAmount = parseEther("1");
-      setUtcApproved(utcAllowance >= requiredAmount);
-    } else if (!isReserved) {
-      setUtcApproved(true); // No approval needed for open lobbies
+    if (totalUtcRequired > 0n && utcAllowance !== undefined) {
+      setUtcApproved((utcAllowance as bigint) >= totalUtcRequired);
+    } else if (totalUtcRequired === 0n) {
+      setUtcApproved(true); // No approval needed if no UTC required
     }
-  }, [isReserved, utcAllowance]);
+  }, [totalUtcRequired, utcAllowance]);
 
   // Handle approval success
   React.useEffect(() => {
@@ -116,11 +149,13 @@ export function LobbyCreateButton({
   }, [approveSuccess, refetchAllowance]);
 
   const handleApproveUTC = useCallback(async () => {
-    if (!address || !isReserved) return;
+    if (!address || totalUtcRequired === 0n) return;
 
     // Check balance
-    if (!utcBalance || utcBalance < parseEther("1")) {
-      toast.error("Insufficient UTC balance. Need 1 UTC to reserve game.");
+    if (!utcBalance || utcBalance < totalUtcRequired) {
+      toast.error(
+        `Insufficient UTC balance. Need ${formatEther(totalUtcRequired)} UTC.`
+      );
       return;
     }
 
@@ -130,49 +165,104 @@ export function LobbyCreateButton({
         address: CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`,
         abi: UTC_APPROVE_ABI,
         functionName: "approve",
-        args: [CONTRACT_ADDRESSES.LOBBIES as `0x${string}`, parseEther("1")],
+        args: [CONTRACT_ADDRESSES.LOBBIES as `0x${string}`, totalUtcRequired],
       });
     } catch (err) {
       setIsApprovingUTC(false);
       console.error("Failed to approve UTC:", err);
       toast.error("Failed to approve UTC transfer");
     }
-  }, [address, isReserved, utcBalance, writeUTC]);
+  }, [address, totalUtcRequired, utcBalance, writeUTC]);
 
   const validateBeforeTransaction = React.useCallback(() => {
     if (!address) {
       return "Please connect your wallet";
     }
-    if (isReserved) {
-      if (!utcBalance || utcBalance < parseEther("1")) {
-        return "Insufficient UTC balance. Need 1 UTC to reserve game.";
+    if (paused === true) {
+      return "Lobby creation is currently paused";
+    }
+    if (mapExists === false) {
+      return `Map ID ${selectedMapId} does not exist. Please select a valid map.`;
+    }
+    if (turnTime === 0n) {
+      return "Turn time must be greater than 0";
+    }
+    // Prevent reserving lobby for yourself
+    if (isReserved && reservedJoiner && address) {
+      if (reservedJoiner.toLowerCase() === address.toLowerCase()) {
+        return "Cannot reserve a lobby for yourself. Please enter a different player's address or leave empty for an open lobby.";
+      }
+    }
+    // Check UTC requirements (for reserved lobbies and/or additional lobby fees)
+    if (totalUtcRequired > 0n) {
+      if (!utcBalance || utcBalance < totalUtcRequired) {
+        return `Insufficient UTC balance. Need ${formatEther(
+          totalUtcRequired
+        )} UTC.`;
       }
       if (!utcApproved) {
-        return "Please approve UTC transfer first";
+        return `Please approve ${formatEther(
+          totalUtcRequired
+        )} UTC transfer first`;
       }
     }
     return true;
-  }, [address, isReserved, utcBalance, utcApproved]);
+  }, [
+    address,
+    paused,
+    mapExists,
+    selectedMapId,
+    turnTime,
+    isReserved,
+    reservedJoiner,
+    totalUtcRequired,
+    utcBalance,
+    utcApproved,
+  ]);
 
   const transactionId = React.useMemo(
     () =>
-      `create-lobby-${address}-${costLimit}-${turnTime}-${selectedMapId}-${maxScore}-${reservedJoiner || "open"}`,
+      `create-lobby-${address}-${costLimit}-${turnTime}-${selectedMapId}-${maxScore}-${
+        reservedJoiner || "open"
+      }`,
     [address, costLimit, turnTime, selectedMapId, maxScore, reservedJoiner]
   );
 
-  // If reserved and not approved, show approve button
-  if (isReserved && !utcApproved && !isApprovingUTC && !isApproving) {
+  // If UTC is required (reserved lobby and/or additional fee) and not approved, show approve button
+  if (
+    totalUtcRequired > 0n &&
+    !utcApproved &&
+    !isApprovingUTC &&
+    !isApproving
+  ) {
+    const feeBreakdown = [];
+    if (isReserved) {
+      feeBreakdown.push("1 UTC (reservation)");
+    }
+    if (value > 0n) {
+      feeBreakdown.push(`${formatEther(value)} UTC (additional lobby fee)`);
+    }
+
     return (
       <div className="flex flex-col gap-2">
         <div className="text-xs text-yellow-400 font-mono">
-          Reserve game for friend: {formatEther(parseEther("1"))} UTC required
+          {feeBreakdown.length > 0 && (
+            <div>
+              Required: {feeBreakdown.join(" + ")} ={" "}
+              {formatEther(totalUtcRequired)} UTC
+            </div>
+          )}
         </div>
         <button
           onClick={handleApproveUTC}
-          disabled={!utcBalance || utcBalance < parseEther("1")}
-          className={`${className} ${(!utcBalance || utcBalance < parseEther("1")) ? "opacity-50 cursor-not-allowed" : ""}`}
+          disabled={!utcBalance || utcBalance < totalUtcRequired}
+          className={`${className} ${
+            !utcBalance || utcBalance < totalUtcRequired
+              ? "opacity-50 cursor-not-allowed"
+              : ""
+          }`}
         >
-          [APPROVE UTC]
+          {`[APPROVE ${formatEther(totalUtcRequired)} UTC]`}
         </button>
       </div>
     );
@@ -192,10 +282,12 @@ export function LobbyCreateButton({
         maxScore,
         reservedJoiner || zeroAddress,
       ]}
-      value={value}
+      value={totalUtcRequired > 0n ? 0n : value}
       className={className}
       disabled={disabled || isApprovingUTC || isApproving}
-      loadingText={isApprovingUTC || isApproving ? "[APPROVING UTC...]" : "[CREATING...]"}
+      loadingText={
+        isApprovingUTC || isApproving ? "[APPROVING UTC...]" : "[CREATING...]"
+      }
       errorText="[ERROR CREATING]"
       onSuccess={onSuccess}
       onError={onError}

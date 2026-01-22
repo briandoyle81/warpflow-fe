@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
-import { useAccount, useBalance, useReadContract } from "wagmi";
+import { useAccount, useBalance, useReadContract, usePublicClient } from "wagmi";
 import { flowTestnet } from "viem/chains";
 import type { Abi } from "viem";
 import { formatEther } from "viem";
@@ -100,6 +100,7 @@ export function ShipPurchaseButton({
   });
 
   const [utcApproved, setUtcApproved] = useState(false);
+  const referralAddress = "0xac5b774D7a700AcDb528048B6052bc1549cd73B9" as `0x${string}`;
 
   // Check if UTC is approved
   useEffect(() => {
@@ -115,6 +116,51 @@ export function ShipPurchaseButton({
       setUtcApproved(true);
     }
   }, [paymentMethod, utcAllowance, price]);
+
+  const publicClient = usePublicClient({ chainId: flowTestnet.id });
+
+  // Estimate gas for tier 4 purchases before transaction
+  useEffect(() => {
+    if (tier === 4 && address && publicClient) {
+      const estimateGas = async () => {
+        try {
+          let estimatedGas: bigint | undefined;
+          if (paymentMethod === "FLOW") {
+            estimatedGas = await publicClient.estimateContractGas({
+              address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              abi: SHIP_PURCHASE_FLOW_ABI as any,
+              functionName: "purchaseWithFlow",
+              args: [address, tier, referralAddress, 1],
+              value: price,
+              account: address,
+            });
+          } else if (utcApproved) {
+            estimatedGas = await publicClient.estimateContractGas({
+              address: CONTRACT_ADDRESSES.SHIP_PURCHASER as `0x${string}`,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              abi: SHIP_PURCHASE_UTC_ABI as any,
+              functionName: "purchaseWithUC",
+              args: [address, tier, referralAddress, 1],
+              account: address,
+            });
+          }
+
+          if (estimatedGas && estimatedGas > 15_000_000n) {
+            toast.error(
+              `High gas usage detected: ${estimatedGas.toLocaleString()} gas estimated for tier 4 purchase. This may indicate a contract issue.`,
+              { duration: 10000 }
+            );
+          }
+        } catch (error) {
+          // If gas estimation fails, log but don't block
+          console.warn("Failed to estimate gas for tier 4 purchase:", error);
+        }
+      };
+
+      estimateGas();
+    }
+  }, [tier, address, paymentMethod, utcApproved, publicClient, referralAddress, price]);
 
   const validateBeforeTransaction = React.useCallback(() => {
     if (!address) {
@@ -141,8 +187,6 @@ export function ShipPurchaseButton({
     // Trigger refetch to update the UI state
     refetch?.();
   }, [onSuccess, refetch]);
-
-  const referralAddress = "0xac5b774D7a700AcDb528048B6052bc1549cd73B9" as `0x${string}`;
 
   // If UTC payment and not approved, show approve button
   if (paymentMethod === "UTC" && !utcApproved) {

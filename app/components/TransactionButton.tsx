@@ -28,6 +28,7 @@ interface TransactionButtonProps {
   onSuccess?: () => void;
   onError?: (error: Error) => void;
   onTransactionSent?: (hash: `0x${string}`) => void; // Called when transaction is sent (hash available)
+  onReceipt?: (receipt: { gasUsed: bigint }) => void; // Called when transaction receipt is received
 
   // Validation
   validateBeforeTransaction?: () => boolean | string; // Return true or error message
@@ -48,6 +49,7 @@ export function TransactionButton({
   onSuccess,
   onError,
   onTransactionSent,
+  onReceipt,
   validateBeforeTransaction,
 }: TransactionButtonProps) {
   const { writeContract, isPending, error, data: hash } = useWriteContract();
@@ -73,6 +75,7 @@ export function TransactionButton({
     isLoading: isConfirming,
     isSuccess: isConfirmed,
     error: receiptError,
+    data: receipt,
   } = useWaitForTransactionReceipt({
     hash,
     query: {
@@ -171,9 +174,13 @@ export function TransactionButton({
 
   // Handle transaction completion based on receipt confirmation
   React.useEffect(() => {
-    if (isActiveTransaction && isHydrated && isConfirmed) {
+    if (isActiveTransaction && isHydrated && isConfirmed && receipt) {
       // Transaction confirmed on blockchain
       setIsLocallyPending(false); // Reset local pending state
+      // Call onReceipt callback with gas information
+      if (onReceipt && receipt.gasUsed) {
+        onReceipt({ gasUsed: receipt.gasUsed });
+      }
       completeTransaction(transactionId, true);
       onSuccess?.();
     } else if (isActiveTransaction && isHydrated && receiptError) {
@@ -194,10 +201,12 @@ export function TransactionButton({
     isPending,
     error,
     receiptError,
+    receipt,
     transactionId,
     completeTransaction,
     onSuccess,
     onError,
+    onReceipt,
   ]);
 
   // Clear error when component unmounts or transaction changes
