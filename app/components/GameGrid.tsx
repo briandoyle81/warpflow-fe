@@ -1616,9 +1616,9 @@ function LaserShootingAnimation({
     const cellWidth = gridRect.width / 25;
     const cellHeight = gridRect.height / 13;
 
-    // Random point within target cell (80% of cell size to keep it within bounds)
-    const randomX = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.8;
-    const randomY = targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.8;
+    // Random point within center 50% of target cell
+    const randomX = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.5;
+    const randomY = targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.5;
 
     const newLine = {
       id: lineIdRef.current++,
@@ -1756,8 +1756,8 @@ function MissileShootingAnimation({
     const gridRect = gridContainerRef.current.getBoundingClientRect();
     const cellWidth = gridRect.width / 25;
     const cellHeight = gridRect.height / 13;
-    const targetX = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.8;
-    const targetY = targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.8;
+    const targetX = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.5;
+    const targetY = targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.5;
 
     // Calculate direction to target
     const dx = targetX - attackerCenter.x;
@@ -1809,9 +1809,9 @@ function MissileShootingAnimation({
     // Fire second missile 0.1 seconds after the first
     setTimeout(() => {
       // Select a new random target spot for the second missile
-      const targetX2 = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.8;
+      const targetX2 = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.5;
       const targetY2 =
-        targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.8;
+        targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.5;
 
       // Calculate direction to target for second missile
       const dx2 = targetX2 - attackerCenter.x;
@@ -2143,8 +2143,8 @@ function PlasmaShootingAnimation({
     // Start particles from the center of the firing ship's cell (y-axis)
     const startY = attackerCenter.y;
 
-    const targetX = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.8;
-    const targetY = targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.8;
+    const targetX = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.5;
+    const targetY = targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.5;
 
     // Calculate direction to target
     const dx = targetX - attackerCenter.x;
@@ -2355,9 +2355,9 @@ function RailgunShootingAnimation({
     const cellWidth = gridRect.width / 25;
     const cellHeight = gridRect.height / 13;
     const targetX =
-      targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.8;
+      targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.5;
     const targetY =
-      targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.8;
+      targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.5;
 
     // Calculate direction to target
     const dx = targetX - attackerCenter.x;
