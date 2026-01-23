@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { ShipPosition, Attributes, Ship } from "../types/types";
 import { ShipImage } from "./ShipImage";
@@ -25,11 +25,23 @@ interface GameGridProps {
   dragOverCell: { row: number; col: number } | null;
   movementRange: Array<{ row: number; col: number }>;
   shootingRange: Array<{ row: number; col: number }>;
-  validTargets: Array<{ shipId: bigint; position: { row: number; col: number } }>;
-  assistableTargets: Array<{ shipId: bigint; position: { row: number; col: number } }>;
-  assistableTargetsFromStart: Array<{ shipId: bigint; position: { row: number; col: number } }>;
+  validTargets: Array<{
+    shipId: bigint;
+    position: { row: number; col: number };
+  }>;
+  assistableTargets: Array<{
+    shipId: bigint;
+    position: { row: number; col: number };
+  }>;
+  assistableTargetsFromStart: Array<{
+    shipId: bigint;
+    position: { row: number; col: number };
+  }>;
   dragShootingRange: Array<{ row: number; col: number }>;
-  dragValidTargets: Array<{ shipId: bigint; position: { row: number; col: number } }>;
+  dragValidTargets: Array<{
+    shipId: bigint;
+    position: { row: number; col: number };
+  }>;
   isCurrentPlayerTurn: boolean;
   isShipOwnedByCurrentPlayer: (shipId: bigint) => boolean;
   movedShipIdsSet: Set<bigint>;
@@ -37,7 +49,11 @@ interface GameGridProps {
   blockedGrid: boolean[][];
   scoringGrid: number[][];
   onlyOnceGrid: boolean[][];
-  calculateDamage: (targetShipId: bigint, weaponType?: "weapon" | "special", showReducedDamage?: boolean) => {
+  calculateDamage: (
+    targetShipId: bigint,
+    weaponType?: "weapon" | "special",
+    showReducedDamage?: boolean
+  ) => {
     reducedDamage: number;
     willKill: boolean;
     reactorCritical: boolean;
@@ -53,18 +69,19 @@ interface GameGridProps {
   setPreviewPosition: (position: { row: number; col: number } | null) => void;
   setTargetShipId: (shipId: bigint | null) => void;
   setSelectedWeaponType: (type: "weapon" | "special") => void;
-  setHoveredCell: (cell: {
-    shipId: bigint;
-    row: number;
-    col: number;
-    mouseX: number;
-    mouseY: number;
-    isCreator: boolean;
-  } | null) => void;
+  setHoveredCell: (
+    cell: {
+      shipId: bigint;
+      row: number;
+      col: number;
+      mouseX: number;
+      mouseY: number;
+      isCreator: boolean;
+    } | null
+  ) => void;
   setDraggedShipId: (shipId: bigint | null) => void;
   setDragOverCell: (cell: { row: number; col: number } | null) => void;
 }
-
 
 export function GameGrid({
   grid,
@@ -119,7 +136,7 @@ export function GameGrid({
         <div
           ref={gridContainerRef}
           key="game-grid"
-          className="grid gap-0 border border-gray-900 grid-cols-[repeat(25,1fr)] grid-rows-[repeat(13,1fr)] w-full"
+          className="relative grid gap-0 border border-gray-900 grid-cols-[repeat(25,1fr)] grid-rows-[repeat(13,1fr)] w-full"
         >
           {grid.map((row, rowIndex) =>
             row.map((cell, colIndex) => {
@@ -128,7 +145,8 @@ export function GameGrid({
               const isMovementTile = movementRange.some(
                 (pos) => pos.row === rowIndex && pos.col === colIndex
               );
-              const isHighlightedMove = highlightedMovePosition &&
+              const isHighlightedMove =
+                highlightedMovePosition &&
                 highlightedMovePosition.row === rowIndex &&
                 highlightedMovePosition.col === colIndex;
               const isShootingTile = shootingRange.some(
@@ -158,8 +176,12 @@ export function GameGrid({
                   return isValidTargetType;
                 })() &&
                 (draggedShipId && dragOverCell
-                  ? dragValidTargets.some((target) => target.shipId === cell.shipId)
-                  : validTargets.some((target) => target.shipId === cell.shipId));
+                  ? dragValidTargets.some(
+                      (target) => target.shipId === cell.shipId
+                    )
+                  : validTargets.some(
+                      (target) => target.shipId === cell.shipId
+                    ));
 
               // Check if this cell contains an assistable target (friendly ship with 0 HP)
               const isAssistableTarget =
@@ -319,27 +341,67 @@ export function GameGrid({
                     isShipOnScoringTile
                       ? "border-2 border-yellow-400"
                       : "border-0"
-                  } outline outline-1 outline-gray-900 relative cursor-pointer ${
-                    (() => {
-                      // Check if this is the "from" position (original position when proposing a move)
-                      const isProposedMoveOriginal = selectedShipId === cell?.shipId && previewPosition;
-                      // Check if this is the "to" position (preview cell)
-                      const isProposedMovePreview = cell?.isPreview && previewPosition !== null && selectedShipId !== null;
-                      
-                      // Show blue background for "from" or "to" positions
-                      if (isProposedMoveOriginal || isProposedMovePreview) {
-                        // Add blue background, but still need to handle other conditions
-                        const baseBg = canMoveShip
-                          ? "bg-blue-900 ring-2 ring-blue-400"
-                          : "bg-purple-900 ring-2 ring-purple-400";
-                        
-                        // Check for other conditions that might override
-                        if (hasShipMoved &&
-                          isCurrentPlayerTurn &&
-                          isShipOwnedByCurrentPlayer(cell.shipId)) {
-                          return "bg-gray-700 opacity-60 cursor-not-allowed";
+                  } outline outline-1 outline-gray-900 relative cursor-pointer ${(() => {
+                    // Check if this is the "from" position (original position when proposing a move)
+                    const isProposedMoveOriginal =
+                      selectedShipId === cell?.shipId && previewPosition;
+                    // Check if this is the "to" position (preview cell)
+                    const isProposedMovePreview =
+                      cell?.isPreview &&
+                      previewPosition !== null &&
+                      selectedShipId !== null;
+
+                    // Show blue background for "from" or "to" positions
+                    if (isProposedMoveOriginal || isProposedMovePreview) {
+                      // Add blue background, but still need to handle other conditions
+                      const baseBg = canMoveShip
+                        ? "bg-blue-900 ring-2 ring-blue-400"
+                        : "bg-purple-900 ring-2 ring-purple-400";
+
+                      // Check for other conditions that might override
+                      if (
+                        hasShipMoved &&
+                        isCurrentPlayerTurn &&
+                        isShipOwnedByCurrentPlayer(cell.shipId)
+                      ) {
+                        return "bg-gray-700 opacity-60 cursor-not-allowed";
+                      }
+                      if (isSelectedTarget) {
+                        const isAssistAction =
+                          assistableTargets.some(
+                            (target) => target.shipId === cell.shipId
+                          ) ||
+                          assistableTargetsFromStart.some(
+                            (target) => target.shipId === cell.shipId
+                          );
+                        if (isAssistAction) {
+                          return "bg-cyan-900 ring-2 ring-cyan-400";
                         }
-                        if (isSelectedTarget) {
+                        return selectedWeaponType === "special"
+                          ? specialType === 3 // Flak
+                            ? "bg-red-900 ring-2 ring-red-400"
+                            : "bg-blue-900 ring-2 ring-blue-400"
+                          : "bg-red-900 ring-2 ring-red-400";
+                      }
+                      // Return blue background for from/to positions
+                      return baseBg;
+                    }
+
+                    // Otherwise, apply normal selected styling
+                    if (isSelected) {
+                      return canMoveShip
+                        ? "bg-blue-900 ring-2 ring-blue-400"
+                        : "bg-purple-900 ring-2 ring-purple-400";
+                    }
+
+                    // Default styling chain
+                    return hasShipMoved &&
+                      isCurrentPlayerTurn &&
+                      isShipOwnedByCurrentPlayer(cell.shipId)
+                      ? "bg-gray-700 opacity-60 cursor-not-allowed"
+                      : isSelectedTarget
+                      ? (() => {
+                          // Check if this is an assist action
                           const isAssistAction =
                             assistableTargets.some(
                               (target) => target.shipId === cell.shipId
@@ -350,61 +412,25 @@ export function GameGrid({
                           if (isAssistAction) {
                             return "bg-cyan-900 ring-2 ring-cyan-400";
                           }
+                          // Otherwise use weapon-based styling
                           return selectedWeaponType === "special"
                             ? specialType === 3 // Flak
-                              ? "bg-red-900 ring-2 ring-red-400"
-                              : "bg-blue-900 ring-2 ring-blue-400"
+                              ? "bg-red-900 ring-2 ring-red-400" // Flak uses red highlighting like regular weapons
+                              : "bg-blue-900 ring-2 ring-blue-400" // Other specials use blue
                             : "bg-red-900 ring-2 ring-red-400";
-                        }
-                        // Return blue background for from/to positions
-                        return baseBg;
-                      }
-                      
-                      // Otherwise, apply normal selected styling
-                      if (isSelected) {
-                        return canMoveShip
-                          ? "bg-blue-900 ring-2 ring-blue-400"
-                          : "bg-purple-900 ring-2 ring-purple-400";
-                      }
-                      
-                      // Default styling chain
-                      return hasShipMoved &&
-                        isCurrentPlayerTurn &&
-                        isShipOwnedByCurrentPlayer(cell.shipId)
-                        ? "bg-gray-700 opacity-60 cursor-not-allowed"
-                        : isSelectedTarget
-                        ? (() => {
-                            // Check if this is an assist action
-                            const isAssistAction =
-                              assistableTargets.some(
-                                (target) => target.shipId === cell.shipId
-                              ) ||
-                              assistableTargetsFromStart.some(
-                                (target) => target.shipId === cell.shipId
-                              );
-                            if (isAssistAction) {
-                              return "bg-cyan-900 ring-2 ring-cyan-400";
-                            }
-                            // Otherwise use weapon-based styling
-                            return selectedWeaponType === "special"
-                              ? specialType === 3 // Flak
-                                ? "bg-red-900 ring-2 ring-red-400" // Flak uses red highlighting like regular weapons
-                                : "bg-blue-900 ring-2 ring-blue-400" // Other specials use blue
-                              : "bg-red-900 ring-2 ring-red-400";
-                          })()
-                        : isValidTarget
-                        ? selectedWeaponType === "special"
-                          ? specialType === 3 // Flak
-                            ? "bg-red-900/50 ring-1 ring-red-400" // Flak uses red highlighting like regular weapons
-                            : "bg-blue-900/50 ring-1 ring-blue-400" // Other specials use blue
-                          : "bg-orange-900/50 ring-1 ring-orange-400"
-                        : isAssistableTarget
-                        ? "bg-cyan-900/50 ring-1 ring-cyan-400"
-                        : isMovementTile
-                        ? "bg-green-900/50"
-                        : "bg-gray-950";
-                    })()
-                  }`}
+                        })()
+                      : isValidTarget
+                      ? selectedWeaponType === "special"
+                        ? specialType === 3 // Flak
+                          ? "bg-red-900/50 ring-1 ring-red-400" // Flak uses red highlighting like regular weapons
+                          : "bg-blue-900/50 ring-1 ring-blue-400" // Other specials use blue
+                        : "bg-orange-900/50 ring-1 ring-orange-400"
+                      : isAssistableTarget
+                      ? "bg-cyan-900/50 ring-1 ring-cyan-400"
+                      : isMovementTile
+                      ? "bg-green-900/50"
+                      : "bg-gray-950";
+                  })()}`}
                   onClick={handleCellClick}
                   onMouseEnter={
                     cell
@@ -524,16 +550,18 @@ export function GameGrid({
 
                   {/* Movement range highlight */}
                   {isMovementTile && (
-                    <div className={`absolute inset-0 z-2 border-2 pointer-events-none ${
-                      isHighlightedMove
-                        ? "border-yellow-400 bg-yellow-500/40 animate-pulse"
-                        : "border-green-400 bg-green-500/20"
-                    }`} />
+                    <div
+                      className={`absolute inset-0 z-2 border-1 pointer-events-none ${
+                        isHighlightedMove
+                          ? "border-yellow-400/50 bg-yellow-500/20 animate-pulse"
+                          : "border-green-400/50 bg-green-500/10"
+                      }`}
+                    />
                   )}
 
                   {/* Shooting range highlight */}
                   {isShootingTile && (
-                    <div className="absolute inset-0 z-2 border-2 border-orange-400 bg-orange-500/20 pointer-events-none" />
+                    <div className="absolute inset-0 z-2 border-1 border-orange-400/50 bg-orange-500/10 pointer-events-none" />
                   )}
 
                   {/* Drag range highlight - show range from drag position */}
@@ -542,7 +570,7 @@ export function GameGrid({
                       {dragShootingRange.some(
                         (pos) => pos.row === rowIndex && pos.col === colIndex
                       ) && (
-                        <div className="absolute inset-0 z-2 border-2 border-orange-400 bg-orange-500/20 pointer-events-none" />
+                        <div className="absolute inset-0 z-2 border-1 border-orange-400/50 bg-orange-500/10 pointer-events-none" />
                       )}
                       {/* Green outline on the cell being dragged over */}
                       {dragOverCell.row === rowIndex &&
@@ -658,61 +686,6 @@ export function GameGrid({
                         // If we dropped, previewPosition will be updated in onDrop handler
                       }}
                     >
-                      {/* Damage display for selected target or valid targets when dragging/previewing */}
-                      {(isSelectedTarget ||
-                        ((draggedShipId &&
-                          dragOverCell &&
-                          dragValidTargets.some(
-                            (target) => target.shipId === cell.shipId
-                          )) ||
-                          (previewPosition &&
-                            validTargets.some(
-                              (target) => target.shipId === cell.shipId
-                            )))) && (
-                        <div
-                          className={`absolute -top-8 left-1/2 transform -translate-x-1/2 z-20 rounded px-2 py-1 text-xs font-mono text-white whitespace-nowrap ${
-                            selectedWeaponType === "special"
-                              ? specialType === 3 // Flak
-                                ? "bg-orange-900 border border-orange-500" // Orange for flak
-                                : "bg-blue-900 border border-blue-500" // Blue for other specials
-                              : "bg-red-900 border border-red-500"
-                          }`}
-                        >
-                          {(() => {
-                            const damage = calculateDamage(
-                              cell.shipId,
-                              selectedWeaponType,
-                              selectedWeaponType === "special" &&
-                                specialType === 3
-                                ? true
-                                : undefined
-                            ); // Use actual weapon type, show reduced damage for flak display
-                            if (selectedWeaponType === "special") {
-                              // Flak does damage, other special abilities repair/heal
-                              if (specialType === 3) {
-                                // Flak special - show damage effect
-                                if (damage.reactorCritical) {
-                                  return "⚡ Reactor Critical +1";
-                                } else if (damage.willKill) {
-                                  return `💀 ${damage.reducedDamage} DMG (KILL)`;
-                                } else {
-                                  return `⚔️ ${damage.reducedDamage} DMG`;
-                                }
-                              } else {
-                                // Other special abilities - show repair/heal effect
-                                return `🔧 Repair ${damage.reducedDamage} HP`;
-                              }
-                            } else if (damage.reactorCritical) {
-                              return "⚡ Reactor Critical +1";
-                            } else if (damage.willKill) {
-                              return `💀 ${damage.reducedDamage} DMG (KILL)`;
-                            } else {
-                              return `⚔️ ${damage.reducedDamage} DMG`;
-                            }
-                          })()}
-                        </div>
-                      )}
-
                       {/* Health bar inside cell top, adjacent to team dot */}
                       {(() => {
                         const attributes = getShipAttributes(cell.shipId);
@@ -767,45 +740,49 @@ export function GameGrid({
                         ship={ship}
                         className={`w-full h-full relative z-10 ${
                           cell.isCreator ? "scale-x-[-1]" : ""
-                        } ${
-                          (() => {
-                            // Check if this is the "from" position (original position when proposing a move)
-                            const isProposedMoveOriginal = selectedShipId === cell.shipId && previewPosition;
-                            
-                            // Check if this is a proposed move preview (to position)
-                            const isProposedMovePreview = cell.isPreview && 
-                              previewPosition !== null && 
-                              selectedShipId !== null &&
-                              !(lastMoveShipId === cell.shipId && 
-                                lastMoveOldPosition &&
-                                rowIndex === lastMoveOldPosition.row &&
-                                colIndex === lastMoveOldPosition.col);
-                            
-                            // "From" position: 50% opacity, no animation
-                            if (isProposedMoveOriginal) {
-                              return "opacity-50";
-                            }
-                            
-                            // Don't animate proposed move previews
-                            if (isProposedMovePreview) {
-                              return "";
-                            }
-                            
-                            // Last move old position: 50% opacity, no animation
-                            if (lastMoveShipId === cell.shipId &&
-                                lastMoveOldPosition &&
-                                rowIndex === lastMoveOldPosition.row &&
-                                colIndex === lastMoveOldPosition.col) {
-                              return "opacity-50";
-                            }
-                            
-                            // Apply animation for other cases
-                            if (cell.isPreview) {
-                              return "animate-pulse-preview";
-                            }
+                        } ${(() => {
+                          // Check if this is the "from" position (original position when proposing a move)
+                          const isProposedMoveOriginal =
+                            selectedShipId === cell.shipId && previewPosition;
+
+                          // Check if this is a proposed move preview (to position)
+                          const isProposedMovePreview =
+                            cell.isPreview &&
+                            previewPosition !== null &&
+                            selectedShipId !== null &&
+                            !(
+                              lastMoveShipId === cell.shipId &&
+                              lastMoveOldPosition &&
+                              rowIndex === lastMoveOldPosition.row &&
+                              colIndex === lastMoveOldPosition.col
+                            );
+
+                          // "From" position: 50% opacity, no animation
+                          if (isProposedMoveOriginal) {
+                            return "opacity-50";
+                          }
+
+                          // Don't animate proposed move previews
+                          if (isProposedMovePreview) {
                             return "";
-                          })()
-                        }`}
+                          }
+
+                          // Last move old position: 50% opacity, no animation
+                          if (
+                            lastMoveShipId === cell.shipId &&
+                            lastMoveOldPosition &&
+                            rowIndex === lastMoveOldPosition.row &&
+                            colIndex === lastMoveOldPosition.col
+                          ) {
+                            return "opacity-50";
+                          }
+
+                          // Apply animation for other cases
+                          if (cell.isPreview) {
+                            return "animate-pulse-preview";
+                          }
+                          return "";
+                        })()}`}
                         showLoadingState={true}
                       />
                       {/* Moved badge */}
@@ -868,94 +845,114 @@ export function GameGrid({
                           isShipOwnedByCurrentPlayer(cell.shipId)
                             ? "bg-blue-500"
                             : "bg-red-500"
-                        } ${
-                          (() => {
-                            // Check if this is the "from" position (original position when proposing a move)
-                            const isProposedMoveOriginal = selectedShipId === cell.shipId && previewPosition;
-                            
-                            // Check if this is a proposed move preview (to position)
-                            const isProposedMovePreview = cell.isPreview && 
-                              previewPosition !== null && 
-                              selectedShipId !== null &&
-                              !(lastMoveShipId === cell.shipId && 
-                                lastMoveOldPosition &&
-                                rowIndex === lastMoveOldPosition.row &&
-                                colIndex === lastMoveOldPosition.col);
-                            
-                            // "From" position: 50% opacity, no animation
-                            if (isProposedMoveOriginal) {
-                              return "opacity-50";
-                            }
-                            
-                            // Don't animate proposed move previews
-                            if (isProposedMovePreview) {
-                              return "";
-                            }
-                            
-                            // Last move old position: 50% opacity, no animation
-                            if (lastMoveShipId === cell.shipId &&
-                                lastMoveOldPosition &&
-                                rowIndex === lastMoveOldPosition.row &&
-                                colIndex === lastMoveOldPosition.col) {
-                              return "opacity-50";
-                            }
-                            
-                            // Apply animation for other cases
-                            if (cell.isPreview) {
-                              return "animate-pulse-preview";
-                            }
+                        } ${(() => {
+                          // Check if this is the "from" position (original position when proposing a move)
+                          const isProposedMoveOriginal =
+                            selectedShipId === cell.shipId && previewPosition;
+
+                          // Check if this is a proposed move preview (to position)
+                          const isProposedMovePreview =
+                            cell.isPreview &&
+                            previewPosition !== null &&
+                            selectedShipId !== null &&
+                            !(
+                              lastMoveShipId === cell.shipId &&
+                              lastMoveOldPosition &&
+                              rowIndex === lastMoveOldPosition.row &&
+                              colIndex === lastMoveOldPosition.col
+                            );
+
+                          // "From" position: 50% opacity, no animation
+                          if (isProposedMoveOriginal) {
+                            return "opacity-50";
+                          }
+
+                          // Don't animate proposed move previews
+                          if (isProposedMovePreview) {
                             return "";
-                          })()
-                        }`}
+                          }
+
+                          // Last move old position: 50% opacity, no animation
+                          if (
+                            lastMoveShipId === cell.shipId &&
+                            lastMoveOldPosition &&
+                            rowIndex === lastMoveOldPosition.row &&
+                            colIndex === lastMoveOldPosition.col
+                          ) {
+                            return "opacity-50";
+                          }
+
+                          // Apply animation for other cases
+                          if (cell.isPreview) {
+                            return "animate-pulse-preview";
+                          }
+                          return "";
+                        })()}`}
                       />
                       {/* Movement path borders */}
                       {(() => {
                         const isPreviewCell = cell.isPreview;
-                        const isProposedMoveOriginal = selectedShipId === cell.shipId && previewPosition;
-                        const isLastMoveOldPosition = lastMoveShipId === cell.shipId && 
+                        const isProposedMoveOriginal =
+                          selectedShipId === cell.shipId && previewPosition;
+                        const isLastMoveOldPosition =
+                          lastMoveShipId === cell.shipId &&
                           lastMoveOldPosition &&
                           rowIndex === lastMoveOldPosition.row &&
                           colIndex === lastMoveOldPosition.col;
-                        const isLastMoveNewPosition = lastMoveShipId === cell.shipId &&
+                        const isLastMoveNewPosition =
+                          lastMoveShipId === cell.shipId &&
                           lastMoveOldPosition &&
                           !isLastMoveOldPosition; // New position is where the ship is but not at old position
-                        
+
                         // Check if this is a proposed move preview (to position)
                         // It's a proposed move preview if: it's a preview cell AND there's an active proposed move (previewPosition exists) AND it's not the last move old position
-                        const isProposedMovePreview = isPreviewCell && 
-                          previewPosition !== null && 
+                        const isProposedMovePreview =
+                          isPreviewCell &&
+                          previewPosition !== null &&
                           selectedShipId !== null &&
                           !isLastMoveOldPosition;
-                        
-                        const shouldShowBorder = isPreviewCell || isProposedMoveOriginal || isLastMoveOldPosition || isLastMoveNewPosition;
-                        
+
+                        const shouldShowBorder =
+                          isPreviewCell ||
+                          isProposedMoveOriginal ||
+                          isLastMoveOldPosition ||
+                          isLastMoveNewPosition;
+
                         if (!shouldShowBorder) return null;
-                        
+
                         // For proposed moves: preview (to) is solid, original (from) is dashed
                         // For last move: old position is dashed, new position is solid
                         // Dashed for: proposed move original position, last move old position
                         // Solid for: proposed move preview (to), last move new position
-                        const isDashed = isProposedMoveOriginal || isLastMoveOldPosition;
+                        const isDashed =
+                          isProposedMoveOriginal || isLastMoveOldPosition;
                         // Don't animate "from" position, new position of last move, or last move old position
-                        const shouldAnimate = isPreviewCell && !isProposedMovePreview && !isLastMoveOldPosition;
-                        
+                        const shouldAnimate =
+                          isPreviewCell &&
+                          !isProposedMovePreview &&
+                          !isLastMoveOldPosition;
+
                         // Explicitly ensure proposed move previews are solid
-                        const borderStyle = isProposedMovePreview 
-                          ? "border-solid" 
-                          : (isDashed ? "border-dashed" : "border-solid");
-                        
+                        const borderStyle = isProposedMovePreview
+                          ? "border-solid"
+                          : isDashed
+                          ? "border-dashed"
+                          : "border-solid";
+
                         // Make proposed move preview borders thicker
-                        const borderWidth = isProposedMovePreview ? "border-4" : "border-2";
-                        
+                        const borderWidth = isProposedMovePreview
+                          ? "border-4"
+                          : "border-2";
+
                         // Don't animate proposed move previews (to position), but animate others
                         const animationClass = isProposedMovePreview
                           ? ""
-                          : (shouldAnimate
-                              ? (isPreviewCell
-                                  ? "animate-pulse-preview"
-                                  : "animate-pulse-original")
-                              : "");
-                        
+                          : shouldAnimate
+                          ? isPreviewCell
+                            ? "animate-pulse-preview"
+                            : "animate-pulse-original"
+                          : "";
+
                         return (
                           <div
                             className={`absolute inset-0 ${borderWidth} border-yellow-400 rounded-sm pointer-events-none ${borderStyle} ${animationClass}`}
@@ -968,6 +965,409 @@ export function GameGrid({
               );
             })
           )}
+
+          {/* Laser Shooting Animation */}
+          {(selectedShipId || lastMoveShipId) &&
+            targetShipId &&
+            selectedWeaponType === "weapon" &&
+            (() => {
+              // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
+              const shipId = selectedShipId || lastMoveShipId;
+              if (!shipId) return null;
+
+              // Check if the ship has a Laser weapon (mainWeapon === 0)
+              const ship = shipMap.get(shipId);
+              if (!ship || ship.equipment.mainWeapon !== 0) {
+                return null;
+              }
+
+              // Find positions of attacking and target ships
+              // Use previewPosition or dragOverCell (to position) - no fallback
+              // For last move, use previewPosition which is set to the new position
+              let attackerRow = -1;
+              let attackerCol = -1;
+
+              if (previewPosition) {
+                attackerRow = previewPosition.row;
+                attackerCol = previewPosition.col;
+              } else if (draggedShipId && dragOverCell) {
+                attackerRow = dragOverCell.row;
+                attackerCol = dragOverCell.col;
+              } else if (lastMoveShipId && shipId === lastMoveShipId) {
+                // For last move display, use the new position from lastMoveOldPosition context
+                // previewPosition should already be set, but if not, find from grid
+                grid.forEach((row, r) => {
+                  row.forEach((cell, c) => {
+                    if (cell?.shipId === shipId) {
+                      attackerRow = r;
+                      attackerCol = c;
+                    }
+                  });
+                });
+                if (attackerRow === -1 || attackerCol === -1) return null;
+              } else {
+                // No preview or drag position - don't show animation
+                return null;
+              }
+
+              let targetRow = -1;
+              let targetCol = -1;
+              grid.forEach((row, r) => {
+                row.forEach((cell, c) => {
+                  if (cell?.shipId === targetShipId) {
+                    targetRow = r;
+                    targetCol = c;
+                  }
+                });
+              });
+
+              // Only show animation if target is found
+              if (targetRow === -1 || targetCol === -1) return null;
+
+              return (
+                <LaserShootingAnimation
+                  gridContainerRef={gridContainerRef}
+                  attackerRow={attackerRow}
+                  attackerCol={attackerCol}
+                  targetRow={targetRow}
+                  targetCol={targetCol}
+                />
+              );
+            })()}
+
+          {/* Missile Shooting Animation */}
+          {(selectedShipId || lastMoveShipId) &&
+            targetShipId &&
+            selectedWeaponType === "weapon" &&
+            (() => {
+              // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
+              const shipId = selectedShipId || lastMoveShipId;
+              if (!shipId) return null;
+
+              // Check if the ship has a Missile weapon (mainWeapon === 2)
+              const ship = shipMap.get(shipId);
+              if (!ship || ship.equipment.mainWeapon !== 2) {
+                return null;
+              }
+
+              // Find positions of attacking and target ships
+              // Use previewPosition or dragOverCell (to position) - no fallback
+              // For last move, use previewPosition which is set to the new position
+              let attackerRow = -1;
+              let attackerCol = -1;
+
+              if (previewPosition) {
+                attackerRow = previewPosition.row;
+                attackerCol = previewPosition.col;
+              } else if (draggedShipId && dragOverCell) {
+                attackerRow = dragOverCell.row;
+                attackerCol = dragOverCell.col;
+              } else if (lastMoveShipId && shipId === lastMoveShipId) {
+                // For last move display, use the new position from lastMoveOldPosition context
+                // previewPosition should already be set, but if not, find from grid
+                grid.forEach((row, r) => {
+                  row.forEach((cell, c) => {
+                    if (cell?.shipId === shipId) {
+                      attackerRow = r;
+                      attackerCol = c;
+                    }
+                  });
+                });
+                if (attackerRow === -1 || attackerCol === -1) return null;
+              } else {
+                // No preview or drag position - don't show animation
+                return null;
+              }
+
+              let targetRow = -1;
+              let targetCol = -1;
+              grid.forEach((row, r) => {
+                row.forEach((cell, c) => {
+                  if (cell?.shipId === targetShipId) {
+                    targetRow = r;
+                    targetCol = c;
+                  }
+                });
+              });
+
+              // Only show animation if target is found
+              if (targetRow === -1 || targetCol === -1) return null;
+
+              return (
+                <MissileShootingAnimation
+                  gridContainerRef={gridContainerRef}
+                  attackerRow={attackerRow}
+                  attackerCol={attackerCol}
+                  targetRow={targetRow}
+                  targetCol={targetCol}
+                />
+              );
+            })()}
+
+          {/* Plasma Shooting Animation */}
+          {(selectedShipId || lastMoveShipId) &&
+            targetShipId &&
+            selectedWeaponType === "weapon" &&
+            (() => {
+              // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
+              const shipId = selectedShipId || lastMoveShipId;
+              if (!shipId) return null;
+
+              // Check if the ship has a Plasma weapon (mainWeapon === 3)
+              const ship = shipMap.get(shipId);
+              if (!ship || ship.equipment.mainWeapon !== 3) {
+                return null;
+              }
+
+              // Find positions of attacking and target ships
+              // Use previewPosition or dragOverCell (to position) - no fallback
+              // For last move, use previewPosition which is set to the new position
+              let attackerRow = -1;
+              let attackerCol = -1;
+
+              if (previewPosition) {
+                attackerRow = previewPosition.row;
+                attackerCol = previewPosition.col;
+              } else if (draggedShipId && dragOverCell) {
+                attackerRow = dragOverCell.row;
+                attackerCol = dragOverCell.col;
+              } else if (lastMoveShipId && shipId === lastMoveShipId) {
+                // For last move display, use the new position from lastMoveOldPosition context
+                // previewPosition should already be set, but if not, find from grid
+                grid.forEach((row, r) => {
+                  row.forEach((cell, c) => {
+                    if (cell?.shipId === shipId) {
+                      attackerRow = r;
+                      attackerCol = c;
+                    }
+                  });
+                });
+                if (attackerRow === -1 || attackerCol === -1) return null;
+              } else {
+                // No preview or drag position - don't show animation
+                return null;
+              }
+
+              let targetRow = -1;
+              let targetCol = -1;
+              grid.forEach((row, r) => {
+                row.forEach((cell, c) => {
+                  if (cell?.shipId === targetShipId) {
+                    targetRow = r;
+                    targetCol = c;
+                  }
+                });
+              });
+
+              // Only show animation if target is found
+              if (targetRow === -1 || targetCol === -1) return null;
+
+              return (
+                <PlasmaShootingAnimation
+                  gridContainerRef={gridContainerRef}
+                  attackerRow={attackerRow}
+                  attackerCol={attackerCol}
+                  targetRow={targetRow}
+                  targetCol={targetCol}
+                />
+              );
+            })()}
+
+          {/* Railgun Shooting Animation */}
+          {(selectedShipId || lastMoveShipId) &&
+            targetShipId &&
+            selectedWeaponType === "weapon" &&
+            (() => {
+              // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
+              const shipId = selectedShipId || lastMoveShipId;
+              if (!shipId) return null;
+
+              // Check if the ship has a Railgun weapon (mainWeapon === 1)
+              const ship = shipMap.get(shipId);
+              if (!ship || ship.equipment.mainWeapon !== 1) {
+                return null;
+              }
+
+              // Find positions of attacking and target ships
+              // Use previewPosition or dragOverCell (to position) - no fallback
+              // For last move, use previewPosition which is set to the new position
+              let attackerRow = -1;
+              let attackerCol = -1;
+
+              if (previewPosition) {
+                attackerRow = previewPosition.row;
+                attackerCol = previewPosition.col;
+              } else if (draggedShipId && dragOverCell) {
+                attackerRow = dragOverCell.row;
+                attackerCol = dragOverCell.col;
+              } else if (lastMoveShipId && shipId === lastMoveShipId) {
+                // For last move display, use the new position from lastMoveOldPosition context
+                // previewPosition should already be set, but if not, find from grid
+                grid.forEach((row, r) => {
+                  row.forEach((cell, c) => {
+                    if (cell?.shipId === shipId) {
+                      attackerRow = r;
+                      attackerCol = c;
+                    }
+                  });
+                });
+                if (attackerRow === -1 || attackerCol === -1) return null;
+              } else {
+                // No preview or drag position - don't show animation
+                return null;
+              }
+
+              let targetRow = -1;
+              let targetCol = -1;
+              grid.forEach((row, r) => {
+                row.forEach((cell, c) => {
+                  if (cell?.shipId === targetShipId) {
+                    targetRow = r;
+                    targetCol = c;
+                  }
+                });
+              });
+
+              // Only show animation if target is found
+              if (targetRow === -1 || targetCol === -1) return null;
+
+              return (
+                <RailgunShootingAnimation
+                  gridContainerRef={gridContainerRef}
+                  attackerRow={attackerRow}
+                  attackerCol={attackerCol}
+                  targetRow={targetRow}
+                  targetCol={targetCol}
+                />
+              );
+            })()}
+
+          {/* Damage Labels - Rendered at grid level above weapon animations */}
+          {gridContainerRef.current &&
+            (() => {
+              const targetsToShow: Array<{
+                shipId: bigint;
+                row: number;
+                col: number;
+              }> = [];
+
+              // Collect selected target
+              if (targetShipId) {
+                grid.forEach((row, r) => {
+                  row.forEach((cell, c) => {
+                    if (cell && cell.shipId === targetShipId) {
+                      targetsToShow.push({
+                        shipId: cell.shipId,
+                        row: r,
+                        col: c,
+                      });
+                    }
+                  });
+                });
+              }
+
+              // Collect drag targets
+              if (draggedShipId && dragOverCell) {
+                dragValidTargets.forEach((target) => {
+                  if (!targetsToShow.some((t) => t.shipId === target.shipId)) {
+                    targetsToShow.push({
+                      shipId: target.shipId,
+                      row: target.position.row,
+                      col: target.position.col,
+                    });
+                  }
+                });
+              }
+
+              // Collect preview targets
+              if (previewPosition) {
+                validTargets.forEach((target) => {
+                  if (!targetsToShow.some((t) => t.shipId === target.shipId)) {
+                    targetsToShow.push({
+                      shipId: target.shipId,
+                      row: target.position.row,
+                      col: target.position.col,
+                    });
+                  }
+                });
+              }
+
+              if (targetsToShow.length === 0) return null;
+
+              const gridRect = gridContainerRef.current.getBoundingClientRect();
+              const cellWidth = gridRect.width / 25;
+              const cellHeight = gridRect.height / 13;
+
+              return (
+                <div
+                  className="absolute pointer-events-none z-50"
+                  style={{
+                    left: `0px`,
+                    top: `0px`,
+                    width: `${gridRect.width}px`,
+                    height: `${gridRect.height}px`,
+                  }}
+                >
+                  {targetsToShow.map((target) => {
+                    const damage = calculateDamage(
+                      target.shipId,
+                      selectedWeaponType,
+                      selectedWeaponType === "special" && specialType === 3
+                        ? true
+                        : undefined
+                    );
+
+                    let labelText: string;
+                    if (selectedWeaponType === "special") {
+                      // Flak does damage, other special abilities repair/heal
+                      if (specialType === 3) {
+                        // Flak special - show damage effect
+                        if (damage.reactorCritical) {
+                          labelText = "⚡ Reactor Critical +1";
+                        } else if (damage.willKill) {
+                          labelText = `💀 ${damage.reducedDamage} DMG (KILL)`;
+                        } else {
+                          labelText = `⚔️ ${damage.reducedDamage} DMG`;
+                        }
+                      } else {
+                        // Other special abilities - show repair/heal effect
+                        labelText = `🔧 Repair ${damage.reducedDamage} HP`;
+                      }
+                    } else if (damage.reactorCritical) {
+                      labelText = "⚡ Reactor Critical +1";
+                    } else if (damage.willKill) {
+                      labelText = `💀 ${damage.reducedDamage} DMG (KILL)`;
+                    } else {
+                      labelText = `⚔️ ${damage.reducedDamage} DMG`;
+                    }
+
+                    // Calculate position above target cell (relative to grid container)
+                    const cellX = target.col * cellWidth + cellWidth / 2;
+                    const cellTop = target.row * cellHeight; // Top edge of the cell
+
+                    return (
+                      <div
+                        key={target.shipId.toString()}
+                        className={`absolute rounded px-2 py-1 text-xs font-mono text-white whitespace-nowrap ${
+                          selectedWeaponType === "special"
+                            ? specialType === 3 // Flak
+                              ? "bg-orange-900 border border-orange-500" // Orange for flak
+                              : "bg-blue-900 border border-blue-500" // Blue for other specials
+                            : "bg-red-900 border border-red-500"
+                        }`}
+                        style={{
+                          left: `${cellX}px`,
+                          top: `${cellTop - 32}px`, // Position 32px above the top of the target cell
+                          transform: "translateX(-50%)",
+                        }}
+                      >
+                        {labelText}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
         </div>
       </div>
 
@@ -1164,5 +1564,963 @@ export function GameGrid({
           );
         })()}
     </>
+  );
+}
+
+// Laser Shooting Animation Component
+interface LaserShootingAnimationProps {
+  gridContainerRef: React.RefObject<HTMLDivElement>;
+  attackerRow: number;
+  attackerCol: number;
+  targetRow: number;
+  targetCol: number;
+}
+
+function LaserShootingAnimation({
+  gridContainerRef,
+  attackerRow,
+  attackerCol,
+  targetRow,
+  targetCol,
+}: LaserShootingAnimationProps) {
+  const [lines, setLines] = useState<
+    Array<{ id: number; endX: number; endY: number }>
+  >([]);
+  const lineIdRef = useRef(0);
+
+  // Calculate cell centers relative to grid container
+  const getCellCenter = useCallback(
+    (row: number, col: number) => {
+      if (!gridContainerRef.current) return { x: 0, y: 0 };
+
+      const gridRect = gridContainerRef.current.getBoundingClientRect();
+      const cellWidth = gridRect.width / 25;
+      const cellHeight = gridRect.height / 13;
+
+      // Calculate position relative to grid container (not screen)
+      const x = col * cellWidth + cellWidth / 2;
+      const y = row * cellHeight + cellHeight / 2;
+
+      return { x, y };
+    },
+    [gridContainerRef]
+  );
+
+  // Create a new line
+  const createLine = useCallback(() => {
+    if (!gridContainerRef.current) return;
+
+    const targetCenter = getCellCenter(targetRow, targetCol);
+
+    const gridRect = gridContainerRef.current.getBoundingClientRect();
+    const cellWidth = gridRect.width / 25;
+    const cellHeight = gridRect.height / 13;
+
+    // Random point within target cell (80% of cell size to keep it within bounds)
+    const randomX = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.8;
+    const randomY = targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.8;
+
+    const newLine = {
+      id: lineIdRef.current++,
+      endX: randomX,
+      endY: randomY,
+    };
+
+    setLines((prev) => [...prev, newLine]);
+
+    // Remove line after fade animation (0.5s)
+    setTimeout(() => {
+      setLines((prev) => prev.filter((line) => line.id !== newLine.id));
+    }, 500);
+  }, [targetRow, targetCol, getCellCenter]);
+
+  // Continuously create new lines
+  useEffect(() => {
+    // Create first line immediately
+    createLine();
+
+    // Create new lines continuously
+    const interval = setInterval(() => {
+      createLine();
+    }, 500); // Create a new line every 0.5 seconds
+
+    return () => clearInterval(interval);
+  }, [createLine]);
+
+  if (!gridContainerRef.current) return null;
+
+  const gridRect = gridContainerRef.current.getBoundingClientRect();
+  const attackerCenter = getCellCenter(attackerRow, attackerCol);
+
+  return (
+    <svg
+      className="absolute pointer-events-none z-5"
+      style={{
+        left: `0px`,
+        top: `0px`,
+        width: `${gridRect.width}px`,
+        height: `${gridRect.height}px`,
+      }}
+      viewBox={`0 0 ${gridRect.width} ${gridRect.height}`}
+      preserveAspectRatio="none"
+    >
+      {lines.map((line) => {
+        // Calculate line length and angle
+        const dx = line.endX - attackerCenter.x;
+        const dy = line.endY - attackerCenter.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+        return (
+          <rect
+            key={line.id}
+            x={attackerCenter.x}
+            y={attackerCenter.y - 1}
+            width={length}
+            height="2"
+            fill="red"
+            stroke="red"
+            strokeWidth="0"
+            transform={`rotate(${angle} ${attackerCenter.x} ${attackerCenter.y})`}
+            className="animate-laser-fade"
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+// Missile Shooting Animation Component
+interface MissileShootingAnimationProps {
+  gridContainerRef: React.RefObject<HTMLDivElement>;
+  attackerRow: number;
+  attackerCol: number;
+  targetRow: number;
+  targetCol: number;
+}
+
+function MissileShootingAnimation({
+  gridContainerRef,
+  attackerRow,
+  attackerCol,
+  targetRow,
+  targetCol,
+}: MissileShootingAnimationProps) {
+  const [missiles, setMissiles] = useState<
+    Array<{
+      id: number;
+      x: number;
+      y: number;
+      angle: number;
+      targetX: number;
+      targetY: number;
+      startX: number;
+      startY: number;
+      driftX: number;
+      driftY: number;
+      spawnX: number;
+      spawnY: number;
+      driftStartTime: number;
+      startTime: number;
+    }>
+  >([]);
+  const missileIdRef = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Calculate cell centers
+  const getCellCenter = useCallback(
+    (row: number, col: number) => {
+      if (!gridContainerRef.current) return { x: 0, y: 0 };
+
+      const gridRect = gridContainerRef.current.getBoundingClientRect();
+      const cellWidth = gridRect.width / 25;
+      const cellHeight = gridRect.height / 13;
+
+      const x = col * cellWidth + cellWidth / 2;
+      const y = row * cellHeight + cellHeight / 2;
+
+      return { x, y };
+    },
+    [gridContainerRef]
+  );
+
+  // Select target spot and spawn missile
+  const spawnMissile = useCallback(() => {
+    if (!gridContainerRef.current) return;
+
+    const attackerCenter = getCellCenter(attackerRow, attackerCol);
+    const targetCenter = getCellCenter(targetRow, targetCol);
+
+    // Select a random target spot within target cell
+    const gridRect = gridContainerRef.current.getBoundingClientRect();
+    const cellWidth = gridRect.width / 25;
+    const cellHeight = gridRect.height / 13;
+    const targetX = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.8;
+    const targetY = targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.8;
+
+    // Calculate direction to target
+    const dx = targetX - attackerCenter.x;
+    const dy = targetY - attackerCenter.y;
+    const targetAngle = Math.atan2(dy, dx);
+
+    // Initial direction: 90 degrees counter-clockwise from target direction
+    // with random variation of up to ±30 degrees
+    const angleVariation = (Math.random() - 0.5) * ((30 * Math.PI) / 180); // ±30 degrees in radians
+    const initialAngle = targetAngle + Math.PI / 2 + angleVariation;
+
+    // Calculate initial drift position (0.25 seconds at start speed)
+    const avgCellSize = (cellWidth + cellHeight) / 2;
+    const TOP_SPEED = avgCellSize * 4;
+    const START_SPEED = TOP_SPEED / 8;
+    const INITIAL_DRIFT_TIME = 0.5;
+    const driftDistance = START_SPEED * INITIAL_DRIFT_TIME;
+
+    const driftX = attackerCenter.x + Math.cos(initialAngle) * driftDistance;
+    const driftY = attackerCenter.y + Math.sin(initialAngle) * driftDistance;
+
+    // New path from drift position to target
+    const newDx = targetX - driftX;
+    const newDy = targetY - driftY;
+
+    // Angle for triangle orientation (always point at target)
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+
+    // Spawn first missile at attacker position
+    const firstMissile = {
+      id: missileIdRef.current++,
+      x: attackerCenter.x,
+      y: attackerCenter.y,
+      angle,
+      targetX,
+      targetY,
+      startX: driftX, // Acceleration starts from drift position
+      startY: driftY,
+      driftX, // Store drift position
+      driftY,
+      spawnX: attackerCenter.x, // Store spawn position
+      spawnY: attackerCenter.y,
+      driftStartTime: Date.now(),
+      startTime: Date.now() + INITIAL_DRIFT_TIME * 1000, // Acceleration starts after drift
+    };
+
+    setMissiles([firstMissile]);
+
+    // Fire second missile 0.1 seconds after the first
+    setTimeout(() => {
+      // Select a new random target spot for the second missile
+      const targetX2 = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.8;
+      const targetY2 =
+        targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.8;
+
+      // Calculate direction to target for second missile
+      const dx2 = targetX2 - attackerCenter.x;
+      const dy2 = targetY2 - attackerCenter.y;
+      const targetAngle2 = Math.atan2(dy2, dx2);
+
+      // Initial direction with random variation
+      const angleVariation2 = (Math.random() - 0.5) * ((30 * Math.PI) / 180);
+      const initialAngle2 = targetAngle2 + Math.PI / 2 + angleVariation2;
+
+      const driftDistance2 = START_SPEED * INITIAL_DRIFT_TIME;
+      const driftX2 =
+        attackerCenter.x + Math.cos(initialAngle2) * driftDistance2;
+      const driftY2 =
+        attackerCenter.y + Math.sin(initialAngle2) * driftDistance2;
+
+      const angle2 = Math.atan2(dy2, dx2) * (180 / Math.PI) + 90;
+
+      const secondMissile = {
+        id: missileIdRef.current++,
+        x: attackerCenter.x,
+        y: attackerCenter.y,
+        angle: angle2,
+        targetX: targetX2,
+        targetY: targetY2,
+        startX: driftX2,
+        startY: driftY2,
+        driftX: driftX2,
+        driftY: driftY2,
+        spawnX: attackerCenter.x,
+        spawnY: attackerCenter.y,
+        driftStartTime: Date.now(),
+        startTime: Date.now() + INITIAL_DRIFT_TIME * 1000,
+      };
+
+      setMissiles((prev) => [...prev, secondMissile]);
+    }, 100);
+  }, [
+    gridContainerRef,
+    attackerRow,
+    attackerCol,
+    targetRow,
+    targetCol,
+    getCellCenter,
+  ]);
+
+  // Handle missile despawn and respawn
+  useEffect(() => {
+    if (missiles.length === 0) {
+      // No missiles - wait 1 second then spawn next pair
+      timeoutRef.current = setTimeout(() => {
+        spawnMissile();
+      }, 1000);
+
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+      };
+    }
+  }, [missiles.length, spawnMissile]);
+
+  // Animate missile movement
+  useEffect(() => {
+    if (missiles.length === 0) return;
+    if (!gridContainerRef.current) return;
+
+    const gridRect = gridContainerRef.current.getBoundingClientRect();
+    const cellWidth = gridRect.width / 25;
+    const cellHeight = gridRect.height / 13;
+    const avgCellSize = (cellWidth + cellHeight) / 2;
+
+    // Constant speed values (pixels per second)
+    const TOP_SPEED = avgCellSize * 4;
+    const START_SPEED = TOP_SPEED / 8;
+    const INITIAL_DRIFT_TIME = 0.5;
+    const ACCELERATION_TIME = 0.125;
+    const ACCELERATION = (TOP_SPEED - START_SPEED) / ACCELERATION_TIME;
+
+    const animate = () => {
+      const updatedMissiles = missiles
+        .map((missile) => {
+          // Calculate direction to target for initial drift
+          const targetDx = missile.targetX - missile.spawnX;
+          const targetDy = missile.targetY - missile.spawnY;
+          const targetAngle = Math.atan2(targetDy, targetDx);
+          const initialAngle = targetAngle + Math.PI / 2; // 90 degrees CCW from target
+
+          // Distance from drift position to target
+          const dx = missile.targetX - missile.startX;
+          const dy = missile.targetY - missile.startY;
+          const totalDistance = Math.sqrt(dx * dx + dy * dy);
+
+          // Calculate distance covered during acceleration phase
+          const accelerationDistance =
+            START_SPEED * ACCELERATION_TIME +
+            0.5 * ACCELERATION * ACCELERATION_TIME * ACCELERATION_TIME;
+          const reachesTargetDuringAccel =
+            accelerationDistance >= totalDistance;
+
+          const totalElapsed = (Date.now() - missile.driftStartTime) / 1000;
+          const driftElapsed = totalElapsed;
+          const accelerationElapsed = totalElapsed - INITIAL_DRIFT_TIME;
+
+          let currentX: number;
+          let currentY: number;
+
+          // Always point at target
+          const angleDx = missile.targetX - (missile.x || missile.spawnX);
+          const angleDy = missile.targetY - (missile.y || missile.spawnY);
+          const angle = Math.atan2(angleDy, angleDx) * (180 / Math.PI) + 90;
+
+          if (driftElapsed < INITIAL_DRIFT_TIME) {
+            // Initial drift phase: move 90 degrees from target direction at start speed
+            const driftDistance = START_SPEED * driftElapsed;
+            currentX = missile.spawnX + Math.cos(initialAngle) * driftDistance;
+            currentY = missile.spawnY + Math.sin(initialAngle) * driftDistance;
+          } else if (accelerationElapsed >= 0) {
+            // Acceleration phase (after drift) - move from drift position to target
+            let distanceTraveled = 0;
+
+            if (reachesTargetDuringAccel) {
+              // Target reached during acceleration
+              const a = 0.5 * ACCELERATION;
+              const b = START_SPEED;
+              const c = -totalDistance;
+              const discriminant = b * b - 4 * a * c;
+              const timeToTarget = (-b + Math.sqrt(discriminant)) / (2 * a);
+
+              if (accelerationElapsed < timeToTarget) {
+                distanceTraveled =
+                  START_SPEED * accelerationElapsed +
+                  0.5 *
+                    ACCELERATION *
+                    accelerationElapsed *
+                    accelerationElapsed;
+              } else {
+                distanceTraveled = totalDistance;
+              }
+            } else {
+              // Acceleration then constant speed
+              if (accelerationElapsed < ACCELERATION_TIME) {
+                distanceTraveled =
+                  START_SPEED * accelerationElapsed +
+                  0.5 *
+                    ACCELERATION *
+                    accelerationElapsed *
+                    accelerationElapsed;
+              } else {
+                const remainingDistance = totalDistance - accelerationDistance;
+                const constantSpeedTime = remainingDistance / TOP_SPEED;
+                const timeInConstantPhase =
+                  accelerationElapsed - ACCELERATION_TIME;
+
+                if (timeInConstantPhase < constantSpeedTime) {
+                  distanceTraveled =
+                    accelerationDistance + TOP_SPEED * timeInConstantPhase;
+                } else {
+                  distanceTraveled = totalDistance;
+                }
+              }
+            }
+
+            const progress = Math.min(distanceTraveled / totalDistance, 1);
+            currentX =
+              missile.startX + (missile.targetX - missile.startX) * progress;
+            currentY =
+              missile.startY + (missile.targetY - missile.startY) * progress;
+          } else {
+            // Shouldn't happen, but fallback
+            currentX = missile.x;
+            currentY = missile.y;
+          }
+
+          // Check if reached target
+          const distanceToTarget = Math.sqrt(
+            Math.pow(currentX - missile.targetX, 2) +
+              Math.pow(currentY - missile.targetY, 2)
+          );
+
+          if (distanceToTarget <= 0.1) {
+            // Missile reached target - mark for removal
+            return null;
+          }
+
+          return {
+            ...missile,
+            x: currentX,
+            y: currentY,
+            angle,
+          };
+        })
+        .filter((m): m is NonNullable<typeof m> => m !== null);
+
+      setMissiles(updatedMissiles);
+
+      if (updatedMissiles.length > 0) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        animationFrameRef.current = null;
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [missiles, gridContainerRef]);
+
+  // Start first missile
+  useEffect(() => {
+    spawnMissile();
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [spawnMissile]);
+
+  if (!gridContainerRef.current || missiles.length === 0) return null;
+
+  const gridRect = gridContainerRef.current.getBoundingClientRect();
+
+  // Create acute isosceles triangle points
+  // Triangle points: tip at (0, 0), base points at (-base/2, height) and (base/2, height)
+  const triangleSize = 8; // Base width
+  const triangleHeight = 12; // Height
+  const tipX = 0;
+  const tipY = 0;
+  const baseLeftX = -triangleSize / 2;
+  const baseRightX = triangleSize / 2;
+  const baseY = triangleHeight;
+
+  return (
+    <svg
+      className="absolute pointer-events-none z-5"
+      style={{
+        left: `0px`,
+        top: `0px`,
+        width: `${gridRect.width}px`,
+        height: `${gridRect.height}px`,
+      }}
+      viewBox={`0 0 ${gridRect.width} ${gridRect.height}`}
+      preserveAspectRatio="none"
+    >
+      {missiles.map((missile) => (
+        <polygon
+          key={missile.id}
+          points={`${tipX},${tipY} ${baseLeftX},${baseY} ${baseRightX},${baseY}`}
+          fill="red"
+          stroke="red"
+          strokeWidth="0"
+          transform={`translate(${missile.x}, ${missile.y}) rotate(${missile.angle})`}
+        />
+      ))}
+    </svg>
+  );
+}
+
+// Plasma Shooting Animation Component
+interface PlasmaShootingAnimationProps {
+  gridContainerRef: React.RefObject<HTMLDivElement>;
+  attackerRow: number;
+  attackerCol: number;
+  targetRow: number;
+  targetCol: number;
+}
+
+function PlasmaShootingAnimation({
+  gridContainerRef,
+  attackerRow,
+  attackerCol,
+  targetRow,
+  targetCol,
+}: PlasmaShootingAnimationProps) {
+  const [particles, setParticles] = useState<
+    Array<{
+      id: number;
+      x: number;
+      y: number;
+      progress: number;
+      spread: number;
+      size: number;
+      opacity: number;
+      targetX: number;
+      targetY: number;
+      startX: number;
+      startY: number;
+      startTime: number;
+      travelTime: number;
+    }>
+  >([]);
+  const particleIdRef = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
+
+  // Calculate cell centers
+  const getCellCenter = useCallback(
+    (row: number, col: number) => {
+      if (!gridContainerRef.current) return { x: 0, y: 0 };
+
+      const gridRect = gridContainerRef.current.getBoundingClientRect();
+      const cellWidth = gridRect.width / 25;
+      const cellHeight = gridRect.height / 13;
+
+      const x = col * cellWidth + cellWidth / 2;
+      const y = row * cellHeight + cellHeight / 2;
+
+      return { x, y };
+    },
+    [gridContainerRef]
+  );
+
+  // Create a new particle
+  const createParticle = useCallback(() => {
+    if (!gridContainerRef.current) return;
+
+    const attackerCenter = getCellCenter(attackerRow, attackerCol);
+    const targetCenter = getCellCenter(targetRow, targetCol);
+
+    // Random point within target cell
+    const gridRect = gridContainerRef.current.getBoundingClientRect();
+    const cellWidth = gridRect.width / 25;
+    const cellHeight = gridRect.height / 13;
+
+    // Start particles from the center of the firing ship's cell (y-axis)
+    const startY = attackerCenter.y;
+
+    const targetX = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.8;
+    const targetY = targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.8;
+
+    // Calculate direction to target
+    const dx = targetX - attackerCenter.x;
+    const dy = targetY - attackerCenter.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Create particle with spread (flamethrower effect)
+    // Spread increases as it travels (cone shape)
+    const spread = (Math.random() - 0.5) * 0.15; // Random spread angle in radians (tighter spread)
+    const size = 4 + Math.random() * 4; // Random size between 4-8px
+    const opacity = 1.0; // Fully opaque
+
+    const newParticle = {
+      id: particleIdRef.current++,
+      x: attackerCenter.x,
+      y: startY, // Start from below the firing ship
+      progress: 0,
+      spread,
+      size,
+      opacity,
+      targetX,
+      targetY,
+      startX: attackerCenter.x,
+      startY: startY, // Start from below the firing ship
+      startTime: Date.now(),
+      travelTime: 0.3 + Math.random() * 0.2, // 0.3-0.5 seconds travel time
+    };
+
+    setParticles((prev) => [...prev, newParticle]);
+
+    // Remove particle after it reaches target
+    setTimeout(() => {
+      setParticles((prev) => prev.filter((p) => p.id !== newParticle.id));
+    }, newParticle.travelTime * 1000);
+  }, [
+    gridContainerRef,
+    attackerRow,
+    attackerCol,
+    targetRow,
+    targetCol,
+    getCellCenter,
+  ]);
+
+  // Continuously create particles
+  useEffect(() => {
+    // Create first particle immediately
+    createParticle();
+
+    // Create new particles continuously
+    const interval = setInterval(() => {
+      createParticle();
+    }, 25); // Create a new particle every 25ms for a continuous stream (doubled from 50ms)
+
+    return () => clearInterval(interval);
+  }, [createParticle]);
+
+  // Animate particles
+  useEffect(() => {
+    if (particles.length === 0) return;
+
+    const animate = () => {
+      const now = Date.now();
+      const updatedParticles = particles
+        .map((particle) => {
+          const elapsed = (now - particle.startTime) / 1000;
+          const progress = Math.min(elapsed / particle.travelTime, 1);
+
+          if (progress >= 1) {
+            return null; // Particle reached target
+          }
+
+          // Calculate position along the path with spread
+          const dx = particle.targetX - particle.startX;
+          const dy = particle.targetY - particle.startY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const angle = Math.atan2(dy, dx);
+
+          // Apply spread (cone effect) - spread increases with progress
+          const spreadDistance = particle.spread * distance * progress * 0.5;
+          const spreadAngle = angle + Math.PI / 2; // Perpendicular to path
+
+          const baseX = particle.startX + dx * progress;
+          const baseY = particle.startY + dy * progress;
+          const currentX = baseX + Math.cos(spreadAngle) * spreadDistance;
+          const currentY = baseY + Math.sin(spreadAngle) * spreadDistance;
+
+          // Keep fully opaque (no fade)
+          const currentOpacity = particle.opacity;
+
+          return {
+            ...particle,
+            x: currentX,
+            y: currentY,
+            progress,
+            opacity: currentOpacity,
+          };
+        })
+        .filter((p): p is NonNullable<typeof p> => p !== null);
+
+      setParticles(updatedParticles);
+
+      if (updatedParticles.length > 0) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        animationFrameRef.current = null;
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [particles]);
+
+  if (!gridContainerRef.current) return null;
+
+  const gridRect = gridContainerRef.current.getBoundingClientRect();
+
+  return (
+    <svg
+      className="absolute pointer-events-none z-15"
+      style={{
+        left: `0px`,
+        top: `0px`,
+        width: `${gridRect.width}px`,
+        height: `${gridRect.height}px`,
+      }}
+      viewBox={`0 0 ${gridRect.width} ${gridRect.height}`}
+      preserveAspectRatio="none"
+    >
+      {particles.map((particle) => (
+        <circle
+          key={particle.id}
+          cx={particle.x}
+          cy={particle.y}
+          r={particle.size}
+          fill="#6495ED"
+          opacity={particle.opacity}
+        />
+      ))}
+    </svg>
+  );
+}
+
+// Railgun Shooting Animation Component
+interface RailgunShootingAnimationProps {
+  gridContainerRef: React.RefObject<HTMLDivElement>;
+  attackerRow: number;
+  attackerCol: number;
+  targetRow: number;
+  targetCol: number;
+}
+
+function RailgunShootingAnimation({
+  gridContainerRef,
+  attackerRow,
+  attackerCol,
+  targetRow,
+  targetCol,
+}: RailgunShootingAnimationProps) {
+  const [projectiles, setProjectiles] = useState<
+    Array<{
+      id: number;
+      x: number;
+      y: number;
+      angle: number;
+      targetX: number;
+      targetY: number;
+      startX: number;
+      startY: number;
+      startTime: number;
+      travelTime: number;
+    }>
+  >([]);
+  const projectileIdRef = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Calculate cell centers
+  const getCellCenter = useCallback(
+    (row: number, col: number) => {
+      if (!gridContainerRef.current) return { x: 0, y: 0 };
+
+      const gridRect = gridContainerRef.current.getBoundingClientRect();
+      const cellWidth = gridRect.width / 25;
+      const cellHeight = gridRect.height / 13;
+
+      const x = col * cellWidth + cellWidth / 2;
+      const y = row * cellHeight + cellHeight / 2;
+
+      return { x, y };
+    },
+    [gridContainerRef]
+  );
+
+  // Spawn a new projectile
+  const spawnProjectile = useCallback(() => {
+    if (!gridContainerRef.current) return;
+
+    const attackerCenter = getCellCenter(attackerRow, attackerCol);
+    const targetCenter = getCellCenter(targetRow, targetCol);
+
+    // Select a random target spot within target cell
+    const gridRect = gridContainerRef.current.getBoundingClientRect();
+    const cellWidth = gridRect.width / 25;
+    const cellHeight = gridRect.height / 13;
+    const targetX =
+      targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.8;
+    const targetY =
+      targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.8;
+
+    // Calculate direction to target
+    const dx = targetX - attackerCenter.x;
+    const dy = targetY - attackerCenter.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    // High speed constant rate (faster than missiles)
+    const avgCellSize = (cellWidth + cellHeight) / 2;
+    const SPEED = avgCellSize * 8; // 8 cells per second (2x faster than missiles)
+    const travelTime = distance / SPEED; // Constant speed, travel time varies by distance
+
+    const newProjectile = {
+      id: projectileIdRef.current++,
+      x: attackerCenter.x,
+      y: attackerCenter.y,
+      angle,
+      targetX,
+      targetY,
+      startX: attackerCenter.x,
+      startY: attackerCenter.y,
+      startTime: Date.now(),
+      travelTime,
+    };
+
+    setProjectiles((prev) => [...prev, newProjectile]);
+
+    // Remove projectile after it reaches target
+    setTimeout(() => {
+      setProjectiles((prev) => prev.filter((p) => p.id !== newProjectile.id));
+    }, travelTime * 1000);
+  }, [
+    gridContainerRef,
+    attackerRow,
+    attackerCol,
+    targetRow,
+    targetCol,
+    getCellCenter,
+  ]);
+
+  // Handle projectile despawn and respawn
+  useEffect(() => {
+    if (projectiles.length === 0) {
+      // All projectiles despawned, wait before spawning next one (slow rate of fire)
+      timeoutRef.current = setTimeout(() => {
+        spawnProjectile();
+      }, 2000); // 2 seconds between shots (slower than missiles which are 1 second)
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [projectiles, spawnProjectile]);
+
+  // Animate projectiles
+  useEffect(() => {
+    if (projectiles.length === 0) return;
+    if (!gridContainerRef.current) return;
+
+    const gridRect = gridContainerRef.current.getBoundingClientRect();
+    const cellWidth = gridRect.width / 25;
+    const cellHeight = gridRect.height / 13;
+    const avgCellSize = (cellWidth + cellHeight) / 2;
+    const SPEED = avgCellSize * 8; // Constant speed
+
+    const animate = () => {
+      const now = Date.now();
+      const updatedProjectiles = projectiles
+        .map((projectile) => {
+          const elapsed = (now - projectile.startTime) / 1000;
+          const progress = Math.min(elapsed / projectile.travelTime, 1);
+
+          if (progress >= 1) {
+            // Projectile reached target - mark for removal
+            return null;
+          }
+
+          // Constant speed movement
+          const currentX =
+            projectile.startX +
+            (projectile.targetX - projectile.startX) * progress;
+          const currentY =
+            projectile.startY +
+            (projectile.targetY - projectile.startY) * progress;
+
+          // Always point at target
+          const angleDx = projectile.targetX - currentX;
+          const angleDy = projectile.targetY - currentY;
+          const angle = Math.atan2(angleDy, angleDx) * (180 / Math.PI);
+
+          return {
+            ...projectile,
+            x: currentX,
+            y: currentY,
+            angle,
+          };
+        })
+        .filter((p): p is NonNullable<typeof p> => p !== null);
+
+      setProjectiles(updatedProjectiles);
+
+      if (updatedProjectiles.length > 0) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        animationFrameRef.current = null;
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [projectiles, gridContainerRef]);
+
+  // Start first projectile
+  useEffect(() => {
+    spawnProjectile();
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [spawnProjectile]);
+
+  if (!gridContainerRef.current || projectiles.length === 0) return null;
+
+  const gridRect = gridContainerRef.current.getBoundingClientRect();
+
+  // Create cylinder shape (small rectangle)
+  const cylinderWidth = 3; // Width of cylinder (reduced by 50%)
+  const cylinderHeight = 6; // Length of cylinder (reduced by 50%)
+
+  return (
+    <svg
+      className="absolute pointer-events-none z-15"
+      style={{
+        left: `0px`,
+        top: `0px`,
+        width: `${gridRect.width}px`,
+        height: `${gridRect.height}px`,
+      }}
+      viewBox={`0 0 ${gridRect.width} ${gridRect.height}`}
+      preserveAspectRatio="none"
+    >
+      {projectiles.map((projectile) => (
+        <rect
+          key={projectile.id}
+          x={-cylinderWidth / 2}
+          y={-cylinderHeight / 2}
+          width={cylinderWidth}
+          height={cylinderHeight}
+          fill="white"
+          stroke="white"
+          strokeWidth="1"
+          transform={`translate(${projectile.x}, ${projectile.y}) rotate(${projectile.angle + 90})`}
+        />
+      ))}
+    </svg>
   );
 }

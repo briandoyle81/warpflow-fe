@@ -533,7 +533,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     return map;
   }, [gameShips]);
 
-
   // Get special range data for the selected ship
   const selectedShip = selectedShipId ? shipMap.get(selectedShipId) : null;
   const specialType = selectedShip?.equipment.special || 0;
@@ -702,12 +701,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     // Also show last move preview if we're displaying it (and not showing a proposed move)
     // Check conditions directly to avoid dependency order issues
     const isMyTurnNow = game.turnState.currentTurn === address;
-    const shouldShowLastMoveNow = 
+    const shouldShowLastMoveNow =
       game.metadata.winner === "0x0000000000000000000000000000000000000000" &&
       game.lastMove &&
       game.lastMove.shipId !== 0n &&
       selectedShipId === null;
-    
+
     const isShowingProposedMoveNow = (() => {
       if (selectedShipId === null || !isMyTurnNow || previewPosition === null) {
         return false;
@@ -715,7 +714,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       const ship = shipMap.get(selectedShipId);
       return ship ? ship.owner === address : false;
     })();
-    
+
     // Only show last move if not showing a proposed move
     const canShowLastMove = shouldShowLastMoveNow && !isShowingProposedMoveNow;
 
@@ -723,7 +722,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       const lastMoveShipPosition = game.shipPositions.find(
         (pos) => pos.shipId === game.lastMove!.shipId
       );
-      
+
       if (lastMoveShipPosition) {
         // The ship is currently at its new position
         // Show a preview copy at the old position (ghosted/flashing)
@@ -753,7 +752,16 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     }
 
     return newGrid;
-  }, [game.shipPositions, selectedShipId, previewPosition, game.lastMove, game.metadata.winner, game.turnState.currentTurn, address, shipMap]);
+  }, [
+    game.shipPositions,
+    selectedShipId,
+    previewPosition,
+    game.lastMove,
+    game.metadata.winner,
+    game.turnState.currentTurn,
+    address,
+    shipMap,
+  ]);
 
   // Calculate movement range for selected ship (any ship, for viewing)
   const movementRange = React.useMemo(() => {
@@ -1643,7 +1651,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Track if we're currently displaying the last move (to avoid infinite loops)
   const isDisplayingLastMoveRef = React.useRef(false);
-  const lastDisplayedMoveRef = React.useRef<{ shipId: bigint; newRow: number; newCol: number } | null>(null);
+  const lastDisplayedMoveRef = React.useRef<{
+    shipId: bigint;
+    newRow: number;
+    newCol: number;
+  } | null>(null);
 
   // Determine if we should show last move preview
   // Show to both players UNLESS:
@@ -1664,7 +1676,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     if (selectedShipId !== null) {
       return false;
     }
-
 
     // Check if the last move ship exists
     const lastMoveShip = shipMap.get(game.lastMove.shipId);
@@ -1694,10 +1705,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   ]);
 
   // Check if a ship belongs to the current player
-  const isShipOwnedByCurrentPlayer = React.useCallback((shipId: bigint): boolean => {
-    const ship = shipMap.get(shipId);
-    return ship ? ship.owner === address : false;
-  }, [shipMap, address]);
+  const isShipOwnedByCurrentPlayer = React.useCallback(
+    (shipId: bigint): boolean => {
+      const ship = shipMap.get(shipId);
+      return ship ? ship.owner === address : false;
+    },
+    [shipMap, address]
+  );
 
   // Track if we're showing a proposed move (not last move)
   const isShowingProposedMove = React.useMemo(() => {
@@ -1725,7 +1739,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     }
 
     // Check if last move has changed
-    const lastMoveChanged = 
+    const lastMoveChanged =
       !lastDisplayedMoveRef.current ||
       !game.lastMove ||
       lastDisplayedMoveRef.current.shipId !== game.lastMove.shipId ||
@@ -1783,12 +1797,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       : null;
 
   // Last move props for GameGrid
-  const lastMoveShipId = shouldShowLastMove && game.lastMove && !isShowingProposedMove
-    ? game.lastMove.shipId
-    : null;
-  const lastMoveOldPosition = shouldShowLastMove && game.lastMove && !isShowingProposedMove
-    ? { row: game.lastMove.oldRow, col: game.lastMove.oldCol }
-    : null;
+  const lastMoveShipId =
+    shouldShowLastMove && game.lastMove && !isShowingProposedMove
+      ? game.lastMove.shipId
+      : null;
+  const lastMoveOldPosition =
+    shouldShowLastMove && game.lastMove && !isShowingProposedMove
+      ? { row: game.lastMove.oldRow, col: game.lastMove.oldCol }
+      : null;
 
   // Track previous turn state to detect turn changes
   const prevTurnRef = React.useRef<boolean | null>(null);
@@ -1826,7 +1842,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       }
     }
   }, [isMyTurn, address, clearAllTransactions]);
-
 
   // Handle move submission - now handled by TransactionButton
 
@@ -2384,255 +2399,251 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               {/* Show action buttons for proposed moves */}
               <div className="flex flex-col gap-2 flex-shrink-0 ml-auto">
                 <>
-                    {(() => {
-                      // Compute the actual actionType that will be submitted (same as args)
-                      const computedActionType =
-                        targetShipId !== null && targetShipId !== 0n
-                          ? (() => {
-                              // Check if this is an assist action (friendly ship with 0 HP)
-                              const isAssistAction =
-                                assistableTargets.some(
-                                  (target) => target.shipId === targetShipId
-                                ) ||
-                                assistableTargetsFromStart.some(
-                                  (target) => target.shipId === targetShipId
-                                );
-                              if (isAssistAction) {
-                                return ActionType.Assist;
-                              }
-                              // Otherwise, check weapon type for shooting/special
-                              return selectedWeaponType === "special"
-                                ? ActionType.Special
-                                : ActionType.Shoot;
-                            })()
-                          : targetShipId === 0n &&
-                            selectedWeaponType === "special" &&
-                            specialType === 3
-                          ? ActionType.Special // Flak AOE (targetShipId is 0n)
-                          : ActionType.Pass; // Stay instead (targetShipId is null) or no target
+                  {(() => {
+                    // Compute the actual actionType that will be submitted (same as args)
+                    const computedActionType =
+                      targetShipId !== null && targetShipId !== 0n
+                        ? (() => {
+                            // Check if this is an assist action (friendly ship with 0 HP)
+                            const isAssistAction =
+                              assistableTargets.some(
+                                (target) => target.shipId === targetShipId
+                              ) ||
+                              assistableTargetsFromStart.some(
+                                (target) => target.shipId === targetShipId
+                              );
+                            if (isAssistAction) {
+                              return ActionType.Assist;
+                            }
+                            // Otherwise, check weapon type for shooting/special
+                            return selectedWeaponType === "special"
+                              ? ActionType.Special
+                              : ActionType.Shoot;
+                          })()
+                        : targetShipId === 0n &&
+                          selectedWeaponType === "special" &&
+                          specialType === 3
+                        ? ActionType.Special // Flak AOE (targetShipId is 0n)
+                        : ActionType.Pass; // Stay instead (targetShipId is null) or no target
 
-                      const computedRow = previewPosition
-                        ? previewPosition.row
-                        : (() => {
-                            const currentPosition = game.shipPositions.find(
-                              (pos) => pos.shipId === selectedShipId
-                            );
-                            return currentPosition
-                              ? currentPosition.position.row
-                              : 0;
-                          })();
-                      const computedCol = previewPosition
-                        ? previewPosition.col
-                        : (() => {
-                            const currentPosition = game.shipPositions.find(
-                              (pos) => pos.shipId === selectedShipId
-                            );
-                            return currentPosition
-                              ? currentPosition.position.col
-                              : 0;
-                          })();
-
-                      // Determine button text based on computed actionType
-                      const getButtonText = () => {
-                        if (previewPosition) {
-                          // Moving
-                          if (computedActionType === ActionType.Assist) {
-                            return scoringGrid[computedRow] &&
-                              scoringGrid[computedRow][computedCol] > 0
-                              ? "➡️⭐🆘"
-                              : "➡️🆘";
-                          }
-                          if (
-                            computedActionType === ActionType.Special &&
-                            specialType === 3
-                          ) {
-                            return scoringGrid[computedRow] &&
-                              scoringGrid[computedRow][computedCol] > 0
-                              ? "➡️⭐💥"
-                              : "➡️💥";
-                          }
-                          if (computedActionType === ActionType.Special) {
-                            const specialIcon =
-                              specialType === 1
-                                ? "⚡"
-                                : specialType === 2
-                                ? "🔧"
-                                : "✨";
-                            return scoringGrid[computedRow] &&
-                              scoringGrid[computedRow][computedCol] > 0
-                              ? `➡️⭐${specialIcon}`
-                              : `➡️${specialIcon}`;
-                          }
-                          if (computedActionType === ActionType.Shoot) {
-                            return scoringGrid[computedRow] &&
-                              scoringGrid[computedRow][computedCol] > 0
-                              ? "➡️⚔️⭐"
-                              : "➡️⚔️";
-                          }
-                          // Pass (shouldn't happen with previewPosition, but handle it)
-                          return scoringGrid[computedRow] &&
-                            scoringGrid[computedRow][computedCol] > 0
-                            ? "➡️⭐"
-                            : "➡️";
-                        } else {
-                          // Not moving (staying in place)
+                    const computedRow = previewPosition
+                      ? previewPosition.row
+                      : (() => {
                           const currentPosition = game.shipPositions.find(
                             (pos) => pos.shipId === selectedShipId
                           );
-                          const isOnScoringTile =
-                            currentPosition &&
-                            scoringGrid[currentPosition.position.row] &&
-                            scoringGrid[currentPosition.position.row][
-                              currentPosition.position.col
-                            ] > 0;
+                          return currentPosition
+                            ? currentPosition.position.row
+                            : 0;
+                        })();
+                    const computedCol = previewPosition
+                      ? previewPosition.col
+                      : (() => {
+                          const currentPosition = game.shipPositions.find(
+                            (pos) => pos.shipId === selectedShipId
+                          );
+                          return currentPosition
+                            ? currentPosition.position.col
+                            : 0;
+                        })();
 
-                          if (computedActionType === ActionType.Pass) {
-                            return isOnScoringTile ? "⏸️⭐" : "✓";
+                    // Determine button text based on computed actionType
+                    const getButtonText = () => {
+                      if (previewPosition) {
+                        // Moving
+                        if (computedActionType === ActionType.Assist) {
+                          return scoringGrid[computedRow] &&
+                            scoringGrid[computedRow][computedCol] > 0
+                            ? "➡️⭐🆘"
+                            : "➡️🆘";
+                        }
+                        if (
+                          computedActionType === ActionType.Special &&
+                          specialType === 3
+                        ) {
+                          return scoringGrid[computedRow] &&
+                            scoringGrid[computedRow][computedCol] > 0
+                            ? "➡️⭐💥"
+                            : "➡️💥";
+                        }
+                        if (computedActionType === ActionType.Special) {
+                          const specialIcon =
+                            specialType === 1
+                              ? "⚡"
+                              : specialType === 2
+                              ? "🔧"
+                              : "✨";
+                          return scoringGrid[computedRow] &&
+                            scoringGrid[computedRow][computedCol] > 0
+                            ? `➡️⭐${specialIcon}`
+                            : `➡️${specialIcon}`;
+                        }
+                        if (computedActionType === ActionType.Shoot) {
+                          return scoringGrid[computedRow] &&
+                            scoringGrid[computedRow][computedCol] > 0
+                            ? "➡️⚔️⭐"
+                            : "➡️⚔️";
+                        }
+                        // Pass (shouldn't happen with previewPosition, but handle it)
+                        return scoringGrid[computedRow] &&
+                          scoringGrid[computedRow][computedCol] > 0
+                          ? "➡️⭐"
+                          : "➡️";
+                      } else {
+                        // Not moving (staying in place)
+                        const currentPosition = game.shipPositions.find(
+                          (pos) => pos.shipId === selectedShipId
+                        );
+                        const isOnScoringTile =
+                          currentPosition &&
+                          scoringGrid[currentPosition.position.row] &&
+                          scoringGrid[currentPosition.position.row][
+                            currentPosition.position.col
+                          ] > 0;
+
+                        if (computedActionType === ActionType.Pass) {
+                          return isOnScoringTile ? "⏸️⭐" : "✓";
+                        }
+                        if (computedActionType === ActionType.Assist) {
+                          return "🆘";
+                        }
+                        if (
+                          computedActionType === ActionType.Special &&
+                          specialType === 3
+                        ) {
+                          return isOnScoringTile ? "⏸️⭐💥" : "💥";
+                        }
+                        if (computedActionType === ActionType.Special) {
+                          const specialIcon =
+                            specialType === 1
+                              ? "⚡"
+                              : specialType === 2
+                              ? "🔧"
+                              : "✨";
+                          return isOnScoringTile
+                            ? `⏸️⭐${specialIcon}`
+                            : specialIcon;
+                        }
+                        if (computedActionType === ActionType.Shoot) {
+                          return "⚔️";
+                        }
+                        return "✓";
+                      }
+                    };
+
+                    return (
+                      <TransactionButton
+                        transactionId={`move-ship-${selectedShipId}-${game.metadata.gameId}`}
+                        contractAddress={gameContractConfig.address}
+                        abi={gameContractConfig.abi}
+                        functionName="moveShip"
+                        args={[
+                          game.metadata.gameId,
+                          selectedShipId,
+                          computedRow,
+                          computedCol,
+                          computedActionType,
+                          targetShipId || 0n,
+                        ]}
+                        className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
+                        loadingText="Submitting..."
+                        errorText="Error"
+                        onSuccess={() => {
+                          // Deselect ship after transaction receipt is received
+                          setPreviewPosition(null);
+                          setSelectedShipId(null);
+                          setTargetShipId(null);
+                          setSelectedWeaponType("weapon");
+                          toast.success("Move submitted successfully!");
+                          // Track when player moved to trigger polling schedule
+                          const moveTime = Date.now();
+                          playerMoveTimeRef.current = moveTime;
+                          setPlayerMoveTimestamp(moveTime); // Trigger effect re-run
+                          // Refetch both the specific game and the game list
+                          refetchGame();
+                          refetch?.();
+                        }}
+                        onError={(error) => {
+                          console.error("Error submitting move:", error);
+                          const errorMessage =
+                            (error as Error)?.message ||
+                            String(error) ||
+                            "Unknown error";
+
+                          if (
+                            errorMessage.includes("User rejected") ||
+                            errorMessage.includes("User denied")
+                          ) {
+                            toast.error("Transaction declined by user");
+                          } else if (
+                            errorMessage.includes("insufficient funds")
+                          ) {
+                            toast.error("Insufficient funds for transaction");
+                          } else if (errorMessage.includes("gas")) {
+                            toast.error(
+                              "Transaction failed due to gas estimation error"
+                            );
+                          } else if (
+                            errorMessage.includes("execution reverted")
+                          ) {
+                            toast.error(
+                              "Transaction reverted - check if it&apos;s your turn and ship is valid"
+                            );
+                          } else if (errorMessage.includes("NotYourTurn")) {
+                            toast.error("It&apos;s not your turn to move");
+                          } else if (errorMessage.includes("ShipNotFound")) {
+                            toast.error("Ship not found in this game");
+                          } else if (errorMessage.includes("InvalidMove")) {
+                            toast.error(
+                              "Invalid move - check ship position and movement range"
+                            );
+                          } else if (
+                            errorMessage.includes("PositionOccupied")
+                          ) {
+                            toast.error("Target position is already occupied");
+                          } else {
+                            toast.error(`Transaction failed: ${errorMessage}`);
                           }
-                          if (computedActionType === ActionType.Assist) {
-                            return "🆘";
+                        }}
+                        validateBeforeTransaction={() => {
+                          // Validate based on computed values (same logic as args that will be submitted)
+                          if (!selectedShipId) {
+                            return "No ship selected";
                           }
                           if (
-                            computedActionType === ActionType.Special &&
-                            specialType === 3
+                            !game.metadata.gameId ||
+                            game.metadata.gameId === 0n
                           ) {
-                            return isOnScoringTile ? "⏸️⭐💥" : "💥";
+                            return "Invalid game ID";
                           }
-                          if (computedActionType === ActionType.Special) {
-                            const specialIcon =
-                              specialType === 1
-                                ? "⚡"
-                                : specialType === 2
-                                ? "🔧"
-                                : "✨";
-                            return isOnScoringTile
-                              ? `⏸️⭐${specialIcon}`
-                              : specialIcon;
+                          if (!isShipOwnedByCurrentPlayer(selectedShipId)) {
+                            return "You can only move your own ships";
                           }
-                          if (computedActionType === ActionType.Shoot) {
-                            return "⚔️";
+                          if (movedShipIdsSet.has(selectedShipId)) {
+                            return "This ship has already moved this round";
                           }
-                          return "✓";
-                        }
-                      };
-
-                      return (
-                        <TransactionButton
-                          transactionId={`move-ship-${selectedShipId}-${game.metadata.gameId}`}
-                          contractAddress={gameContractConfig.address}
-                          abi={gameContractConfig.abi}
-                          functionName="moveShip"
-                          args={[
-                            game.metadata.gameId,
-                            selectedShipId,
-                            computedRow,
-                            computedCol,
-                            computedActionType,
-                            targetShipId || 0n,
-                          ]}
-                          className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
-                          loadingText="Submitting..."
-                          errorText="Error"
-                          onSuccess={() => {
-                            // Deselect ship after transaction receipt is received
-                            setPreviewPosition(null);
-                            setSelectedShipId(null);
-                            setTargetShipId(null);
-                            setSelectedWeaponType("weapon");
-                            toast.success("Move submitted successfully!");
-                            // Track when player moved to trigger polling schedule
-                            const moveTime = Date.now();
-                            playerMoveTimeRef.current = moveTime;
-                            setPlayerMoveTimestamp(moveTime); // Trigger effect re-run
-                            // Refetch both the specific game and the game list
-                            refetchGame();
-                            refetch?.();
-                          }}
-                          onError={(error) => {
-                            console.error("Error submitting move:", error);
-                            const errorMessage =
-                              (error as Error)?.message ||
-                              String(error) ||
-                              "Unknown error";
-
-                            if (
-                              errorMessage.includes("User rejected") ||
-                              errorMessage.includes("User denied")
-                            ) {
-                              toast.error("Transaction declined by user");
-                            } else if (
-                              errorMessage.includes("insufficient funds")
-                            ) {
-                              toast.error("Insufficient funds for transaction");
-                            } else if (errorMessage.includes("gas")) {
-                              toast.error(
-                                "Transaction failed due to gas estimation error"
-                              );
-                            } else if (
-                              errorMessage.includes("execution reverted")
-                            ) {
-                              toast.error(
-                                "Transaction reverted - check if it&apos;s your turn and ship is valid"
-                              );
-                            } else if (errorMessage.includes("NotYourTurn")) {
-                              toast.error("It&apos;s not your turn to move");
-                            } else if (errorMessage.includes("ShipNotFound")) {
-                              toast.error("Ship not found in this game");
-                            } else if (errorMessage.includes("InvalidMove")) {
-                              toast.error(
-                                "Invalid move - check ship position and movement range"
-                              );
-                            } else if (
-                              errorMessage.includes("PositionOccupied")
-                            ) {
-                              toast.error(
-                                "Target position is already occupied"
-                              );
-                            } else {
-                              toast.error(
-                                `Transaction failed: ${errorMessage}`
-                              );
-                            }
-                          }}
-                          validateBeforeTransaction={() => {
-                            // Validate based on computed values (same logic as args that will be submitted)
-                            if (!selectedShipId) {
-                              return "No ship selected";
-                            }
-                            if (
-                              !game.metadata.gameId ||
-                              game.metadata.gameId === 0n
-                            ) {
-                              return "Invalid game ID";
-                            }
-                            if (!isShipOwnedByCurrentPlayer(selectedShipId)) {
-                              return "You can only move your own ships";
-                            }
-                            if (movedShipIdsSet.has(selectedShipId)) {
-                              return "This ship has already moved this round";
-                            }
-                            if (
-                              computedRow < 0 ||
-                              computedRow >= GRID_HEIGHT ||
-                              computedCol < 0 ||
-                              computedCol >= GRID_WIDTH
-                            ) {
-                              return "Invalid position coordinates";
-                            }
-                            return true;
-                          }}
-                        >
-                          Submit {getButtonText()}
-                        </TransactionButton>
-                      );
-                    })()}
-                    <button
-                      onClick={handleCancelMove}
-                      className="px-4 py-1.5 text-sm rounded bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </>
+                          if (
+                            computedRow < 0 ||
+                            computedRow >= GRID_HEIGHT ||
+                            computedCol < 0 ||
+                            computedCol >= GRID_WIDTH
+                          ) {
+                            return "Invalid position coordinates";
+                          }
+                          return true;
+                        }}
+                      >
+                        Submit {getButtonText()}
+                      </TransactionButton>
+                    );
+                  })()}
+                  <button
+                    onClick={handleCancelMove}
+                    className="px-4 py-1.5 text-sm rounded bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </>
               </div>
             </div>
 

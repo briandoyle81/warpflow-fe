@@ -121,3 +121,17 @@ body {
 .animate-pulse-original {
   animation: pulse-original 1s ease-in-out infinite;
 }
+
+/* Laser shooting animation */
+@keyframes laser-fade {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-laser-fade {
+  animation: laser-fade 0.5s linear forwards;
+}
