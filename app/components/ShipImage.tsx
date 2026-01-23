@@ -1,6 +1,7 @@
 import React from "react";
 import { useShipRenderer } from "../hooks/useShipRenderer";
 import { Ship } from "../types/types";
+import { calculateShipRank } from "../utils/shipLevel";
 
 // Debug flag - set to false to disable console logs
 const DEBUG_IMAGES = false;
@@ -50,11 +51,11 @@ export function ShipImage({
           alt={`Destroyed Ship #${ship.id.toString()}`}
           className="w-full h-full object-contain opacity-75"
         />
-        {ship.shipData.shiny && (
-          <div className="absolute top-1 right-1 text-yellow-400 text-lg animate-pulse">
-            ✨
-          </div>
-        )}
+        <div className="absolute top-[11.5px] right-1 text-yellow-400 text-[0.4375rem]">
+          {Array.from({ length: calculateShipRank(ship).rank }, (_, i) => (
+            <span key={i}>⭐</span>
+          ))}
+        </div>
       </div>
     );
   }
@@ -68,11 +69,11 @@ export function ShipImage({
           alt={`Unconstructed Ship #${ship.id.toString()}`}
           className="w-full h-full object-contain opacity-75"
         />
-        {ship.shipData.shiny && (
-          <div className="absolute top-1 right-1 text-yellow-400 text-lg animate-pulse">
-            ✨
-          </div>
-        )}
+        <div className="absolute top-[11.5px] right-1 text-yellow-400 text-[0.4375rem]">
+          {Array.from({ length: calculateShipRank(ship).rank }, (_, i) => (
+            <span key={i}>⭐</span>
+          ))}
+        </div>
       </div>
     );
   }
@@ -121,11 +122,11 @@ export function ShipImage({
           // The error will be handled by the hook's error state
         }}
       />
-      {ship.shipData.shiny && (
-        <div className="absolute top-1 right-1 text-yellow-400 text-lg animate-pulse">
-          ✨
-        </div>
-      )}
+      <div className="absolute top-[11.5px] right-1 text-yellow-400 text-[0.4375rem]">
+        {Array.from({ length: calculateShipRank(ship).rank }, (_, i) => (
+          <span key={i}>⭐</span>
+        ))}
+      </div>
     </div>
   );
 }

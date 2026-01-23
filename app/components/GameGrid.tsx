@@ -822,21 +822,14 @@ export function GameGrid({
                               cell.isCreator
                                 ? "bottom-0 left-0"
                                 : "bottom-0 right-0"
-                            } m-0.5 text-[8px] font-mono`}
+                            } m-0.5 flex items-center justify-center`}
                           >
-                            {skulls}
+                            <div className="w-4 h-4 rounded-full bg-red-500/90 flex items-center justify-center">
+                              <span className="text-[8px] font-mono">{skulls}</span>
+                            </div>
                           </div>
                         );
                       })()}
-                      {/* Critical hull indicator */}
-                      {(() => {
-                        const attributes = getShipAttributes(cell.shipId);
-                        return attributes && attributes.hullPoints === 0;
-                      })() && (
-                        <div className="absolute top-0 right-0 m-0.5 w-4 h-4 rounded-full bg-red-500/90 text-white flex items-center justify-center animate-pulse">
-                          <span className="text-[10px]">💀</span>
-                        </div>
-                      )}
                       {/* Team indicator overlay */}
                       <div
                         className={`absolute top-0 ${
@@ -2354,10 +2347,8 @@ function RailgunShootingAnimation({
     const gridRect = gridContainerRef.current.getBoundingClientRect();
     const cellWidth = gridRect.width / 25;
     const cellHeight = gridRect.height / 13;
-    const targetX =
-      targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.5;
-    const targetY =
-      targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.5;
+    const targetX = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.5;
+    const targetY = targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.5;
 
     // Calculate direction to target
     const dx = targetX - attackerCenter.x;
@@ -2518,7 +2509,9 @@ function RailgunShootingAnimation({
           fill="white"
           stroke="white"
           strokeWidth="1"
-          transform={`translate(${projectile.x}, ${projectile.y}) rotate(${projectile.angle + 90})`}
+          transform={`translate(${projectile.x}, ${projectile.y}) rotate(${
+            projectile.angle + 90
+          })`}
         />
       ))}
     </svg>
