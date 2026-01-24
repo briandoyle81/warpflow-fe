@@ -126,14 +126,114 @@ const ShipCard: React.FC<ShipCardProps> = ({
     }
   };
 
+  // Get industrial border styles
+  const getIndustrialBorderStyle = () => {
+    if (reactorCriticalStatus === "critical") {
+      return {
+        borderColor: "var(--color-warning-red)",
+        borderTopColor: "var(--color-warning-red)",
+        borderLeftColor: "var(--color-warning-red)",
+        backgroundColor: "var(--color-slate)",
+      };
+    }
+    if (reactorCriticalStatus === "warning") {
+      return {
+        borderColor: "var(--color-amber)",
+        borderTopColor: "var(--color-amber)",
+        borderLeftColor: "var(--color-amber)",
+        backgroundColor: "var(--color-slate)",
+      };
+    }
+
+    const isInGameView = tooltipMode || gameViewMode;
+    if (isInGameView && ship.shipData.constructed && !ship.shipData.timestampDestroyed) {
+      return {
+        borderColor: isCurrentPlayerShip ? "var(--color-cyan)" : "var(--color-warning-red)",
+        borderTopColor: isCurrentPlayerShip ? "var(--color-cyan)" : "var(--color-warning-red)",
+        borderLeftColor: isCurrentPlayerShip ? "var(--color-cyan)" : "var(--color-warning-red)",
+        backgroundColor: tooltipMode ? "var(--color-slate)" : "var(--color-near-black)",
+      };
+    }
+
+    if (selectionMode && isSelected) {
+      return {
+        borderColor: "var(--color-phosphor-green)",
+        borderTopColor: "var(--color-phosphor-green)",
+        borderLeftColor: "var(--color-phosphor-green)",
+        backgroundColor: tooltipMode ? "var(--color-slate)" : "var(--color-near-black)",
+      };
+    }
+    if (ship.shipData.timestampDestroyed > 0n) {
+      return {
+        borderColor: "var(--color-warning-red)",
+        borderTopColor: "var(--color-warning-red)",
+        borderLeftColor: "var(--color-warning-red)",
+        backgroundColor: tooltipMode ? "var(--color-slate)" : "var(--color-near-black)",
+      };
+    }
+    if (ship.shipData.inFleet) {
+      return {
+        borderColor: "var(--color-amber)",
+        borderTopColor: "var(--color-amber)",
+        borderLeftColor: "var(--color-amber)",
+        backgroundColor: tooltipMode ? "var(--color-slate)" : "var(--color-near-black)",
+      };
+    }
+    if (ship.shipData.constructed) {
+      if (selectionMode) {
+        return {
+          borderColor: canSelect ? "var(--color-gunmetal)" : "var(--color-gunmetal)",
+          borderTopColor: canSelect ? "var(--color-steel)" : "var(--color-gunmetal)",
+          borderLeftColor: canSelect ? "var(--color-steel)" : "var(--color-gunmetal)",
+          backgroundColor: "var(--color-slate)",
+          opacity: canSelect ? 1 : 0.5,
+        };
+      }
+      return {
+        borderColor: "var(--color-phosphor-green)",
+        borderTopColor: "var(--color-phosphor-green)",
+        borderLeftColor: "var(--color-phosphor-green)",
+        backgroundColor: "var(--color-near-black)",
+      };
+    }
+    return {
+      borderColor: "var(--color-gunmetal)",
+      borderTopColor: "var(--color-steel)",
+      borderLeftColor: "var(--color-steel)",
+      backgroundColor: "var(--color-near-black)",
+    };
+  };
+
+  const borderStyle = getIndustrialBorderStyle();
+
   return (
     <div
-      className={`border rounded-lg p-4 ${
+      className={`border border-solid p-4 ${
         selectionMode && canSelect
-          ? "cursor-pointer transition-all duration-200"
+          ? "cursor-pointer transition-colors duration-150"
           : ""
-      } ${getBorderClass()}`}
+      }`}
+      style={{
+        ...borderStyle,
+        borderRadius: 0, // Square corners
+      }}
       onClick={handleCardClick}
+      onMouseEnter={(e) => {
+        if (selectionMode && canSelect && !isSelected) {
+          e.currentTarget.style.borderColor = "var(--color-cyan)";
+          e.currentTarget.style.borderTopColor = "var(--color-cyan)";
+          e.currentTarget.style.borderLeftColor = "var(--color-cyan)";
+          e.currentTarget.style.backgroundColor = "var(--color-steel)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (selectionMode && canSelect && !isSelected) {
+          e.currentTarget.style.borderColor = borderStyle.borderColor;
+          e.currentTarget.style.borderTopColor = borderStyle.borderTopColor;
+          e.currentTarget.style.borderLeftColor = borderStyle.borderLeftColor;
+          e.currentTarget.style.backgroundColor = borderStyle.backgroundColor;
+        }
+      }}
     >
       {/* Ship Image - Bigger */}
       <div
@@ -145,7 +245,11 @@ const ShipCard: React.FC<ShipCardProps> = ({
             ship.shipData.constructed ? "constructed" : "unconstructed"
           }`}
           ship={ship}
-          className="w-full h-48 rounded border border-gray-600"
+          className="w-full h-48 border border-solid"
+          style={{
+            borderColor: "var(--color-gunmetal)",
+            borderRadius: 0, // Square corners
+          }}
           showLoadingState={true}
         />
 
@@ -155,16 +259,25 @@ const ShipCard: React.FC<ShipCardProps> = ({
             {/* Health bar for damaged ships */}
             {inGameAttributes.hullPoints < inGameAttributes.maxHullPoints && (
               <div className="absolute -top-2 left-0 right-0 z-10">
-                <div className="w-full h-1 bg-gray-700 rounded-sm">
+                <div
+                  className="w-full h-1 transition-all duration-300"
+                  style={{
+                    backgroundColor: "var(--color-gunmetal)",
+                    borderRadius: 0, // Square corners
+                  }}
+                >
                   <div
-                    className={`h-full rounded-sm transition-all duration-300 ${
-                      (inGameAttributes.hullPoints /
-                        inGameAttributes.maxHullPoints) *
-                        100 <=
-                      25
-                        ? "bg-red-500"
-                        : "bg-green-500"
-                    }`}
+                    className="h-full transition-all duration-300"
+                    style={{
+                      backgroundColor:
+                        (inGameAttributes.hullPoints /
+                          inGameAttributes.maxHullPoints) *
+                          100 <=
+                        25
+                          ? "var(--color-warning-red)"
+                          : "var(--color-phosphor-green)",
+                      borderRadius: 0, // Square corners
+                    }}
                     style={{
                       width: `${
                         (inGameAttributes.hullPoints /
@@ -289,24 +402,58 @@ const ShipCard: React.FC<ShipCardProps> = ({
               }}
               onClick={(e) => e.stopPropagation()}
               disabled={ship.shipData.inFleet}
-              className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 rounded focus:ring-cyan-400 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-4 h-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                accentColor: "var(--color-cyan)",
+                borderColor: "var(--color-cyan)",
+                backgroundColor: "var(--color-near-black)",
+                borderRadius: 0, // Square checkbox
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                width: "16px",
+                height: "16px",
+                border: "2px solid",
+              }}
             />
           )}
           <span
-            className={`text-xs px-2 py-1 rounded ${
-              ship.shipData.shiny
-                ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
-                : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
-            }`}
+            className="text-xs px-2 py-1 border border-solid uppercase font-semibold tracking-wider"
+            style={{
+              fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+              backgroundColor: ship.shipData.shiny
+                ? "var(--color-near-black)"
+                : "var(--color-near-black)",
+              color: ship.shipData.shiny
+                ? "var(--color-amber)"
+                : "var(--color-text-secondary)",
+              borderColor: ship.shipData.shiny
+                ? "var(--color-amber)"
+                : "var(--color-gunmetal)",
+              borderTopColor: ship.shipData.shiny
+                ? "var(--color-amber)"
+                : "var(--color-steel)",
+              borderLeftColor: ship.shipData.shiny
+                ? "var(--color-amber)"
+                : "var(--color-steel)",
+              borderRadius: 0, // Square corners
+            }}
           >
             {ship.shipData.shiny ? "SHINY ✨" : "COMMON"}
           </span>
           {/* Rank */}
           {ship.shipData.constructed && (
             <span
-              className={`text-xs px-2 py-1 rounded border ${getRankColor(
-                calculateShipRank(ship).rank
-              )}`}
+              className="text-xs px-2 py-1 border border-solid uppercase font-semibold tracking-wider"
+              style={{
+                fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                backgroundColor: "var(--color-near-black)",
+                color: "var(--color-text-primary)",
+                borderColor: "var(--color-gunmetal)",
+                borderTopColor: "var(--color-steel)",
+                borderLeftColor: "var(--color-steel)",
+                borderRadius: 0, // Square corners
+              }}
             >
               R{calculateShipRank(ship).rank}
             </span>

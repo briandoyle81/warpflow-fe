@@ -1,50 +1,103 @@
 @import "tailwindcss";
 
+/* ============================================
+   COLOR TOKENS - Faction 01: Industrial Military
+   ============================================ */
+
 :root {
-  --background: #0f172a;
-  --foreground: #e2e8f0;
+  /* Base Colors (Dominant) */
+  --color-near-black: #0c1117;
+  --color-slate: #1a2430;
+  --color-steel: #223041;
+  --color-gunmetal: #2b2f36;
+
+  /* Accent Colors (Functional Only) */
+  --color-phosphor-green: #6bff8f;
+  --color-amber: #ffb84d;
+  --color-cyan: #56d6ff;
+  --color-warning-red: #ff4d4d;
+
+  /* Text Colors */
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  /* Border Colors */
+  --color-border-outer: #0c1117;
+  --color-border-inner: #223041;
+
+  /* Legacy compatibility (will be phased out) */
+  --background: var(--color-near-black);
+  --foreground: var(--color-text-primary);
 }
 
+/* Tailwind v4 Theme Configuration */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Colors */
+  --color-background: var(--color-near-black);
+  --color-foreground: var(--color-text-primary);
+  
+  --color-near-black: #0c1117;
+  --color-slate: #1a2430;
+  --color-steel: #223041;
+  --color-gunmetal: #2b2f36;
+  --color-phosphor-green: #6bff8f;
+  --color-amber: #ffb84d;
+  --color-cyan: #56d6ff;
+  --color-warning-red: #ff4d4d;
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  /* Typography */
+  --font-sans: var(--font-rajdhani);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f172a;
-    --foreground: #e2e8f0;
-  }
+/* ============================================
+   BASE STYLES & RESET
+   ============================================ */
+
+/* Pixel-perfect rendering for pixel art compatibility */
+* {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--color-near-black);
+  color: var(--color-text-primary);
+  font-family: var(--font-rajdhani), 'Arial Black', sans-serif;
+  /* Disable font smoothing for pixel-perfect rendering */
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  font-smooth: never;
 }
 
-/* Custom volume slider styles */
+/* ============================================
+   SLIDER STYLES - Industrial Theme
+   ============================================ */
+
 .slider::-webkit-slider-thumb {
   appearance: none;
   height: 16px;
   width: 16px;
-  border-radius: 50%;
-  background: #22d3ee;
+  border-radius: 0; /* Square, not rounded */
+  background: var(--color-cyan);
   cursor: pointer;
-  border: 2px solid #ffffff;
-  box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+  border: 2px solid var(--color-steel);
+  /* No glow effects - functional only */
 }
 
 .slider::-moz-range-thumb {
   height: 16px;
   width: 16px;
-  border-radius: 50%;
-  background: #22d3ee;
+  border-radius: 0; /* Square, not rounded */
+  background: var(--color-cyan);
   cursor: pointer;
-  border: 2px solid #ffffff;
-  box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+  border: 2px solid var(--color-steel);
+  /* No glow effects - functional only */
 }
 
 .slider:focus {
@@ -52,45 +105,57 @@ body {
 }
 
 .slider:focus::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.3),
-    0 0 15px rgba(34, 211, 238, 0.6);
+  border-color: var(--color-cyan);
+  background: var(--color-cyan);
+  /* Functional 1px outline only */
+  outline: 1px solid var(--color-cyan);
+  outline-offset: 2px;
 }
 
 .slider:focus::-moz-range-thumb {
-  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.3),
-    0 0 15px rgba(34, 211, 238, 0.6);
+  border-color: var(--color-cyan);
+  background: var(--color-cyan);
+  /* Functional 1px outline only */
+  outline: 1px solid var(--color-cyan);
+  outline-offset: 2px;
 }
 
-/* Retro sci-fi scrollbar */
+/* ============================================
+   SCROLLBAR - Industrial Theme
+   ============================================ */
+
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b;
-  border-radius: 4px;
+  background: var(--color-slate);
+  border-radius: 0; /* Square corners */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #22d3ee;
-  border-radius: 4px;
-  border: 1px solid #0f172a;
+  background: var(--color-steel);
+  border-radius: 0; /* Square corners */
+  border: 1px solid var(--color-gunmetal);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #06b6d4;
-  box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+  background: var(--color-cyan);
+  /* No glow effects */
 }
 
-/* Selection styling */
+/* ============================================
+   SELECTION STYLING - Industrial Theme
+   ============================================ */
+
 ::selection {
-  background: rgba(34, 211, 238, 0.3);
-  color: #22d3ee;
+  background: rgba(86, 214, 255, 0.2); /* Cyan with low opacity */
+  color: var(--color-cyan);
 }
 
 ::-moz-selection {
-  background: rgba(34, 211, 238, 0.3);
-  color: #22d3ee;
+  background: rgba(86, 214, 255, 0.2); /* Cyan with low opacity */
+  color: var(--color-cyan);
 }
 
 /* Ship movement preview animations */
@@ -122,6 +187,10 @@ body {
   animation: pulse-original 1s ease-in-out infinite;
 }
 
+/* ============================================
+   ANIMATIONS - Functional Only
+   ============================================ */
+
 /* Laser shooting animation */
 @keyframes laser-fade {
   0% {
@@ -134,4 +203,260 @@ body {
 
 .animate-laser-fade {
   animation: laser-fade 0.5s linear forwards;
+}
+
+/* Functional pulse for targeting, shields, weapons */
+@keyframes pulse-functional {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.pulse-target-lock {
+  animation: pulse-functional 1.5s ease-in-out infinite;
+  outline: 1px solid var(--color-phosphor-green);
+}
+
+.pulse-shield-charging {
+  animation: pulse-functional 1.5s ease-in-out infinite;
+  outline: 1px solid var(--color-cyan);
+}
+
+.pulse-weapon-primed {
+  animation: pulse-functional 1.5s ease-in-out infinite;
+  outline: 1px solid var(--color-amber);
+}
+
+/* ============================================
+   UTILITY CLASSES - Industrial Theme
+   ============================================ */
+
+/* Panel base style */
+.panel {
+  background: var(--color-slate);
+  border: 1px solid var(--color-gunmetal);
+  border-top-color: var(--color-steel);
+  border-left-color: var(--color-steel);
+  border-radius: 0; /* Square corners */
+}
+
+.panel-elevated {
+  background: var(--color-steel);
+  border: 1px solid var(--color-gunmetal);
+  border-top-color: var(--color-steel);
+  border-left-color: var(--color-steel);
+  border-radius: 0;
+}
+
+/* Scanline overlay (CRT effect) */
+.scanline-overlay {
+  position: relative;
+}
+
+.scanline-overlay::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Film grain texture */
+.film-grain {
+  position: relative;
+}
+
+.film-grain::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* System label styling */
+.system-label {
+  font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-secondary);
+  padding: 4px 8px;
+  border: 1px solid var(--color-gunmetal);
+  background: transparent;
+}
+
+/* Functional glow (1-2px only, for active targeting/critical hits) */
+.glow-targeting {
+  outline: 2px solid var(--color-phosphor-green);
+  outline-offset: 0;
+}
+
+.glow-critical {
+  outline: 2px solid var(--color-warning-red);
+  outline-offset: 0;
+}
+
+/* Remove all rounded corners utility */
+.no-radius {
+  border-radius: 0 !important;
+}
+
+/* Square corners with 2px chamfer (optional) */
+.chamfer-2 {
+  clip-path: polygon(
+    2px 0%, 100% 0%, 100% calc(100% - 2px), 
+    calc(100% - 2px) 100%, 0% 100%, 0% 2px
+  );
+}
+
+/* ============================================
+   FORM CONTROLS - Industrial Theme
+   ============================================ */
+
+/* Input fields */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  background-color: var(--color-near-black);
+  border: 2px solid var(--color-gunmetal);
+  border-top-color: var(--color-steel);
+  border-left-color: var(--color-steel);
+  color: var(--color-text-primary);
+  font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
+  border-radius: 0; /* Square corners */
+  padding: 8px 12px;
+  transition: border-color 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-cyan);
+  border-top-color: var(--color-cyan);
+  border-left-color: var(--color-cyan);
+  background-color: var(--color-slate);
+}
+
+input[type="text"]:disabled,
+input[type="number"]:disabled,
+input[type="email"]:disabled,
+input[type="password"]:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--color-slate);
+}
+
+/* Checkboxes - Square */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-gunmetal);
+  border-top-color: var(--color-steel);
+  border-left-color: var(--color-steel);
+  background-color: var(--color-near-black);
+  border-radius: 0; /* Square */
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--color-cyan);
+  border-color: var(--color-cyan);
+  border-top-color: var(--color-cyan);
+  border-left-color: var(--color-cyan);
+}
+
+input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-near-black);
+  font-size: 12px;
+  font-weight: bold;
+  font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
+}
+
+input[type="checkbox"]:focus {
+  outline: 1px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Radio buttons - Square */
+input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-gunmetal);
+  border-top-color: var(--color-steel);
+  border-left-color: var(--color-steel);
+  background-color: var(--color-near-black);
+  border-radius: 0; /* Square */
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+input[type="radio"]:checked {
+  background-color: var(--color-cyan);
+  border-color: var(--color-cyan);
+  border-top-color: var(--color-cyan);
+  border-left-color: var(--color-cyan);
+}
+
+input[type="radio"]:focus {
+  outline: 1px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
+/* Select dropdowns */
+select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2356d6ff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 32px;
+}
+
+select:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2356d6ff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
 }

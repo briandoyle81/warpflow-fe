@@ -42,7 +42,7 @@ const ManageNavy: React.FC = () => {
   // Read the user's purchase count
   const { data: amountPurchased } = useShipsRead(
     "amountPurchased",
-    address ? [address] : undefined
+    address ? [address] : undefined,
   );
 
   // Get ship attributes for in-game properties
@@ -92,7 +92,7 @@ const ManageNavy: React.FC = () => {
 
   // State for ship selection and filtering
   const [selectedShips, setSelectedShips] = React.useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [filterStatus, setFilterStatus] = React.useState<
     "all" | "constructed" | "unconstructed" | "starred"
@@ -106,11 +106,11 @@ const ManageNavy: React.FC = () => {
 
   // State for starred ships
   const [starredShips, setStarredShips] = React.useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [showShipPurchase, setShowShipPurchase] = React.useState(false);
   const [paymentMethod, setPaymentMethod] = React.useState<"FLOW" | "UTC">(
-    "FLOW"
+    "FLOW",
   );
   const [showRecycleModal, setShowRecycleModal] = React.useState(false);
   const [shipToRecycle, setShipToRecycle] = React.useState<Ship | null>(null);
@@ -132,7 +132,7 @@ const ManageNavy: React.FC = () => {
   React.useEffect(() => {
     localStorage.setItem(
       "warpflow-starred-ships",
-      JSON.stringify(Array.from(starredShips))
+      JSON.stringify(Array.from(starredShips)),
     );
   }, [starredShips]);
 
@@ -160,7 +160,7 @@ const ManageNavy: React.FC = () => {
       filtered = filtered.filter((ship) => !ship.shipData.constructed);
     } else if (filterStatus === "starred") {
       filtered = filtered.filter((ship) =>
-        starredShips.has(ship.id.toString())
+        starredShips.has(ship.id.toString()),
       );
     }
 
@@ -228,7 +228,7 @@ const ManageNavy: React.FC = () => {
       setSelectedShips(new Set());
     } else {
       setSelectedShips(
-        new Set(filteredAndSortedShips.map((ship) => ship.id.toString()))
+        new Set(filteredAndSortedShips.map((ship) => ship.id.toString())),
       );
     }
   };
@@ -290,18 +290,45 @@ const ManageNavy: React.FC = () => {
   }
 
   return (
-    <div className="text-cyan-300 font-mono">
+    <div
+      style={{
+        fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+        color: "var(--color-text-primary)",
+      }}
+    >
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <h3 className="text-2xl font-bold tracking-wider">[MANAGE NAVY]</h3>
-          <label className="flex items-center gap-2 text-sm text-cyan-300 cursor-pointer">
+          <h3
+            className="text-2xl font-bold tracking-wider uppercase"
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              color: "var(--color-text-primary)",
+            }}
+          >
+            [MANAGE NAVY]
+          </h3>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input
               type="checkbox"
               checked={showDebugButtons}
               onChange={(e) => setShowDebugButtons(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+              className="w-4 h-4"
+              style={{
+                accentColor: "var(--color-cyan)",
+                borderColor: "var(--color-cyan)",
+                backgroundColor: "var(--color-near-black)",
+                borderRadius: 0,
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                width: "16px",
+                height: "16px",
+                border: "2px solid",
+              }}
             />
-            <span>Debug Mode</span>
+            <span style={{ color: "var(--color-text-secondary)" }}>
+              Debug Mode
+            </span>
           </label>
         </div>
 
@@ -309,11 +336,26 @@ const ManageNavy: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div
-              className={`w-2 h-2 rounded-full ${
-                isListening ? "bg-green-400 animate-pulse" : "bg-red-400"
-              }`}
+              className="w-2 h-2"
+              style={{
+                backgroundColor: isListening
+                  ? "var(--color-phosphor-green)"
+                  : "var(--color-warning-red)",
+                animation: isListening
+                  ? "pulse-functional 1.5s ease-in-out infinite"
+                  : "none",
+              }}
             ></div>
-            <span className="text-xs text-cyan-300">
+            <span
+              className="text-xs uppercase font-semibold tracking-wider"
+              style={{
+                fontFamily:
+                  "var(--font-jetbrains-mono), 'Courier New', monospace",
+                color: isListening
+                  ? "var(--color-phosphor-green)"
+                  : "var(--color-warning-red)",
+              }}
+            >
               {isListening ? "LIVE" : "OFFLINE"}
             </span>
           </div>
@@ -322,25 +364,160 @@ const ManageNavy: React.FC = () => {
 
       {/* Navy Statistics - Condensed */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mb-6">
-        <div className="border border-cyan-400 bg-black/40 rounded p-2 text-center">
-          <h4 className="text-xs font-bold text-cyan-400 mb-1">🚀 TOTAL</h4>
-          <p className="text-lg font-bold">{fleetStats.totalShips}</p>
+        <div
+          className="border border-solid p-2 text-center"
+          style={{
+            borderColor: "var(--color-gunmetal)",
+            borderTopColor: "var(--color-steel)",
+            borderLeftColor: "var(--color-steel)",
+            backgroundColor: "var(--color-slate)",
+            borderRadius: 0,
+          }}
+        >
+          <h4
+            className="text-xs font-bold mb-1 uppercase tracking-wider"
+            style={{
+              fontFamily:
+                "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-cyan)",
+            }}
+          >
+            TOTAL
+          </h4>
+          <p
+            className="text-lg font-bold"
+            style={{
+              fontFamily:
+                "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-text-primary)",
+            }}
+          >
+            {fleetStats.totalShips}
+          </p>
         </div>
-        <div className="border border-yellow-400 bg-black/40 rounded p-2 text-center">
-          <h4 className="text-xs font-bold text-yellow-400 mb-1">✨ SHINY</h4>
-          <p className="text-lg font-bold">{fleetStats.shinyShips}</p>
+        <div
+          className="border border-solid p-2 text-center"
+          style={{
+            borderColor: "var(--color-gunmetal)",
+            borderTopColor: "var(--color-steel)",
+            borderLeftColor: "var(--color-steel)",
+            backgroundColor: "var(--color-slate)",
+            borderRadius: 0,
+          }}
+        >
+          <h4
+            className="text-xs font-bold mb-1 uppercase tracking-wider"
+            style={{
+              fontFamily:
+                "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-amber)",
+            }}
+          >
+            SHINY
+          </h4>
+          <p
+            className="text-lg font-bold"
+            style={{
+              fontFamily:
+                "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-text-primary)",
+            }}
+          >
+            {fleetStats.shinyShips}
+          </p>
         </div>
-        <div className="border border-purple-400 bg-black/40 rounded p-2 text-center">
-          <h4 className="text-xs font-bold text-purple-400 mb-1">💎 COST</h4>
-          <p className="text-lg font-bold">{fleetStats.totalCost}</p>
+        <div
+          className="border border-solid p-2 text-center"
+          style={{
+            borderColor: "var(--color-gunmetal)",
+            borderTopColor: "var(--color-steel)",
+            borderLeftColor: "var(--color-steel)",
+            backgroundColor: "var(--color-slate)",
+            borderRadius: 0,
+          }}
+        >
+          <h4
+            className="text-xs font-bold mb-1 uppercase tracking-wider"
+            style={{
+              fontFamily:
+                "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-cyan)",
+            }}
+          >
+            COST
+          </h4>
+          <p
+            className="text-lg font-bold"
+            style={{
+              fontFamily:
+                "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-text-primary)",
+            }}
+          >
+            {fleetStats.totalCost}
+          </p>
         </div>
-        <div className="border border-gray-400 bg-black/40 rounded p-2 text-center">
-          <h4 className="text-xs font-bold text-gray-400 mb-1">🛡️ UNBUILT</h4>
-          <p className="text-lg font-bold">{fleetStats.unconstructedShips}</p>
+        <div
+          className="border border-solid p-2 text-center"
+          style={{
+            borderColor: "var(--color-gunmetal)",
+            borderTopColor: "var(--color-steel)",
+            borderLeftColor: "var(--color-steel)",
+            backgroundColor: "var(--color-slate)",
+            borderRadius: 0,
+          }}
+        >
+          <h4
+            className="text-xs font-bold mb-1 uppercase tracking-wider"
+            style={{
+              fontFamily:
+                "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            UNBUILT
+          </h4>
+          <p
+            className="text-lg font-bold"
+            style={{
+              fontFamily:
+                "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-text-primary)",
+            }}
+          >
+            {fleetStats.unconstructedShips}
+          </p>
         </div>
-        <div className="border border-red-400 bg-black/40 rounded p-2 text-center">
-          <h4 className="text-xs font-bold text-red-400 mb-1">💀 DEAD</h4>
-          <p className="text-lg font-bold">{fleetStats.destroyedShips}</p>
+        <div
+          className="border border-solid p-2 text-center"
+          style={{
+            borderColor: "var(--color-gunmetal)",
+            borderTopColor: "var(--color-steel)",
+            borderLeftColor: "var(--color-steel)",
+            backgroundColor: "var(--color-slate)",
+            borderRadius: 0,
+          }}
+        >
+          <h4
+            className="text-xs font-bold mb-1 uppercase tracking-wider"
+            style={{
+              fontFamily:
+                "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-warning-red)",
+            }}
+          >
+            DEAD
+          </h4>
+          <p
+            className="text-lg font-bold"
+            style={{
+              fontFamily:
+                "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-text-primary)",
+            }}
+          >
+            {fleetStats.destroyedShips}
+          </p>
         </div>
       </div>
 
@@ -414,7 +591,7 @@ const ManageNavy: React.FC = () => {
                 resetAllShipRequestStates();
                 clearAllShipRetryTimeouts();
                 toast.success(
-                  `Cleared all ${cleared} images from cache and reset all states`
+                  `Cleared all ${cleared} images from cache and reset all states`,
                 );
                 // Force refresh by reloading the page
                 window.location.reload();
@@ -428,7 +605,7 @@ const ManageNavy: React.FC = () => {
               onClick={() => {
                 resetAllShipRequestStates();
                 toast.success(
-                  `Reset all request states - try loading images again`
+                  `Reset all request states - try loading images again`,
                 );
               }}
               className="px-4 py-2 rounded-lg border border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold text-sm transition-all duration-200"
@@ -450,7 +627,7 @@ const ManageNavy: React.FC = () => {
               onClick={() => {
                 const status = getQueueStatus();
                 toast.success(
-                  `Queue: ${status.queueLength} pending, ${status.activeRequests} active`
+                  `Queue: ${status.queueLength} pending, ${status.activeRequests} active`,
                 );
               }}
               className="px-4 py-2 rounded-lg border border-purple-400 text-purple-400 hover:border-purple-300 hover:text-purple-300 hover:bg-purple-400/10 font-mono font-bold text-sm transition-all duration-200"
@@ -599,10 +776,27 @@ const ManageNavy: React.FC = () => {
       )}
 
       {/* Filtering and Sorting Controls */}
-      <div className="bg-black/40 border border-cyan-400 rounded-lg p-4 mb-6">
+      <div
+        className="border border-solid p-4 mb-6"
+        style={{
+          backgroundColor: "var(--color-slate)",
+          borderColor: "var(--color-gunmetal)",
+          borderTopColor: "var(--color-steel)",
+          borderLeftColor: "var(--color-steel)",
+          borderRadius: 0,
+        }}
+      >
         <div className="flex flex-wrap items-center gap-4 justify-between">
           <div className="flex items-center gap-4">
-            <label className="text-sm font-bold text-cyan-400">FILTER:</label>
+            <label
+              className="text-sm font-bold uppercase tracking-wider"
+              style={{
+                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                color: "var(--color-cyan)",
+              }}
+            >
+              FILTER:
+            </label>
             <select
               value={filterStatus}
               onChange={(e) =>
@@ -611,10 +805,14 @@ const ManageNavy: React.FC = () => {
                     | "all"
                     | "constructed"
                     | "unconstructed"
-                    | "starred"
+                    | "starred",
                 )
               }
-              className="bg-black/60 border border-cyan-400 text-cyan-300 px-3 py-1 rounded font-mono text-sm"
+              className="px-3 py-1 uppercase font-semibold tracking-wider text-sm"
+              style={{
+                fontFamily:
+                  "var(--font-jetbrains-mono), 'Courier New', monospace",
+              }}
             >
               <option value="all">ALL SHIPS</option>
               <option value="constructed">CONSTRUCTED</option>
@@ -624,7 +822,15 @@ const ManageNavy: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <label className="text-sm font-bold text-cyan-400">SORT BY:</label>
+            <label
+              className="text-sm font-bold uppercase tracking-wider"
+              style={{
+                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                color: "var(--color-cyan)",
+              }}
+            >
+              SORT BY:
+            </label>
             <select
               value={sortBy}
               onChange={(e) =>
@@ -634,10 +840,14 @@ const ManageNavy: React.FC = () => {
                     | "cost"
                     | "accuracy"
                     | "hull"
-                    | "speed"
+                    | "speed",
                 )
               }
-              className="bg-black/60 border border-cyan-400 text-cyan-300 px-3 py-1 rounded font-mono text-sm"
+              className="px-3 py-1 uppercase font-semibold tracking-wider text-sm"
+              style={{
+                fontFamily:
+                  "var(--font-jetbrains-mono), 'Courier New', monospace",
+              }}
             >
               <option value="id">ID</option>
               <option value="cost">COST</option>
@@ -648,24 +858,48 @@ const ManageNavy: React.FC = () => {
 
             <button
               onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              className="px-3 py-1 border border-cyan-400 text-cyan-300 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 rounded font-mono text-sm transition-all duration-200"
+              className="px-3 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-sm transition-colors duration-150"
+              style={{
+                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                borderColor: "var(--color-cyan)",
+                color: "var(--color-cyan)",
+                backgroundColor: "var(--color-steel)",
+                borderRadius: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--color-slate)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--color-steel)";
+              }}
             >
               {sortOrder === "asc" ? "↑" : "↓"}
             </button>
           </div>
 
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm text-cyan-300 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 checked={showInGameProperties}
                 onChange={(e) => setShowInGameProperties(e.target.checked)}
-                className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 rounded focus:ring-cyan-400 focus:ring-2"
+                className="w-4 h-4"
               />
-              <span className="text-sm font-bold text-cyan-400">
+              <span
+                className="text-sm font-bold uppercase tracking-wider"
+                style={{
+                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  color: "var(--color-cyan)",
+                }}
+              >
                 IN-GAME PROPERTIES
                 {isFromCache && (
-                  <span className="text-xs text-green-400 ml-1">(cached)</span>
+                  <span
+                    className="text-xs ml-1"
+                    style={{ color: "var(--color-phosphor-green)" }}
+                  >
+                    (cached)
+                  </span>
                 )}
               </span>
             </label>
@@ -673,21 +907,52 @@ const ManageNavy: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-between mt-4">
-          <span className="text-sm text-cyan-300">
+          <span
+            className="text-sm uppercase tracking-wider"
+            style={{
+              fontFamily:
+                "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-text-secondary)",
+            }}
+          >
             Showing {filteredAndSortedShips.length} of {ships.length} ships
           </span>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleSelectAll}
-              className="px-3 py-1 border border-purple-400 text-purple-400 hover:border-purple-300 hover:text-purple-300 hover:bg-purple-400/10 rounded font-mono text-sm transition-all duration-200"
+              className="px-3 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-sm transition-colors duration-150"
+              style={{
+                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                borderColor: "var(--color-gunmetal)",
+                color: "var(--color-text-secondary)",
+                backgroundColor: "var(--color-steel)",
+                borderRadius: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "var(--color-cyan)";
+                e.currentTarget.style.color = "var(--color-cyan)";
+                e.currentTarget.style.backgroundColor = "var(--color-slate)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                e.currentTarget.style.color = "var(--color-text-secondary)";
+                e.currentTarget.style.backgroundColor = "var(--color-steel)";
+              }}
             >
               {selectedShips.size === filteredAndSortedShips.length
                 ? "[DESELECT ALL]"
                 : "[SELECT ALL]"}
             </button>
             {selectedShips.size > 0 && (
-              <span className="text-sm text-purple-300">
+              <span
+                className="text-sm uppercase tracking-wider"
+                style={{
+                  fontFamily:
+                    "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  color: "var(--color-text-secondary)",
+                }}
+              >
                 {selectedShips.size} selected
               </span>
             )}
