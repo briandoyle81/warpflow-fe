@@ -72,37 +72,80 @@ const Header: React.FC = () => {
   const isConnected = account.isConnected;
 
   return (
-    <header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-b-2 border-cyan-400 shadow-lg shadow-cyan-400/20">
+    <header
+      className="border-b-2 border-solid"
+      style={{
+        backgroundColor: "var(--color-slate)",
+        borderColor: "var(--color-gunmetal)",
+        borderTopColor: "var(--color-steel)",
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between py-2 gap-4">
           {/* Left side - Logo and Title */}
           <div className="flex flex-col items-start gap-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="relative">
-                <h1 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 tracking-wider">
+                <h1
+                  className="text-3xl sm:text-4xl font-black uppercase tracking-wider"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    color: "var(--color-text-primary)",
+                  }}
+                >
                   WARPFLOW
                 </h1>
-                <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400"></div>
+                <div
+                  className="absolute -bottom-1 left-0 right-0 h-0.5"
+                  style={{ backgroundColor: "var(--color-cyan)" }}
+                ></div>
               </div>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="relative">
-                  <span className="text-lg sm:text-xl font-mono font-bold text-amber-400 tracking-wider px-3 py-1 border border-amber-400 bg-black/30">
-                    [TESTNET ALPHA]
-                  </span>
-                  <div className="absolute inset-0 bg-amber-400/10 animate-pulse"></div>
+                <div
+                  className="px-3 py-1 border border-solid"
+                  style={{
+                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    color: "var(--color-amber)",
+                    borderColor: "var(--color-amber)",
+                    backgroundColor: "var(--color-near-black)",
+                  }}
+                >
+                  [TESTNET ALPHA]
                 </div>
               </div>
             </div>
-            <div className="relative ml-0">
-              <span className="text-sm font-mono font-bold text-red-400 tracking-wider px-2 py-1 border border-red-400 bg-black/30">
+            <div className="ml-0">
+              <span
+                className="text-sm px-2 py-1 border border-solid"
+                style={{
+                  fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  color: "var(--color-warning-red)",
+                  borderColor: "var(--color-warning-red)",
+                  backgroundColor: "var(--color-near-black)",
+                }}
+              >
                 In active development, ships and games will be lost
               </span>
-              <div className="absolute inset-0 bg-red-400/10 animate-pulse"></div>
             </div>
           </div>
           {/* Center section - Player Controls */}
           <div className="flex-1 flex justify-center items-center">
-            <div className="border border-purple-400 bg-black/40 rounded-lg p-2">
+            <div
+              className="border border-solid p-2"
+              style={{
+                borderColor: "var(--color-gunmetal)",
+                borderTopColor: "var(--color-steel)",
+                borderLeftColor: "var(--color-steel)",
+                backgroundColor: "var(--color-near-black)",
+              }}
+            >
               <MusicPlayer />
             </div>
           </div>
@@ -155,7 +198,13 @@ const Header: React.FC = () => {
                                 <button
                                   onClick={openConnectModal}
                                   type="button"
-                                  className="border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 px-6 py-2 rounded-lg font-mono font-bold tracking-wider transition-all duration-200 shadow-lg shadow-cyan-400/20 hover:shadow-cyan-400/40 bg-black/40"
+                                  className="px-6 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+                                  style={{
+                                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                    borderColor: "var(--color-cyan)",
+                                    color: "var(--color-cyan)",
+                                    backgroundColor: "var(--color-steel)",
+                                  }}
                                 >
                                   [LOG IN]
                                 </button>
@@ -167,7 +216,13 @@ const Header: React.FC = () => {
                                 <button
                                   onClick={openChainModal}
                                   type="button"
-                                  className="border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 px-6 py-2 rounded-lg font-mono font-bold tracking-wider transition-all duration-200 shadow-lg shadow-red-400/20 hover:shadow-red-400/40 bg-black/40"
+                                  className="px-6 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+                                  style={{
+                                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                    borderColor: "var(--color-warning-red)",
+                                    color: "var(--color-warning-red)",
+                                    backgroundColor: "var(--color-steel)",
+                                  }}
                                 >
                                   [WRONG NETWORK]
                                 </button>
@@ -189,8 +244,22 @@ const Header: React.FC = () => {
                     {/* Flow Balance and Buy Flow button */}
                     <div className="flex items-center gap-2">
                       {/* Flow Balance */}
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-green-400 shadow-lg shadow-green-400/30 h-8 w-40 justify-center">
-                        <span className="text-green-400 text-xs font-mono font-bold tracking-wider">
+                      <div
+                        className="flex items-center gap-2 px-3 py-1.5 h-8 w-40 justify-center border border-solid"
+                        style={{
+                          backgroundColor: "var(--color-near-black)",
+                          borderColor: "var(--color-phosphor-green)",
+                          borderTopColor: "var(--color-steel)",
+                          borderLeftColor: "var(--color-steel)",
+                        }}
+                      >
+                        <span
+                          className="text-xs font-bold tracking-wider uppercase"
+                          style={{
+                            fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                            color: "var(--color-phosphor-green)",
+                          }}
+                        >
                           {balance?.value
                             ? `${parseFloat(balance.formatted).toFixed(2)} FLOW`
                             : "0.00 FLOW"}
@@ -205,18 +274,58 @@ const Header: React.FC = () => {
                       {/* UTC Balance - Clickable */}
                       <button
                         onClick={() => setShowUTCPurchaseModal(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-yellow-400 shadow-lg shadow-yellow-400/30 h-8 w-40 justify-center hover:border-yellow-300 hover:bg-yellow-400/10 transition-all duration-200 cursor-pointer"
+                        className="flex items-center gap-2 px-3 py-1.5 h-8 w-40 justify-center border border-solid transition-colors duration-150 cursor-pointer"
+                        style={{
+                          backgroundColor: "var(--color-near-black)",
+                          borderColor: "var(--color-amber)",
+                          borderTopColor: "var(--color-steel)",
+                          borderLeftColor: "var(--color-steel)",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "var(--color-amber)";
+                          e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "var(--color-amber)";
+                          e.currentTarget.style.backgroundColor = "var(--color-near-black)";
+                        }}
                       >
-                        <span className="text-yellow-400 text-xs font-mono font-bold tracking-wider">
+                        <span
+                          className="text-xs font-bold tracking-wider uppercase"
+                          style={{
+                            fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                            color: "var(--color-amber)",
+                          }}
+                        >
                           {utcBalance
                             ? `${formatEther(utcBalance as bigint)} UTC`
                             : "0.00 UTC"}
                         </span>
                       </button>
                       {/* Network (moved here) */}
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-cyan-400 shadow-lg shadow-cyan-400/30 h-8 w-32 justify-center">
-                        <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
-                        <span className="text-cyan-400 text-xs font-mono font-bold tracking-wider">
+                      <div
+                        className="flex items-center gap-2 px-3 py-1.5 h-8 w-32 justify-center border border-solid"
+                        style={{
+                          backgroundColor: "var(--color-near-black)",
+                          borderColor: "var(--color-cyan)",
+                          borderTopColor: "var(--color-steel)",
+                          borderLeftColor: "var(--color-steel)",
+                        }}
+                      >
+                        <div
+                          className="w-2 h-2"
+                          style={{
+                            backgroundColor: "var(--color-cyan)",
+                            animation: "pulse-functional 1.5s ease-in-out infinite",
+                          }}
+                        ></div>
+                        <span
+                          className="text-xs font-bold tracking-wider uppercase"
+                          style={{
+                            fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                            color: "var(--color-cyan)",
+                          }}
+                        >
                           {account.chain?.name?.toUpperCase() || "FLOW TESTNET"}
                         </span>
                       </div>
@@ -227,13 +336,39 @@ const Header: React.FC = () => {
                   <div className="flex gap-2 flex-col">
                     <button
                       onClick={handleDisconnect}
-                      className="border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 px-3 py-1.5 rounded-lg font-mono font-bold tracking-wider transition-all duration-200 shadow-lg shadow-red-400/20 hover:shadow-red-400/40 w-48 flex items-center justify-center text-xs h-8"
+                      className="px-3 py-1.5 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150 w-48 flex items-center justify-center text-xs h-8"
+                      style={{
+                        fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                        borderColor: "var(--color-warning-red)",
+                        color: "var(--color-warning-red)",
+                        backgroundColor: "var(--color-steel)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                      }}
                     >
                       [LOG OUT]
                     </button>
                     {/* Address (moved here) */}
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-purple-400 shadow-lg shadow-purple-400/30 h-8 w-48 justify-center">
-                      <span className="text-purple-400 text-xs font-mono font-bold tracking-wider">
+                    <div
+                      className="flex items-center gap-2 px-3 py-1.5 h-8 w-48 justify-center border border-solid"
+                      style={{
+                        backgroundColor: "var(--color-near-black)",
+                        borderColor: "var(--color-gunmetal)",
+                        borderTopColor: "var(--color-steel)",
+                        borderLeftColor: "var(--color-steel)",
+                      }}
+                    >
+                      <span
+                        className="text-xs font-bold tracking-wider uppercase"
+                        style={{
+                          fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
                         {formatAddress(account.address || "")}
                       </span>
                       <button
@@ -241,7 +376,18 @@ const Header: React.FC = () => {
                           navigator.clipboard.writeText(account.address || "");
                           toast.success("Address copied to clipboard!");
                         }}
-                        className="text-purple-400 hover:text-purple-300 transition-all duration-200 p-1 hover:bg-purple-400/10 rounded"
+                        className="p-1 transition-colors duration-150"
+                        style={{
+                          color: "var(--color-text-secondary)",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = "var(--color-cyan)";
+                          e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = "var(--color-text-secondary)";
+                          e.currentTarget.style.backgroundColor = "transparent";
+                        }}
                         title="Copy address to clipboard"
                       >
                         <svg

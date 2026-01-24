@@ -1891,7 +1891,24 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
-            className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
+            className="px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderColor: "var(--color-gunmetal)",
+              color: "var(--color-text-secondary)",
+              backgroundColor: "var(--color-steel)",
+              borderRadius: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-slate)";
+              e.currentTarget.style.borderColor = "var(--color-cyan)";
+              e.currentTarget.style.color = "var(--color-cyan)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-steel)";
+              e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
           >
             ←
           </button>
@@ -1910,7 +1927,24 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
-            className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
+            className="px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderColor: "var(--color-gunmetal)",
+              color: "var(--color-text-secondary)",
+              backgroundColor: "var(--color-steel)",
+              borderRadius: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-slate)";
+              e.currentTarget.style.borderColor = "var(--color-cyan)";
+              e.currentTarget.style.color = "var(--color-cyan)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-steel)";
+              e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
           >
             ←
           </button>
@@ -1921,7 +1955,20 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           </p>
           <button
             onClick={() => refetchGame()}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded font-mono hover:bg-blue-700 transition-colors"
+            className="mt-4 px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderColor: "var(--color-cyan)",
+              color: "var(--color-cyan)",
+              backgroundColor: "var(--color-steel)",
+              borderRadius: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-slate)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-steel)";
+            }}
           >
             Retry
           </button>
@@ -1938,7 +1985,24 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           <div className="flex items-center space-x-4">
             <button
               onClick={onBack}
-              className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
+              className="px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderColor: "var(--color-gunmetal)",
+              color: "var(--color-text-secondary)",
+              backgroundColor: "var(--color-steel)",
+              borderRadius: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-slate)";
+              e.currentTarget.style.borderColor = "var(--color-cyan)";
+              e.currentTarget.style.color = "var(--color-cyan)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-steel)";
+              e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
             >
               ←
             </button>
@@ -1953,7 +2017,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+            <div
+              className="animate-spin h-12 w-12 border-b-2 mx-auto mb-4"
+              style={{
+                borderColor: "var(--color-cyan)",
+                borderRadius: 0, // Square spinner
+              }}
+            ></div>
             <p className="text-cyan-400 font-mono">Loading ship data...</p>
           </div>
         </div>
@@ -1968,7 +2038,24 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         <div className="flex items-center space-x-4">
           <button
             onClick={onBack}
-            className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700 transition-colors"
+            className="px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderColor: "var(--color-gunmetal)",
+              color: "var(--color-text-secondary)",
+              backgroundColor: "var(--color-steel)",
+              borderRadius: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-slate)";
+              e.currentTarget.style.borderColor = "var(--color-cyan)";
+              e.currentTarget.style.color = "var(--color-cyan)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-steel)";
+              e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
           >
             ←
           </button>
@@ -1994,18 +2081,41 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 if (hasExceededTime) {
                   return (
                     <div className="flex flex-col gap-1.5">
-                      <div className="text-sm text-gray-400 flex items-center gap-2">
-                        <span className="text-blue-400">YOUR TURN</span>
-                        <span className="text-gray-300">•</span>
-                        <span className="text-red-400 font-mono animate-pulse">
+                      <div
+                        className="text-sm flex items-center gap-2 uppercase font-semibold tracking-wider"
+                        style={{
+                          fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        <span style={{ color: "var(--color-cyan)" }}>YOUR TURN</span>
+                        <span style={{ color: "var(--color-text-muted)" }}>•</span>
+                        <span
+                          className="font-mono"
+                          style={{
+                            fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                            color: "var(--color-warning-red)",
+                            animation: "pulse-functional 1.5s ease-in-out infinite",
+                          }}
+                        >
                           00:00
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="flex-1 h-1.5 overflow-hidden"
+                          style={{
+                            backgroundColor: "var(--color-gunmetal)",
+                            borderRadius: 0,
+                          }}
+                        >
                           <div
-                            className="h-full bg-cyan-400 transition-all duration-1000 ease-linear"
-                            style={{ width: `${pollProgress}%` }}
+                            className="h-full transition-all duration-1000 ease-linear"
+                            style={{
+                              width: `${pollProgress}%`,
+                              backgroundColor: "var(--color-cyan)",
+                              borderRadius: 0,
+                            }}
                           />
                         </div>
                         <button
@@ -2040,29 +2150,52 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   return (
                     <div className="flex flex-col gap-1.5">
                       <div className="text-sm">
-                        <TransactionButton
-                          transactionId={`seize-${game.metadata.gameId.toString()}`}
-                          contractAddress={gameContractConfig.address}
-                          abi={gameContractConfig.abi}
-                          functionName="forceMoveOnTimeout"
-                          args={[game.metadata.gameId]}
-                          className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded font-mono transition-colors"
-                          loadingText="Seizing..."
-                          errorText="Failed"
-                          onSuccess={() => {
-                            toast.success("Turn seized. Opponent timed out.");
-                            refetchGame();
-                            refetch?.();
+                        <div
+                          className="inline-block"
+                          style={{
+                            fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                            borderColor: "var(--color-amber)",
+                            color: "var(--color-amber)",
+                            backgroundColor: "var(--color-steel)",
+                            borderWidth: "2px",
+                            borderStyle: "solid",
+                            borderRadius: 0,
                           }}
                         >
-                          Seize Turn
-                        </TransactionButton>
+                          <TransactionButton
+                            transactionId={`seize-${game.metadata.gameId.toString()}`}
+                            contractAddress={gameContractConfig.address}
+                            abi={gameContractConfig.abi}
+                            functionName="forceMoveOnTimeout"
+                            args={[game.metadata.gameId]}
+                            className="px-3 py-1 uppercase font-semibold tracking-wider transition-colors duration-150 w-full h-full"
+                            loadingText="Seizing..."
+                            errorText="Failed"
+                            onSuccess={() => {
+                              toast.success("Turn seized. Opponent timed out.");
+                              refetchGame();
+                              refetch?.();
+                            }}
+                          >
+                            Seize Turn
+                          </TransactionButton>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="flex-1 h-1.5 overflow-hidden"
+                          style={{
+                            backgroundColor: "var(--color-gunmetal)",
+                            borderRadius: 0,
+                          }}
+                        >
                           <div
-                            className="h-full bg-cyan-400 transition-all duration-1000 ease-linear"
-                            style={{ width: `${pollProgress}%` }}
+                            className="h-full transition-all duration-1000 ease-linear"
+                            style={{
+                              width: `${pollProgress}%`,
+                              backgroundColor: "var(--color-cyan)",
+                              borderRadius: 0,
+                            }}
                           />
                         </div>
                         <button
@@ -2095,28 +2228,49 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
                 return (
                   <div className="flex flex-col gap-1.5">
-                    <div className="text-sm text-gray-400 flex items-center gap-2">
+                    <div
+                      className="text-sm flex items-center gap-2 uppercase font-semibold tracking-wider"
+                      style={{
+                        fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                        color: "var(--color-text-secondary)",
+                      }}
+                    >
                       <span
-                        className={isMyTurn ? "text-blue-400" : "text-red-400"}
+                        style={{
+                          color: isMyTurn ? "var(--color-cyan)" : "var(--color-warning-red)",
+                        }}
                       >
                         {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
                       </span>
-                      <span className="text-gray-300">•</span>
+                      <span style={{ color: "var(--color-text-muted)" }}>•</span>
                       <span
-                        className={
-                          turnSecondsLeft <= 10
-                            ? "text-red-400 font-mono"
-                            : "text-cyan-400 font-mono"
-                        }
+                        className="font-mono"
+                        style={{
+                          fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                          color:
+                            turnSecondsLeft <= 10
+                              ? "var(--color-warning-red)"
+                              : "var(--color-cyan)",
+                        }}
                       >
                         {formatSeconds(turnSecondsLeft)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="flex-1 h-1.5 overflow-hidden"
+                        style={{
+                          backgroundColor: "var(--color-gunmetal)",
+                          borderRadius: 0,
+                        }}
+                      >
                         <div
-                          className="h-full bg-cyan-400 transition-all duration-1000 ease-linear"
-                          style={{ width: `${pollProgress}%` }}
+                          className="h-full transition-all duration-1000 ease-linear"
+                          style={{
+                            width: `${pollProgress}%`,
+                            backgroundColor: "var(--color-cyan)",
+                            borderRadius: 0,
+                          }}
                         />
                       </div>
                       <button
@@ -2148,11 +2302,34 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               })()}
           </div>
           {/* Scores box aligned left, to the right of title */}
-          <div className="ml-6 bg-gray-800 rounded p-2 border border-gray-700 w-48 text-lg">
+          <div
+            className="ml-6 p-2 border border-solid w-48 text-lg"
+            style={{
+              backgroundColor: "var(--color-slate)",
+              borderColor: "var(--color-gunmetal)",
+              borderTopColor: "var(--color-steel)",
+              borderLeftColor: "var(--color-steel)",
+              borderRadius: 0,
+            }}
+          >
             <div className="space-y-0.5">
               <div className="flex justify-between">
-                <span className="text-gray-400">My Score:</span>
-                <span className="text-white">
+                <span
+                  style={{
+                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                    color: "var(--color-text-secondary)",
+                    fontSize: "14px",
+                  }}
+                >
+                  My Score:
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                    color: "var(--color-text-primary)",
+                    fontWeight: 600,
+                  }}
+                >
                   {game.metadata.creator === address
                     ? game.creatorScore?.toString() || "0"
                     : game.joinerScore?.toString() || "0"}
@@ -2160,8 +2337,22 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Opponent:</span>
-                <span className="text-white">
+                <span
+                  style={{
+                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                    color: "var(--color-text-secondary)",
+                    fontSize: "14px",
+                  }}
+                >
+                  Opponent:
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                    color: "var(--color-text-primary)",
+                    fontWeight: 600,
+                  }}
+                >
                   {game.metadata.creator === address
                     ? game.joinerScore?.toString() || "0"
                     : game.creatorScore?.toString() || "0"}
@@ -2175,7 +2366,16 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         {/* Move Confirmation UI - positioned between left and right sections */}
         {/* Show ONLY for player's own proposed moves, NOT for last move display */}
         {isShowingProposedMove && (
-          <div className="flex-1 mx-6 bg-gray-900 rounded-lg border border-gray-700">
+          <div
+            className="flex-1 mx-6 border border-solid"
+            style={{
+              backgroundColor: "var(--color-slate)",
+              borderColor: "var(--color-gunmetal)",
+              borderTopColor: "var(--color-steel)",
+              borderLeftColor: "var(--color-steel)",
+              borderRadius: 0,
+            }}
+          >
             <div className="flex items-center gap-6 p-4">
               {/* Left: Ship Info */}
               <div className="flex flex-col gap-2 min-w-0 flex-shrink-0">
@@ -2241,7 +2441,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         setTargetShipId(null);
                       }
                     }}
-                    className="px-3 py-1.5 text-sm rounded bg-gray-800 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+                    className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider"
+                    style={{
+                      fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      borderRadius: 0,
+                    }}
                   >
                     <option value="weapon">
                       {selectedShip
@@ -2262,8 +2466,23 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 assistableTargets.length > 0 ||
                 assistableTargetsFromStart.length > 0) && (
                 <div className="flex-1">
-                  <div className="bg-gray-800 rounded border border-gray-700 p-3">
-                    <div className="text-xs text-gray-400 mb-2 uppercase tracking-wide">
+                  <div
+                    className="border border-solid p-3"
+                    style={{
+                      backgroundColor: "var(--color-near-black)",
+                      borderColor: "var(--color-gunmetal)",
+                      borderTopColor: "var(--color-steel)",
+                      borderLeftColor: "var(--color-steel)",
+                      borderRadius: 0,
+                    }}
+                  >
+                    <div
+                      className="text-xs mb-2 uppercase tracking-wide"
+                      style={{
+                        fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                        color: "var(--color-text-secondary)",
+                      }}
+                    >
                       Select Target (Optional)
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -2271,22 +2490,64 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         <>
                           <button
                             onClick={() => setTargetShipId(0n)}
-                            className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                              targetShipId === 0n
-                                ? "bg-orange-600 text-white"
-                                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                            }`}
+                            className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                            style={{
+                              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                              borderColor: targetShipId === 0n ? "var(--color-amber)" : "var(--color-gunmetal)",
+                              borderTopColor: targetShipId === 0n ? "var(--color-amber)" : "var(--color-steel)",
+                              borderLeftColor: targetShipId === 0n ? "var(--color-amber)" : "var(--color-steel)",
+                              color: targetShipId === 0n ? "var(--color-amber)" : "var(--color-text-secondary)",
+                              backgroundColor: targetShipId === 0n ? "var(--color-steel)" : "var(--color-slate)",
+                              borderWidth: "2px",
+                              borderStyle: "solid",
+                              borderRadius: 0,
+                            }}
+                            onMouseEnter={(e) => {
+                              if (targetShipId !== 0n) {
+                                e.currentTarget.style.borderColor = "var(--color-amber)";
+                                e.currentTarget.style.color = "var(--color-amber)";
+                                e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (targetShipId !== 0n) {
+                                e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                                e.currentTarget.style.color = "var(--color-text-secondary)";
+                                e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                              }
+                            }}
                           >
                             💥 Flak ({validTargets.length})
                           </button>
                           {previewPosition && (
                             <button
                               onClick={() => setTargetShipId(null)}
-                              className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                                targetShipId === null
-                                  ? "bg-gray-600 text-white"
-                                  : "bg-gray-700 text-gray-400 hover:bg-gray-600"
-                              }`}
+                              className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                              style={{
+                                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                borderColor: targetShipId === null ? "var(--color-gunmetal)" : "var(--color-gunmetal)",
+                                borderTopColor: targetShipId === null ? "var(--color-steel)" : "var(--color-steel)",
+                                borderLeftColor: targetShipId === null ? "var(--color-steel)" : "var(--color-steel)",
+                                color: targetShipId === null ? "var(--color-text-primary)" : "var(--color-text-muted)",
+                                backgroundColor: targetShipId === null ? "var(--color-steel)" : "var(--color-slate)",
+                                borderWidth: "2px",
+                                borderStyle: "solid",
+                                borderRadius: 0,
+                              }}
+                              onMouseEnter={(e) => {
+                                if (targetShipId !== null) {
+                                  e.currentTarget.style.borderColor = "var(--color-cyan)";
+                                  e.currentTarget.style.color = "var(--color-cyan)";
+                                  e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (targetShipId !== null) {
+                                  e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                                  e.currentTarget.style.color = "var(--color-text-muted)";
+                                  e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                                }
+                              }}
                             >
                               Move Only
                             </button>
@@ -2300,11 +2561,30 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             <button
                               key={target.shipId.toString()}
                               onClick={() => setTargetShipId(target.shipId)}
-                              className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                                targetShipId === target.shipId
-                                  ? "bg-red-600 text-white"
-                                  : "bg-gray-700 text-red-300 hover:bg-gray-600"
-                              }`}
+                              className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                              style={{
+                                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                borderColor: targetShipId === target.shipId ? "var(--color-warning-red)" : "var(--color-gunmetal)",
+                                borderTopColor: targetShipId === target.shipId ? "var(--color-warning-red)" : "var(--color-steel)",
+                                borderLeftColor: targetShipId === target.shipId ? "var(--color-warning-red)" : "var(--color-steel)",
+                                color: targetShipId === target.shipId ? "var(--color-warning-red)" : "var(--color-warning-red)",
+                                backgroundColor: targetShipId === target.shipId ? "var(--color-steel)" : "var(--color-slate)",
+                                borderWidth: "2px",
+                                borderStyle: "solid",
+                                borderRadius: 0,
+                              }}
+                              onMouseEnter={(e) => {
+                                if (targetShipId !== target.shipId) {
+                                  e.currentTarget.style.borderColor = "var(--color-warning-red)";
+                                  e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (targetShipId !== target.shipId) {
+                                  e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                                  e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                                }
+                              }}
                             >
                               ⚡ EMP{" "}
                               {targetShip?.name ||
@@ -2321,13 +2601,49 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               <button
                                 key={target.shipId.toString()}
                                 onClick={() => setTargetShipId(target.shipId)}
-                                className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                                  targetShipId === target.shipId
+                                className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                                style={{
+                                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                  borderColor: targetShipId === target.shipId
                                     ? selectedWeaponType === "special"
-                                      ? "bg-blue-600 text-white"
-                                      : "bg-red-600 text-white"
-                                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                                }`}
+                                      ? "var(--color-cyan)"
+                                      : "var(--color-warning-red)"
+                                    : "var(--color-gunmetal)",
+                                  borderTopColor: targetShipId === target.shipId
+                                    ? selectedWeaponType === "special"
+                                      ? "var(--color-cyan)"
+                                      : "var(--color-warning-red)"
+                                    : "var(--color-steel)",
+                                  borderLeftColor: targetShipId === target.shipId
+                                    ? selectedWeaponType === "special"
+                                      ? "var(--color-cyan)"
+                                      : "var(--color-warning-red)"
+                                    : "var(--color-steel)",
+                                  color: targetShipId === target.shipId
+                                    ? selectedWeaponType === "special"
+                                      ? "var(--color-cyan)"
+                                      : "var(--color-warning-red)"
+                                    : "var(--color-text-secondary)",
+                                  backgroundColor: targetShipId === target.shipId ? "var(--color-steel)" : "var(--color-slate)",
+                                  borderWidth: "2px",
+                                  borderStyle: "solid",
+                                  borderRadius: 0,
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (targetShipId !== target.shipId) {
+                                    const accentColor = selectedWeaponType === "special" ? "var(--color-cyan)" : "var(--color-warning-red)";
+                                    e.currentTarget.style.borderColor = accentColor;
+                                    e.currentTarget.style.color = accentColor;
+                                    e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (targetShipId !== target.shipId) {
+                                    e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                                    e.currentTarget.style.color = "var(--color-text-secondary)";
+                                    e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                                  }
+                                }}
                               >
                                 Target #{target.shipId.toString()}
                                 {targetShip && ` (${targetShip.name})`}
@@ -2363,11 +2679,30 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                                     onClick={() =>
                                       setTargetShipId(target.shipId)
                                     }
-                                    className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                                      targetShipId === target.shipId
-                                        ? "bg-blue-600 text-white"
-                                        : "bg-gray-700 text-blue-300 hover:bg-gray-600"
-                                    }`}
+                                    className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                                    style={{
+                                      fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                      borderColor: targetShipId === target.shipId ? "var(--color-cyan)" : "var(--color-gunmetal)",
+                                      borderTopColor: targetShipId === target.shipId ? "var(--color-cyan)" : "var(--color-steel)",
+                                      borderLeftColor: targetShipId === target.shipId ? "var(--color-cyan)" : "var(--color-steel)",
+                                      color: targetShipId === target.shipId ? "var(--color-cyan)" : "var(--color-cyan)",
+                                      backgroundColor: targetShipId === target.shipId ? "var(--color-steel)" : "var(--color-slate)",
+                                      borderWidth: "2px",
+                                      borderStyle: "solid",
+                                      borderRadius: 0,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      if (targetShipId !== target.shipId) {
+                                        e.currentTarget.style.borderColor = "var(--color-cyan)";
+                                        e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                                      }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (targetShipId !== target.shipId) {
+                                        e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                                        e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                                      }
+                                    }}
                                   >
                                     🆘 Assist #{target.shipId.toString()}
                                     {targetShip && ` (${targetShip.name})`}
@@ -2385,7 +2720,28 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       ) && (
                         <button
                           onClick={() => setTargetShipId(null)}
-                          className="px-3 py-1.5 text-sm rounded bg-gray-700 text-gray-400 hover:bg-gray-600 transition-colors"
+                          className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                          style={{
+                            fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                            borderColor: "var(--color-gunmetal)",
+                            borderTopColor: "var(--color-steel)",
+                            borderLeftColor: "var(--color-steel)",
+                            color: "var(--color-text-muted)",
+                            backgroundColor: "var(--color-slate)",
+                            borderWidth: "2px",
+                            borderStyle: "solid",
+                            borderRadius: 0,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = "var(--color-cyan)";
+                            e.currentTarget.style.color = "var(--color-cyan)";
+                            e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                            e.currentTarget.style.color = "var(--color-text-muted)";
+                            e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                          }}
                         >
                           {previewPosition ? "Move Only" : "Stay"}
                         </button>
@@ -2532,22 +2888,34 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     };
 
                     return (
-                      <TransactionButton
-                        transactionId={`move-ship-${selectedShipId}-${game.metadata.gameId}`}
-                        contractAddress={gameContractConfig.address}
-                        abi={gameContractConfig.abi}
-                        functionName="moveShip"
-                        args={[
-                          game.metadata.gameId,
-                          selectedShipId,
-                          computedRow,
-                          computedCol,
-                          computedActionType,
-                          targetShipId || 0n,
-                        ]}
-                        className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
-                        loadingText="Submitting..."
-                        errorText="Error"
+                      <div
+                        className="inline-block"
+                        style={{
+                          fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                          borderColor: "var(--color-phosphor-green)",
+                          color: "var(--color-phosphor-green)",
+                          backgroundColor: "var(--color-steel)",
+                          borderWidth: "2px",
+                          borderStyle: "solid",
+                          borderRadius: 0,
+                        }}
+                      >
+                        <TransactionButton
+                          transactionId={`move-ship-${selectedShipId}-${game.metadata.gameId}`}
+                          contractAddress={gameContractConfig.address}
+                          abi={gameContractConfig.abi}
+                          functionName="moveShip"
+                          args={[
+                            game.metadata.gameId,
+                            selectedShipId,
+                            computedRow,
+                            computedCol,
+                            computedActionType,
+                            targetShipId || 0n,
+                          ]}
+                          className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 w-full h-full"
+                          loadingText="Submitting..."
+                          errorText="Error"
                         onSuccess={() => {
                           // Deselect ship after transaction receipt is received
                           setPreviewPosition(null);
@@ -2635,11 +3003,31 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       >
                         Submit {getButtonText()}
                       </TransactionButton>
-                    );
+                    </div>
+                  );
                   })()}
                   <button
                     onClick={handleCancelMove}
-                    className="px-4 py-1.5 text-sm rounded bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+                    className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                    style={{
+                      fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      borderColor: "var(--color-gunmetal)",
+                      color: "var(--color-text-secondary)",
+                      backgroundColor: "var(--color-steel)",
+                      borderWidth: "2px",
+                      borderStyle: "solid",
+                      borderRadius: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                      e.currentTarget.style.borderColor = "var(--color-cyan)";
+                      e.currentTarget.style.color = "var(--color-cyan)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                      e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                      e.currentTarget.style.color = "var(--color-text-secondary)";
+                    }}
                   >
                     Cancel
                   </button>
@@ -2733,11 +3121,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               {game.metadata.winner !==
                 "0x0000000000000000000000000000000000000000" && (
                 <span
-                  className={
-                    game.metadata.winner === address
-                      ? "text-green-400"
-                      : "text-red-400"
-                  }
+                  className="uppercase font-bold tracking-wider"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    color:
+                      game.metadata.winner === address
+                        ? "var(--color-phosphor-green)"
+                        : "var(--color-warning-red)",
+                  }}
                 >
                   {game.metadata.winner === address ? "VICTORY" : "DEFEAT"}
                 </span>
@@ -2749,15 +3140,19 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
       {/* Game Map */}
       <div
-        className="bg-gray-900 rounded-lg p-2 w-full"
+        className="p-2 w-full border border-solid"
         style={{
+          backgroundColor: "var(--color-slate)",
+          borderColor: "var(--color-gunmetal)",
+          borderTopColor: "var(--color-steel)",
+          borderLeftColor: "var(--color-steel)",
+          borderRadius: 0,
           outline: `2px solid ${
-            game.turnState.currentTurn === address ? "#60a5fa" : "#f87171"
-          }`, // blue-400 when my turn, red-400 when opponent's
+            game.turnState.currentTurn === address
+              ? "var(--color-cyan)"
+              : "var(--color-warning-red)"
+          }`,
           outlineOffset: 0,
-          borderColor: "#374151", // keep the subtle internal border color
-          borderWidth: 1,
-          borderStyle: "solid",
         }}
       >
         <GameGrid
@@ -2851,7 +3246,19 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   type="checkbox"
                   checked={showDebug}
                   onChange={(e) => setShowDebug(e.target.checked)}
-                  className="rounded"
+                  className="w-4 h-4"
+                  style={{
+                    accentColor: "var(--color-cyan)",
+                    borderColor: "var(--color-cyan)",
+                    backgroundColor: "var(--color-near-black)",
+                    borderRadius: 0,
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    MozAppearance: "none",
+                    width: "16px",
+                    height: "16px",
+                    border: "2px solid",
+                  }}
                 />
                 <span>Show Debug</span>
               </label>
@@ -2860,7 +3267,19 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   type="checkbox"
                   checked={disableTooltips}
                   onChange={(e) => setDisableTooltips(e.target.checked)}
-                  className="rounded"
+                  className="w-4 h-4"
+                  style={{
+                    accentColor: "var(--color-cyan)",
+                    borderColor: "var(--color-cyan)",
+                    backgroundColor: "var(--color-near-black)",
+                    borderRadius: 0,
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    MozAppearance: "none",
+                    width: "16px",
+                    height: "16px",
+                    border: "2px solid",
+                  }}
                 />
                 <span>Disable Tooltips</span>
               </label>
@@ -2868,7 +3287,20 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 onClick={() => {
                   refetchGame();
                 }}
-                className="px-2 py-1 border border-cyan-400 text-cyan-400 rounded font-mono hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10"
+                className="px-2 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-xs transition-colors duration-150"
+                style={{
+                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  borderColor: "var(--color-cyan)",
+                  color: "var(--color-cyan)",
+                  backgroundColor: "var(--color-steel)",
+                  borderRadius: 0,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                }}
               >
                 Test Refetch
               </button>
@@ -2878,7 +3310,20 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     refetchFn();
                   });
                 }}
-                className="px-2 py-1 border border-green-400 text-green-400 rounded font-mono hover:border-green-300 hover:text-green-300 hover:bg-green-400/10"
+                className="px-2 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-xs transition-colors duration-150"
+                style={{
+                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  borderColor: "var(--color-phosphor-green)",
+                  color: "var(--color-phosphor-green)",
+                  backgroundColor: "var(--color-steel)",
+                  borderRadius: 0,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                }}
               >
                 Test Events
               </button>
@@ -2896,16 +3341,40 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       />
 
       {/* Ship Details */}
-      <div className="bg-gray-900 rounded-lg p-4 border border-gray-700 w-full">
+      <div
+        className="p-4 border border-solid w-full"
+        style={{
+          backgroundColor: "var(--color-slate)",
+          borderColor: "var(--color-gunmetal)",
+          borderTopColor: "var(--color-steel)",
+          borderLeftColor: "var(--color-steel)",
+          borderRadius: 0,
+        }}
+      >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Determine order based on player: creator has My Fleet left, joiner has Opponent's Fleet left */}
           {game.metadata.creator === address ? (
             <>
               {/* My Fleet - Left for creator */}
               <div>
-                <h4 className="text-blue-400 font-mono mb-3">
+                <h4
+                  className="mb-3 uppercase font-bold tracking-wider"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    color: "var(--color-cyan)",
+                    fontSize: "18px",
+                  }}
+                >
                   My Fleet
-                  <span className="ml-2 text-gray-400">
+                  <span
+                    className="ml-2"
+                    style={{
+                      fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      color: "var(--color-text-secondary)",
+                      fontSize: "14px",
+                      fontWeight: 400,
+                    }}
+                  >
                     ({game.metadata.creator})
                   </span>
                 </h4>
@@ -2965,7 +3434,19 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                                   setTargetShipId(shipId);
                                   setSelectedWeaponType("weapon"); // Reset to weapon for assist
                                 }}
-                                className="mt-2 w-full text-blue-400 font-mono text-xs hover:text-blue-300 hover:underline cursor-pointer"
+                                className="mt-2 w-full text-xs uppercase font-semibold tracking-wider cursor-pointer transition-colors duration-150"
+                                style={{
+                                  fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                                  color: "var(--color-cyan)",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = "var(--color-cyan)";
+                                  e.currentTarget.style.textDecoration = "underline";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = "var(--color-cyan)";
+                                  e.currentTarget.style.textDecoration = "none";
+                                }}
                                 title="Click to assist this ship"
                               >
                                 Click to assist this ship
@@ -2981,9 +3462,24 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               </div>
               {/* Opponent's Fleet - Right for creator */}
               <div>
-                <h4 className="text-red-400 font-mono mb-3">
+                <h4
+                  className="mb-3 uppercase font-bold tracking-wider"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    color: "var(--color-warning-red)",
+                    fontSize: "18px",
+                  }}
+                >
                   Opponent&apos;s Fleet
-                  <span className="ml-2 text-gray-400">
+                  <span
+                    className="ml-2"
+                    style={{
+                      fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      color: "var(--color-text-secondary)",
+                      fontSize: "14px",
+                      fontWeight: 400,
+                    }}
+                  >
                     ({game.metadata.joiner})
                   </span>
                 </h4>
@@ -3036,9 +3532,24 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             <>
               {/* Opponent's Fleet - Left for joiner */}
               <div>
-                <h4 className="text-red-400 font-mono mb-3">
+                <h4
+                  className="mb-3 uppercase font-bold tracking-wider"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    color: "var(--color-warning-red)",
+                    fontSize: "18px",
+                  }}
+                >
                   Opponent&apos;s Fleet
-                  <span className="ml-2 text-gray-400">
+                  <span
+                    className="ml-2"
+                    style={{
+                      fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      color: "var(--color-text-secondary)",
+                      fontSize: "14px",
+                      fontWeight: 400,
+                    }}
+                  >
                     ({game.metadata.creator})
                   </span>
                 </h4>
@@ -3088,9 +3599,24 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               </div>
               {/* My Fleet - Right for joiner */}
               <div>
-                <h4 className="text-blue-400 font-mono mb-3">
+                <h4
+                  className="mb-3 uppercase font-bold tracking-wider"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    color: "var(--color-cyan)",
+                    fontSize: "18px",
+                  }}
+                >
                   My Fleet
-                  <span className="ml-2 text-gray-400">
+                  <span
+                    className="ml-2"
+                    style={{
+                      fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      color: "var(--color-text-secondary)",
+                      fontSize: "14px",
+                      fontWeight: 400,
+                    }}
+                  >
                     ({game.metadata.joiner})
                   </span>
                 </h4>
