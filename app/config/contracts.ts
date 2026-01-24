@@ -37,13 +37,13 @@ export const CONTRACT_ABIS = {
 // Tiers are now 0-based (0-4) instead of 1-based (1-5)
 export const SHIP_PURCHASE_TIERS = {
   tiers: [0, 1, 2, 3, 4],
-  shipsPerTier: [5, 11, 28, 60, 125],
+  shipsPerTier: [5, 11, 22, 40, 60],
   prices: [
     BigInt("4990000000000000000"), // 4.99 FLOW - Tier 0
     BigInt("9990000000000000000"), // 9.99 FLOW - Tier 1
-    BigInt("24990000000000000000"), // 24.99 FLOW - Tier 2
-    BigInt("49990000000000000000"), // 49.99 FLOW - Tier 3
-    BigInt("99990000000000000000"), // 99.99 FLOW - Tier 4
+    BigInt("19990000000000000000"), // 19.99 FLOW - Tier 2
+    BigInt("34990000000000000000"), // 34.99 FLOW - Tier 3
+    BigInt("49990000000000000000"), // 49.99 FLOW - Tier 4
   ],
 } as const;
 

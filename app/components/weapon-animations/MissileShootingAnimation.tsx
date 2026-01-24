@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 
 interface MissileShootingAnimationProps {
-  gridContainerRef: React.RefObject<HTMLDivElement>;
+  gridContainerRef: React.RefObject<HTMLDivElement | null>;
   attackerRow: number;
   attackerCol: number;
   targetRow: number;
@@ -45,8 +45,8 @@ export function MissileShootingAnimation({
       if (!gridContainerRef.current) return { x: 0, y: 0 };
 
       const gridRect = gridContainerRef.current.getBoundingClientRect();
-      const cellWidth = gridRect.width / 25;
-      const cellHeight = gridRect.height / 13;
+      const cellWidth = gridRect.width / 17;
+      const cellHeight = gridRect.height / 11;
 
       const x = col * cellWidth + cellWidth / 2;
       const y = row * cellHeight + cellHeight / 2;

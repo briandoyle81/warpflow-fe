@@ -13,7 +13,7 @@ import { useLobbies } from "../hooks/useLobbies";
 import { useOwnedShips } from "../hooks/useOwnedShips";
 import { useFleetsRead } from "../hooks/useFleetsContract";
 import { useShipsRead } from "../hooks/useShipsContract";
-import { LobbyStatus, Ship, Attributes } from "../types/types";
+import { LobbyStatus, Ship, Attributes, GRID_DIMENSIONS } from "../types/types";
 import { toast } from "react-hot-toast";
 import { cacheShipsData } from "../hooks/useShipDataCache";
 import { ShipImage } from "./ShipImage";
@@ -393,10 +393,10 @@ const Lobbies: React.FC = () => {
     existingPositions: Array<{ row: number; col: number }>
   ) => {
     if (isCreator) {
-      // Creator ships start in upper left (rows 0-12, cols 0-4)
-      // Find the next available position in order: (0,0), (1,0), (2,0), ..., (12,0), (0,1), (1,1), etc.
-      for (let col = 0; col < 5; col++) {
-        for (let row = 0; row < 13; row++) {
+      // Creator ships start in upper left (rows 0-10, cols 0-3)
+      // Find the next available position in order: (0,0), (1,0), (2,0), ..., (10,0), (0,1), (1,1), etc.
+      for (let col = 0; col < 4; col++) {
+        for (let row = 0; row < 11; row++) {
           if (
             !existingPositions.some((pos) => pos.row === row && pos.col === col)
           ) {
@@ -405,10 +405,10 @@ const Lobbies: React.FC = () => {
         }
       }
     } else {
-      // Joiner ships start in lower right (rows 0-12, cols 20-24)
-      // Find the next available position in order: (12,24), (11,24), (10,24), ..., (0,24), (12,23), etc.
-      for (let col = 24; col >= 20; col--) {
-        for (let row = 12; row >= 0; row--) {
+      // Joiner ships start in lower right (rows 0-10, cols 13-16)
+      // Find the next available position in order: (10,16), (9,16), (8,16), ..., (0,16), (10,15), etc.
+      for (let col = 16; col >= 13; col--) {
+        for (let row = 10; row >= 0; row--) {
           if (
             !existingPositions.some((pos) => pos.row === row && pos.col === col)
           ) {
@@ -473,8 +473,8 @@ const Lobbies: React.FC = () => {
 
       // Check if position is valid for this player
       const isValidPosition = isCreator
-        ? (row >= 0 && row < 13 && col >= 0 && col < 25)
-        : (row >= 0 && row < 13 && col >= 0 && col < 25);
+        ? (row >= 0 && row < GRID_DIMENSIONS.HEIGHT && col >= 0 && col < GRID_DIMENSIONS.WIDTH)
+        : (row >= 0 && row < GRID_DIMENSIONS.HEIGHT && col >= 0 && col < GRID_DIMENSIONS.WIDTH);
 
       if (!isValidPosition) return;
 

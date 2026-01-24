@@ -173,8 +173,8 @@ export function MapEditor({
   const getRadialSymmetryPositions = useCallback((row: number, col: number) => {
     // For even dimensions, center is between tiles
     // Center line is between (HEIGHT/2 - 1) and (HEIGHT/2)
-    const centerRow = (GRID_DIMENSIONS.HEIGHT - 1) / 2; // 6 for 13 rows
-    const centerCol = (GRID_DIMENSIONS.WIDTH - 1) / 2; // 12 for 25 cols
+    const centerRow = (GRID_DIMENSIONS.HEIGHT - 1) / 2; // 5 for 11 rows
+    const centerCol = (GRID_DIMENSIONS.WIDTH - 1) / 2; // 8 for 17 cols
 
     // Calculate relative position from center
     const relRow = row - centerRow;
@@ -850,7 +850,7 @@ export function MapEditor({
       <div className="bg-gray-900 rounded-lg w-full relative flex justify-center p-1">
         <div
           key={`grid-${editorState.blockedTiles.length}-${editorState.scoringTiles.length}`}
-          className="grid relative gap-0 grid-cols-[repeat(25,1fr)] grid-rows-[repeat(13,1fr)] w-full"
+          className="grid relative gap-0 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full"
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
@@ -900,11 +900,21 @@ export function MapEditor({
         {/* Grid reference lines overlay */}
         <div className="absolute pointer-events-none inset-0">
           {/* Vertical reference lines */}
-          {/* Center column edges (left and right of column 12) */}
+          {/* Center column edges (left and right of column 8) */}
           <div
             className="absolute bg-blue-400"
             style={{
-              left: `${(12 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+              left: `${(8 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+              top: 0,
+              width: "2px",
+              height: "100%",
+              transform: "translateX(-50%)",
+            }}
+          />
+          <div
+            className="absolute bg-blue-400"
+            style={{
+              left: `${(9 / GRID_DIMENSIONS.WIDTH) * 100}%`,
               top: 0,
               width: "2px",
               height: "100%",
@@ -922,11 +932,11 @@ export function MapEditor({
             }}
           />
 
-          {/* Red emphasis lines */}
+          {/* Red emphasis lines - Creator/Joiner boundaries */}
           <div
             className="absolute bg-red-400"
             style={{
-              left: `${(5 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+              left: `${(4 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Right boundary of creator zone (after column 3, before column 4)
               top: 0,
               width: "2px",
               height: "100%",
@@ -936,7 +946,7 @@ export function MapEditor({
           <div
             className="absolute bg-red-400"
             style={{
-              left: `${(20 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+              left: `${(13 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Start of joiner zone (columns 13-16)
               top: 0,
               width: "2px",
               height: "100%",
@@ -944,8 +954,8 @@ export function MapEditor({
             }}
           />
 
-          {/* Every 5 columns from center */}
-          {[7, 2, 18, 23].map((col) => (
+          {/* Reference columns */}
+          {[3, 5, 11, 14].map((col) => (
             <div
               key={`v-${col}`}
               className="absolute bg-blue-200"
@@ -961,7 +971,17 @@ export function MapEditor({
           ))}
 
           {/* Horizontal reference lines */}
-          {/* Center row edges (top and bottom of row 6) */}
+          {/* Center row edges (top and bottom of row 5) */}
+          <div
+            className="absolute bg-blue-400"
+            style={{
+              left: 0,
+              top: `${(5 / GRID_DIMENSIONS.HEIGHT) * 100}%`,
+              width: "100%",
+              height: "2px",
+              transform: "translateY(-50%)",
+            }}
+          />
           <div
             className="absolute bg-blue-400"
             style={{
@@ -972,19 +992,9 @@ export function MapEditor({
               transform: "translateY(-50%)",
             }}
           />
-          <div
-            className="absolute bg-blue-400"
-            style={{
-              left: 0,
-              top: `${(7 / GRID_DIMENSIONS.HEIGHT) * 100}%`,
-              width: "100%",
-              height: "2px",
-              transform: "translateY(-50%)",
-            }}
-          />
 
-          {/* Every 5 rows from center */}
-          {[1, 12].map((row) => (
+          {/* Reference rows */}
+          {[1, 9].map((row) => (
             <div
               key={`h-${row}`}
               className="absolute bg-blue-200"

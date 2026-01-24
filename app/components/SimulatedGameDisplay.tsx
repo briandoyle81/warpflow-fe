@@ -14,8 +14,8 @@ interface SimulatedGameDisplayProps {
   tutorialContext: TutorialContextValue;
 }
 
-const GRID_WIDTH = 25;
-const GRID_HEIGHT = 13;
+const GRID_WIDTH = 17;
+const GRID_HEIGHT = 11;
 
 export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayProps) {
   const { gameState, currentStep, currentStepIndex, validateAction, executeAction } = tutorialContext;

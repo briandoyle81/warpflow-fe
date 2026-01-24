@@ -5,15 +5,15 @@ import { GRID_DIMENSIONS } from "../types/types";
 
 // Initial ship positions for tutorial
 const INITIAL_SHIP_POSITIONS: ShipPosition[] = [
-  // Player ships (left side, columns 0-4)
-  { shipId: 1001n, position: { row: 6, col: 7 }, isCreator: true },
-  { shipId: 1002n, position: { row: 5, col: 6 }, isCreator: true },
-  { shipId: 1003n, position: { row: 7, col: 6 }, isCreator: true },
+  // Player ships (left side, columns 0-3)
+  { shipId: 1001n, position: { row: 5, col: 2 }, isCreator: true },
+  { shipId: 1002n, position: { row: 4, col: 1 }, isCreator: true },
+  { shipId: 1003n, position: { row: 6, col: 1 }, isCreator: true },
 
-  // Opponent ships (right side, columns 20-24)
-  { shipId: 2001n, position: { row: 6, col: 17 }, isCreator: false },
-  { shipId: 2002n, position: { row: 5, col: 18 }, isCreator: false }, // Will be disabled
-  { shipId: 2003n, position: { row: 6, col: 14 }, isCreator: false },
+  // Opponent ships (right side, columns 13-16)
+  { shipId: 2001n, position: { row: 5, col: 15 }, isCreator: false },
+  { shipId: 2002n, position: { row: 4, col: 14 }, isCreator: false }, // Will be disabled
+  { shipId: 2003n, position: { row: 5, col: 13 }, isCreator: false },
 ];
 
 // Create initial attributes for all ships

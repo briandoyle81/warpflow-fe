@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 
 interface LaserShootingAnimationProps {
-  gridContainerRef: React.RefObject<HTMLDivElement>;
+  gridContainerRef: React.RefObject<HTMLDivElement | null>;
   attackerRow: number;
   attackerCol: number;
   targetRow: number;
@@ -28,8 +28,8 @@ export function LaserShootingAnimation({
       if (!gridContainerRef.current) return { x: 0, y: 0 };
 
       const gridRect = gridContainerRef.current.getBoundingClientRect();
-      const cellWidth = gridRect.width / 25;
-      const cellHeight = gridRect.height / 13;
+      const cellWidth = gridRect.width / 17;
+      const cellHeight = gridRect.height / 11;
 
       // Calculate position relative to grid container (not screen)
       const x = col * cellWidth + cellWidth / 2;

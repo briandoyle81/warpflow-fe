@@ -434,8 +434,8 @@ export interface MapEditorState {
 }
 
 export const GRID_DIMENSIONS = {
-  WIDTH: 25,
-  HEIGHT: 13,
+  WIDTH: 17,
+  HEIGHT: 11,
 } as const;
 
 // Game contract types

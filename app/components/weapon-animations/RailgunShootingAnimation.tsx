@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 
 interface RailgunShootingAnimationProps {
-  gridContainerRef: React.RefObject<HTMLDivElement>;
+  gridContainerRef: React.RefObject<HTMLDivElement | null>;
   attackerRow: number;
   attackerCol: number;
   targetRow: number;
@@ -33,7 +33,7 @@ export function RailgunShootingAnimation({
   >([]);
   const projectileIdRef = useRef(0);
   const animationFrameRef = useRef<number | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasFiredRef = useRef<string>("");
 
   // Calculate cell centers
   const getCellCenter = useCallback(
@@ -41,8 +41,8 @@ export function RailgunShootingAnimation({
       if (!gridContainerRef.current) return { x: 0, y: 0 };
 
       const gridRect = gridContainerRef.current.getBoundingClientRect();
-      const cellWidth = gridRect.width / 25;
-      const cellHeight = gridRect.height / 13;
+      const cellWidth = gridRect.width / 17;
+      const cellHeight = gridRect.height / 11;
 
       const x = col * cellWidth + cellWidth / 2;
       const y = row * cellHeight + cellHeight / 2;
@@ -61,8 +61,8 @@ export function RailgunShootingAnimation({
 
     // Select a random target spot within target cell
     const gridRect = gridContainerRef.current.getBoundingClientRect();
-    const cellWidth = gridRect.width / 25;
-    const cellHeight = gridRect.height / 13;
+    const cellWidth = gridRect.width / 17;
+    const cellHeight = gridRect.height / 11;
     const targetX = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.5;
     const targetY = targetCenter.y + (Math.random() - 0.5) * cellHeight * 0.5;
 
@@ -90,7 +90,11 @@ export function RailgunShootingAnimation({
       travelTime,
     };
 
-    setProjectiles((prev) => [...prev, newProjectile]);
+    setProjectiles((prev) => {
+      // Only add if there are no existing projectiles (single shot)
+      if (prev.length > 0) return prev;
+      return [newProjectile];
+    });
 
     // Remove projectile after it reaches target
     setTimeout(() => {
@@ -105,21 +109,19 @@ export function RailgunShootingAnimation({
     getCellCenter,
   ]);
 
-  // Handle projectile despawn and respawn
+  // Handle projectile despawn and respawn (endless cycling with single projectile)
   useEffect(() => {
     if (projectiles.length === 0) {
-      // All projectiles despawned, wait before spawning next one (slow rate of fire)
-      timeoutRef.current = setTimeout(() => {
+      // All projectiles despawned, wait before spawning next one
+      const timeoutId = setTimeout(() => {
         spawnProjectile();
-      }, 2000); // 2 seconds between shots (slower than missiles which are 1 second)
-    }
+      }, 2000); // 2 seconds between shots
 
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [projectiles, spawnProjectile]);
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [projectiles.length, spawnProjectile]);
 
   // Animate projectiles
   useEffect(() => {
@@ -127,10 +129,8 @@ export function RailgunShootingAnimation({
     if (!gridContainerRef.current) return;
 
     const gridRect = gridContainerRef.current.getBoundingClientRect();
-    const cellWidth = gridRect.width / 25;
-    const cellHeight = gridRect.height / 13;
-    const avgCellSize = (cellWidth + cellHeight) / 2;
-    const SPEED = avgCellSize * 8; // Constant speed
+    const cellWidth = gridRect.width / 17;
+    const cellHeight = gridRect.height / 11;
 
     const animate = () => {
       const now = Date.now();
@@ -184,16 +184,21 @@ export function RailgunShootingAnimation({
     };
   }, [projectiles, gridContainerRef]);
 
-  // Start first projectile
+  // Reset and start cycling when attack parameters change
   useEffect(() => {
-    spawnProjectile();
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [spawnProjectile]);
+    // Create a unique key for this attack
+    const attackKey = `${attackerRow}-${attackerCol}-${targetRow}-${targetCol}`;
+    
+    // If attack parameters changed, reset and start new cycle
+    if (hasFiredRef.current !== attackKey) {
+      hasFiredRef.current = attackKey;
+      // Clear any existing projectiles
+      setProjectiles([]);
+      // Start the first projectile of the new cycle
+      spawnProjectile();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attackerRow, attackerCol, targetRow, targetCol]);
 
   if (!gridContainerRef.current || projectiles.length === 0) return null;
 

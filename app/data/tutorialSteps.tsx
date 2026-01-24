@@ -20,7 +20,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
           <li><span className="text-blue-400">Blue tiles</span> = Scoring positions (once only)</li>
           <li><span className="text-gray-300">Gray tiles</span> = Empty space</li>
         </ul>
-        <p className="text-sm">Your ships are on the left (columns 0-4), enemy ships are on the right (columns 20-24).</p>
+        <p className="text-sm">Your ships are on the left (columns 0-3), enemy ships are on the right (columns 13-16).</p>
       </div>
     ),
     allowedActions: {},

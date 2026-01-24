@@ -287,9 +287,9 @@ When purchasing ships by tier, the first N ships receive preset ranks based on t
 
 - **Tier 0** (index 0): 5 ships total → 1 Rank 1 ship, 4 random
 - **Tier 1** (index 1): 11 ships total → 1 Rank 2 ship, 1 Rank 1 ship, 9 random
-- **Tier 2** (index 2): 28 ships total → 1 Rank 3 ship, 1 Rank 2 ship, 1 Rank 1 ship, 25 random
-- **Tier 3** (index 3): 60 ships total → 1 Rank 4 ship, 1 Rank 3 ship, 1 Rank 2 ship, 1 Rank 1 ship, 56 random
-- **Tier 4** (index 4): 125 ships total → 1 Rank 5 ship, 1 Rank 4 ship, 1 Rank 3 ship, 1 Rank 2 ship, 1 Rank 1 ship, 120 random
+- **Tier 2** (index 2): 22 ships total → 1 Rank 3 ship, 1 Rank 2 ship, 1 Rank 1 ship, 19 random
+- **Tier 3** (index 3): 40 ships total → 1 Rank 4 ship, 1 Rank 3 ship, 1 Rank 2 ship, 1 Rank 1 ship, 36 random
+- **Tier 4** (index 4): 60 ships total → 1 Rank 5 ship, 1 Rank 4 ship, 1 Rank 3 ship, 1 Rank 2 ship, 1 Rank 1 ship, 55 random
 
 **Rank Thresholds:**
 
@@ -412,7 +412,7 @@ The following functions were changed from `public` to `external` (no impact on f
 
 - First N ships (N = tier + 1) get preset ranks
 - Remaining ships are random
-- Example: Tier 4 (index 4) purchase gives 125 ships total:
+- Example: Tier 4 (index 4) purchase gives 60 ships total:
   1. Rank 5 (300 kills)
   2. Rank 4 (100 kills)
   3. Rank 3 (30 kills)
@@ -572,9 +572,9 @@ await shipPurchaser.write.purchaseUTCWithFlow([to, 1], {
 
 - Old Tier 1 → New Tier 0 (index 0): 5 ships, 4.99 FLOW/UTC
 - Old Tier 2 → New Tier 1 (index 1): 11 ships, 9.99 FLOW/UTC
-- Old Tier 3 → New Tier 2 (index 2): 28 ships, 24.99 FLOW/UTC
-- Old Tier 4 → New Tier 3 (index 3): 60 ships, 49.99 FLOW/UTC
-- Old Tier 5 → New Tier 4 (index 4): 125 ships, 99.99 FLOW/UTC
+- Old Tier 3 → New Tier 2 (index 2): 22 ships, 19.99 FLOW/UTC
+- Old Tier 4 → New Tier 3 (index 3): 40 ships, 34.99 FLOW/UTC
+- Old Tier 5 → New Tier 4 (index 4): 60 ships, 49.99 FLOW/UTC
 
 **Frontend Updates Required:**
 

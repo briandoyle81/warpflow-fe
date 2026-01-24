@@ -190,10 +190,10 @@ export function MapDisplay({
       return false;
     }
 
-    // Creator may place in left 5 columns; joiner in right 5 columns
+    // Creator may place in left 4 columns (0-3); joiner in right 4 columns (13-16)
     return isCreatorViewer
-      ? col >= 0 && col <= 4
-      : col >= GRID_DIMENSIONS.WIDTH - 5 && col < GRID_DIMENSIONS.WIDTH;
+      ? col >= 0 && col <= 3
+      : col >= 13 && col <= 16;
   };
 
   // Handle cell click
@@ -351,31 +351,31 @@ export function MapDisplay({
       >
         <div
           key={`map-display-${mapId}-${mapState.blockedTiles.length}-${mapState.scoringTiles.length}`}
-          className="grid relative gap-0 grid-cols-[repeat(25,1fr)] grid-rows-[repeat(13,1fr)] w-full h-full"
+          className="grid relative gap-0 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full h-full"
         >
           {/* Player-specific overlay - render first so it's behind everything */}
           {showPlayerOverlay && (
             <div className="absolute pointer-events-none inset-0">
               {isCreator ? (
-                /* Creator overlay - left 5 columns */
+                /* Creator overlay - left 4 columns (0-3) */
                 <div
                   className="absolute bg-blue-400"
                   style={{
                     left: 0,
                     top: 0,
-                    width: `${(5 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+                    width: `${(4 / GRID_DIMENSIONS.WIDTH) * 100}%`,
                     height: "100%",
                     opacity: 0.1,
                   }}
                 />
               ) : (
-                /* Joiner overlay - right 5 columns */
+                /* Joiner overlay - right 4 columns (13-16) */
                 <div
                   className="absolute bg-blue-400"
                   style={{
                     right: 0,
                     top: 0,
-                    width: `${(5 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+                    width: `${(4 / GRID_DIMENSIONS.WIDTH) * 100}%`,
                     height: "100%",
                     opacity: 0.1,
                   }}
@@ -465,11 +465,11 @@ export function MapDisplay({
           {/* Grid reference lines overlay */}
           <div className="absolute pointer-events-none inset-0 z-10">
             {/* Vertical reference lines */}
-            {/* Center column edges (left and right of column 12) */}
+            {/* Reference lines for grid zones */}
             <div
               className="absolute bg-blue-400"
               style={{
-                left: `${(12 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+                left: `${(4 / GRID_DIMENSIONS.WIDTH) * 100}%`, // End of creator zone (after column 3)
                 top: 0,
                 width: "2px",
                 height: "100%",
@@ -479,7 +479,27 @@ export function MapDisplay({
             <div
               className="absolute bg-blue-400"
               style={{
-                left: `${(13 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+                left: `${(8 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Left edge of center column
+                top: 0,
+                width: "2px",
+                height: "100%",
+                transform: "translateX(-50%)",
+              }}
+            />
+            <div
+              className="absolute bg-blue-400"
+              style={{
+                left: `${(9 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Right edge of center column
+                top: 0,
+                width: "2px",
+                height: "100%",
+                transform: "translateX(-50%)",
+              }}
+            />
+            <div
+              className="absolute bg-blue-400"
+              style={{
+                left: `${(13 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Start of joiner zone (columns 13-16)
                 top: 0,
                 width: "2px",
                 height: "100%",
@@ -487,11 +507,11 @@ export function MapDisplay({
               }}
             />
 
-            {/* Red emphasis lines */}
+            {/* Red emphasis lines - Creator/Joiner boundaries */}
             <div
               className="absolute bg-red-400"
               style={{
-                left: `${(5 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+                left: `${(4 / GRID_DIMENSIONS.WIDTH) * 100}%`, // End of creator zone (after column 3)
                 top: 0,
                 width: "2px",
                 height: "100%",
@@ -501,7 +521,7 @@ export function MapDisplay({
             <div
               className="absolute bg-red-400"
               style={{
-                left: `${(20 / GRID_DIMENSIONS.WIDTH) * 100}%`,
+                left: `${(13 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Start of joiner zone (columns 13-16)
                 top: 0,
                 width: "2px",
                 height: "100%",
@@ -509,8 +529,8 @@ export function MapDisplay({
               }}
             />
 
-            {/* Every 5 columns from center */}
-            {[7, 2, 18, 23].map((col) => (
+            {/* Reference columns */}
+            {[2, 5, 11, 14].map((col) => (
               <div
                 key={`v-${col}`}
                 className="absolute bg-blue-200"
@@ -526,7 +546,17 @@ export function MapDisplay({
             ))}
 
             {/* Horizontal reference lines */}
-            {/* Center row edges (top and bottom of row 6) */}
+            {/* Center row edges (top and bottom of row 5) */}
+            <div
+              className="absolute bg-blue-400"
+              style={{
+                left: 0,
+                top: `${(5 / GRID_DIMENSIONS.HEIGHT) * 100}%`,
+                width: "100%",
+                height: "2px",
+                transform: "translateY(-50%)",
+              }}
+            />
             <div
               className="absolute bg-blue-400"
               style={{
@@ -537,19 +567,9 @@ export function MapDisplay({
                 transform: "translateY(-50%)",
               }}
             />
-            <div
-              className="absolute bg-blue-400"
-              style={{
-                left: 0,
-                top: `${(7 / GRID_DIMENSIONS.HEIGHT) * 100}%`,
-                width: "100%",
-                height: "2px",
-                transform: "translateY(-50%)",
-              }}
-            />
 
-            {/* Every 5 rows from center */}
-            {[1, 12].map((row) => (
+            {/* Reference rows */}
+            {[1, 9].map((row) => (
               <div
                 key={`h-${row}`}
                 className="absolute bg-blue-200"

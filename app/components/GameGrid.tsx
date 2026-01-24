@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef } from "react";
 import Image from "next/image";
 import { ShipPosition, Attributes, Ship } from "../types/types";
 import { ShipImage } from "./ShipImage";
@@ -140,7 +140,7 @@ export function GameGrid({
         <div
           ref={gridContainerRef}
           key="game-grid"
-          className="relative grid gap-0 border border-gray-900 grid-cols-[repeat(25,1fr)] grid-rows-[repeat(13,1fr)] w-full"
+          className="relative grid gap-0 border border-gray-900 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full"
         >
           {grid.map((row, rowIndex) =>
             row.map((cell, colIndex) => {
@@ -1299,8 +1299,8 @@ export function GameGrid({
               if (targetsToShow.length === 0) return null;
 
               const gridRect = gridContainerRef.current.getBoundingClientRect();
-              const cellWidth = gridRect.width / 25;
-              const cellHeight = gridRect.height / 13;
+              const cellWidth = gridRect.width / 17;
+              const cellHeight = gridRect.height / 11;
 
               return (
                 <div
@@ -1398,8 +1398,8 @@ export function GameGrid({
 
           if (gridContainerRef.current) {
             const gridRect = gridContainerRef.current.getBoundingClientRect();
-            const cellWidth = gridRect.width / 25; // 25 columns
-            const cellHeight = gridRect.height / 13; // 13 rows
+            const cellWidth = gridRect.width / 17; // 17 columns
+            const cellHeight = gridRect.height / 11; // 11 rows
 
             shipCellLeft = gridRect.left + hoveredCell.col * cellWidth;
             shipCellTop = gridRect.top + hoveredCell.row * cellHeight;
