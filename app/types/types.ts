@@ -299,6 +299,7 @@ export function tupleToLobby(tuple: LobbyTuple): Lobby {
     },
     players: {
       joiner: tuple[2],
+      reservedJoiner: "0x0000000000000000000000000000000000000000" as Address, // Default to zero address if not in tuple
       creatorFleetId: tuple[7],
       joinerFleetId: tuple[8],
       joinedAt: tuple[11],

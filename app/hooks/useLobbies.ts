@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
+import type { Address } from "viem";
 import {
   useLobbiesWrite,
   useLobbyCount,

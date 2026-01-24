@@ -130,6 +130,9 @@ export function LobbyCreateButton({
     return total;
   }, [isReserved, value]);
 
+  // Type-safe UTC balance
+  const utcBalanceBigInt = React.useMemo(() => utcBalance as bigint | undefined, [utcBalance]);
+
   // Check if UTC is approved
   React.useEffect(() => {
     if (totalUtcRequired > 0n && utcAllowance !== undefined) {
@@ -152,7 +155,7 @@ export function LobbyCreateButton({
     if (!address || totalUtcRequired === 0n) return;
 
     // Check balance
-    if (!utcBalance || utcBalance < totalUtcRequired) {
+    if (!utcBalanceBigInt || utcBalanceBigInt < totalUtcRequired) {
       toast.error(
         `Insufficient UTC balance. Need ${formatEther(totalUtcRequired)} UTC.`
       );
@@ -172,7 +175,7 @@ export function LobbyCreateButton({
       console.error("Failed to approve UTC:", err);
       toast.error("Failed to approve UTC transfer");
     }
-  }, [address, totalUtcRequired, utcBalance, writeUTC]);
+  }, [address, totalUtcRequired, utcBalanceBigInt, writeUTC]);
 
   const validateBeforeTransaction = React.useCallback(() => {
     if (!address) {
@@ -195,7 +198,8 @@ export function LobbyCreateButton({
     }
     // Check UTC requirements (for reserved lobbies and/or additional lobby fees)
     if (totalUtcRequired > 0n) {
-      if (!utcBalance || utcBalance < totalUtcRequired) {
+      const balance = utcBalance as bigint | undefined;
+      if (!balance || balance < totalUtcRequired) {
         return `Insufficient UTC balance. Need ${formatEther(
           totalUtcRequired
         )} UTC.`;
@@ -216,7 +220,7 @@ export function LobbyCreateButton({
     isReserved,
     reservedJoiner,
     totalUtcRequired,
-    utcBalance,
+    utcBalanceBigInt,
     utcApproved,
   ]);
 
@@ -255,9 +259,9 @@ export function LobbyCreateButton({
         </div>
         <button
           onClick={handleApproveUTC}
-          disabled={!utcBalance || utcBalance < totalUtcRequired}
+          disabled={!utcBalanceBigInt || utcBalanceBigInt < totalUtcRequired}
           className={`${className} ${
-            !utcBalance || utcBalance < totalUtcRequired
+            !utcBalanceBigInt || utcBalanceBigInt < totalUtcRequired
               ? "opacity-50 cursor-not-allowed"
               : ""
           }`}
