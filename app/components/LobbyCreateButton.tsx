@@ -260,11 +260,14 @@ export function LobbyCreateButton({
         <button
           onClick={handleApproveUTC}
           disabled={!utcBalanceBigInt || utcBalanceBigInt < totalUtcRequired}
-          className={`${className} ${
+          className={`${className.replace(/\brounded(-\w+)?\b/g, "").replace(/\s+/g, " ").trim()} ${
             !utcBalanceBigInt || utcBalanceBigInt < totalUtcRequired
               ? "opacity-50 cursor-not-allowed"
               : ""
           }`}
+          style={{
+            borderRadius: 0, // Square corners for industrial theme
+          }}
         >
           {`[APPROVE ${formatEther(totalUtcRequired)} UTC]`}
         </button>

@@ -1257,7 +1257,12 @@ const Lobbies: React.FC = () => {
 
       {/* Player Status */}
       {playerState && (
-        <div className="mb-6 p-4 border border-cyan-400 bg-black/40 rounded-lg">
+        <div
+          className="mb-6 p-4 border border-cyan-400 bg-black/40"
+          style={{
+            borderRadius: 0, // Square corners for industrial theme
+          }}
+        >
           <h4 className="text-lg font-bold text-cyan-400 mb-2">
             PLAYER STATUS
           </h4>
@@ -1297,7 +1302,10 @@ const Lobbies: React.FC = () => {
         <button
           onClick={() => setShowCreateForm(true)}
           disabled={!canCreateLobby || !!paused}
-          className="w-full px-6 py-3 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full px-6 py-3 border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            borderRadius: 0, // Square corners for industrial theme
+          }}
         >
           {paused ? "LOBBIES PAUSED" : "CREATE LOBBY"}
         </button>
@@ -1314,7 +1322,12 @@ const Lobbies: React.FC = () => {
 
       {/* Create Lobby Form */}
       {showCreateForm && (
-        <div className="mb-6 p-4 border border-purple-400 bg-black/40 rounded-lg">
+        <div
+          className="mb-6 p-4 border border-purple-400 bg-black/40"
+          style={{
+            borderRadius: 0, // Square corners for industrial theme
+          }}
+        >
           <h4 className="text-lg font-bold text-purple-400 mb-4">
             CREATE LOBBY
           </h4>
@@ -1492,7 +1505,10 @@ const Lobbies: React.FC = () => {
               </LobbyCreateButton>
               <button
                 onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 border border-red-400 text-red-400 rounded hover:bg-red-400/20"
+                className="px-4 py-2 border border-red-400 text-red-400 hover:bg-red-400/20"
+                style={{
+                  borderRadius: 0, // Square corners for industrial theme
+                }}
               >
                 CANCEL
               </button>
@@ -1507,7 +1523,10 @@ const Lobbies: React.FC = () => {
           <h4 className="text-lg font-bold text-cyan-400">AVAILABLE LOBBIES</h4>
           <button
             onClick={() => loadLobbies()}
-            className="px-3 py-1 text-xs border border-cyan-400 text-cyan-400 rounded hover:bg-cyan-400/10"
+            className="px-3 py-1 text-xs border border-cyan-400 text-cyan-400 hover:bg-cyan-400/10"
+            style={{
+              borderRadius: 0, // Square corners for industrial theme
+            }}
           >
             REFRESH
           </button>
@@ -1531,12 +1550,15 @@ const Lobbies: React.FC = () => {
           lobbyList.lobbies.map((lobby) => (
             <div
               key={lobby.basic.id.toString()}
-              className={`border rounded-lg p-4 ${
+              className={`border p-4 ${
                 address &&
                 lobby.basic.creator.toLowerCase() === address.toLowerCase()
                   ? "border-yellow-400 bg-yellow-400/10"
                   : "border-cyan-400 bg-black/40"
               }`}
+              style={{
+                borderRadius: 0, // Square corners for industrial theme
+              }}
             >
               <div className="flex justify-between items-start mb-2">
                 <div>

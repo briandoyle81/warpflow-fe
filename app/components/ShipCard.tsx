@@ -405,8 +405,12 @@ const ShipCard: React.FC<ShipCardProps> = ({
               className="w-4 h-4 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 accentColor: "var(--color-cyan)",
-                borderColor: "var(--color-cyan)",
-                backgroundColor: "var(--color-near-black)",
+                borderColor: isSelected ? "var(--color-cyan)" : "var(--color-cyan)",
+                backgroundColor: isSelected
+                  ? "var(--color-cyan)"
+                  : "var(--color-near-black)",
+                borderTopColor: isSelected ? "var(--color-cyan)" : "var(--color-cyan)",
+                borderLeftColor: isSelected ? "var(--color-cyan)" : "var(--color-cyan)",
                 borderRadius: 0, // Square checkbox
                 appearance: "none",
                 WebkitAppearance: "none",
@@ -414,6 +418,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                 width: "16px",
                 height: "16px",
                 border: "2px solid",
+                position: "relative",
               }}
             />
           )}

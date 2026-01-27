@@ -204,6 +204,7 @@ const Header: React.FC = () => {
                                     borderColor: "var(--color-cyan)",
                                     color: "var(--color-cyan)",
                                     backgroundColor: "var(--color-steel)",
+                                    borderRadius: 0, // Square corners for industrial theme
                                   }}
                                 >
                                   [LOG IN]
@@ -222,6 +223,7 @@ const Header: React.FC = () => {
                                     borderColor: "var(--color-warning-red)",
                                     color: "var(--color-warning-red)",
                                     backgroundColor: "var(--color-steel)",
+                                    borderRadius: 0, // Square corners for industrial theme
                                   }}
                                 >
                                   [WRONG NETWORK]
@@ -342,6 +344,7 @@ const Header: React.FC = () => {
                         borderColor: "var(--color-warning-red)",
                         color: "var(--color-warning-red)",
                         backgroundColor: "var(--color-steel)",
+                        borderRadius: 0, // Square corners for industrial theme
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.backgroundColor = "var(--color-slate)";

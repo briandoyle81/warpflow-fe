@@ -56,7 +56,8 @@ interface GameGridProps {
   calculateDamage: (
     targetShipId: bigint,
     weaponType?: "weapon" | "special",
-    showReducedDamage?: boolean
+    showReducedDamage?: boolean,
+    shooterShipIdOverride?: bigint
   ) => {
     reducedDamage: number;
     willKill: boolean;
@@ -362,12 +363,8 @@ export function GameGrid({
                         ? "bg-blue-900 ring-2 ring-blue-400"
                         : "bg-purple-900 ring-2 ring-purple-400";
 
-                      // Check for other conditions that might override
-                      if (
-                        hasShipMoved &&
-                        isCurrentPlayerTurn &&
-                        isShipOwnedByCurrentPlayer(cell.shipId)
-                      ) {
+                      // Check for other conditions that might override - gray for any moved ship
+                      if (hasShipMoved) {
                         return "bg-gray-700 opacity-60 cursor-not-allowed";
                       }
                       if (isSelectedTarget) {
@@ -398,12 +395,17 @@ export function GameGrid({
                         : "bg-purple-900 ring-2 ring-purple-400";
                     }
 
-                    // Default styling chain
-                    return hasShipMoved &&
-                      isCurrentPlayerTurn &&
-                      isShipOwnedByCurrentPlayer(cell.shipId)
-                      ? "bg-gray-700 opacity-60 cursor-not-allowed"
-                      : isSelectedTarget
+                    // Default styling chain - gray for any ship that has moved this round (both players see it)
+                    let cursorSuffix = "";
+                    if (cell != null && isCurrentPlayerTurn) {
+                      if (isShipOwnedByCurrentPlayer(cell.shipId)) {
+                        cursorSuffix = " cursor-not-allowed";
+                      }
+                    }
+                    const movedStyle = "bg-gray-700 opacity-60" + cursorSuffix;
+                    return hasShipMoved
+                      ? movedStyle
+                      : isSelectedTarget && cell
                       ? (() => {
                           // Check if this is an assist action
                           const isAssistAction =
@@ -1313,14 +1315,21 @@ export function GameGrid({
                   }}
                 >
                   {targetsToShow.map((target) => {
+                    const isLastMoveTarget =
+                      lastMoveShipId != null &&
+                      targetShipId != null &&
+                      target.shipId === targetShipId;
                     const damage = calculateDamage(
                       target.shipId,
                       selectedWeaponType,
                       selectedWeaponType === "special" && specialType === 3
                         ? true
-                        : undefined
+                        : undefined,
+                      isLastMoveTarget ? lastMoveShipId ?? undefined : undefined
                     );
 
+                    // For last move display, never show (KILL) since we don't know if it actually killed
+                    const showAsKill = damage.willKill && !isLastMoveTarget;
                     let labelText: string;
                     if (selectedWeaponType === "special") {
                       // Flak does damage, other special abilities repair/heal
@@ -1328,7 +1337,7 @@ export function GameGrid({
                         // Flak special - show damage effect
                         if (damage.reactorCritical) {
                           labelText = "⚡ Reactor Critical +1";
-                        } else if (damage.willKill) {
+                        } else if (showAsKill) {
                           labelText = `💀 ${damage.reducedDamage} DMG (KILL)`;
                         } else {
                           labelText = `⚔️ ${damage.reducedDamage} DMG`;
@@ -1339,7 +1348,7 @@ export function GameGrid({
                       }
                     } else if (damage.reactorCritical) {
                       labelText = "⚡ Reactor Critical +1";
-                    } else if (damage.willKill) {
+                    } else if (showAsKill) {
                       labelText = `💀 ${damage.reducedDamage} DMG (KILL)`;
                     } else {
                       labelText = `⚔️ ${damage.reducedDamage} DMG`;

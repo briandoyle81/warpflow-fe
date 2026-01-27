@@ -210,7 +210,7 @@ export function RailgunShootingAnimation({
 
   return (
     <svg
-      className="absolute pointer-events-none z-15"
+      className="absolute pointer-events-none z-20"
       style={{
         left: `0px`,
         top: `0px`,

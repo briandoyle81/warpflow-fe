@@ -15,8 +15,11 @@ const ShipConstructor: React.FC = () => {
   const { ships, isLoading: isLoadingShips } = useOwnedShips();
   const [mode, setMode] = useState<"create" | "customize">("customize");
   const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
   // Store the original ship snapshot when it's first loaded
-  const [originalShipSnapshot, setOriginalShipSnapshot] = useState<Ship | null>(null);
+  const [originalShipSnapshot, setOriginalShipSnapshot] = useState<Ship | null>(
+    null,
+  );
   const isEditingExisting = mode === "customize";
   const controlsDisabled = isEditingExisting && !selectedShipId;
 
@@ -50,7 +53,7 @@ const ShipConstructor: React.FC = () => {
     if (mode === "customize" && selectedShipId && ships) {
       // Only allow constructed ships to be customized
       const ship = ships.find(
-        (s) => s.id === selectedShipId && s.shipData.constructed
+        (s) => s.id === selectedShipId && s.shipData.constructed,
       );
       if (ship) {
         // Store a snapshot of the original ship for comparison
@@ -132,7 +135,9 @@ const ShipConstructor: React.FC = () => {
         inFleet: false,
         timestampDestroyed: BigInt(0),
       },
-      owner: address || ("0x0000000000000000000000000000000000000000" as `0x${string}`),
+      owner:
+        address ||
+        ("0x0000000000000000000000000000000000000000" as `0x${string}`),
     }),
     [
       shipName,
@@ -154,7 +159,7 @@ const ShipConstructor: React.FC = () => {
       shiny,
       constructed,
       address,
-    ]
+    ],
   );
 
   // Render the ship using local renderer
@@ -186,7 +191,9 @@ const ShipConstructor: React.FC = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const shipDataAny = originalShip.shipData as any;
     const isFreeShip =
-      typeof shipDataAny?.isFreeShip === "boolean" ? shipDataAny.isFreeShip : false;
+      typeof shipDataAny?.isFreeShip === "boolean"
+        ? shipDataAny.isFreeShip
+        : false;
 
     return [
       shipName, // name
@@ -252,19 +259,23 @@ const ShipConstructor: React.FC = () => {
   ]);
 
   // Read the on-chain UTC cost to modify this ship via DroneYard
-  const { data: modificationCost, refetch: refetchModificationCost } = useReadContract({
-    address: CONTRACT_ADDRESSES.DRONE_YARD as `0x${string}`,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    abi: CONTRACT_ABIS.DRONE_YARD as any,
-    functionName: "calculateCostToModify",
-    args:
-      mode === "customize" && selectedShipId && buildDroneYardShipStruct
-        ? [selectedShipId, buildDroneYardShipStruct]
-        : undefined,
-    query: {
-      enabled: mode === "customize" && !!selectedShipId && !!buildDroneYardShipStruct,
-    },
-  });
+  const { data: modificationCost, refetch: refetchModificationCost } =
+    useReadContract({
+      address: CONTRACT_ADDRESSES.DRONE_YARD as `0x${string}`,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      abi: CONTRACT_ABIS.DRONE_YARD as any,
+      functionName: "calculateCostToModify",
+      args:
+        mode === "customize" && selectedShipId && buildDroneYardShipStruct
+          ? [selectedShipId, buildDroneYardShipStruct]
+          : undefined,
+      query: {
+        enabled:
+          mode === "customize" &&
+          !!selectedShipId &&
+          !!buildDroneYardShipStruct,
+      },
+    });
 
   // Read UTC allowance and balance for DroneYard
   const { data: utcBalance } = useReadContract({
@@ -303,7 +314,9 @@ const ShipConstructor: React.FC = () => {
 
     // Equipment changes
     if (originalShip.equipment.mainWeapon !== mainWeapon) {
-      list.push(`Main Weapon: ${originalShip.equipment.mainWeapon} → ${mainWeapon}`);
+      list.push(
+        `Main Weapon: ${originalShip.equipment.mainWeapon} → ${mainWeapon}`,
+      );
     }
     if (originalShip.equipment.armor !== armor) {
       list.push(`Armor: ${originalShip.equipment.armor} → ${armor}`);
@@ -347,14 +360,14 @@ const ShipConstructor: React.FC = () => {
     }
     if (originalShip.shipData.shiny !== shiny) {
       list.push(
-        `Shiny: ${originalShip.shipData.shiny ? "Yes" : "No"} → ${shiny ? "Yes" : "No"}`
+        `Shiny: ${originalShip.shipData.shiny ? "Yes" : "No"} → ${shiny ? "Yes" : "No"}`,
       );
     }
     if (originalShip.shipData.constructed !== constructed) {
       list.push(
         `Constructed: ${
           originalShip.shipData.constructed ? "Yes" : "No"
-        } → ${constructed ? "Yes" : "No"}`
+        } → ${constructed ? "Yes" : "No"}`,
       );
     }
 
@@ -383,27 +396,38 @@ const ShipConstructor: React.FC = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto">
-      <div className="bg-gray-900 rounded-lg p-6 border border-cyan-400/30">
+      <div
+        className="bg-gray-900 p-6 border border-cyan-400/30"
+        style={{
+          borderRadius: 0, // Square corners for industrial theme
+        }}
+      >
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <div className="flex gap-2">
               <button
                 onClick={() => setMode("customize")}
-                className={`px-4 py-2 rounded-lg border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
+                className={`px-4 py-2 border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
                   mode === "customize"
                     ? "border-yellow-400 text-yellow-400 bg-yellow-400/10"
                     : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
                 }`}
+                style={{
+                  borderRadius: 0, // Square corners for industrial theme
+                }}
               >
                 CUSTOMIZE
               </button>
               <button
                 onClick={() => setMode("create")}
-                className={`px-4 py-2 rounded-lg border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
+                className={`px-4 py-2 border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
                   mode === "create"
                     ? "border-cyan-400 text-cyan-400 bg-cyan-400/10"
                     : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
                 }`}
+                style={{
+                  borderRadius: 0, // Square corners for industrial theme
+                }}
               >
                 EXPLORE
               </button>
@@ -412,7 +436,12 @@ const ShipConstructor: React.FC = () => {
         </div>
 
         {mode === "customize" && (
-          <div className="mb-6 bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div
+            className="mb-6 bg-gray-800 p-4 border border-gray-700"
+            style={{
+              borderRadius: 0, // Square corners for industrial theme
+            }}
+          >
             <label className="block text-sm font-bold text-cyan-300 mb-2 font-mono">
               SELECT SHIP TO CUSTOMIZE:
             </label>
@@ -423,7 +452,10 @@ const ShipConstructor: React.FC = () => {
                 setSelectedShipId(shipId);
               }}
               disabled={isLoadingShips}
-              className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 rounded text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 font-mono"
+              className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 font-mono"
+              style={{
+                borderRadius: 0, // Square corners for industrial theme
+              }}
             >
               <option value="">-- Select a ship --</option>
               {ships
@@ -438,8 +470,191 @@ const ShipConstructor: React.FC = () => {
         )}
 
         {controlsDisabled && (
-          <div className="mb-3 text-sm text-yellow-300 font-mono">
-            Select a constructed ship to enable controls.
+          <div className="mb-3 text-sm text-yellow-300 font-mono flex items-center gap-2">
+            <span>Select a constructed ship to enable controls.</span>
+            <div className="relative inline-block">
+              <button
+                type="button"
+                onMouseEnter={() => setShowTooltip(true)}
+                onMouseLeave={() => setShowTooltip(false)}
+                className="w-5 h-5 flex items-center justify-center border border-cyan-400 text-cyan-400 hover:bg-cyan-400/10 transition-colors font-bold text-xs"
+                style={{
+                  borderRadius: 0, // Square corners for industrial theme
+                }}
+                aria-label="Ship modification help"
+              >
+                ?
+              </button>
+              {showTooltip && (
+                <div
+                  className="absolute left-0 top-full mt-2 w-[700px] max-w-[90vw] p-4 bg-black border-2 border-cyan-400 text-sm text-cyan-300 font-mono z-50 shadow-lg max-h-[80vh] overflow-y-auto"
+                  style={{
+                    borderRadius: 0, // Square corners for industrial theme
+                  }}
+                  onMouseEnter={() => setShowTooltip(true)}
+                  onMouseLeave={() => setShowTooltip(false)}
+                >
+                  <div className="space-y-2">
+                    <div className="font-bold text-cyan-400 mb-3 text-center">
+                      SHIP MODIFICATION
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Left Column - Cost Information */}
+                      <div className="space-y-2 text-xs pr-4 border-r border-cyan-400/30">
+                        <p className="font-bold text-yellow-400">
+                          EXACT COST CALCULATION:
+                        </p>
+                        <p>
+                          Base cost = Tier 0 price ÷ 5 = 4.99 UTC ÷ 5 ={" "}
+                          <strong className="text-cyan-400">0.998 UTC</strong>
+                        </p>
+                        <p className="mt-1">
+                          Total cost = Base cost × 2
+                          <sup>(total modifications)</sup>
+                        </p>
+
+                        <p className="mt-3 font-bold text-yellow-400">
+                          COST BY MODIFICATION COUNT:
+                        </p>
+                        <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 font-mono text-xs">
+                          <li>
+                            0 modifications:{" "}
+                            <strong className="text-green-400">
+                              0.998 UTC
+                            </strong>{" "}
+                            (base)
+                          </li>
+                          <li>
+                            1 modification:{" "}
+                            <strong className="text-green-400">
+                              1.996 UTC
+                            </strong>{" "}
+                            (×2)
+                          </li>
+                          <li>
+                            2 modifications:{" "}
+                            <strong className="text-yellow-400">
+                              3.992 UTC
+                            </strong>{" "}
+                            (×4)
+                          </li>
+                          <li>
+                            3 modifications:{" "}
+                            <strong className="text-yellow-400">
+                              7.984 UTC
+                            </strong>{" "}
+                            (×8)
+                          </li>
+                          <li>
+                            4 modifications:{" "}
+                            <strong className="text-orange-400">
+                              15.968 UTC
+                            </strong>{" "}
+                            (×16)
+                          </li>
+                          <li>
+                            5 modifications:{" "}
+                            <strong className="text-orange-400">
+                              31.936 UTC
+                            </strong>{" "}
+                            (×32)
+                          </li>
+                          <li>
+                            6 modifications:{" "}
+                            <strong className="text-red-400">63.872 UTC</strong>{" "}
+                            (×64)
+                          </li>
+                          <li>
+                            7+ modifications:{" "}
+                            <strong className="text-red-400">
+                              Exponentially higher
+                            </strong>
+                          </li>
+                        </ul>
+                        <p className="mt-2 text-xs opacity-80">
+                          <strong>Total modifications</strong> = existing
+                          ship&apos;s modification count + new changes
+                        </p>
+
+                        <p className="mt-3 font-bold text-yellow-400">
+                          WHAT COUNTS AS A MODIFICATION:
+                        </p>
+                        <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 text-xs">
+                          <li>
+                            <strong>Equipment changes:</strong> +1 per changed
+                            property (mainWeapon, armor, shields, special)
+                          </li>
+                          <li>
+                            <strong>Trait changes:</strong> Sum of absolute
+                            differences for accuracy, hull, speed (e.g.,
+                            changing accuracy from 0→2 = +2 modifications)
+                          </li>
+                          <li>
+                            <strong>Shiny status change:</strong> +3
+                            modifications (toggling shiny on/off)
+                          </li>
+                        </ul>
+
+                        <p className="mt-3 font-bold text-yellow-400">
+                          PAYMENT PROCESS:
+                        </p>
+                        <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 text-xs">
+                          <li>Approve UTC for the DroneYard contract</li>
+                          <li>Pay the calculated modification cost in UTC</li>
+                        </ul>
+                        <p className="mt-2 text-xs opacity-80">
+                          The exact cost will be displayed once you select a
+                          ship and make changes.
+                        </p>
+                      </div>
+
+                      {/* Right Column - Property Information */}
+                      <div className="space-y-2 text-xs pl-4">
+                        <p className="font-bold text-yellow-400">
+                          PROPERTIES YOU CAN CHANGE:
+                        </p>
+                        <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 text-xs">
+                          <li>
+                            Equipment: Main Weapon, Armor, Shields, Special
+                          </li>
+                          <li>
+                            Traits: Accuracy (0-2), Hull (0-2), Speed (0-2)
+                          </li>
+                          <li>Shiny status (costs 3 modifications)</li>
+                        </ul>
+
+                        <p className="mt-3 font-bold text-red-400">
+                          PROPERTIES YOU CANNOT CHANGE:
+                        </p>
+                        <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 text-xs">
+                          <li>Serial Number (immutable)</li>
+                          <li>Colors (preserved from original ship)</li>
+                          <li>Ship Name (preserved)</li>
+                          <li>
+                            Variant (cannot be changed when editing existing
+                            ship)
+                          </li>
+                        </ul>
+
+                        <p className="mt-3 font-bold text-yellow-400">
+                          RESTRICTIONS:
+                        </p>
+                        <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 text-xs">
+                          <li>Ship must be constructed</li>
+                          <li>Ship must not be in a fleet</li>
+                          <li>Only ship owner can modify</li>
+                          <li>
+                            Armor and Shields cannot both be set (one must be
+                            None)
+                          </li>
+                          <li>Trait values must be 0, 1, or 2</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -451,7 +666,12 @@ const ShipConstructor: React.FC = () => {
             }`}
           >
             {/* Equipment Section */}
-            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <div
+              className="bg-gray-800 p-4 border border-gray-700"
+              style={{
+                borderRadius: 0, // Square corners for industrial theme
+              }}
+            >
               <h3 className="text-lg font-bold text-cyan-300 mb-4 font-mono">
                 EQUIPMENT
               </h3>
@@ -463,7 +683,10 @@ const ShipConstructor: React.FC = () => {
                   <select
                     value={mainWeapon}
                     onChange={(e) => setMainWeapon(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 rounded text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    style={{
+                      borderRadius: 0, // Square corners for industrial theme
+                    }}
                   >
                     <option value={0}>Laser</option>
                     <option value={1}>Railgun</option>
@@ -529,7 +752,10 @@ const ShipConstructor: React.FC = () => {
                           setArmor(newArmor);
                           if (newArmor > 0) setShields(0);
                         }}
-                        className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 rounded text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                        className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                        style={{
+                          borderRadius: 0, // Square corners for industrial theme
+                        }}
                       >
                         <option value={1}>Light</option>
                         <option value={2}>Medium</option>
@@ -549,7 +775,10 @@ const ShipConstructor: React.FC = () => {
                           setShields(newShields);
                           if (newShields > 0) setArmor(0);
                         }}
-                        className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 rounded text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                        className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                        style={{
+                          borderRadius: 0, // Square corners for industrial theme
+                        }}
                       >
                         <option value={1}>Basic</option>
                         <option value={2}>Enhanced</option>
@@ -566,7 +795,10 @@ const ShipConstructor: React.FC = () => {
                   <select
                     value={special}
                     onChange={(e) => setSpecial(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 rounded text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    style={{
+                      borderRadius: 0, // Square corners for industrial theme
+                    }}
                   >
                     <option value={0}>None</option>
                     <option value={1}>EMP</option>
@@ -578,7 +810,12 @@ const ShipConstructor: React.FC = () => {
             </div>
 
             {/* Traits Section */}
-            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <div
+              className="bg-gray-800 p-4 border border-gray-700"
+              style={{
+                borderRadius: 0, // Square corners for industrial theme
+              }}
+            >
               <h3 className="text-lg font-bold text-cyan-300 mb-4 font-mono">
                 TRAITS
               </h3>
@@ -635,16 +872,24 @@ const ShipConstructor: React.FC = () => {
                     value={variant}
                     onChange={(e) => setVariant(Number(e.target.value))}
                     disabled={isEditingExisting}
-                    className={`w-full px-3 py-2 bg-gray-900 border border-cyan-400 rounded text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
+                    className={`w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
                       isEditingExisting ? "opacity-50 cursor-not-allowed" : ""
                     }`}
+                    style={{
+                      borderRadius: 0, // Square corners for industrial theme
+                    }}
                   />
                 </div>
               </div>
             </div>
 
             {/* Colors Section */}
-            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <div
+              className="bg-gray-800 p-4 border border-gray-700"
+              style={{
+                borderRadius: 0, // Square corners for industrial theme
+              }}
+            >
               <h3 className="text-lg font-bold text-cyan-300 mb-4 font-mono">
                 COLORS (Primary)
               </h3>
@@ -697,7 +942,12 @@ const ShipConstructor: React.FC = () => {
             {/* Secondary colors currently unused; hide this section for now */}
 
             {/* ShipData Section */}
-            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <div
+              className="bg-gray-800 p-4 border border-gray-700"
+              style={{
+                borderRadius: 0, // Square corners for industrial theme
+              }}
+            >
               <h3 className="text-lg font-bold text-cyan-300 mb-4 font-mono">
                 SHIP DATA
               </h3>
@@ -712,9 +962,12 @@ const ShipConstructor: React.FC = () => {
                       value={shipName}
                       onChange={(e) => setShipName(e.target.value)}
                       disabled={isEditingExisting}
-                      className={`w-full px-3 py-2 bg-gray-900 border border-cyan-400 rounded text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 font-mono ${
+                      className={`w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 font-mono ${
                         isEditingExisting ? "opacity-50 cursor-not-allowed" : ""
                       }`}
+                      style={{
+                        borderRadius: 0, // Square corners for industrial theme
+                      }}
                       placeholder="Enter ship name"
                     />
                   </div>
@@ -724,7 +977,10 @@ const ShipConstructor: React.FC = () => {
                     type="checkbox"
                     checked={shiny}
                     onChange={(e) => setShiny(e.target.checked)}
-                    className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 rounded focus:ring-cyan-400 focus:ring-2"
+                    className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 focus:ring-cyan-400 focus:ring-2"
+                    style={{
+                      borderRadius: 0, // Square corners for industrial theme
+                    }}
                   />
                   <span>Shiny</span>
                 </label>
@@ -732,99 +988,132 @@ const ShipConstructor: React.FC = () => {
             </div>
 
             {/* Approval and Customize Buttons (only in customize mode with selected ship) */}
-            {mode === "customize" && selectedShipId && buildDroneYardShipStruct && (
-              <div className="bg-gray-800 rounded-lg p-4 border border-yellow-400/50">
-                {needsApproval ? (
+            {mode === "customize" &&
+              selectedShipId &&
+              buildDroneYardShipStruct && (
+                <div
+                  className="bg-gray-800 p-4 border border-yellow-400/50"
+                  style={{
+                    borderRadius: 0, // Square corners for industrial theme
+                  }}
+                >
+                  {needsApproval ? (
+                    <TransactionButton
+                      transactionId={`approve-drone-yard-${selectedShipId}-${address}`}
+                      contractAddress={
+                        CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`
+                      }
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      abi={CONTRACT_ABIS.UNIVERSAL_CREDITS as any}
+                      functionName="approve"
+                      args={[
+                        CONTRACT_ADDRESSES.DRONE_YARD as `0x${string}`,
+                        modificationCost ?? 0n,
+                      ]}
+                      className="w-full px-6 py-3 mb-3 border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        borderRadius: 0, // Square corners for industrial theme
+                      }}
+                      loadingText="[APPROVING UTC...]"
+                      errorText="[ERROR APPROVING]"
+                      onSuccess={() => {
+                        toast.success("UTC approved for DroneYard");
+                        refetchAllowance?.();
+                      }}
+                      validateBeforeTransaction={() => {
+                        if (!address) return "Please connect your wallet";
+                        if (!modificationCost) return "Cost not available";
+                        if (
+                          !utcBalance ||
+                          (utcBalance as bigint) < (modificationCost as bigint)
+                        ) {
+                          return "Insufficient UTC balance";
+                        }
+                        return true;
+                      }}
+                    >
+                      {modificationCost
+                        ? `[APPROVE ${formatEther(modificationCost as bigint)} UTC]`
+                        : "[APPROVE UTC]"}
+                    </TransactionButton>
+                  ) : null}
+
                   <TransactionButton
-                    transactionId={`approve-drone-yard-${selectedShipId}-${address}`}
-                    contractAddress={CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`}
+                    transactionId={`customize-ship-${selectedShipId}-${address}`}
+                    contractAddress={
+                      CONTRACT_ADDRESSES.DRONE_YARD as `0x${string}`
+                    }
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    abi={CONTRACT_ABIS.UNIVERSAL_CREDITS as any}
-                    functionName="approve"
-                    args={[
-                      CONTRACT_ADDRESSES.DRONE_YARD as `0x${string}`,
-                      modificationCost ?? 0n,
-                    ]}
-                    className="w-full px-6 py-3 mb-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    loadingText="[APPROVING UTC...]"
-                    errorText="[ERROR APPROVING]"
+                    abi={CONTRACT_ABIS.DRONE_YARD as any}
+                    functionName="modifyShip"
+                    args={[selectedShipId, buildDroneYardShipStruct]}
+                    className="w-full px-6 py-3 border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      borderRadius: 0, // Square corners for industrial theme
+                    }}
+                    loadingText="[CUSTOMIZING SHIP...]"
+                    errorText="[ERROR CUSTOMIZING]"
+                    disabled={
+                      !modificationCost ||
+                      !utcBalance ||
+                      (utcBalance as bigint) < (modificationCost as bigint) ||
+                      (utcAllowance !== undefined &&
+                        (utcAllowance as bigint) < (modificationCost as bigint))
+                    }
                     onSuccess={() => {
-                      toast.success("UTC approved for DroneYard");
+                      toast.success("Ship customized successfully!");
+                      // After customization, refresh cost and allowance so
+                      // the approve button and amount stay in sync with contracts.
+                      refetchModificationCost?.();
                       refetchAllowance?.();
                     }}
                     validateBeforeTransaction={() => {
-                      if (!address) return "Please connect your wallet";
-                      if (!modificationCost) return "Cost not available";
-                      if (!utcBalance || (utcBalance as bigint) < (modificationCost as bigint)) {
+                      if (!address) {
+                        return "Please connect your wallet";
+                      }
+                      if (!selectedShipId) {
+                        return "Please select a ship to customize";
+                      }
+                      if (!modificationCost) {
+                        return "Cost not available";
+                      }
+                      if (
+                        !utcBalance ||
+                        (utcBalance as bigint) < (modificationCost as bigint)
+                      ) {
                         return "Insufficient UTC balance";
+                      }
+                      if (
+                        utcAllowance !== undefined &&
+                        (utcAllowance as bigint) < (modificationCost as bigint)
+                      ) {
+                        return "Please approve UTC first";
                       }
                       return true;
                     }}
                   >
-                    {modificationCost
-                      ? `[APPROVE ${formatEther(modificationCost as bigint)} UTC]`
-                      : "[APPROVE UTC]"}
+                    [CUSTOMIZE SHIP]
                   </TransactionButton>
-                ) : null}
-
-                <TransactionButton
-                  transactionId={`customize-ship-${selectedShipId}-${address}`}
-                  contractAddress={CONTRACT_ADDRESSES.DRONE_YARD as `0x${string}`}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  abi={CONTRACT_ABIS.DRONE_YARD as any}
-                  functionName="modifyShip"
-                  args={[selectedShipId, buildDroneYardShipStruct]}
-                  className="w-full px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  loadingText="[CUSTOMIZING SHIP...]"
-                  errorText="[ERROR CUSTOMIZING]"
-                  disabled={
-                    !modificationCost ||
-                    !utcBalance ||
-                    (utcBalance as bigint) < (modificationCost as bigint) ||
-                    (utcAllowance !== undefined &&
-                      (utcAllowance as bigint) < (modificationCost as bigint))
-                  }
-                  onSuccess={() => {
-                    toast.success("Ship customized successfully!");
-                    // After customization, refresh cost and allowance so
-                    // the approve button and amount stay in sync with contracts.
-                    refetchModificationCost?.();
-                    refetchAllowance?.();
-                  }}
-                  validateBeforeTransaction={() => {
-                    if (!address) {
-                      return "Please connect your wallet";
-                    }
-                    if (!selectedShipId) {
-                      return "Please select a ship to customize";
-                    }
-                    if (!modificationCost) {
-                      return "Cost not available";
-                    }
-                    if (!utcBalance || (utcBalance as bigint) < (modificationCost as bigint)) {
-                      return "Insufficient UTC balance";
-                    }
-                    if (
-                      utcAllowance !== undefined &&
-                      (utcAllowance as bigint) < (modificationCost as bigint)
-                    ) {
-                      return "Please approve UTC first";
-                    }
-                    return true;
-                  }}
-                >
-                  [CUSTOMIZE SHIP]
-                </TransactionButton>
-              </div>
-            )}
+                </div>
+              )}
           </div>
 
           {/* Preview Panel */}
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div
+            className="bg-gray-800 p-4 border border-gray-700"
+            style={{
+              borderRadius: 0, // Square corners for industrial theme
+            }}
+          >
             <h3 className="text-lg font-bold text-cyan-300 mb-4 font-mono">
               PREVIEW
             </h3>
-            <div className="flex flex-col items-center justify-center min-h-[400px] bg-gray-900 rounded-lg p-4">
+            <div
+              className="flex flex-col items-center justify-center min-h-[400px] bg-gray-900 p-4"
+              style={{
+                borderRadius: 0, // Square corners for industrial theme
+              }}
+            >
               {shipImageDataUrl ? (
                 <img
                   src={shipImageDataUrl}
@@ -880,14 +1169,15 @@ const ShipConstructor: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                    {modificationCost !== undefined && modificationCost !== null && (
-                      <div className="mt-4 pt-3 border-t border-gray-700">
-                        <div className="text-sm font-bold text-yellow-300 font-mono">
-                          COST TO MODIFY (ON-CHAIN):{" "}
-                          {formatEther(modificationCost as bigint)} UTC
+                    {modificationCost !== undefined &&
+                      modificationCost !== null && (
+                        <div className="mt-4 pt-3 border-t border-gray-700">
+                          <div className="text-sm font-bold text-yellow-300 font-mono">
+                            COST TO MODIFY (ON-CHAIN):{" "}
+                            {formatEther(modificationCost as bigint)} UTC
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 ) : (
                   <div className="text-xs text-gray-500 font-mono">

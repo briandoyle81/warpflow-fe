@@ -567,7 +567,10 @@ const ManageNavy: React.FC = () => {
         <button
           onClick={() => setShowShipPurchase(true)}
           disabled={transactionState.isPending}
-          className="px-6 py-3 rounded-lg border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            borderRadius: 0, // Square corners for industrial theme
+          }}
         >
           [BUY NEW SHIPS]
         </button>
@@ -738,21 +741,27 @@ const ManageNavy: React.FC = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPaymentMethod("FLOW")}
-                    className={`px-3 py-1 rounded-lg border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
+                    className={`px-3 py-1 border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
                       paymentMethod === "FLOW"
                         ? "border-cyan-400 text-cyan-400 bg-cyan-400/10"
                         : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
                     }`}
+                    style={{
+                      borderRadius: 0, // Square corners for industrial theme
+                    }}
                   >
                     FLOW
                   </button>
                   <button
                     onClick={() => setPaymentMethod("UTC")}
-                    className={`px-3 py-1 rounded-lg border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
+                    className={`px-3 py-1 border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
                       paymentMethod === "UTC"
                         ? "border-yellow-400 text-yellow-400 bg-yellow-400/10"
                         : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
                     }`}
+                    style={{
+                      borderRadius: 0, // Square corners for industrial theme
+                    }}
                   >
                     UTC
                   </button>
@@ -812,6 +821,9 @@ const ManageNavy: React.FC = () => {
               style={{
                 fontFamily:
                   "var(--font-jetbrains-mono), 'Courier New', monospace",
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
               }}
             >
               <option value="all">ALL SHIPS</option>
@@ -847,6 +859,9 @@ const ManageNavy: React.FC = () => {
               style={{
                 fontFamily:
                   "var(--font-jetbrains-mono), 'Courier New', monospace",
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
               }}
             >
               <option value="id">ID</option>
@@ -906,58 +921,6 @@ const ManageNavy: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-4">
-          <span
-            className="text-sm uppercase tracking-wider"
-            style={{
-              fontFamily:
-                "var(--font-jetbrains-mono), 'Courier New', monospace",
-              color: "var(--color-text-secondary)",
-            }}
-          >
-            Showing {filteredAndSortedShips.length} of {ships.length} ships
-          </span>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSelectAll}
-              className="px-3 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-sm transition-colors duration-150"
-              style={{
-                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                borderColor: "var(--color-gunmetal)",
-                color: "var(--color-text-secondary)",
-                backgroundColor: "var(--color-steel)",
-                borderRadius: 0,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "var(--color-cyan)";
-                e.currentTarget.style.color = "var(--color-cyan)";
-                e.currentTarget.style.backgroundColor = "var(--color-slate)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-                e.currentTarget.style.color = "var(--color-text-secondary)";
-                e.currentTarget.style.backgroundColor = "var(--color-steel)";
-              }}
-            >
-              {selectedShips.size === filteredAndSortedShips.length
-                ? "[DESELECT ALL]"
-                : "[SELECT ALL]"}
-            </button>
-            {selectedShips.size > 0 && (
-              <span
-                className="text-sm uppercase tracking-wider"
-                style={{
-                  fontFamily:
-                    "var(--font-jetbrains-mono), 'Courier New', monospace",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                {selectedShips.size} selected
-              </span>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Ships Display */}
@@ -968,9 +931,56 @@ const ManageNavy: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          <h4 className="text-xl font-bold mb-4 text-center">
-            [YOUR SHIPS] - {shipCount} Total
-          </h4>
+          <div className="flex items-center justify-between mb-4">
+            <h4
+              className="text-xl font-bold"
+              style={{
+                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                color: "var(--color-text-primary)",
+              }}
+            >
+              [YOUR SHIPS] - Showing {filteredAndSortedShips.length} of {ships.length} ships
+            </h4>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSelectAll}
+                className="px-3 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-sm transition-colors duration-150"
+                style={{
+                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  borderColor: "var(--color-gunmetal)",
+                  color: "var(--color-text-secondary)",
+                  backgroundColor: "var(--color-steel)",
+                  borderRadius: 0,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--color-cyan)";
+                  e.currentTarget.style.color = "var(--color-cyan)";
+                  e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                  e.currentTarget.style.color = "var(--color-text-secondary)";
+                  e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                }}
+              >
+                {selectedShips.size === filteredAndSortedShips.length
+                  ? "[DESELECT ALL]"
+                  : "[SELECT ALL]"}
+              </button>
+              {selectedShips.size > 0 && (
+                <span
+                  className="text-sm uppercase tracking-wider"
+                  style={{
+                    fontFamily:
+                      "var(--font-jetbrains-mono), 'Courier New', monospace",
+                    color: "var(--color-text-secondary)",
+                  }}
+                >
+                  {selectedShips.size} selected
+                </span>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredAndSortedShips.map((ship: Ship) => (
               <ShipCard

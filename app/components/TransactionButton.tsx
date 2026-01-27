@@ -271,13 +271,22 @@ export function TransactionButton({
     buttonContent = errorText;
   }
 
+  // Remove rounded classes from className to enforce square corners
+  const cleanedClassName = className
+    .replace(/\brounded(-\w+)?\b/g, "")
+    .replace(/\s+/g, " ") // Replace multiple spaces with single space
+    .trim();
+
   return (
     <button
       onClick={handleTransaction}
       disabled={isDisabled}
-      className={`${className} ${
+      className={`${cleanedClassName} ${
         isDisabled ? "opacity-50 cursor-not-allowed" : ""
       }`}
+      style={{
+        borderRadius: 0, // Force square corners for industrial theme
+      }}
     >
       {buttonContent}
     </button>

@@ -829,14 +829,16 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     previewPosition,
   ]);
 
-  // Calculate damage for a target ship
+  // Calculate damage for a target ship (shooterShipIdOverride used for last-move display when no ship selected)
   const calculateDamage = React.useCallback(
     (
       targetShipId: bigint,
       weaponType?: "weapon" | "special",
-      showReducedDamage?: boolean
+      showReducedDamage?: boolean,
+      shooterShipIdOverride?: bigint
     ) => {
-      if (!selectedShipId)
+      const shooterId = shooterShipIdOverride ?? selectedShipId;
+      if (shooterId == null)
         return {
           baseDamage: 0,
           reducedDamage: 0,
@@ -844,7 +846,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           reactorCritical: false,
         };
 
-      const shooterAttributes = getShipAttributes(selectedShipId);
+      const shooterAttributes = getShipAttributes(shooterId);
       const targetAttributes = getShipAttributes(targetShipId);
 
       if (!shooterAttributes || !targetAttributes)

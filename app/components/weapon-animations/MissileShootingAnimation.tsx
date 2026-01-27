@@ -117,7 +117,7 @@ export function MissileShootingAnimation({
 
     setMissiles([firstMissile]);
 
-    // Fire second missile 0.1 seconds after the first
+    // Fire second missile 0.2 seconds after the first
     setTimeout(() => {
       // Select a new random target spot for the second missile
       const targetX2 = targetCenter.x + (Math.random() - 0.5) * cellWidth * 0.5;
@@ -159,7 +159,7 @@ export function MissileShootingAnimation({
       };
 
       setMissiles((prev) => [...prev, secondMissile]);
-    }, 100);
+    }, 200);
   }, [
     gridContainerRef,
     attackerRow,
@@ -362,7 +362,7 @@ export function MissileShootingAnimation({
 
   return (
     <svg
-      className="absolute pointer-events-none z-5"
+      className="absolute pointer-events-none z-20"
       style={{
         left: `0px`,
         top: `0px`,

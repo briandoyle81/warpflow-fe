@@ -64,13 +64,21 @@ export function FreeShipClaimButton({
 
   const isDisabled = disabled || !isEligible || isPending;
 
+  // Remove rounded classes from className to enforce square corners
+  const cleanedClassName = className
+    .replace(/\brounded(-\w+)?\b/g, "")
+    .trim();
+
   return (
     <button
       onClick={handleClick}
       disabled={isDisabled}
-      className={`${className} ${
+      className={`${cleanedClassName} ${
         isDisabled ? "opacity-50 cursor-not-allowed" : ""
       }`}
+      style={{
+        borderRadius: 0, // Force square corners for industrial theme
+      }}
     >
       {isPending ? "[CLAIMING...]" : children}
     </button>

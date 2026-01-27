@@ -18,7 +18,7 @@ export default function Home() {
   const { isOwner } = useShipAttributesOwner();
 
   // Initialize with default tab to prevent hydration mismatch
-  const [activeTab, setActiveTab] = useState("Manage Navy");
+  const [activeTab, setActiveTab] = useState("Info");
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Load saved tab after hydration
@@ -28,11 +28,11 @@ export default function Home() {
     const savedGameId = localStorage.getItem("selectedGameId");
 
     const validTabs = [
+      "Info",
       "Manage Navy",
       "Lobbies",
       "Games",
       "Profile",
-      "Info",
       "Maps",
       "Customize Ship",
     ];
@@ -131,11 +131,11 @@ export default function Home() {
           <div className="flex flex-wrap justify-center gap-2 mb-8">
             {(() => {
               const tabs = [
+                "Info",
                 "Manage Navy",
                 "Lobbies",
                 "Games",
                 "Profile",
-                "Info",
                 "Maps",
                 "Customize Ship",
               ];

@@ -17,12 +17,14 @@ interface ShipImageProps {
   ship: Ship;
   className?: string;
   showLoadingState?: boolean;
+  style?: React.CSSProperties;
 }
 
 export function ShipImage({
   ship,
   className = "",
   showLoadingState = true,
+  style,
 }: ShipImageProps) {
   const { dataUrl, isLoading, error, renderKey } = useShipRenderer(ship);
 
@@ -45,7 +47,7 @@ export function ShipImage({
   // Handle destroyed ships
   if (isDestroyed) {
     return (
-      <div className={`relative ${className}`}>
+      <div className={`relative ${className}`} style={style}>
         <img
           src="/img/ship-destroyed.png"
           alt={`Destroyed Ship #${ship.id.toString()}`}
@@ -63,7 +65,7 @@ export function ShipImage({
   // Handle not constructed ships
   if (isNotConstructed) {
     return (
-      <div className={`relative ${className}`}>
+      <div className={`relative ${className}`} style={style}>
         <img
           src="/img/dry-dock.png"
           alt={`Unconstructed Ship #${ship.id.toString()}`}
@@ -112,7 +114,7 @@ export function ShipImage({
 
   // Normal constructed ship with image
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} style={style}>
       <img
         src={dataUrl}
         alt={`Ship #${ship.id.toString()}`}
