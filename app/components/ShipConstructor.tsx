@@ -1010,10 +1010,7 @@ const ShipConstructor: React.FC = () => {
                         CONTRACT_ADDRESSES.DRONE_YARD as `0x${string}`,
                         modificationCost ?? 0n,
                       ]}
-                      className="w-full px-6 py-3 mb-3 border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        borderRadius: 0, // Square corners for industrial theme
-                      }}
+                      className="w-full px-6 py-3 mb-3 rounded-none border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       loadingText="[APPROVING UTC...]"
                       errorText="[ERROR APPROVING]"
                       onSuccess={() => {
@@ -1047,10 +1044,7 @@ const ShipConstructor: React.FC = () => {
                     abi={CONTRACT_ABIS.DRONE_YARD as any}
                     functionName="modifyShip"
                     args={[selectedShipId, buildDroneYardShipStruct]}
-                    className="w-full px-6 py-3 border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{
-                      borderRadius: 0, // Square corners for industrial theme
-                    }}
+                    className="w-full px-6 py-3 rounded-none border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     loadingText="[CUSTOMIZING SHIP...]"
                     errorText="[ERROR CUSTOMIZING]"
                     disabled={

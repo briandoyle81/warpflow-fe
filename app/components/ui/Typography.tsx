@@ -22,13 +22,15 @@ const headingSizes = {
   6: "text-sm",
 };
 
+type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+
 export function Heading({
   level = 1,
   children,
   className,
   ...props
 }: HeadingProps) {
-  const Component = `h${level}` as keyof JSX.IntrinsicElements;
+  const Component = `h${level}` as HeadingTag;
 
   return (
     <Component

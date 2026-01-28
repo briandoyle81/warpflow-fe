@@ -74,10 +74,10 @@ body {
   background: var(--color-near-black);
   color: var(--color-text-primary);
   font-family: var(--font-rajdhani), 'Arial Black', sans-serif;
-  /* Disable font smoothing for pixel-perfect rendering */
-  -webkit-font-smoothing: none;
-  -moz-osx-font-smoothing: unset;
-  font-smooth: never;
+  /* Enable font smoothing for crisper text on WebKit/Blink */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* ============================================

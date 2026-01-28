@@ -277,8 +277,6 @@ const ShipCard: React.FC<ShipCardProps> = ({
                           ? "var(--color-warning-red)"
                           : "var(--color-phosphor-green)",
                       borderRadius: 0, // Square corners
-                    }}
-                    style={{
                       width: `${
                         (inGameAttributes.hullPoints /
                           inGameAttributes.maxHullPoints) *
