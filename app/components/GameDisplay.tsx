@@ -2366,19 +2366,21 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         </div>
 
         {/* Move Confirmation UI - positioned between left and right sections */}
-        {/* Show ONLY for player's own proposed moves, NOT for last move display */}
-        {isShowingProposedMove && (
-          <div
-            className="flex-1 mx-6 border border-solid"
-            style={{
-              backgroundColor: "var(--color-slate)",
-              borderColor: "var(--color-gunmetal)",
-              borderTopColor: "var(--color-steel)",
-              borderLeftColor: "var(--color-steel)",
-              borderRadius: 0,
-            }}
-          >
-            <div className="flex items-center gap-6 p-4">
+        {/* Reserve space even when hidden to avoid layout jumping */}
+        <div
+          className="flex-1 mx-6 border border-solid min-h-[128px]"
+          style={{
+            backgroundColor: "var(--color-slate)",
+            borderColor: "var(--color-gunmetal)",
+            borderTopColor: "var(--color-steel)",
+            borderLeftColor: "var(--color-steel)",
+            borderRadius: 0,
+          }}
+        >
+          {/* Show ONLY for player's own proposed moves, NOT for last move display */}
+          {isShowingProposedMove ? (
+            <>
+              <div className="flex items-center gap-6 p-4">
               {/* Left: Ship Info */}
               <div className="flex flex-col gap-2 min-w-0 flex-shrink-0">
                 <div className="flex items-center gap-3">
@@ -3099,8 +3101,31 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 })()}
               </div>
             )}
-          </div>
-        )}
+            </>
+          ) : (
+            // Placeholder content to preserve height when UI isn't active
+            <div className="p-4 opacity-0 pointer-events-none select-none">
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col gap-2 min-w-0 flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <span className="text-white font-semibold">.</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="border border-solid p-3">
+                    <div className="text-xs mb-2 uppercase tracking-wide">.</div>
+                    <div className="flex flex-wrap gap-2">
+                      <button className="px-3 py-1.5 text-sm">.</button>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 flex-shrink-0 ml-auto">
+                  <button className="px-4 py-1.5 text-sm">.</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Right side: Emergency Flee Safety Switch and Game Status */}
         <div className="flex items-center space-x-4">

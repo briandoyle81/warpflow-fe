@@ -57,7 +57,7 @@ interface GameGridProps {
     targetShipId: bigint,
     weaponType?: "weapon" | "special",
     showReducedDamage?: boolean,
-    shooterShipIdOverride?: bigint
+    shooterShipIdOverride?: bigint,
   ) => {
     reducedDamage: number;
     willKill: boolean;
@@ -82,7 +82,7 @@ interface GameGridProps {
       mouseX: number;
       mouseY: number;
       isCreator: boolean;
-    } | null
+    } | null,
   ) => void;
   setDraggedShipId: (shipId: bigint | null) => void;
   setDragOverCell: (cell: { row: number; col: number } | null) => void;
@@ -148,14 +148,14 @@ export function GameGrid({
               const ship = cell ? shipMap.get(cell.shipId) : null;
               const isSelected = selectedShipId === cell?.shipId;
               const isMovementTile = movementRange.some(
-                (pos) => pos.row === rowIndex && pos.col === colIndex
+                (pos) => pos.row === rowIndex && pos.col === colIndex,
               );
               const isHighlightedMove =
                 highlightedMovePosition &&
                 highlightedMovePosition.row === rowIndex &&
                 highlightedMovePosition.col === colIndex;
               const isShootingTile = shootingRange.some(
-                (pos) => pos.row === rowIndex && pos.col === colIndex
+                (pos) => pos.row === rowIndex && pos.col === colIndex,
               );
 
               // Check if this ship has already moved this round
@@ -175,17 +175,17 @@ export function GameGrid({
                       ? specialType === 3 // Flak
                         ? cell.shipId !== selectedShipId // Flak hits ALL ships in range except itself
                         : specialType === 1 // EMP
-                        ? !isShipOwnedByCurrentPlayer(cell.shipId) // EMP targets enemy ships
-                        : isShipOwnedByCurrentPlayer(cell.shipId) // Other special abilities target friendly ships
+                          ? !isShipOwnedByCurrentPlayer(cell.shipId) // EMP targets enemy ships
+                          : isShipOwnedByCurrentPlayer(cell.shipId) // Other special abilities target friendly ships
                       : !isShipOwnedByCurrentPlayer(cell.shipId); // Weapons target enemy ships
                   return isValidTargetType;
                 })() &&
                 (draggedShipId && dragOverCell
                   ? dragValidTargets.some(
-                      (target) => target.shipId === cell.shipId
+                      (target) => target.shipId === cell.shipId,
                     )
                   : validTargets.some(
-                      (target) => target.shipId === cell.shipId
+                      (target) => target.shipId === cell.shipId,
                     ));
 
               // Check if this cell contains an assistable target (friendly ship with 0 HP)
@@ -195,10 +195,10 @@ export function GameGrid({
                 isCurrentPlayerTurn &&
                 isShipOwnedByCurrentPlayer(selectedShipId) &&
                 (assistableTargets.some(
-                  (target) => target.shipId === cell.shipId
+                  (target) => target.shipId === cell.shipId,
                 ) ||
                   assistableTargetsFromStart.some(
-                    (target) => target.shipId === cell.shipId
+                    (target) => target.shipId === cell.shipId,
                   ));
               const isSelectedTarget = cell && targetShipId === cell.shipId;
 
@@ -211,7 +211,7 @@ export function GameGrid({
                     isShipOwnedByCurrentPlayer(selectedShipId)
                   ) {
                     const isFriendlyShip = isShipOwnedByCurrentPlayer(
-                      cell.shipId
+                      cell.shipId,
                     );
                     const selectedShip = shipMap.get(selectedShipId);
                     const hasRepairDrones =
@@ -220,7 +220,7 @@ export function GameGrid({
                     if (isFriendlyShip && hasRepairDrones) {
                       // Check if the friendly ship is in repair range
                       const isInRepairRange = validTargets.some(
-                        (target) => target.shipId === cell.shipId
+                        (target) => target.shipId === cell.shipId,
                       );
                       if (isInRepairRange) {
                         // Switch to repair drones and target this ship
@@ -243,15 +243,36 @@ export function GameGrid({
                         ? specialType === 3 // Flak
                           ? cell.shipId !== selectedShipId // Flak hits ALL ships in range except itself
                           : specialType === 1 // EMP
-                          ? !isShipOwnedByCurrentPlayer(cell.shipId) // EMP targets enemy ships
-                          : isShipOwnedByCurrentPlayer(cell.shipId) // Other special abilities target friendly ships
+                            ? !isShipOwnedByCurrentPlayer(cell.shipId) // EMP targets enemy ships
+                            : isShipOwnedByCurrentPlayer(cell.shipId) // Other special abilities target friendly ships
                         : !isShipOwnedByCurrentPlayer(cell.shipId); // Weapons target enemy ships
 
                     if (isValidTargetType) {
                       const isInShootingRange = validTargets.some(
-                        (target) => target.shipId === cell.shipId
+                        (target) => target.shipId === cell.shipId,
                       );
                       if (isInShootingRange) {
+                        // If the player hasn't proposed a move yet, convert this into a
+                        // "stay in place + fire" intent by setting previewPosition to the
+                        // selected ship's current position. This enables shooting without moving.
+                        if (selectedWeaponType === "weapon" && previewPosition === null) {
+                          let found = false;
+                          for (let r = 0; r < grid.length && !found; r++) {
+                            const gridRow = grid[r];
+                            for (let c = 0; c < gridRow.length; c++) {
+                              const cellAt = gridRow[c];
+                              if (
+                                cellAt &&
+                                cellAt.shipId === selectedShipId &&
+                                !cellAt.isPreview
+                              ) {
+                                setPreviewPosition({ row: r, col: c });
+                                found = true;
+                                break;
+                              }
+                            }
+                          }
+                        }
                         // For flak special, select all targets in range
                         if (
                           selectedWeaponType === "special" &&
@@ -270,11 +291,11 @@ export function GameGrid({
 
                     // Check if this is a friendly ship with 0 hitpoints that can be assisted
                     const isAssistableTarget = assistableTargets.some(
-                      (target) => target.shipId === cell.shipId
+                      (target) => target.shipId === cell.shipId,
                     );
                     const isAssistableFromStart =
                       assistableTargetsFromStart.some(
-                        (target) => target.shipId === cell.shipId
+                        (target) => target.shipId === cell.shipId,
                       );
                     if (isAssistableTarget || isAssistableFromStart) {
                       setTargetShipId(cell.shipId);
@@ -370,10 +391,10 @@ export function GameGrid({
                       if (isSelectedTarget) {
                         const isAssistAction =
                           assistableTargets.some(
-                            (target) => target.shipId === cell.shipId
+                            (target) => target.shipId === cell.shipId,
                           ) ||
                           assistableTargetsFromStart.some(
-                            (target) => target.shipId === cell.shipId
+                            (target) => target.shipId === cell.shipId,
                           );
                         if (isAssistAction) {
                           return "bg-cyan-900 ring-2 ring-cyan-400";
@@ -406,36 +427,36 @@ export function GameGrid({
                     return hasShipMoved
                       ? movedStyle
                       : isSelectedTarget && cell
-                      ? (() => {
-                          // Check if this is an assist action
-                          const isAssistAction =
-                            assistableTargets.some(
-                              (target) => target.shipId === cell.shipId
-                            ) ||
-                            assistableTargetsFromStart.some(
-                              (target) => target.shipId === cell.shipId
-                            );
-                          if (isAssistAction) {
-                            return "bg-cyan-900 ring-2 ring-cyan-400";
-                          }
-                          // Otherwise use weapon-based styling
-                          return selectedWeaponType === "special"
+                        ? (() => {
+                            // Check if this is an assist action
+                            const isAssistAction =
+                              assistableTargets.some(
+                                (target) => target.shipId === cell.shipId,
+                              ) ||
+                              assistableTargetsFromStart.some(
+                                (target) => target.shipId === cell.shipId,
+                              );
+                            if (isAssistAction) {
+                              return "bg-cyan-900 ring-2 ring-cyan-400";
+                            }
+                            // Otherwise use weapon-based styling
+                            return selectedWeaponType === "special"
+                              ? specialType === 3 // Flak
+                                ? "bg-red-900 ring-2 ring-red-400" // Flak uses red highlighting like regular weapons
+                                : "bg-blue-900 ring-2 ring-blue-400" // Other specials use blue
+                              : "bg-red-900 ring-2 ring-red-400";
+                          })()
+                        : isValidTarget
+                          ? selectedWeaponType === "special"
                             ? specialType === 3 // Flak
-                              ? "bg-red-900 ring-2 ring-red-400" // Flak uses red highlighting like regular weapons
-                              : "bg-blue-900 ring-2 ring-blue-400" // Other specials use blue
-                            : "bg-red-900 ring-2 ring-red-400";
-                        })()
-                      : isValidTarget
-                      ? selectedWeaponType === "special"
-                        ? specialType === 3 // Flak
-                          ? "bg-red-900/50 ring-1 ring-red-400" // Flak uses red highlighting like regular weapons
-                          : "bg-blue-900/50 ring-1 ring-blue-400" // Other specials use blue
-                        : "bg-orange-900/50 ring-1 ring-orange-400"
-                      : isAssistableTarget
-                      ? "bg-cyan-900/50 ring-1 ring-cyan-400"
-                      : isMovementTile
-                      ? "bg-green-900/50"
-                      : "bg-gray-950";
+                              ? "bg-red-900/50 ring-1 ring-red-400" // Flak uses red highlighting like regular weapons
+                              : "bg-blue-900/50 ring-1 ring-blue-400" // Other specials use blue
+                            : "bg-orange-900/50 ring-1 ring-orange-400"
+                          : isAssistableTarget
+                            ? "bg-cyan-900/50 ring-1 ring-cyan-400"
+                            : isMovementTile
+                              ? "bg-green-900/50"
+                              : "bg-gray-950";
                   })()}`}
                   onClick={handleCellClick}
                   onMouseEnter={
@@ -503,18 +524,18 @@ export function GameGrid({
                     title: onlyOnceGrid[rowIndex][colIndex]
                       ? `Crystal Deposit: ${scoringGrid[rowIndex][colIndex]} points (only once) (${rowIndex}, ${colIndex})`
                       : scoringGrid[rowIndex][colIndex] > 0
-                      ? `Gold Deposit: ${scoringGrid[rowIndex][colIndex]} points (${rowIndex}, ${colIndex})`
-                      : blockedGrid[rowIndex][colIndex]
-                      ? `Blocked Line of Sight (${rowIndex}, ${colIndex})`
-                      : isMovementTile
-                      ? `Move here (${rowIndex}, ${colIndex})`
-                      : isShootingTile
-                      ? `Shooting range (${rowIndex}, ${colIndex})`
-                      : isAssistableTarget
-                      ? `Click to assist this ship (${rowIndex}, ${colIndex})`
-                      : isValidTarget
-                      ? `Click to target this ship (${rowIndex}, ${colIndex})`
-                      : `Empty (${rowIndex}, ${colIndex})`,
+                        ? `Gold Deposit: ${scoringGrid[rowIndex][colIndex]} points (${rowIndex}, ${colIndex})`
+                        : blockedGrid[rowIndex][colIndex]
+                          ? `Blocked Line of Sight (${rowIndex}, ${colIndex})`
+                          : isMovementTile
+                            ? `Move here (${rowIndex}, ${colIndex})`
+                            : isShootingTile
+                              ? `Shooting range (${rowIndex}, ${colIndex})`
+                              : isAssistableTarget
+                                ? `Click to assist this ship (${rowIndex}, ${colIndex})`
+                                : isValidTarget
+                                  ? `Click to target this ship (${rowIndex}, ${colIndex})`
+                                  : `Empty (${rowIndex}, ${colIndex})`,
                   })}
                 >
                   {/* Blocked line of sight tile - lowest layer */}
@@ -574,7 +595,7 @@ export function GameGrid({
                   {draggedShipId && dragOverCell && (
                     <>
                       {dragShootingRange.some(
-                        (pos) => pos.row === rowIndex && pos.col === colIndex
+                        (pos) => pos.row === rowIndex && pos.col === colIndex,
                       ) && (
                         <div className="absolute inset-0 z-2 border-1 border-orange-400/50 bg-orange-500/10 pointer-events-none" />
                       )}
@@ -632,14 +653,14 @@ export function GameGrid({
                           e.dataTransfer.effectAllowed = "move";
                           e.dataTransfer.setData(
                             "text/plain",
-                            cell.shipId.toString()
+                            cell.shipId.toString(),
                           );
 
                           // Create custom drag image that preserves ship orientation
                           // Find the ship image element (it's inside a div with class "relative")
                           const shipImageContainer =
                             e.currentTarget.querySelector(
-                              ".relative img"
+                              ".relative img",
                             ) as HTMLImageElement;
                           if (
                             shipImageContainer &&
@@ -770,7 +791,10 @@ export function GameGrid({
                           }
 
                           // "From" position: 50% opacity, no animation
-                          if (selectedShipId === cell.shipId && previewPosition) {
+                          if (
+                            selectedShipId === cell.shipId &&
+                            previewPosition
+                          ) {
                             return "opacity-50";
                           }
 
@@ -825,7 +849,7 @@ export function GameGrid({
 
                         const skullCount = Math.min(
                           attributes.reactorCriticalTimer,
-                          3
+                          3,
                         );
                         const skulls = "💀".repeat(skullCount);
 
@@ -838,7 +862,9 @@ export function GameGrid({
                             } m-0.5 flex items-center justify-center`}
                           >
                             <div className="w-4 h-4 rounded-full bg-red-500/90 flex items-center justify-center">
-                              <span className="text-[8px] font-mono">{skulls}</span>
+                              <span className="text-[8px] font-mono">
+                                {skulls}
+                              </span>
                             </div>
                           </div>
                         );
@@ -942,8 +968,8 @@ export function GameGrid({
                         const borderStyle = isProposedMovePreview
                           ? "border-solid"
                           : isDashed
-                          ? "border-dashed"
-                          : "border-solid";
+                            ? "border-dashed"
+                            : "border-solid";
 
                         // Make proposed move preview borders thicker
                         const borderWidth = isProposedMovePreview
@@ -954,10 +980,10 @@ export function GameGrid({
                         const animationClass = isProposedMovePreview
                           ? ""
                           : shouldAnimate
-                          ? isPreviewCell
-                            ? "animate-pulse-preview"
-                            : "animate-pulse-original"
-                          : "";
+                            ? isPreviewCell
+                              ? "animate-pulse-preview"
+                              : "animate-pulse-original"
+                            : "";
 
                         return (
                           <div
@@ -969,7 +995,7 @@ export function GameGrid({
                   ) : null}
                 </div>
               );
-            })
+            }),
           )}
 
           {/* Laser Shooting Animation */}
@@ -1325,7 +1351,9 @@ export function GameGrid({
                       selectedWeaponType === "special" && specialType === 3
                         ? true
                         : undefined,
-                      isLastMoveTarget ? lastMoveShipId ?? undefined : undefined
+                      isLastMoveTarget
+                        ? (lastMoveShipId ?? undefined)
+                        : undefined,
                     );
 
                     // For last move display, never show (KILL) since we don't know if it actually killed
@@ -1530,8 +1558,8 @@ export function GameGrid({
               tooltipLeft,
               typeof window !== "undefined"
                 ? window.innerWidth - tooltipWidth
-                : tooltipLeft
-            )
+                : tooltipLeft,
+            ),
           );
           tooltipTop = Math.max(
             0,
@@ -1539,8 +1567,8 @@ export function GameGrid({
               tooltipTop,
               typeof window !== "undefined"
                 ? window.innerHeight - tooltipHeight
-                : tooltipTop
-            )
+                : tooltipTop,
+            ),
           );
 
           return (
@@ -1566,7 +1594,7 @@ export function GameGrid({
                   hideCheckbox={true}
                   tooltipMode={true}
                   isCurrentPlayerShip={isShipOwnedByCurrentPlayer(
-                    hoveredCell.shipId
+                    hoveredCell.shipId,
                   )}
                   flipShip={hoveredCell.isCreator}
                   hasMoved={movedShipIdsSet.has(hoveredCell.shipId)}
