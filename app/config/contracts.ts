@@ -6,20 +6,51 @@ import UniversalCreditsContract from "../contracts/DeployModule#UniversalCredits
 import MapsContract from "../contracts/DeployModule#Maps.json";
 import ShipAttributesContract from "../contracts/DeployModule#ShipAttributes.json";
 import DroneYardContract from "../contracts/DeployModule#DroneYard.json";
-import deployedAddresses from "../contracts/deployed_addresses.json";
+import { flowTestnet } from "viem/chains";
+import flowTestnetDeployedAddresses from "../contracts/flow-testnet/deployed_addresses.json";
 
-// Contract addresses from deployed_addresses.json
-export const CONTRACT_ADDRESSES = {
-  SHIPS: deployedAddresses["DeployModule#Ships"],
-  FLEETS: deployedAddresses["DeployModule#Fleets"],
-  LOBBIES: deployedAddresses["DeployModule#Lobbies"],
-  GAME: deployedAddresses["DeployModule#Game"],
-  UNIVERSAL_CREDITS: deployedAddresses["DeployModule#UniversalCredits"],
-  MAPS: deployedAddresses["DeployModule#Maps"],
-  SHIP_ATTRIBUTES: deployedAddresses["DeployModule#ShipAttributes"],
-  SHIP_PURCHASER: deployedAddresses["DeployModule#ShipPurchaser"],
-  DRONE_YARD: deployedAddresses["DeployModule#DroneYard"],
+type DeployedAddresses = Record<string, `0x${string}`>;
+
+const FLOW_TESTNET_DEPLOYED_ADDRESSES =
+  flowTestnetDeployedAddresses as unknown as DeployedAddresses;
+
+// Per-network deployed address registries
+export const DEPLOYED_ADDRESSES_BY_CHAIN_ID = {
+  [flowTestnet.id]: FLOW_TESTNET_DEPLOYED_ADDRESSES,
 } as const;
+
+// Stable, per-network contract address sets
+const FLOW_TESTNET_CONTRACT_ADDRESSES = {
+  SHIPS: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#Ships"],
+  FLEETS: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#Fleets"],
+  LOBBIES: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#Lobbies"],
+  GAME: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#Game"],
+  UNIVERSAL_CREDITS: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#UniversalCredits"],
+  MAPS: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#Maps"],
+  SHIP_ATTRIBUTES: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#ShipAttributes"],
+  SHIP_PURCHASER: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#ShipPurchaser"],
+  DRONE_YARD: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#DroneYard"],
+} as const;
+
+export const CONTRACT_ADDRESSES_BY_CHAIN_ID = {
+  [flowTestnet.id]: FLOW_TESTNET_CONTRACT_ADDRESSES,
+} as const;
+
+/**
+ * Returns contract addresses for the active chain. For now, we fall back to
+ * Flow Testnet until additional networks are added.
+ */
+export function getContractAddresses(chainId?: number) {
+  if (chainId && chainId in CONTRACT_ADDRESSES_BY_CHAIN_ID) {
+    return CONTRACT_ADDRESSES_BY_CHAIN_ID[
+      chainId as keyof typeof CONTRACT_ADDRESSES_BY_CHAIN_ID
+    ];
+  }
+  return FLOW_TESTNET_CONTRACT_ADDRESSES;
+}
+
+// Default export for existing callsites (current app config uses Flow Testnet)
+export const CONTRACT_ADDRESSES = FLOW_TESTNET_CONTRACT_ADDRESSES;
 
 // Contract ABIs
 export const CONTRACT_ABIS = {
