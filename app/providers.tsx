@@ -4,7 +4,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { flowTestnet } from "viem/chains";
+import { flowTestnet, saigon } from "viem/chains";
 import { http } from "wagmi";
 import { MusicPlayerProvider } from "./providers/MusicPlayerContext";
 import { TransactionProvider } from "./providers/TransactionContext";
@@ -19,9 +19,10 @@ export function Providers({ children }: { children: ReactNode }) {
         appName: "WarpFlow",
         projectId:
           process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID",
-        chains: [flowTestnet],
+        chains: [flowTestnet, saigon],
         transports: {
           [flowTestnet.id]: http(),
+          [saigon.id]: http(),
         },
       }),
     []

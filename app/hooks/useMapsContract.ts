@@ -52,21 +52,32 @@ export function useGetAllPresetMaps() {
   return useMapsRead("getAllPresetMaps");
 }
 
+function isValidPositiveInt(n: number) {
+  return Number.isFinite(n) && Number.isInteger(n) && n > 0;
+}
+
 export function useGetPresetMap(mapId: number) {
-  return useMapsRead("getPresetMap", [BigInt(mapId)], {
-    query: { enabled: mapId > 0 },
+  const enabled = isValidPositiveInt(mapId);
+  return useMapsRead("getPresetMap", enabled ? [BigInt(mapId)] : undefined, {
+    query: { enabled },
   });
 }
 
 export function useGetPresetScoringMap(mapId: number) {
-  return useMapsRead("getPresetScoringMap", [BigInt(mapId)], {
-    query: { enabled: mapId > 0 },
-  });
+  const enabled = isValidPositiveInt(mapId);
+  return useMapsRead(
+    "getPresetScoringMap",
+    enabled ? [BigInt(mapId)] : undefined,
+    {
+      query: { enabled },
+    }
+  );
 }
 
 export function useMapExists(mapId: number) {
-  return useMapsRead("mapExists", [BigInt(mapId)], {
-    query: { enabled: mapId > 0 },
+  const enabled = isValidPositiveInt(mapId);
+  return useMapsRead("mapExists", enabled ? [BigInt(mapId)] : undefined, {
+    query: { enabled },
   });
 }
 

@@ -20,12 +20,16 @@ export function useLobbiesContract() {
 // Hook for reading contract data with proper typing
 export function useLobbiesRead(
   functionName: string,
-  args?: readonly unknown[]
+  args?: readonly unknown[],
+  // Pass-through wagmi options (e.g. query.enabled)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  options?: any
 ) {
   return useReadContract({
     ...lobbiesContractConfig,
     functionName,
     args,
+    ...(options || {}),
   });
 }
 
@@ -56,56 +60,19 @@ export type LobbiesWriteFunction =
   | "rejectGame";
 
 // Helper hooks for common operations
-export function useLobby(lobbyId: bigint) {
-  const { data, error, isLoading, refetch } = useLobbiesRead("getLobby", [
-    lobbyId,
-  ]);
+export function useLobby(
+  lobbyId: bigint,
+  options?: { enabled?: boolean }
+) {
+  const { data, error, isLoading, refetch } = useLobbiesRead(
+    "getLobby",
+    [lobbyId],
+    { query: { enabled: options?.enabled ?? true } }
+  );
 
   return {
-    lobby: data
-      ? ({
-          basic: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            id: (data as any)[0],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            creator: (data as any)[1],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            costLimit: (data as any)[3],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            createdAt: (data as any)[5],
-          },
-          players: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            joiner: (data as any)[2],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            reservedJoiner: (data as any).players?.reservedJoiner || "0x0000000000000000000000000000000000000000",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            creatorFleetId: (data as any)[7],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            joinerFleetId: (data as any)[8],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            joinedAt: (data as any)[11],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            joinerFleetSetAt: (data as any)[12],
-          },
-          gameConfig: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            creatorGoesFirst: (data as any)[9],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            turnTime: (data as any)[10],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            selectedMapId: (data as any)[13],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            maxScore: (data as any)[14],
-          },
-          state: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            status: (data as any)[4],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            gameStartedAt: (data as any)[6],
-          },
-        } as Lobby)
-      : undefined,
+    // The contract returns the Lobby struct directly (same shape as `Lobby`).
+    lobby: (data as Lobby | undefined) ?? undefined,
     error,
     isLoading,
     refetch,

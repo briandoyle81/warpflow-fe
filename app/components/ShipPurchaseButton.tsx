@@ -4,10 +4,10 @@ import React, { useState, useEffect } from "react";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import { useAccount, useBalance, useReadContract, usePublicClient } from "wagmi";
-import { flowTestnet } from "viem/chains";
 import type { Abi } from "viem";
 import { formatEther } from "viem";
 import { toast } from "react-hot-toast";
+import { getSelectedChainId } from "../config/networks";
 
 interface ShipPurchaseButtonProps {
   tier: number;
@@ -76,9 +76,10 @@ export function ShipPurchaseButton({
   refetch,
 }: ShipPurchaseButtonProps) {
   const { address } = useAccount();
+  const activeChainId = getSelectedChainId();
   const { data: flowBalance } = useBalance({
     address,
-    chainId: flowTestnet.id,
+    chainId: activeChainId,
   });
 
   // Read UTC balance for UTC purchases
@@ -117,7 +118,7 @@ export function ShipPurchaseButton({
     }
   }, [paymentMethod, utcAllowance, price]);
 
-  const publicClient = usePublicClient({ chainId: flowTestnet.id });
+  const publicClient = usePublicClient({ chainId: activeChainId });
 
   // Estimate gas for tier 4 purchases before transaction
   useEffect(() => {

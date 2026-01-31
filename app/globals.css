@@ -210,6 +210,34 @@ body {
   animation: laser-fade 0.5s linear forwards;
 }
 
+/* Flak explosion pops */
+@keyframes flak-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.95;
+  }
+  60% {
+    transform: scale(1.25);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+.flak-explosion {
+  position: absolute;
+  border-radius: 0; /* industrial theme */
+  background: radial-gradient(
+    circle,
+    rgba(255, 184, 77, 0.95) 0%,
+    rgba(255, 77, 77, 0.65) 45%,
+    rgba(0, 0, 0, 0) 70%
+  );
+  animation: flak-pop 0.45s ease-out forwards;
+}
+
 /* Functional pulse for targeting, shields, weapons */
 @keyframes pulse-functional {
   0%, 100% {

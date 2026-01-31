@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   useAccount,
   useBalance,
@@ -9,7 +9,6 @@ import {
   useReadContract,
 } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { flowTestnet } from "viem/chains";
 import { formatEther } from "viem";
 import MusicPlayer from "./MusicPlayer";
 import PayButton from "./PayButton";
@@ -17,14 +16,33 @@ import { toast } from "react-hot-toast";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import type { Abi } from "viem";
 import UTCPurchaseModal from "./UTCPurchaseModal";
+import {
+  DEFAULT_CHAIN_ID,
+  getSelectedChainId,
+  getNativeTokenSymbol,
+  isSupportedChainId,
+  setSelectedChainId,
+  SUPPORTED_CHAINS,
+} from "../config/networks";
 
 const Header: React.FC = () => {
   const [isHydrated, setIsHydrated] = useState(false);
   const [showUTCPurchaseModal, setShowUTCPurchaseModal] = useState(false);
 
   const account = useAccount();
+
+  const [selectedChainId, setSelectedChainIdState] = useState<number>(
+    DEFAULT_CHAIN_ID
+  );
+  const pendingSwitchChainIdRef = useRef<number | null>(null);
+  const lastSwitchRequestRef = useRef<{ chainId: number; at: number } | null>(
+    null
+  );
+
+  const nativeTokenSymbol = getNativeTokenSymbol(selectedChainId);
   const { data: balance } = useBalance({
     address: account.address,
+    chainId: selectedChainId,
     query: { enabled: isHydrated && !!account.address },
   });
 
@@ -34,6 +52,7 @@ const Header: React.FC = () => {
     abi: CONTRACT_ABIS.UNIVERSAL_CREDITS as Abi,
     functionName: "balanceOf",
     args: account.address ? [account.address] : undefined,
+    chainId: selectedChainId,
     query: { enabled: isHydrated && !!account.address },
   });
 
@@ -50,10 +69,56 @@ const Header: React.FC = () => {
     account.status === "connecting" || account.status === "reconnecting";
 
   useEffect(() => {
-    if (account.status === "connected" && account.chainId !== flowTestnet.id) {
-      switchChain({ chainId: flowTestnet.id });
+    if (!isHydrated) return;
+    const persisted = getSelectedChainId();
+    setSelectedChainIdState(persisted);
+  }, [isHydrated]);
+
+  // If the wallet chain changes externally, reflect it in the selector.
+  // Do NOT do this while we're in the middle of a programmatic switch.
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (account.status !== "connected") return;
+    if (!isSupportedChainId(account.chainId)) return;
+    if (pendingSwitchChainIdRef.current != null) return;
+    if (account.chainId !== selectedChainId) {
+      setSelectedChainId(account.chainId);
+      setSelectedChainIdState(account.chainId);
     }
-  }, [account, switchChain]);
+  }, [account.status, account.chainId, isHydrated, selectedChainId]);
+
+  // When connected, ensure wallet is on the selected chain.
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (account.status !== "connected") return;
+    if (!isSupportedChainId(selectedChainId)) return;
+    if (account.chainId === selectedChainId) {
+      pendingSwitchChainIdRef.current = null;
+      return;
+    }
+
+    // Track that we're attempting a switch (prevents "sync from wallet" effect fighting us)
+    pendingSwitchChainIdRef.current = selectedChainId;
+
+    // Avoid spamming switch requests while a wallet prompt is pending
+    const now = Date.now();
+    const last = lastSwitchRequestRef.current;
+    if (last && last.chainId === selectedChainId && now - last.at < 2000) {
+      return;
+    }
+    lastSwitchRequestRef.current = { chainId: selectedChainId, at: now };
+    switchChain({ chainId: selectedChainId });
+  }, [account.status, account.chainId, isHydrated, selectedChainId, switchChain]);
+
+  const handleNetworkChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextId = Number(e.target.value);
+    setSelectedChainId(nextId);
+    setSelectedChainIdState(nextId);
+    pendingSwitchChainIdRef.current = nextId;
+    if (account.status === "connected") {
+      switchChain({ chainId: nextId });
+    }
+  };
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -263,8 +328,8 @@ const Header: React.FC = () => {
                           }}
                         >
                           {balance?.value
-                            ? `${parseFloat(balance.formatted).toFixed(2)} FLOW`
-                            : "0.00 FLOW"}
+                            ? `${parseFloat(balance.formatted).toFixed(2)} ${nativeTokenSymbol}`
+                            : `0.00 ${nativeTokenSymbol}`}
                         </span>
                       </div>
                       {/* Buy Flow button (match network width) */}
@@ -321,15 +386,26 @@ const Header: React.FC = () => {
                             animation: "pulse-functional 1.5s ease-in-out infinite",
                           }}
                         ></div>
-                        <span
-                          className="text-xs font-bold tracking-wider uppercase"
+                        <select
+                          value={selectedChainId}
+                          onChange={handleNetworkChange}
+                          disabled={!isHydrated || isConnecting}
+                          className="bg-transparent text-xs font-bold tracking-wider uppercase outline-none cursor-pointer w-full text-center truncate"
                           style={{
                             fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
                             color: "var(--color-cyan)",
                           }}
                         >
-                          {account.chain?.name?.toUpperCase() || "FLOW TESTNET"}
-                        </span>
+                          {SUPPORTED_CHAINS.map((c) => (
+                            <option
+                              key={c.id}
+                              value={c.id}
+                              className="text-black"
+                            >
+                              {c.name.toUpperCase()}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   </div>

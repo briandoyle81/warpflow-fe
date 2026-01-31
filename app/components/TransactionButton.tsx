@@ -56,6 +56,7 @@ export function TransactionButton({
   const {
     transactionState,
     startTransaction,
+    setTransactionHash,
     completeTransaction,
     clearError,
   } = useTransaction();
@@ -247,9 +248,18 @@ export function TransactionButton({
     ) {
       // Hash is available - transaction was sent by wallet, but receipt not yet confirmed
       transactionSentHashRef.current = hash;
+      setTransactionHash(transactionId, hash);
       onTransactionSent(hash);
     }
-  }, [hash, isActiveTransaction, onTransactionSent, isConfirmed, isConfirming]);
+  }, [
+    hash,
+    isActiveTransaction,
+    onTransactionSent,
+    isConfirmed,
+    isConfirming,
+    setTransactionHash,
+    transactionId,
+  ]);
 
   // Reset the ref when transaction changes
   React.useEffect(() => {

@@ -6,17 +6,24 @@ import UniversalCreditsContract from "../contracts/DeployModule#UniversalCredits
 import MapsContract from "../contracts/DeployModule#Maps.json";
 import ShipAttributesContract from "../contracts/DeployModule#ShipAttributes.json";
 import DroneYardContract from "../contracts/DeployModule#DroneYard.json";
-import { flowTestnet } from "viem/chains";
+import { flowTestnet, saigon } from "viem/chains";
+import { getSelectedChainId } from "./networks";
 import flowTestnetDeployedAddresses from "../contracts/flow-testnet/deployed_addresses.json";
+import roninSaigonDeployedAddresses from "../contracts/ronin-saigon/deployed_addresses.json";
 
 type DeployedAddresses = Record<string, `0x${string}`>;
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+
 const FLOW_TESTNET_DEPLOYED_ADDRESSES =
   flowTestnetDeployedAddresses as unknown as DeployedAddresses;
+const RONIN_SAIGON_DEPLOYED_ADDRESSES =
+  roninSaigonDeployedAddresses as unknown as DeployedAddresses;
 
 // Per-network deployed address registries
 export const DEPLOYED_ADDRESSES_BY_CHAIN_ID = {
   [flowTestnet.id]: FLOW_TESTNET_DEPLOYED_ADDRESSES,
+  [saigon.id]: RONIN_SAIGON_DEPLOYED_ADDRESSES,
 } as const;
 
 // Stable, per-network contract address sets
@@ -32,8 +39,30 @@ const FLOW_TESTNET_CONTRACT_ADDRESSES = {
   DRONE_YARD: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#DroneYard"],
 } as const;
 
+const RONIN_SAIGON_CONTRACT_ADDRESSES = {
+  SHIPS: RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#Ships"] ?? ZERO_ADDRESS,
+  FLEETS:
+    RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#Fleets"] ?? ZERO_ADDRESS,
+  LOBBIES:
+    RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#Lobbies"] ?? ZERO_ADDRESS,
+  GAME: RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#Game"] ?? ZERO_ADDRESS,
+  UNIVERSAL_CREDITS:
+    RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#UniversalCredits"] ??
+    ZERO_ADDRESS,
+  MAPS: RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#Maps"] ?? ZERO_ADDRESS,
+  SHIP_ATTRIBUTES:
+    RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#ShipAttributes"] ??
+    ZERO_ADDRESS,
+  SHIP_PURCHASER:
+    RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#ShipPurchaser"] ??
+    ZERO_ADDRESS,
+  DRONE_YARD:
+    RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#DroneYard"] ?? ZERO_ADDRESS,
+} as const;
+
 export const CONTRACT_ADDRESSES_BY_CHAIN_ID = {
   [flowTestnet.id]: FLOW_TESTNET_CONTRACT_ADDRESSES,
+  [saigon.id]: RONIN_SAIGON_CONTRACT_ADDRESSES,
 } as const;
 
 /**
@@ -49,8 +78,17 @@ export function getContractAddresses(chainId?: number) {
   return FLOW_TESTNET_CONTRACT_ADDRESSES;
 }
 
-// Default export for existing callsites (current app config uses Flow Testnet)
-export const CONTRACT_ADDRESSES = FLOW_TESTNET_CONTRACT_ADDRESSES;
+// Back-compat: most callsites import `CONTRACT_ADDRESSES`. Make it chain-aware.
+export const CONTRACT_ADDRESSES = new Proxy(
+  {} as typeof FLOW_TESTNET_CONTRACT_ADDRESSES,
+  {
+    get(_target, prop) {
+      const chainId = getSelectedChainId();
+      const addresses = getContractAddresses(chainId) as Record<string, unknown>;
+      return addresses[prop as string];
+    },
+  }
+);
 
 // Contract ABIs
 export const CONTRACT_ABIS = {
@@ -79,5 +117,6 @@ export const SHIP_PURCHASE_TIERS = {
 } as const;
 
 // Contract types for wagmi
-export type ContractNames = keyof typeof CONTRACT_ADDRESSES;
-export type ContractAddresses = (typeof CONTRACT_ADDRESSES)[ContractNames];
+export type ContractNames = keyof typeof FLOW_TESTNET_CONTRACT_ADDRESSES;
+export type ContractAddresses =
+  (typeof FLOW_TESTNET_CONTRACT_ADDRESSES)[ContractNames];

@@ -4,7 +4,7 @@ import React from "react";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
 import { useAccount, useBalance } from "wagmi";
-import { flowTestnet } from "viem/chains";
+import { getSelectedChainId } from "../config/networks";
 
 interface UTCPurchaseButtonProps {
   tier: number;
@@ -43,11 +43,12 @@ export function UTCPurchaseButton({
   refetch,
 }: UTCPurchaseButtonProps) {
   const { address } = useAccount();
+  const activeChainId = getSelectedChainId();
 
   // Get user's FLOW balance
   const { data: flowBalance } = useBalance({
     address,
-    chainId: flowTestnet.id,
+    chainId: activeChainId,
   });
 
   const validateBeforeTransaction = React.useCallback(() => {

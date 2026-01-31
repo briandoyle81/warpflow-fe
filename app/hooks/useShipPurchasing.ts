@@ -7,8 +7,8 @@ import {
 import { CONTRACT_ADDRESSES, SHIP_PURCHASE_TIERS } from "../config/contracts";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
-import { flowTestnet } from "viem/chains";
 import { useEffect } from "react";
+import { getSelectedChainId } from "../config/networks";
 
 // Ships contract ABI for purchasing with FLOW
 const shipsContractABI = [
@@ -29,11 +29,12 @@ const shipsContractABI = [
 export function useShipPurchasing() {
   const { address } = useAccount();
   const { refetch } = useOwnedShips();
+  const activeChainId = getSelectedChainId();
 
   // Get user's FLOW balance
   const { data: flowBalance, isLoading: isLoadingFlowBalance } = useBalance({
     address,
-    chainId: flowTestnet.id,
+    chainId: activeChainId,
   });
 
   // Write contract for purchasing

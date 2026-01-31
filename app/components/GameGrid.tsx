@@ -9,6 +9,7 @@ import { LaserShootingAnimation } from "./weapon-animations/LaserShootingAnimati
 import { MissileShootingAnimation } from "./weapon-animations/MissileShootingAnimation";
 import { PlasmaShootingAnimation } from "./weapon-animations/PlasmaShootingAnimation";
 import { RailgunShootingAnimation } from "./weapon-animations/RailgunShootingAnimation";
+import { FlakExplosionAnimation } from "./weapon-animations/FlakExplosionAnimation";
 
 interface GameGridProps {
   grid: (ShipPosition | null)[][];
@@ -133,6 +134,25 @@ export function GameGrid({
   const lastDragOverCellRef = useRef<{ row: number; col: number } | null>(null);
 
   const isMyTurn = currentTurn === address;
+
+  const flakEffectCells = React.useMemo(() => {
+    // Flak should show explosions across all in-range tiles, including tiles
+    // that contain ships. `shootingRange` excludes occupied tiles, so union with
+    // target positions.
+    const rangeCells =
+      draggedShipId && dragOverCell ? dragShootingRange : shootingRange;
+    const targetCells = (
+      draggedShipId && dragOverCell ? dragValidTargets : validTargets
+    ).map((t) => t.position);
+    return [...rangeCells, ...targetCells];
+  }, [
+    draggedShipId,
+    dragOverCell,
+    dragShootingRange,
+    shootingRange,
+    dragValidTargets,
+    validTargets,
+  ]);
 
   return (
     <>
@@ -1273,6 +1293,17 @@ export function GameGrid({
                 />
               );
             })()}
+
+          {/* Flak Area-of-Effect animation */}
+          {selectedShipId &&
+            selectedWeaponType === "special" &&
+            specialType === 3 &&
+            targetShipId === 0n && (
+              <FlakExplosionAnimation
+                gridContainerRef={gridContainerRef}
+                targetCells={flakEffectCells}
+              />
+            )}
 
           {/* Damage Labels - Rendered at grid level above weapon animations */}
           {gridContainerRef.current &&

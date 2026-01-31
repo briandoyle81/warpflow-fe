@@ -35,9 +35,10 @@ import { calculateShipRank, getRankColor } from "../utils/shipLevel";
 import { formatDestroyedDate } from "../utils/dateUtils";
 import { MapDisplay } from "./MapDisplay";
 import { usePlayerGames } from "../hooks/usePlayerGames";
+import { useLobby } from "../hooks/useLobbiesContract";
 
 const Lobbies: React.FC = () => {
-  const { address, isConnected, status } = useAccount();
+  const { address, isConnected } = useAccount();
   const { transactionState } = useTransaction();
   const {
     lobbyList,
@@ -182,6 +183,11 @@ const Lobbies: React.FC = () => {
     null
   );
 
+  // Live lobby data for the currently selected lobby (avoids relying on lobby list refresh timing)
+  const { lobby: selectedLobbyLive } = useLobby(selectedLobby ?? 0n, {
+    enabled: selectedLobby != null,
+  });
+
   // Fleet ship data fetching
   const { data: fleetShipIds, isLoading: fleetShipIdsLoading } = useFleetsRead(
     "getFleetShipIds",
@@ -213,9 +219,9 @@ const Lobbies: React.FC = () => {
   // Determine the player's existing fleet ID when fleet selection modal is open
   const playerFleetId = React.useMemo(() => {
     if (!selectedLobby || !address) return null;
-    const lobby = lobbyList.lobbies.find(
-      (l) => l.basic.id === selectedLobby
-    );
+    const lobby =
+      selectedLobbyLive ??
+      lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
     if (!lobby) return null;
     const isCreator = lobby.basic.creator === address;
     return isCreator
@@ -225,7 +231,7 @@ const Lobbies: React.FC = () => {
       : lobby.players.joinerFleetId > 0n
       ? lobby.players.joinerFleetId
       : null;
-  }, [selectedLobby, address, lobbyList.lobbies]);
+  }, [selectedLobby, address, lobbyList.lobbies, selectedLobbyLive]);
 
   // Fetch the player's existing fleet data when viewing their own fleet
   const { data: playerFleetIdsAndPositions } = useFleetsRead(
@@ -832,9 +838,6 @@ const Lobbies: React.FC = () => {
       const lobbyId = lastFleetCreationLobbyRef.current;
       toast.success("Fleet created successfully!");
       setShowFleetView(false);
-      setSelectedShips([]);
-      setShipPositions([]);
-      setSelectedShipId(null);
       setShowFleetConfirmation(false);
 
       // Check if both fleets are now selected - if so, navigate to game
@@ -933,7 +936,9 @@ const Lobbies: React.FC = () => {
   // Auto-fetch opponent fleet data for grid preview (cache immutable fleets)
   const opponentCacheKey = React.useMemo(() => {
     if (!selectedLobby) return null;
-    const lobby = lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
+    const lobby =
+      selectedLobbyLive ??
+      lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
     if (!lobby) return null;
     const myIsCreator = lobby.basic.creator === address;
     const opponentFleetId = myIsCreator
@@ -942,29 +947,33 @@ const Lobbies: React.FC = () => {
     return opponentFleetId && opponentFleetId > 0n
       ? `fleet:${opponentFleetId.toString()}`
       : null;
-  }, [selectedLobby, lobbyList.lobbies, address]);
+  }, [selectedLobby, lobbyList.lobbies, address, selectedLobbyLive]);
 
   // Compute opponent fleetId for grid
   const opponentFleetIdForGrid = React.useMemo(() => {
     if (!selectedLobby) return null as bigint | null;
-    const lobby = lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
+    const lobby =
+      selectedLobbyLive ??
+      lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
     if (!lobby) return null;
     const myIsCreator = lobby.basic.creator === address;
     const fid = myIsCreator
       ? lobby.players.joinerFleetId
       : lobby.players.creatorFleetId;
     return fid && fid > 0n ? fid : null;
-  }, [selectedLobby, lobbyList.lobbies, address]);
+  }, [selectedLobby, lobbyList.lobbies, address, selectedLobbyLive]);
 
   // Whether the opponent fleet (when shown) belongs to the lobby creator
   const opponentIsCreator = React.useMemo(() => {
     if (!selectedLobby) return false;
-    const lobby = lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
+    const lobby =
+      selectedLobbyLive ??
+      lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
     if (!lobby) return false;
     const opponentFid = opponentFleetIdForGrid;
     if (!opponentFid) return false;
     return lobby.players.creatorFleetId === opponentFid;
-  }, [selectedLobby, lobbyList.lobbies, opponentFleetIdForGrid]);
+  }, [selectedLobby, lobbyList.lobbies, opponentFleetIdForGrid, selectedLobbyLive]);
 
   const [opponentGridPositions, setOpponentGridPositions] = React.useState<
     Array<{ shipId: bigint; row: number; col: number }>
@@ -1961,12 +1970,28 @@ const Lobbies: React.FC = () => {
       {/* Fleet Selection Modal */}
       {selectedLobby &&
         (() => {
-          const currentLobby = lobbyList.lobbies.find(
-            (lobby) => lobby.basic.id === selectedLobby
-          );
+          const currentLobby =
+            selectedLobbyLive ??
+            lobbyList.lobbies.find((lobby) => lobby.basic.id === selectedLobby);
           const isCreator = currentLobby
             ? currentLobby.basic.creator === address
             : false;
+          const isParticipant =
+            currentLobby != null
+              ? currentLobby.basic.creator === address ||
+                currentLobby.players.joiner === address
+              : false;
+          const opponentHasFleet =
+            currentLobby != null
+              ? isCreator
+                ? currentLobby.players.joinerFleetId > 0n
+                : currentLobby.players.creatorFleetId > 0n
+              : false;
+          const bothFleetsSelected =
+            currentLobby != null
+              ? currentLobby.players.creatorFleetId > 0n &&
+                currentLobby.players.joinerFleetId > 0n
+              : false;
           const totalCost = selectedShips.reduce((sum, shipId) => {
             const ship = ships.find((s) => s.id === shipId);
             return sum + (ship ? Number(ship.shipData.cost) : 0);
@@ -2002,6 +2027,11 @@ const Lobbies: React.FC = () => {
                     {playerFleetId && (
                       <span className="px-3 py-1 text-xs font-bold text-green-400 bg-green-400/20 border border-green-400 rounded">
                         FLEET SELECTED
+                      </span>
+                    )}
+                    {playerFleetId && !opponentHasFleet && (
+                      <span className="px-3 py-1 text-xs font-bold text-yellow-400 bg-yellow-400/10 border border-yellow-400/40 rounded">
+                        WAITING FOR OPPONENT
                       </span>
                     )}
                   </div>
@@ -2057,6 +2087,21 @@ const Lobbies: React.FC = () => {
                         className="px-4 py-2 border border-red-400 text-red-400 rounded hover:bg-red-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         CANCEL
+                      </button>
+                    </div>
+                  )}
+                  {/* After a fleet is selected, replace Cancel/Need points with Go To Game (disabled until both fleets) */}
+                  {isParticipant && playerFleetId && (
+                    <div className="absolute left-1/2 transform -translate-x-1/2">
+                      <button
+                        onClick={() => {
+                          if (!bothFleetsSelected) return;
+                          navigateToGame(selectedLobby);
+                        }}
+                        disabled={!bothFleetsSelected}
+                        className="px-4 py-2 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        GO TO GAME
                       </button>
                     </div>
                   )}
@@ -2523,7 +2568,8 @@ const Lobbies: React.FC = () => {
                     {isCreator ? (
                       <>
                         {/* Ship Selection Grid - 1/4 width */}
-                        <div className="w-1/4 h-full">
+                        {!playerFleetId && (
+                          <div className="w-1/4 h-full">
                           <div className="grid grid-cols-1 gap-4 mb-6 overflow-y-auto content-start max-h-[80vh]">
                             {filteredShips
                               .sort((a, b) => {
@@ -2593,9 +2639,14 @@ const Lobbies: React.FC = () => {
                               })}
                           </div>
                         </div>
+                        )}
 
                         {/* Map Display - 3/4 width */}
-                        <div className="w-3/4 h-full flex items-center justify-center">
+                        <div
+                          className={`${
+                            playerFleetId ? "w-full" : "w-3/4"
+                          } h-full flex items-center justify-center`}
+                        >
                           {/* Map Display */}
                           {currentLobby && (
                             <MapDisplay
@@ -2623,16 +2674,33 @@ const Lobbies: React.FC = () => {
                                   : combinedShips
                               }
                               selectedShipId={selectedShipId}
-                              onShipSelect={handleShipSelect}
-                              onShipMove={handleShipMove}
+                              onShipSelect={
+                                playerFleetId ||
+                                (showFleetView &&
+                                  viewingFleetId &&
+                                  viewingFleetOwner)
+                                  ? undefined
+                                  : handleShipSelect
+                              }
+                              onShipMove={
+                                playerFleetId ||
+                                (showFleetView &&
+                                  viewingFleetId &&
+                                  viewingFleetOwner)
+                                  ? undefined
+                                  : handleShipMove
+                              }
                               allowSelection={
+                                !playerFleetId &&
                                 !(
                                   showFleetView &&
                                   viewingFleetId &&
                                   viewingFleetOwner
                                 )
                               }
-                              selectableShipIds={selectableShipIds}
+                              selectableShipIds={
+                                playerFleetId ? undefined : selectableShipIds
+                              }
                               flippedShipIds={flippedShipIds as bigint[]}
                               onDragOver={handleDragOver}
                               onDrop={handleDrop}
@@ -2644,7 +2712,11 @@ const Lobbies: React.FC = () => {
                     ) : (
                       <>
                         {/* Map Display - 3/4 width (left for joiner) */}
-                        <div className="w-3/4 h-full flex items-center justify-center">
+                        <div
+                          className={`${
+                            playerFleetId ? "w-full" : "w-3/4"
+                          } h-full flex items-center justify-center`}
+                        >
                           {/* Map Display */}
                           {currentLobby && (
                             <MapDisplay
@@ -2672,16 +2744,33 @@ const Lobbies: React.FC = () => {
                                   : combinedShips
                               }
                               selectedShipId={selectedShipId}
-                              onShipSelect={handleShipSelect}
-                              onShipMove={handleShipMove}
+                              onShipSelect={
+                                playerFleetId ||
+                                (showFleetView &&
+                                  viewingFleetId &&
+                                  viewingFleetOwner)
+                                  ? undefined
+                                  : handleShipSelect
+                              }
+                              onShipMove={
+                                playerFleetId ||
+                                (showFleetView &&
+                                  viewingFleetId &&
+                                  viewingFleetOwner)
+                                  ? undefined
+                                  : handleShipMove
+                              }
                               allowSelection={
+                                !playerFleetId &&
                                 !(
                                   showFleetView &&
                                   viewingFleetId &&
                                   viewingFleetOwner
                                 )
                               }
-                              selectableShipIds={selectableShipIds}
+                              selectableShipIds={
+                                playerFleetId ? undefined : selectableShipIds
+                              }
                               flippedShipIds={flippedShipIds as bigint[]}
                               onDragOver={handleDragOver}
                               onDrop={handleDrop}
@@ -2691,7 +2780,8 @@ const Lobbies: React.FC = () => {
                         </div>
 
                         {/* Ship Selection Grid - 1/4 width (right for joiner) */}
-                        <div className="w-1/4 h-full">
+                        {!playerFleetId && (
+                          <div className="w-1/4 h-full">
                           <div className="grid grid-cols-1 gap-4 mb-6 overflow-y-auto content-start max-h-[80vh]">
                             {filteredShips
                               .sort((a, b) => {
@@ -2761,6 +2851,7 @@ const Lobbies: React.FC = () => {
                               })}
                           </div>
                         </div>
+                        )}
                       </>
                     )}
                   </div>
