@@ -210,6 +210,53 @@ body {
   animation: laser-fade 0.5s linear forwards;
 }
 
+/* EMP wave (specialType === 1) */
+@keyframes emp-wave-dash {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -220;
+  }
+}
+
+.emp-wave {
+  stroke-dasharray: 18 26;
+  animation: emp-wave-dash 0.75s linear infinite;
+}
+
+.emp-wave--a {
+  stroke-dasharray: 22 30;
+  animation-duration: 0.8s;
+}
+
+.emp-wave--b {
+  stroke-dasharray: 10 22;
+  animation-duration: 0.62s;
+  animation-delay: 0.08s;
+}
+
+@keyframes emp-impact {
+  0% {
+    transform: scale(0.35);
+    opacity: 0.9;
+  }
+  65% {
+    transform: scale(1.35);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.emp-impact {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: emp-impact 0.55s ease-out infinite;
+}
+
 /* Flak explosion pops */
 @keyframes flak-pop {
   0% {
@@ -238,6 +285,131 @@ body {
   animation: flak-pop 0.45s ease-out forwards;
 }
 
+/* Repair drones (specialType === 2) */
+@keyframes repair-drone-flight {
+  0% {
+    transform: translate(0px, 0px);
+    opacity: 0.0;
+  }
+  6% {
+    opacity: 1;
+  }
+  20% {
+    /* outbound arc midpoint */
+    transform: translate(var(--m1x), var(--m1y));
+    opacity: 1;
+  }
+  35% {
+    /* arrive at target */
+    transform: translate(var(--dx), var(--dy));
+    opacity: 1;
+  }
+  65% {
+    /* hover at target */
+    transform: translate(var(--dx), var(--dy));
+    opacity: 1;
+  }
+  82% {
+    /* return arc midpoint */
+    transform: translate(var(--m2x), var(--m2y));
+    opacity: 1;
+  }
+  94% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0px, 0px);
+    opacity: 0;
+  }
+}
+
+@keyframes repair-drone-orbit {
+  0% {
+    transform: translate(
+      calc(var(--orbit) * 1),
+      0px
+    );
+  }
+  25% {
+    transform: translate(
+      0px,
+      calc(var(--orbit) * 1)
+    );
+  }
+  50% {
+    transform: translate(
+      calc(var(--orbit) * -1),
+      0px
+    );
+  }
+  75% {
+    transform: translate(
+      0px,
+      calc(var(--orbit) * -1)
+    );
+  }
+  100% {
+    transform: translate(
+      calc(var(--orbit) * 1),
+      0px
+    );
+  }
+}
+
+.repair-drone {
+  position: absolute;
+  left: calc(var(--ax) - 2px);
+  top: calc(var(--ay) - 2px);
+  width: 4px;
+  height: 4px;
+  background: var(--color-cyan);
+  opacity: 0;
+  animation: repair-drone-flight var(--dur, 3.2s) ease-in-out infinite;
+}
+
+.repair-drone::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  width: 6px;
+  height: 6px;
+  background: rgba(86, 214, 255, 0.18);
+  pointer-events: none;
+}
+
+.repair-drone__orbiter {
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  width: 6px;
+  height: 6px;
+  background: rgba(107, 255, 143, 0.65); /* subtle green service light */
+  opacity: 0.0;
+  animation: repair-drone-orbit 0.55s linear infinite;
+}
+
+@keyframes repair-orbiter-opacity {
+  0%,
+  30% {
+    opacity: 0;
+  }
+  40%,
+  60% {
+    opacity: 1;
+  }
+  70%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.repair-drone__orbiter {
+  animation:
+    repair-drone-orbit 0.55s linear infinite,
+    repair-orbiter-opacity var(--dur, 3.2s) ease-in-out infinite;
+}
+
 /* Functional pulse for targeting, shields, weapons */
 @keyframes pulse-functional {
   0%, 100% {
@@ -246,6 +418,10 @@ body {
   50% {
     opacity: 0.85;
   }
+}
+
+.animate-damage-flash {
+  animation: pulse-functional 0.9s ease-in-out infinite;
 }
 
 .pulse-target-lock {
@@ -261,6 +437,16 @@ body {
 .pulse-weapon-primed {
   animation: pulse-functional 1.5s ease-in-out infinite;
   outline: 1px solid var(--color-amber);
+}
+
+/* Timeout turn bar (when turnSecondsLeft === 0) */
+.animate-timeout-bar {
+  animation: pulse-functional 2.2s ease-in-out infinite;
+}
+
+/* Gentle timeout pulse for text/buttons when time is 0 */
+.animate-timeout-soft {
+  animation: pulse-functional 2.2s ease-in-out infinite;
 }
 
 /* ============================================

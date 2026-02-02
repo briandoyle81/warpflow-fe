@@ -113,7 +113,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   >(null);
   const lastPollTimeRef = React.useRef<number>(Date.now());
   const currentPollIntervalRef = React.useRef<number>(30 * 1000);
-  const [pollProgress, setPollProgress] = React.useState<number>(0);
 
   // Register this game's refetch function for global event handling
   React.useEffect(() => {
@@ -291,25 +290,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     game.turnState.turnTime,
   ]);
 
-  // Track polling progress for progress bar
-  React.useEffect(() => {
-    const updateProgress = () => {
-      const now = Date.now();
-      const timeSinceLastPoll = now - lastPollTimeRef.current;
-      const interval = currentPollIntervalRef.current;
-      const progress = Math.min(100, (timeSinceLastPoll / interval) * 100);
-      setPollProgress(progress);
-    };
-
-    // Update immediately
-    updateProgress();
-
-    // Update every second
-    const progressInterval = setInterval(updateProgress, 1000);
-
-    return () => clearInterval(progressInterval);
-  }, [isPageVisible, isWindowFocused, playerMoveTimestamp]);
-
   // Reset move time when turn changes (opponent moved)
   React.useEffect(() => {
     if (gameData) {
@@ -395,6 +375,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Countdown for remaining turn time (in seconds)
   const [turnSecondsLeft, setTurnSecondsLeft] = React.useState<number>(0);
+  const turnTimeSec = React.useMemo(
+    () => Number(game.turnState.turnTime || 0n),
+    [game.turnState.turnTime]
+  );
+  const turnPercentRemaining = React.useMemo(() => {
+    if (!turnTimeSec || turnTimeSec <= 0) return 0;
+    const pct = (turnSecondsLeft / turnTimeSec) * 100;
+    return Math.max(0, Math.min(100, pct));
+  }, [turnSecondsLeft, turnTimeSec]);
 
   React.useEffect(() => {
     // Helper to compute remaining seconds
@@ -1717,11 +1706,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Track if we're showing a proposed move (not last move)
   const isShowingProposedMove = React.useMemo(() => {
-    if (selectedShipId === null || !isMyTurn || previewPosition === null) {
+    // Show move submission UI whenever it's your turn and you have one of your
+    // ships selected that hasn't moved yet (even if you haven't proposed a move).
+    if (selectedShipId === null || !isMyTurn) {
       return false;
     }
-    return isShipOwnedByCurrentPlayer(selectedShipId);
-  }, [selectedShipId, isMyTurn, previewPosition, isShipOwnedByCurrentPlayer]);
+    if (!isShipOwnedByCurrentPlayer(selectedShipId)) return false;
+    if (movedShipIdsSet.has(selectedShipId)) return false;
+    return true;
+  }, [selectedShipId, isMyTurn, isShipOwnedByCurrentPlayer, movedShipIdsSet]);
 
   // When showing last move, set up the preview state to display it
   // This should NOT interfere with proposed moves
@@ -2093,11 +2086,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         <span style={{ color: "var(--color-cyan)" }}>YOUR TURN</span>
                         <span style={{ color: "var(--color-text-muted)" }}>•</span>
                         <span
-                          className="font-mono"
+                          className="font-mono animate-timeout-soft"
                           style={{
                             fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
                             color: "var(--color-warning-red)",
-                            animation: "pulse-functional 1.5s ease-in-out infinite",
                           }}
                         >
                           00:00
@@ -2112,10 +2104,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           }}
                         >
                           <div
-                            className="h-full transition-all duration-1000 ease-linear"
+                            className="h-full animate-timeout-bar"
                             style={{
-                              width: `${pollProgress}%`,
-                              backgroundColor: "var(--color-cyan)",
+                              width: `100%`,
+                              backgroundColor: "var(--color-warning-red)",
                               borderRadius: 0,
                             }}
                           />
@@ -2170,7 +2162,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             abi={gameContractConfig.abi}
                             functionName="forceMoveOnTimeout"
                             args={[game.metadata.gameId]}
-                            className="px-3 py-1 uppercase font-semibold tracking-wider transition-colors duration-150 w-full h-full"
+                            className="px-3 py-1 uppercase font-semibold tracking-wider transition-colors duration-150 w-full h-full animate-timeout-soft"
                             loadingText="Seizing..."
                             errorText="Failed"
                             onSuccess={() => {
@@ -2192,10 +2184,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           }}
                         >
                           <div
-                            className="h-full transition-all duration-1000 ease-linear"
+                            className="h-full animate-timeout-bar"
                             style={{
-                              width: `${pollProgress}%`,
-                              backgroundColor: "var(--color-cyan)",
+                              width: `100%`,
+                              backgroundColor: "var(--color-warning-red)",
                               borderRadius: 0,
                             }}
                           />
@@ -2269,8 +2261,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         <div
                           className="h-full transition-all duration-1000 ease-linear"
                           style={{
-                            width: `${pollProgress}%`,
-                            backgroundColor: "var(--color-cyan)",
+                              width: `${turnPercentRemaining}%`,
+                              backgroundColor:
+                                turnSecondsLeft <= 10
+                                  ? "var(--color-warning-red)"
+                                  : "var(--color-cyan)",
                             borderRadius: 0,
                           }}
                         />
@@ -2398,16 +2393,19 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   </span>
                   <span className="text-gray-500">→</span>
                   <span className="text-gray-300 font-mono">
-                    {previewPosition
-                      ? `(${previewPosition.row}, ${previewPosition.col})`
-                      : (() => {
-                          const currentPosition = game.shipPositions.find(
-                            (pos) => pos.shipId === selectedShipId
-                          );
-                          return currentPosition
-                            ? `(${currentPosition.position.row}, ${currentPosition.position.col})`
-                            : "Unknown";
-                        })()}
+                    {(() => {
+                      const currentPosition = game.shipPositions.find(
+                        (pos) => pos.shipId === selectedShipId
+                      );
+                      const isHoldingPosition =
+                        !previewPosition ||
+                        (!!currentPosition &&
+                          previewPosition.row === currentPosition.position.row &&
+                          previewPosition.col === currentPosition.position.col);
+
+                      if (isHoldingPosition) return "HOLD POSITION";
+                      return `(${previewPosition!.row}, ${previewPosition!.col})`;
+                    })()}
                   </span>
                   {(() => {
                     const points = (() => {

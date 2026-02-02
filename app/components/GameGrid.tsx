@@ -10,6 +10,8 @@ import { MissileShootingAnimation } from "./weapon-animations/MissileShootingAni
 import { PlasmaShootingAnimation } from "./weapon-animations/PlasmaShootingAnimation";
 import { RailgunShootingAnimation } from "./weapon-animations/RailgunShootingAnimation";
 import { FlakExplosionAnimation } from "./weapon-animations/FlakExplosionAnimation";
+import { RepairDroneAnimation } from "./weapon-animations/RepairDroneAnimation";
+import { EmpWaveAnimation } from "./weapon-animations/EmpWaveAnimation";
 
 interface GameGridProps {
   grid: (ShipPosition | null)[][];
@@ -152,6 +154,65 @@ export function GameGrid({
     shootingRange,
     dragValidTargets,
     validTargets,
+  ]);
+
+  const projectedDamageByShipId = React.useMemo(() => {
+    const map = new Map<bigint, number>();
+
+    const shouldShowDamagePreview =
+      selectedShipId != null &&
+      isCurrentPlayerTurn &&
+      isShipOwnedByCurrentPlayer(selectedShipId) &&
+      (selectedWeaponType === "weapon" ||
+        (selectedWeaponType === "special" && specialType === 3));
+
+    if (!shouldShowDamagePreview) return map;
+
+    const ids = new Set<bigint>();
+
+    // Selected target
+    if (targetShipId != null && targetShipId !== 0n) {
+      ids.add(targetShipId);
+    }
+
+    // Drag/preview target sets
+    if (draggedShipId && dragOverCell) {
+      dragValidTargets.forEach((t) => ids.add(t.shipId));
+    }
+    if (previewPosition) {
+      validTargets.forEach((t) => ids.add(t.shipId));
+    }
+
+    // Flak: show previews across all ships in range even when no specific target is selected
+    if (selectedWeaponType === "special" && specialType === 3 && targetShipId === 0n) {
+      (draggedShipId && dragOverCell ? dragValidTargets : validTargets).forEach(
+        (t) => ids.add(t.shipId)
+      );
+    }
+
+    const showReducedDamage =
+      selectedWeaponType === "special" && specialType === 3 ? true : undefined;
+
+    ids.forEach((id) => {
+      const dmg = calculateDamage(id, selectedWeaponType, showReducedDamage)
+        .reducedDamage;
+      if (dmg > 0) map.set(id, dmg);
+    });
+
+    return map;
+  }, [
+    selectedShipId,
+    isCurrentPlayerTurn,
+    isShipOwnedByCurrentPlayer,
+    selectedWeaponType,
+    specialType,
+    targetShipId,
+    draggedShipId,
+    dragOverCell,
+    dragValidTargets,
+    validTargets,
+    previewPosition,
+    calculateDamage,
   ]);
 
   return (
@@ -738,13 +799,32 @@ export function GameGrid({
                         const attributes = getShipAttributes(cell.shipId);
                         if (!attributes) return null;
                         if (attributes.hullPoints <= 0) return null; // show skull only
-                        if (attributes.hullPoints >= attributes.maxHullPoints)
-                          return null; // full health - no bar
+                        const previewDamage =
+                          projectedDamageByShipId.get(cell.shipId) ?? 0;
+                        const showDamagePreview = previewDamage > 0;
+                        if (
+                          attributes.hullPoints >= attributes.maxHullPoints &&
+                          !showDamagePreview
+                        ) {
+                          return null; // full health - no bar (unless showing preview)
+                        }
 
                         const healthPercentage =
                           (attributes.hullPoints / attributes.maxHullPoints) *
                           100;
                         const isLowHealth = healthPercentage <= 25;
+
+                        const currentHp = attributes.hullPoints;
+                        const maxHp = attributes.maxHullPoints;
+                        const remainingHp = showDamagePreview
+                          ? Math.max(0, currentHp - previewDamage)
+                          : currentHp;
+                        const remainingPct = showDamagePreview
+                          ? (remainingHp / maxHp) * 100
+                          : healthPercentage;
+                        const damagePct = showDamagePreview
+                          ? Math.max(0, healthPercentage - remainingPct)
+                          : 0;
 
                         // Position: fill the top edge excluding the team dot side
                         // Dot is w-2 (0.5rem) with m-0.5 (0.125rem). Add an extra 0.125rem gap.
@@ -760,24 +840,38 @@ export function GameGrid({
                             <div className="w-full h-1 bg-gray-700 rounded-sm overflow-hidden relative">
                               <div
                                 className={`h-full transition-all duration-300 ${
-                                  isLowHealth ? "bg-red-500" : "bg-green-500"
+                                  // For damage previews, always keep the remaining-health segment green
+                                  // so the projected damage is clearly red on the right.
+                                  showDamagePreview
+                                    ? "bg-green-500"
+                                    : isLowHealth
+                                      ? "bg-red-500"
+                                      : "bg-green-500"
                                 }`}
-                                style={
-                                  cell.isCreator
-                                    ? {
-                                        width: `${healthPercentage}%`,
-                                        left: 0,
-                                        right: "auto",
-                                        position: "absolute",
-                                      }
-                                    : {
-                                        width: `${healthPercentage}%`,
-                                        right: 0,
-                                        left: "auto",
-                                        position: "absolute",
-                                      }
-                                }
+                                style={{
+                                  // Always render health left-to-right (no mirroring).
+                                  // Damage preview overlays the right-side portion.
+                                  width: `${healthPercentage}%`,
+                                  left: 0,
+                                  right: "auto",
+                                  position: "absolute",
+                                }}
                               />
+                              {showDamagePreview && damagePct > 0 && (
+                                <div
+                                  className="absolute top-0 bottom-0 bg-red-500/80 animate-damage-flash"
+                                  style={{
+                                    // Remaining HP on the left, projected damage flashing on the right.
+                                    left: `${remainingPct}%`,
+                                    width: `${damagePct}%`,
+                                  }}
+                                />
+                              )}
+                              {showDamagePreview && (
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-mono text-red-400 animate-damage-flash whitespace-nowrap">
+                                  -{Math.floor(previewDamage)}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -1305,6 +1399,122 @@ export function GameGrid({
               />
             )}
 
+          {/* EMP wave animation (selected + has a target ship) */}
+          {selectedShipId &&
+            selectedWeaponType === "special" &&
+            specialType === 1 &&
+            targetShipId != null &&
+            targetShipId !== 0n &&
+            (() => {
+              // Determine attacker position: preview > drag > current
+              let attackerRow = -1;
+              let attackerCol = -1;
+              if (previewPosition) {
+                attackerRow = previewPosition.row;
+                attackerCol = previewPosition.col;
+              } else if (draggedShipId && dragOverCell) {
+                attackerRow = dragOverCell.row;
+                attackerCol = dragOverCell.col;
+              } else {
+                grid.forEach((row, r) => {
+                  row.forEach((cell, c) => {
+                    if (cell?.shipId === selectedShipId && !cell.isPreview) {
+                      attackerRow = r;
+                      attackerCol = c;
+                    }
+                  });
+                });
+              }
+
+              let targetRow = -1;
+              let targetCol = -1;
+              grid.forEach((row, r) => {
+                row.forEach((cell, c) => {
+                  if (cell?.shipId === targetShipId) {
+                    targetRow = r;
+                    targetCol = c;
+                  }
+                });
+              });
+
+              if (
+                attackerRow === -1 ||
+                attackerCol === -1 ||
+                targetRow === -1 ||
+                targetCol === -1
+              ) {
+                return null;
+              }
+
+              return (
+                <EmpWaveAnimation
+                  gridContainerRef={gridContainerRef}
+                  attackerRow={attackerRow}
+                  attackerCol={attackerCol}
+                  targetRow={targetRow}
+                  targetCol={targetCol}
+                />
+              );
+            })()}
+
+          {/* Repair drones animation (selected + has a target ship) */}
+          {selectedShipId &&
+            selectedWeaponType === "special" &&
+            specialType === 2 &&
+            targetShipId != null &&
+            targetShipId !== 0n &&
+            (() => {
+              // Determine attacker position: preview > drag > current
+              let attackerRow = -1;
+              let attackerCol = -1;
+              if (previewPosition) {
+                attackerRow = previewPosition.row;
+                attackerCol = previewPosition.col;
+              } else if (draggedShipId && dragOverCell) {
+                attackerRow = dragOverCell.row;
+                attackerCol = dragOverCell.col;
+              } else {
+                grid.forEach((row, r) => {
+                  row.forEach((cell, c) => {
+                    if (cell?.shipId === selectedShipId && !cell.isPreview) {
+                      attackerRow = r;
+                      attackerCol = c;
+                    }
+                  });
+                });
+              }
+
+              let targetRow = -1;
+              let targetCol = -1;
+              grid.forEach((row, r) => {
+                row.forEach((cell, c) => {
+                  if (cell?.shipId === targetShipId) {
+                    targetRow = r;
+                    targetCol = c;
+                  }
+                });
+              });
+
+              if (
+                attackerRow === -1 ||
+                attackerCol === -1 ||
+                targetRow === -1 ||
+                targetCol === -1
+              ) {
+                return null;
+              }
+
+              return (
+                <RepairDroneAnimation
+                  gridContainerRef={gridContainerRef}
+                  attackerRow={attackerRow}
+                  attackerCol={attackerCol}
+                  targetRow={targetRow}
+                  targetCol={targetCol}
+                />
+              );
+            })()}
+
           {/* Damage Labels - Rendered at grid level above weapon animations */}
           {gridContainerRef.current &&
             (() => {
@@ -1401,6 +1611,9 @@ export function GameGrid({
                         } else {
                           labelText = `⚔️ ${damage.reducedDamage} DMG`;
                         }
+                      } else if (specialType === 1) {
+                        // EMP: show reactor damage label (not repair)
+                        labelText = "1 Reactor 💀";
                       } else {
                         // Other special abilities - show repair/heal effect
                         labelText = `🔧 Repair ${damage.reducedDamage} HP`;
@@ -1424,7 +1637,9 @@ export function GameGrid({
                           selectedWeaponType === "special"
                             ? specialType === 3 // Flak
                               ? "bg-orange-900 border border-orange-500" // Orange for flak
-                              : "bg-blue-900 border border-blue-500" // Blue for other specials
+                              : specialType === 1 // EMP
+                                ? "bg-red-900 border border-red-500" // Red for EMP reactor damage
+                                : "bg-blue-900 border border-blue-500" // Blue for other specials
                             : "bg-red-900 border border-red-500"
                         }`}
                         style={{
