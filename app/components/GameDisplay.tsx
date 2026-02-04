@@ -55,6 +55,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     col: number;
   } | null>(null);
   const [targetShipId, setTargetShipId] = useState<bigint | null>(null);
+  // Explicit per-ship action override (e.g. Retreat/Flee)
+  const [actionOverride, setActionOverride] = useState<ActionType | null>(null);
 
   const [selectedWeaponType, setSelectedWeaponType] = useState<
     "weapon" | "special"
@@ -74,6 +76,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     row: number;
     col: number;
   } | null>(null);
+
+  // If the user starts targeting or moving, clear any explicit "retreat" override.
+  React.useEffect(() => {
+    if (actionOverride !== ActionType.Retreat) return;
+    if (targetShipId !== null || previewPosition !== null) {
+      setActionOverride(null);
+    }
+  }, [actionOverride, targetShipId, previewPosition]);
 
   // Fetch the current game data to get real-time updates
   const {
@@ -1668,7 +1678,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       return false;
     }
 
-    // Check if the last move ship exists
+    // For Retreat, the ship has left the board. Use only last move data (oldRow, oldCol); do not require ship in shipMap or shipPositions.
+    if ((game.lastMove.actionType as ActionType) === ActionType.Retreat) {
+      return true;
+    }
+
+    // For other actions, the last move ship must exist in cache
     const lastMoveShip = shipMap.get(game.lastMove.shipId);
     if (!lastMoveShip) {
       return false;
@@ -1799,6 +1814,34 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   const lastMoveOldPosition =
     shouldShowLastMove && game.lastMove && !isShowingProposedMove
       ? { row: game.lastMove.oldRow, col: game.lastMove.oldCol }
+      : null;
+
+  const lastMoveActionType =
+    shouldShowLastMove && game.lastMove && !isShowingProposedMove
+      ? game.lastMove.actionType
+      : null;
+
+  // Who made the last move: use ship owner when ship is in map; otherwise derive from turn (after a move, turn switches to the other player)
+  const lastMoveIsCurrentPlayer =
+    shouldShowLastMove && game.lastMove && !isShowingProposedMove
+      ? (() => {
+          const ship = shipMap.get(game.lastMove!.shipId);
+          if (ship) return ship.owner === address;
+          return game.turnState.currentTurn !== address;
+        })()
+      : undefined;
+
+  const retreatPrepShipId =
+    selectedShipId != null && actionOverride === ActionType.Retreat
+      ? selectedShipId
+      : null;
+
+  const retreatPrepIsCreator =
+    retreatPrepShipId != null
+      ? (() => {
+          const ship = shipMap.get(retreatPrepShipId);
+          return ship ? ship.owner === game.metadata.creator : null;
+        })()
       : null;
 
   // Track previous turn state to detect turn changes
@@ -2461,6 +2504,64 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     </option>
                   </select>
                 )}
+                {/* Retreat: always below weapon select, independent of target */}
+                <button
+                  onClick={() => {
+                    setActionOverride(ActionType.Retreat);
+                    setTargetShipId(null);
+                    setPreviewPosition(null);
+                    setSelectedWeaponType("weapon");
+                  }}
+                  className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 w-fit"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    borderColor:
+                      actionOverride === ActionType.Retreat
+                        ? "var(--color-warning-red)"
+                        : "var(--color-gunmetal)",
+                    borderTopColor:
+                      actionOverride === ActionType.Retreat
+                        ? "var(--color-warning-red)"
+                        : "var(--color-steel)",
+                    borderLeftColor:
+                      actionOverride === ActionType.Retreat
+                        ? "var(--color-warning-red)"
+                        : "var(--color-steel)",
+                    color:
+                      actionOverride === ActionType.Retreat
+                        ? "var(--color-warning-red)"
+                        : "var(--color-text-secondary)",
+                    backgroundColor:
+                      actionOverride === ActionType.Retreat
+                        ? "rgba(255, 77, 77, 0.15)"
+                        : "var(--color-slate)",
+                    borderWidth: "2px",
+                    borderStyle: "solid",
+                    borderRadius: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (actionOverride !== ActionType.Retreat) {
+                      e.currentTarget.style.borderColor =
+                        "var(--color-warning-red)";
+                      e.currentTarget.style.color =
+                        "var(--color-warning-red)";
+                      e.currentTarget.style.backgroundColor =
+                        "rgba(255, 77, 77, 0.12)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (actionOverride !== ActionType.Retreat) {
+                      e.currentTarget.style.borderColor =
+                        "var(--color-gunmetal)";
+                      e.currentTarget.style.color =
+                        "var(--color-text-secondary)";
+                      e.currentTarget.style.backgroundColor =
+                        "var(--color-slate)";
+                    }
+                  }}
+                >
+                  Retreat
+                </button>
               </div>
 
               {/* Center: Target Selection */}
@@ -2469,7 +2570,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 assistableTargetsFromStart.length > 0) && (
                 <div className="flex-1">
                   <div
-                    className="border border-solid p-3"
+                    className="border border-solid p-3 min-h-[7.5rem]"
                     style={{
                       backgroundColor: "var(--color-near-black)",
                       borderColor: "var(--color-gunmetal)",
@@ -2487,12 +2588,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     >
                       Select Target (Optional)
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 min-h-[5rem]">
                       {selectedWeaponType === "special" && specialType === 3 ? (
                         <>
                           <button
                             onClick={() => setTargetShipId(0n)}
-                            className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                            className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
                             style={{
                               fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                               borderColor: targetShipId === 0n ? "var(--color-amber)" : "var(--color-gunmetal)",
@@ -2524,7 +2625,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           {previewPosition && (
                             <button
                               onClick={() => setTargetShipId(null)}
-                              className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                              className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
                               style={{
                                 fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                                 borderColor: targetShipId === null ? "var(--color-gunmetal)" : "var(--color-gunmetal)",
@@ -2563,7 +2664,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             <button
                               key={target.shipId.toString()}
                               onClick={() => setTargetShipId(target.shipId)}
-                              className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                              className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
                               style={{
                                 fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                                 borderColor: targetShipId === target.shipId ? "var(--color-warning-red)" : "var(--color-gunmetal)",
@@ -2603,7 +2704,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               <button
                                 key={target.shipId.toString()}
                                 onClick={() => setTargetShipId(target.shipId)}
-                                className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                                className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
                                 style={{
                                   fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                                   borderColor: targetShipId === target.shipId
@@ -2681,7 +2782,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                                     onClick={() =>
                                       setTargetShipId(target.shipId)
                                     }
-                                    className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                                    className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
                                     style={{
                                       fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                                       borderColor: targetShipId === target.shipId ? "var(--color-cyan)" : "var(--color-gunmetal)",
@@ -2721,8 +2822,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         previewPosition
                       ) && (
                         <button
-                          onClick={() => setTargetShipId(null)}
-                          className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                          onClick={() => {
+                            setActionOverride(null);
+                            setTargetShipId(null);
+                          }}
+                          className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
                           style={{
                             fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                             borderColor: "var(--color-gunmetal)",
@@ -2760,29 +2864,31 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   {(() => {
                     // Compute the actual actionType that will be submitted (same as args)
                     const computedActionType =
-                      targetShipId !== null && targetShipId !== 0n
-                        ? (() => {
-                            // Check if this is an assist action (friendly ship with 0 HP)
-                            const isAssistAction =
-                              assistableTargets.some(
-                                (target) => target.shipId === targetShipId
-                              ) ||
-                              assistableTargetsFromStart.some(
-                                (target) => target.shipId === targetShipId
-                              );
-                            if (isAssistAction) {
-                              return ActionType.Assist;
-                            }
-                            // Otherwise, check weapon type for shooting/special
-                            return selectedWeaponType === "special"
-                              ? ActionType.Special
-                              : ActionType.Shoot;
-                          })()
-                        : targetShipId === 0n &&
-                          selectedWeaponType === "special" &&
-                          specialType === 3
-                        ? ActionType.Special // Flak AOE (targetShipId is 0n)
-                        : ActionType.Pass; // Stay instead (targetShipId is null) or no target
+                      actionOverride != null
+                        ? actionOverride
+                        : targetShipId !== null && targetShipId !== 0n
+                          ? (() => {
+                              // Check if this is an assist action (friendly ship with 0 HP)
+                              const isAssistAction =
+                                assistableTargets.some(
+                                  (target) => target.shipId === targetShipId
+                                ) ||
+                                assistableTargetsFromStart.some(
+                                  (target) => target.shipId === targetShipId
+                                );
+                              if (isAssistAction) {
+                                return ActionType.Assist;
+                              }
+                              // Otherwise, check weapon type for shooting/special
+                              return selectedWeaponType === "special"
+                                ? ActionType.Special
+                                : ActionType.Shoot;
+                            })()
+                          : targetShipId === 0n &&
+                              selectedWeaponType === "special" &&
+                              specialType === 3
+                            ? ActionType.Special // Flak AOE (targetShipId is 0n)
+                            : ActionType.Pass; // Stay instead (targetShipId is null) or no target
 
                     const computedRow = previewPosition
                       ? previewPosition.row
@@ -2807,6 +2913,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
                     // Determine button text based on computed actionType
                     const getButtonText = () => {
+                      if (computedActionType === ActionType.Retreat) {
+                        return "🏳️";
+                      }
                       if (previewPosition) {
                         // Moving
                         if (computedActionType === ActionType.Assist) {
@@ -3065,17 +3174,19 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       ));
 
                   const actionType =
-                    targetShipId !== null && targetShipId !== 0n
-                      ? isAssistAction
-                        ? ActionType.Assist
-                        : selectedWeaponType === "special"
-                        ? ActionType.Special
-                        : ActionType.Shoot
-                      : targetShipId === 0n &&
-                        selectedWeaponType === "special" &&
-                        specialType === 3
-                      ? ActionType.Special // Flak AOE (targetShipId is 0n)
-                      : ActionType.Pass; // Stay instead (targetShipId is null) or no target
+                    actionOverride != null
+                      ? actionOverride
+                      : targetShipId !== null && targetShipId !== 0n
+                        ? isAssistAction
+                          ? ActionType.Assist
+                          : selectedWeaponType === "special"
+                            ? ActionType.Special
+                            : ActionType.Shoot
+                        : targetShipId === 0n &&
+                            selectedWeaponType === "special" &&
+                            specialType === 3
+                          ? ActionType.Special // Flak AOE (targetShipId is 0n)
+                          : ActionType.Pass; // Stay instead (targetShipId is null) or no target
 
                   const params = [
                     String(game.metadata.gameId),
@@ -3212,6 +3323,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           highlightedMovePosition={highlightedMovePosition}
           lastMoveShipId={lastMoveShipId}
           lastMoveOldPosition={lastMoveOldPosition}
+          lastMoveActionType={lastMoveActionType}
+          lastMoveIsCurrentPlayer={lastMoveIsCurrentPlayer}
+          retreatPrepShipId={retreatPrepShipId}
+          retreatPrepIsCreator={retreatPrepIsCreator}
           setSelectedShipId={setSelectedShipId}
           setPreviewPosition={setPreviewPosition}
           setTargetShipId={setTargetShipId}
@@ -3357,11 +3472,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         </div>
       </div>
 
-      {/* Game Events */}
+      {/* Last Move */}
       <GameEvents
-        gameId={game.metadata.gameId}
+        lastMove={game.lastMove}
         shipMap={shipMap}
-        shipPositions={game.shipPositions}
         address={address}
       />
 

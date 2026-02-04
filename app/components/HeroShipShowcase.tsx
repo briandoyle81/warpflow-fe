@@ -289,17 +289,31 @@ function generateRandomShip(index: number): Ship {
   };
 }
 
-export const HeroShipShowcase: React.FC = () => {
-  // Rotate ships every 10 seconds
-  const [shipIndex, setShipIndex] = useState(0);
+type HeroShipShowcaseAlign = "start" | "center" | "end";
+
+export const HeroShipShowcase: React.FC<{
+  seedOffset?: number;
+  intervalMs?: number;
+  align?: HeroShipShowcaseAlign;
+  side?: "allied" | "enemy";
+  flipLayout?: boolean;
+}> = ({
+  seedOffset = 0,
+  intervalMs = 10000,
+  align = "end",
+  side = "allied",
+  flipLayout = false,
+}) => {
+  // Rotate ships every N milliseconds
+  const [shipIndex, setShipIndex] = useState(seedOffset);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setShipIndex((prev) => prev + 1);
-    }, 10000); // 10 seconds
+    }, intervalMs);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [intervalMs]);
 
   // Generate current hero ship
   const heroShip = useMemo(() => generateRandomShip(shipIndex), [shipIndex]);
@@ -323,12 +337,30 @@ export const HeroShipShowcase: React.FC = () => {
     }
   }, [heroShip]);
 
+  const justifyClass =
+    align === "start"
+      ? "md:justify-start"
+      : align === "center"
+        ? "md:justify-center"
+        : "md:justify-end";
+
+  const accent = side === "enemy" ? "var(--color-warning-red)" : "var(--color-cyan)";
+  const accentBorderClass = side === "enemy" ? "border-red-400" : "border-blue-400";
+  const accentTextClass = side === "enemy" ? "text-red-300" : "text-cyan-300";
+  const accentSoftBorderClass =
+    side === "enemy" ? "border-red-400/30" : "border-blue-400/30";
+  const accentDividerClass =
+    side === "enemy" ? "border-red-400/20" : "border-blue-400/20";
+  const accentGlow = side === "enemy" ? "rgba(255, 77, 77, 0.4)" : "rgba(86, 214, 255, 0.4)";
+  const accentInset = side === "enemy" ? "rgba(255, 77, 77, 0.1)" : "rgba(86, 214, 255, 0.1)";
+  const flipSprite = side === "allied";
+
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-end gap-2 w-full">
+    <div className={`flex flex-col md:flex-row md:items-center ${justifyClass} gap-2 w-full`}>
       {/* Stats panel (left of art) */}
-      <div className="order-2 md:order-1 flex-1">
+      <div className={`${flipLayout ? "order-2 md:order-2" : "order-2 md:order-1"} flex-1`}>
         <div
-          className="border-2 border-cyan-400 bg-black/60 p-4 flex flex-col justify-between"
+          className={`border-2 ${accentBorderClass} bg-black/60 p-4 flex flex-col justify-between`}
           style={{
             borderRadius: 0, // Square corners for industrial theme
             minWidth: SHIP_ART_SIZE / 2,
@@ -342,7 +374,7 @@ export const HeroShipShowcase: React.FC = () => {
               style={{
                 fontFamily:
                   "var(--font-rajdhani), 'Arial Black', sans-serif",
-                color: "var(--color-cyan)",
+                color: accent,
               }}
             >
               {heroShip.name}
@@ -365,9 +397,12 @@ export const HeroShipShowcase: React.FC = () => {
                   borderRadius: 0,
                   ...(shipRank.rank === 3
                     ? {
-                        color: "var(--color-cyan)",
-                        borderColor: "var(--color-cyan)",
-                        backgroundColor: "rgba(86, 214, 255, 0.2)",
+                        color: accent,
+                        borderColor: accent,
+                        backgroundColor:
+                          side === "enemy"
+                            ? "rgba(255, 77, 77, 0.2)"
+                            : "rgba(86, 214, 255, 0.2)",
                       }
                     : shipRank.rank === 4
                       ? {
@@ -395,7 +430,7 @@ export const HeroShipShowcase: React.FC = () => {
 
           {/* Equipment */}
           <div
-            className="mb-3 pb-3 border-b border-cyan-400/20"
+            className={`mb-3 pb-3 border-b ${accentDividerClass}`}
             style={{
               fontFamily: "var(--font-mono), monospace",
             }}
@@ -403,13 +438,13 @@ export const HeroShipShowcase: React.FC = () => {
             <div className="text-xs space-y-1">
               <div className="flex justify-between">
                 <span className="opacity-60">Weapon:</span>
-                <span className="text-cyan-300">
+                <span className={accentTextClass}>
                   {getMainWeaponName(heroShip.equipment.mainWeapon)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="opacity-60">Armor:</span>
-                <span className="text-cyan-300">
+                <span className={accentTextClass}>
                   {heroShip.equipment.armor > 0
                     ? getArmorName(heroShip.equipment.armor)
                     : heroShip.equipment.shields > 0
@@ -419,7 +454,7 @@ export const HeroShipShowcase: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="opacity-60">Special:</span>
-                <span className="text-cyan-300">
+                <span className={accentTextClass}>
                   {heroShip.equipment.special > 0
                     ? getSpecialName(heroShip.equipment.special)
                     : "None"}
@@ -455,7 +490,7 @@ export const HeroShipShowcase: React.FC = () => {
             </div>
             <div className="flex justify-between">
               <span className="opacity-60">Move:</span>
-              <span className="text-cyan-400 font-bold">
+              <span className={`${side === "enemy" ? "text-red-400" : "text-cyan-400"} font-bold`}>
                 {shipAttributes.movement}
               </span>
             </div>
@@ -470,10 +505,10 @@ export const HeroShipShowcase: React.FC = () => {
       </div>
 
       {/* Ship art (right) */}
-      <div className="flex items-center justify-center order-1 md:order-2">
+      <div className={`flex items-center justify-center ${flipLayout ? "order-1 md:order-1" : "order-1 md:order-2"}`}>
         {heroShipImage ? (
           <div
-            className="relative p-4 bg-black/40 border-2 border-cyan-400/30 flex items-center justify-center"
+            className={`relative p-4 bg-black/40 border-2 ${accentSoftBorderClass} flex items-center justify-center`}
             style={{
               borderRadius: 0, // Square corners for industrial theme
               width: SHIP_ART_SIZE,
@@ -486,20 +521,21 @@ export const HeroShipShowcase: React.FC = () => {
               className="w-full h-full object-contain"
               style={{
                 imageRendering: "pixelated",
-                filter: "drop-shadow(0 0 20px rgba(86, 214, 255, 0.4))",
+                filter: `drop-shadow(0 0 20px ${accentGlow})`,
+                transform: flipSprite ? "scaleX(-1)" : undefined,
               }}
             />
             {/* Glow effect */}
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
-                boxShadow: "inset 0 0 60px rgba(86, 214, 255, 0.1)",
+                boxShadow: `inset 0 0 60px ${accentInset}`,
               }}
             />
           </div>
         ) : (
           <div
-            className="bg-black/40 border-2 border-cyan-400/30 flex items-center justify-center"
+            className={`bg-black/40 border-2 ${accentSoftBorderClass} flex items-center justify-center`}
             style={{
               borderRadius: 0, // Square corners for industrial theme
               width: SHIP_ART_SIZE,

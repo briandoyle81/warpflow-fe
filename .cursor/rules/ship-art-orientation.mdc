@@ -1,0 +1,13 @@
+---
+description: Ship art orientation at native facing (front = left, rear = right)
+alwaysApply: true
+---
+
+# Ship art orientation
+
+When referring to ship art (rendered ship sprites, NFT art, SVGs):
+
+- **Front** of the ship = **left side** of the art at native facing.
+- **Rear** of the ship = **right side** of the art at native facing.
+
+Use this when implementing flips, engine/glow placement, flee/retreat direction, or any logic that depends on which end of the ship is the nose vs the engines.

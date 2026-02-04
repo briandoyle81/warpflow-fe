@@ -28,6 +28,17 @@ const Info: React.FC = () => {
     );
   }
 
+  const handlePlayNow = () => {
+    // Single CTA behavior:
+    // - Connected: go straight to real lobbies
+    // - Not connected: launch the no-wallet demo (tutorial experience)
+    if (isConnected) {
+      window.dispatchEvent(new Event("warpflow-navigate-to-lobbies"));
+    } else {
+      setShowTutorial(true);
+    }
+  };
+
   return (
     <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-8">
       {/* Hero Section - full width so its inner grid aligns with key features below */}
@@ -48,8 +59,8 @@ const Info: React.FC = () => {
         />
 
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 items-center px-6 md:px-0">
-          {/* Left side - Text content (50%) */}
-          <div className="text-center md:text-left md:col-span-6 pl-6 md:pl-8">
+          {/* Left side - Text + primary CTA */}
+          <div className="text-center md:text-left md:col-span-5 pl-6 md:pl-8">
             <h1
               className="text-5xl md:text-6xl font-bold mb-4 tracking-wider"
               style={{
@@ -70,56 +81,118 @@ const Info: React.FC = () => {
               STRATEGIC PvP STARSHIP COMMAND
             </p>
             <p
-              className="text-base mb-4 opacity-80"
+              className="text-lg mb-4 opacity-80"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
                 color: "var(--color-text-secondary)",
               }}
             >
-              Every ship in your navy is a unique tactical asset, from valuable
-              champions that can turn a battle on their own, to disposable
-              escorts you&apos;ll sacrifice to win the war.
+              Admiral, your fleet is dropping out of warp under fire.
             </p>
             <p
-              className="text-sm mb-6 opacity-80"
+              className="text-base mb-6 opacity-80"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
                 color: "var(--color-text-secondary)",
               }}
             >
-              Customize loadouts, assemble a fleet, then take on real opponents
-              in turn-based PvP. Positioning and target priority decide every
-              fight.
+              Deploy on the grid. Outmaneuver real opponents with positioning,
+              range control, and ruthless target priority.
             </p>
-            {!isConnected && (
-              <div className="flex gap-4 justify-center md:justify-start">
+            <div className="flex flex-col gap-3 items-center md:items-start">
+              <button
+                onClick={handlePlayNow}
+                className="px-10 py-4 border-2 border-solid uppercase font-black tracking-wider transition-colors duration-150 w-full md:w-auto"
+                style={{
+                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  borderColor: "var(--color-cyan)",
+                  color: "var(--color-cyan)",
+                  backgroundColor: "rgba(34, 48, 65, 0.85)", // steel-ish
+                  borderRadius: 0,
+                  boxShadow: "0 0 22px rgba(86, 214, 255, 0.18)",
+                }}
+              >
+                [PLAY NOW]
+              </button>
+              {!isConnected && (
                 <p
                   className="text-sm opacity-70"
                   style={{
-                    fontFamily: "var(--font-rajdhani), sans-serif",
+                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
                     color: "var(--color-text-muted)",
                   }}
                 >
-                  Connect your wallet to begin
+                  No wallet required to try the demo. Connect later to save.
                 </p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Right side - Ship showcase container (50%), aligned right */}
-          <div className="md:col-span-6 flex justify-center md:justify-end">
-            <HeroShipShowcase />
+          {/* Right side - Gameplay clip (above the fold) */}
+          <div className="md:col-span-7 flex justify-center md:justify-end pr-6 md:pr-8">
+            <div
+              className="w-full max-w-2xl border-2 border-cyan-400 bg-black/40 p-2"
+              style={{
+                borderRadius: 0,
+              }}
+            >
+              <img
+                src="/img/missile-clip.gif"
+                alt="Missiles firing at target ships with damage numbers and health bars"
+                className="w-full h-auto block"
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Combat preview - gameplay clip */}
-      <div className="md:col-span-12 flex justify-center">
-        <img
-          src="/img/missile-clip.gif"
-          alt="Missiles firing at target ships with damage numbers and health bars"
-          className="w-full max-w-2xl h-auto block"
-        />
+      {/* Ship demo display (kept, moved below hero) */}
+      <div
+        className="md:col-span-12 border-2 border-phosphor-green bg-black/40 p-6"
+        style={{
+          borderRadius: 0,
+        }}
+      >
+        <h3
+          className="text-xl font-bold mb-3 tracking-wider text-center md:text-left"
+          style={{
+            fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+            color: "var(--color-phosphor-green)",
+          }}
+        >
+          [FLEET INTEL]
+        </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-black/0 p-1" style={{ borderRadius: 0 }}>
+            <div
+              className="text-xs font-bold tracking-wider mb-3"
+              style={{
+                fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                color: "var(--color-cyan)",
+              }}
+            >
+              [ALLIED]
+            </div>
+            <HeroShipShowcase seedOffset={0} align="start" side="allied" />
+          </div>
+          <div className="bg-black/0 p-1" style={{ borderRadius: 0 }}>
+            <div
+              className="text-xs font-bold tracking-wider mb-3"
+              style={{
+                fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                color: "var(--color-warning-red)",
+              }}
+            >
+              [ENEMY]
+            </div>
+            <HeroShipShowcase
+              seedOffset={3}
+              align="start"
+              side="enemy"
+              flipLayout={true}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Key Features - same 12-col grid so left edges align with hero */}
@@ -140,7 +213,7 @@ const Info: React.FC = () => {
           [BUILD YOUR NAVY]
         </h3>
         <p
-          className="text-sm mb-4 opacity-80"
+          className="text-base mb-4 opacity-80"
           style={{
             fontFamily: "var(--font-rajdhani), sans-serif",
             color: "var(--color-text-secondary)",
@@ -151,7 +224,7 @@ const Info: React.FC = () => {
           need. Think TCG economy with real ownership.
         </p>
         <ul
-          className="text-xs space-y-1 opacity-90"
+          className="text-sm space-y-1 opacity-90"
           style={{
             fontFamily: "var(--font-mono), monospace",
             color: "var(--color-text-secondary)",
@@ -180,7 +253,7 @@ const Info: React.FC = () => {
           [ASSEMBLE A FLEET]
         </h3>
         <p
-          className="text-sm mb-4 opacity-80"
+          className="text-base mb-4 opacity-80"
           style={{
             fontFamily: "var(--font-rajdhani), sans-serif",
             color: "var(--color-text-secondary)",
@@ -190,7 +263,7 @@ const Info: React.FC = () => {
           want to run. Choose the composition that fits your plan.
         </p>
         <ul
-          className="text-xs space-y-1 opacity-90"
+          className="text-sm space-y-1 opacity-90"
           style={{
             fontFamily: "var(--font-mono), monospace",
             color: "var(--color-text-secondary)",
@@ -220,7 +293,7 @@ const Info: React.FC = () => {
           [ENGAGE THE ENEMY]
         </h3>
         <p
-          className="text-sm mb-4 opacity-80"
+          className="text-base mb-4 opacity-80"
           style={{
             fontFamily: "var(--font-rajdhani), sans-serif",
             color: "var(--color-text-secondary)",
@@ -230,7 +303,7 @@ const Info: React.FC = () => {
           weapon selection determine the outcome. Plan your moves carefully.
         </p>
         <ul
-          className="text-xs space-y-1 opacity-90"
+          className="text-sm space-y-1 opacity-90"
           style={{
             fontFamily: "var(--font-mono), monospace",
             color: "var(--color-text-secondary)",
@@ -259,7 +332,7 @@ const Info: React.FC = () => {
           [COLLECT THE REWARDS]
         </h3>
         <p
-          className="text-sm mb-4 opacity-80"
+          className="text-base mb-4 opacity-80"
           style={{
             fontFamily: "var(--font-rajdhani), sans-serif",
             color: "var(--color-text-secondary)",
@@ -270,7 +343,7 @@ const Info: React.FC = () => {
           fleet stronger over time.
         </p>
         <ul
-          className="text-xs space-y-1 opacity-90"
+          className="text-sm space-y-1 opacity-90"
           style={{
             fontFamily: "var(--font-mono), monospace",
             color: "var(--color-text-secondary)",
@@ -319,7 +392,7 @@ const Info: React.FC = () => {
               CONNECT WALLET
             </h3>
             <p
-              className="text-sm opacity-70"
+              className="text-base opacity-70"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
                 color: "var(--color-text-secondary)",
@@ -348,7 +421,7 @@ const Info: React.FC = () => {
               CLAIM FREE SHIPS
             </h3>
             <p
-              className="text-sm opacity-70"
+              className="text-base opacity-70"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
                 color: "var(--color-text-secondary)",
@@ -377,7 +450,7 @@ const Info: React.FC = () => {
               BATTLE
             </h3>
             <p
-              className="text-sm opacity-70"
+              className="text-base opacity-70"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
                 color: "var(--color-text-secondary)",
@@ -386,48 +459,6 @@ const Info: React.FC = () => {
               Join a lobby and engage in tactical combat against other players
             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Tutorial CTA */}
-      <div
-        className="md:col-span-12 border-2 border-phosphor-green bg-black/40 p-6"
-        style={{
-          borderRadius: 0, // Square corners for industrial theme
-        }}
-      >
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <h3
-              className="text-xl font-bold mb-2"
-              style={{
-                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                color: "var(--color-phosphor-green)",
-              }}
-            >
-              [LEARN THE BASICS]
-            </h3>
-            <p
-              className="text-sm opacity-80"
-              style={{
-                fontFamily: "var(--font-rajdhani), sans-serif",
-                color: "var(--color-text-secondary)",
-              }}
-            >
-              New to WarpFlow? Complete the interactive tutorial to master navy
-              management and combat mechanics.
-            </p>
-          </div>
-          <button
-            onClick={() => setShowTutorial(true)}
-            className="px-6 py-3 border-2 border-phosphor-green text-phosphor-green hover:bg-phosphor-green/10 font-mono font-bold tracking-wider transition-all duration-200 whitespace-nowrap"
-            style={{
-              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-              borderRadius: 0, // Square corners for industrial theme
-            }}
-          >
-            [START TUTORIAL]
-          </button>
         </div>
       </div>
 
@@ -448,7 +479,7 @@ const Info: React.FC = () => {
           [AUDIO CREDITS]
         </h4>
         <div
-          className="text-xs space-y-2 opacity-70"
+          className="text-sm space-y-2 opacity-70"
           style={{
             fontFamily: "var(--font-rajdhani), sans-serif",
             color: "var(--color-text-muted)",

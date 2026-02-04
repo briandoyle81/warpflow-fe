@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react";
 import Image from "next/image";
-import { ShipPosition, Attributes, Ship } from "../types/types";
+import { ShipPosition, Attributes, Ship, ActionType } from "../types/types";
 import { ShipImage } from "./ShipImage";
 import ShipCard from "./ShipCard";
 import { LaserShootingAnimation } from "./weapon-animations/LaserShootingAnimation";
@@ -12,6 +12,8 @@ import { RailgunShootingAnimation } from "./weapon-animations/RailgunShootingAni
 import { FlakExplosionAnimation } from "./weapon-animations/FlakExplosionAnimation";
 import { RepairDroneAnimation } from "./weapon-animations/RepairDroneAnimation";
 import { EmpWaveAnimation } from "./weapon-animations/EmpWaveAnimation";
+import { RetreatPrepAnimation } from "./weapon-animations/RetreatPrepAnimation";
+import { WarpFieldCollapseAnimation } from "./weapon-animations/WarpFieldCollapseAnimation";
 
 interface GameGridProps {
   grid: (ShipPosition | null)[][];
@@ -73,6 +75,10 @@ interface GameGridProps {
   highlightedMovePosition?: { row: number; col: number } | null;
   lastMoveShipId?: bigint | null; // Ship ID for the last move (to show pulse effect)
   lastMoveOldPosition?: { row: number; col: number } | null; // Old position for last move preview
+  lastMoveActionType?: ActionType | null; // When Retreat, show warp collapse at old position
+  lastMoveIsCurrentPlayer?: boolean | undefined; // true = blue outline, false = red outline
+  retreatPrepShipId?: bigint | null; // When set, this ship shows flip + engine glow (Retreat selected)
+  retreatPrepIsCreator?: boolean | null; // For retreat prep flip direction
   setSelectedShipId: (shipId: bigint | null) => void;
   setPreviewPosition: (position: { row: number; col: number } | null) => void;
   setTargetShipId: (shipId: bigint | null) => void;
@@ -123,6 +129,10 @@ export function GameGrid({
   highlightedMovePosition,
   lastMoveShipId,
   lastMoveOldPosition,
+  lastMoveActionType,
+  lastMoveIsCurrentPlayer,
+  retreatPrepShipId,
+  retreatPrepIsCreator,
   setSelectedShipId,
   setPreviewPosition,
   setTargetShipId,
@@ -222,8 +232,9 @@ export function GameGrid({
         <div
           ref={gridContainerRef}
           key="game-grid"
-          className="relative grid gap-0 border border-gray-900 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full"
+          className="relative w-full"
         >
+          <div className="relative z-0 grid gap-0 border border-gray-900 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full">
           {grid.map((row, rowIndex) =>
             row.map((cell, colIndex) => {
               const ship = cell ? shipMap.get(cell.shipId) : null;
@@ -697,6 +708,22 @@ export function GameGrid({
                       <div className="absolute inset-0 z-1 border-2 border-red-400 bg-red-500/10 pointer-events-none animate-pulse" />
                     )}
 
+                  {/* Retreat last move: outline on the cell (blue = current player, red = opponent) */}
+                  {(lastMoveActionType as ActionType) === ActionType.Retreat &&
+                    lastMoveOldPosition != null &&
+                    rowIndex === lastMoveOldPosition.row &&
+                    colIndex === lastMoveOldPosition.col && (
+                      <div
+                        className={`absolute inset-0 ring-4 border-2 border-dashed rounded-sm pointer-events-none z-20 ${
+                          lastMoveIsCurrentPlayer === true
+                            ? "ring-blue-400 border-blue-400 bg-blue-500/20"
+                            : lastMoveIsCurrentPlayer === false
+                              ? "ring-red-400 border-red-400 bg-red-500/20"
+                              : "ring-yellow-400 border-yellow-400 bg-yellow-500/20"
+                        }`}
+                      />
+                    )}
+
                   {cell && ship ? (
                     <div
                       className="w-full h-full relative z-10"
@@ -877,11 +904,38 @@ export function GameGrid({
                         );
                       })()}
 
+                      {/* Retreat prep: flip + engine glow when player selected Retreat (before tx) */}
+                      {retreatPrepShipId === cell.shipId &&
+                        retreatPrepIsCreator != null && (
+                          <RetreatPrepAnimation
+                            ship={ship}
+                            isCreator={retreatPrepIsCreator}
+                            selectionOutlineClassName={
+                              canMoveShip
+                                ? "ring-2 ring-blue-400"
+                                : "ring-2 ring-purple-400"
+                            }
+                          />
+                        )}
                       <ShipImage
                         ship={ship}
                         className={`w-full h-full relative z-10 ${
-                          cell.isCreator ? "scale-x-[-1]" : ""
+                          retreatPrepShipId === cell.shipId
+                            ? "opacity-0 pointer-events-none"
+                            : cell.isCreator
+                              ? "scale-x-[-1]"
+                              : ""
                         } ${(() => {
+                          // Last move old position: hide ghost when showing Retreat zoom-off
+                          if (
+                            lastMoveShipId === cell.shipId &&
+                            lastMoveOldPosition &&
+                            rowIndex === lastMoveOldPosition.row &&
+                            colIndex === lastMoveOldPosition.col &&
+                            lastMoveActionType === ActionType.Retreat
+                          ) {
+                            return "opacity-0 pointer-events-none";
+                          }
                           // Last move old position: 50% opacity, no animation (check first)
                           if (
                             lastMoveShipId === cell.shipId &&
@@ -1099,9 +1153,20 @@ export function GameGrid({
                               : "animate-pulse-original"
                             : "";
 
+                        // Last move outline: blue = current player, red = opponent; proposed move stays yellow
+                        const isLastMoveCell =
+                          isLastMoveOldPosition || isLastMoveNewPosition;
+                        const borderColor = isLastMoveCell
+                          ? lastMoveIsCurrentPlayer === true
+                            ? "border-blue-400"
+                            : lastMoveIsCurrentPlayer === false
+                              ? "border-red-400"
+                              : "border-yellow-400"
+                          : "border-yellow-400";
+
                         return (
                           <div
-                            className={`absolute inset-0 ${borderWidth} border-yellow-400 rounded-sm pointer-events-none ${borderStyle} ${animationClass}`}
+                            className={`absolute inset-0 ${borderWidth} ${borderColor} rounded-sm pointer-events-none ${borderStyle} ${animationClass}`}
                           />
                         );
                       })()}
@@ -1111,6 +1176,19 @@ export function GameGrid({
               );
             }),
           )}
+          </div>
+
+          {/* Overlays: positioned above grid via z-50 so they always paint on top */}
+          <div className="absolute inset-0 z-50 pointer-events-none">
+          {/* Retreat last move: warp field collapsing at the position (no ship data needed) */}
+          {(lastMoveActionType as ActionType) === ActionType.Retreat &&
+            lastMoveOldPosition != null && (
+              <WarpFieldCollapseAnimation
+                gridContainerRef={gridContainerRef}
+                row={lastMoveOldPosition.row}
+                col={lastMoveOldPosition.col}
+              />
+            )}
 
           {/* Laser Shooting Animation */}
           {(selectedShipId || lastMoveShipId) &&
@@ -1655,6 +1733,7 @@ export function GameGrid({
                 </div>
               );
             })()}
+          </div>
         </div>
       </div>
 

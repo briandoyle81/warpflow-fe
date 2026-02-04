@@ -74,19 +74,6 @@ const Header: React.FC = () => {
     setSelectedChainIdState(persisted);
   }, [isHydrated]);
 
-  // If the wallet chain changes externally, reflect it in the selector.
-  // Do NOT do this while we're in the middle of a programmatic switch.
-  useEffect(() => {
-    if (!isHydrated) return;
-    if (account.status !== "connected") return;
-    if (!isSupportedChainId(account.chainId)) return;
-    if (pendingSwitchChainIdRef.current != null) return;
-    if (account.chainId !== selectedChainId) {
-      setSelectedChainId(account.chainId);
-      setSelectedChainIdState(account.chainId);
-    }
-  }, [account.status, account.chainId, isHydrated, selectedChainId]);
-
   // When connected, ensure wallet is on the selected chain.
   useEffect(() => {
     if (!isHydrated) return;
@@ -115,9 +102,6 @@ const Header: React.FC = () => {
     setSelectedChainId(nextId);
     setSelectedChainIdState(nextId);
     pendingSwitchChainIdRef.current = nextId;
-    if (account.status === "connected") {
-      switchChain({ chainId: nextId });
-    }
   };
 
   const formatAddress = (address: string) => {

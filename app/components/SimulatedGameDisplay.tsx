@@ -3,12 +3,18 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import defaultMap from "../../public/default_map.json";
 import { TutorialContextValue } from "../types/onboarding";
-import { ALL_TUTORIAL_SHIPS, TUTORIAL_PLAYER_ADDRESS } from "../data/tutorialShips";
+import {
+  ALL_TUTORIAL_SHIPS,
+  TUTORIAL_PLAYER_ADDRESS,
+} from "../data/tutorialShips";
 import { toast } from "react-hot-toast";
 import { ActionType, ShipPosition, Attributes, Ship } from "../types/types";
 import { GameGrid } from "./GameGrid";
 import { useSpecialRange } from "../hooks/useSpecialRange";
-import { useSpecialData, SpecialData } from "../hooks/useShipAttributesContract";
+import {
+  useSpecialData,
+  SpecialData,
+} from "../hooks/useShipAttributesContract";
 
 interface SimulatedGameDisplayProps {
   tutorialContext: TutorialContextValue;
@@ -17,8 +23,16 @@ interface SimulatedGameDisplayProps {
 const GRID_WIDTH = 17;
 const GRID_HEIGHT = 11;
 
-export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayProps) {
-  const { gameState, currentStep, currentStepIndex, validateAction, executeAction } = tutorialContext;
+export function SimulatedGameDisplay({
+  tutorialContext,
+}: SimulatedGameDisplayProps) {
+  const {
+    gameState,
+    currentStep,
+    currentStepIndex,
+    validateAction,
+    executeAction,
+  } = tutorialContext;
 
   const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
   const [previewPosition, setPreviewPosition] = useState<{
@@ -53,7 +67,9 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
 
   // Map of shipId to ship object
   const shipMap = useMemo(() => {
-    return new Map<bigint, Ship>(ALL_TUTORIAL_SHIPS.map((ship) => [ship.id, ship]));
+    return new Map<bigint, Ship>(
+      ALL_TUTORIAL_SHIPS.map((ship) => [ship.id, ship]),
+    );
   }, []);
 
   // Create grids to track blocked and scoring positions from default map
@@ -125,7 +141,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
       }
       return gameState.shipAttributes[shipIndex];
     },
-    [gameState.shipAttributes, gameState.shipIds]
+    [gameState.shipAttributes, gameState.shipIds],
   );
 
   // Get special range data for the selected ship
@@ -140,7 +156,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
       const ship = shipMap.get(shipId);
       return ship ? ship.owner === TUTORIAL_PLAYER_ADDRESS : false;
     },
-    [shipMap]
+    [shipMap],
   );
 
   // Build a set of shipIds that have already moved this round
@@ -162,7 +178,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
       col0: number,
       row1: number,
       col1: number,
-      blockedGrid: boolean[][]
+      blockedGrid: boolean[][],
     ): boolean => {
       if (blockedGrid[row0] && blockedGrid[row0][col0]) {
         return false;
@@ -205,7 +221,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
 
       return true;
     },
-    []
+    [],
   );
 
   // Create a 2D array to represent the grid
@@ -248,7 +264,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
     const movementRange = attributes?.movement || 1;
 
     const currentPosition = gameState.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId
+      (pos) => pos.shipId === selectedShipId,
     );
 
     if (!currentPosition) return [];
@@ -270,8 +286,8 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
     const allowedPositionsSet = hasMoveConstraints
       ? new Set(
           (allowedMoveAction?.allowedPositions || []).map(
-            (pos) => `${pos.row}-${pos.col}`
-          )
+            (pos) => `${pos.row}-${pos.col}`,
+          ),
         )
       : null;
 
@@ -293,7 +309,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
         const distance = Math.abs(row - startRow) + Math.abs(col - startCol);
         if (distance <= movementRange && distance > 0) {
           const isOccupied = gameState.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col
+            (pos) => pos.position.row === row && pos.position.col === col,
           );
 
           if (!isOccupied) {
@@ -330,7 +346,8 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
       currentStep?.allowedActions.moveShip &&
       selectedShipId === currentStep.allowedActions.moveShip.shipId
     ) {
-      const allowedPositions = currentStep.allowedActions.moveShip.allowedPositions;
+      const allowedPositions =
+        currentStep.allowedActions.moveShip.allowedPositions;
       if (allowedPositions.length > 0) {
         return allowedPositions[0];
       }
@@ -343,7 +360,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
     (
       targetShipId: bigint,
       weaponType?: "weapon" | "special",
-      showReducedDamage?: boolean
+      showReducedDamage?: boolean,
     ) => {
       if (!selectedShipId)
         return {
@@ -389,7 +406,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
       } else {
         reducedDamage = Math.max(
           0,
-          baseDamage - Math.floor((baseDamage * reduction) / 100)
+          baseDamage - Math.floor((baseDamage * reduction) / 100),
         );
       }
 
@@ -397,7 +414,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
 
       return { reducedDamage, willKill, reactorCritical: false };
     },
-    [selectedShipId, getShipAttributes, selectedWeaponType, specialData]
+    [selectedShipId, getShipAttributes, selectedWeaponType, specialData],
   );
 
   // Get valid targets
@@ -407,11 +424,20 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
 
     // Get allowed targets from tutorial step (if step has specific constraints)
     let allowedTargets: bigint[] | null = null;
-    if (currentStep?.allowedActions.shoot && currentStep.allowedActions.shoot.shipId === selectedShipId) {
+    if (
+      currentStep?.allowedActions.shoot &&
+      currentStep.allowedActions.shoot.shipId === selectedShipId
+    ) {
       allowedTargets = currentStep.allowedActions.shoot.allowedTargets;
-    } else if (currentStep?.allowedActions.useSpecial && currentStep.allowedActions.useSpecial.shipId === selectedShipId) {
+    } else if (
+      currentStep?.allowedActions.useSpecial &&
+      currentStep.allowedActions.useSpecial.shipId === selectedShipId
+    ) {
       allowedTargets = currentStep.allowedActions.useSpecial.allowedTargets;
-    } else if (currentStep?.allowedActions.assist && currentStep.allowedActions.assist.shipId === selectedShipId) {
+    } else if (
+      currentStep?.allowedActions.assist &&
+      currentStep.allowedActions.assist.shipId === selectedShipId
+    ) {
       allowedTargets = currentStep.allowedActions.assist.allowedTargets;
     }
 
@@ -424,7 +450,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
         : attributes?.range || 1;
 
     const currentPosition = gameState.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId
+      (pos) => pos.shipId === selectedShipId,
     );
 
     if (!currentPosition) return [];
@@ -509,7 +535,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
     if (!selectedShipId) return [];
 
     const currentPosition = gameState.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId
+      (pos) => pos.shipId === selectedShipId,
     );
 
     if (!currentPosition) return [];
@@ -562,7 +588,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
     if (!selectedShipId) return [];
 
     const currentPosition = gameState.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId
+      (pos) => pos.shipId === selectedShipId,
     );
 
     if (!currentPosition) return [];
@@ -613,7 +639,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
         : attributes?.range || 1;
 
     const currentPosition = gameState.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId
+      (pos) => pos.shipId === selectedShipId,
     );
 
     if (!currentPosition) return [];
@@ -646,7 +672,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
           // Only add positions that are exactly 1 square away and not occupied
           if (distance === 1) {
             const isOccupied = gameState.shipPositions.some(
-              (pos) => pos.position.row === row && pos.position.col === col
+              (pos) => pos.position.row === row && pos.position.col === col,
             );
 
             if (!isOccupied) {
@@ -673,7 +699,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
           if (distance <= shootingRange && distance > 1) {
             // Check if position is not occupied by another ship
             const isOccupied = gameState.shipPositions.some(
-              (pos) => pos.position.row === row && pos.position.col === col
+              (pos) => pos.position.row === row && pos.position.col === col,
             );
 
             if (!isOccupied) {
@@ -722,7 +748,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
         // Only check positions that are exactly 1 square away from any valid move position
         if (distance === movementRange + 1) {
           const isOccupied = gameState.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col
+            (pos) => pos.position.row === row && pos.position.col === col,
           );
 
           if (!isOccupied) {
@@ -747,7 +773,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
                   const isMoveOccupied = gameState.shipPositions.some(
                     (pos) =>
                       pos.position.row === moveRow &&
-                      pos.position.col === moveCol
+                      pos.position.col === moveCol,
                   );
 
                   if (!isMoveOccupied) {
@@ -796,7 +822,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
         ) {
           // Check if position is not occupied by another ship
           const isOccupied = gameState.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col
+            (pos) => pos.position.row === row && pos.position.col === col,
           );
 
           if (!isOccupied) {
@@ -822,7 +848,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
                   const isMoveOccupied = gameState.shipPositions.some(
                     (pos) =>
                       pos.position.row === moveRow &&
-                      pos.position.col === moveCol
+                      pos.position.col === moveCol,
                   );
 
                   if (!isMoveOccupied) {
@@ -917,7 +943,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
       setTargetShipId(null);
       setSelectedWeaponType("weapon");
     },
-    [validateAction, executeAction]
+    [validateAction, executeAction],
   );
 
   const wrappedSetPreviewPosition = useCallback(
@@ -933,9 +959,10 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
         currentStep?.allowedActions.moveShip &&
         selectedShipId === currentStep.allowedActions.moveShip.shipId
       ) {
-        const allowedPositions = currentStep.allowedActions.moveShip.allowedPositions;
+        const allowedPositions =
+          currentStep.allowedActions.moveShip.allowedPositions;
         const isValidMove = allowedPositions.some(
-          (pos) => pos.row === position.row && pos.col === position.col
+          (pos) => pos.row === position.row && pos.col === position.col,
         );
 
         if (!isValidMove) {
@@ -977,7 +1004,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
         setPreviewPosition(position);
       }
     },
-    [selectedShipId, currentStep, validateAction, executeAction]
+    [selectedShipId, currentStep, validateAction, executeAction],
   );
 
   const wrappedSetTargetShipId = useCallback(
@@ -1044,7 +1071,9 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
           setPreviewPosition(null);
           return;
         } else {
-          toast.error(specialValidation.message || "Special ability not allowed");
+          toast.error(
+            specialValidation.message || "Special ability not allowed",
+          );
           return;
         }
       }
@@ -1080,7 +1109,7 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
       // If no matching action, just set the target (for display purposes)
       setTargetShipId(shipId);
     },
-    [selectedShipId, currentStep, validateAction, executeAction]
+    [selectedShipId, currentStep, validateAction, executeAction],
   );
 
   return (
@@ -1088,7 +1117,9 @@ export function SimulatedGameDisplay({ tutorialContext }: SimulatedGameDisplayPr
       <div className="mb-4 bg-black/40 border border-cyan-400 rounded-lg p-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-cyan-300 font-mono">Tutorial Game</h1>
+            <h1 className="text-2xl font-bold text-cyan-300 font-mono">
+              Tutorial Game
+            </h1>
             <p className="text-sm text-gray-400">Simulated game for learning</p>
           </div>
           <div className="text-right">

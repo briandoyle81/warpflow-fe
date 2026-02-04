@@ -60,6 +60,24 @@ export default function Home() {
     };
   }, []);
 
+  // Listen for navigation events from Info (and elsewhere)
+  useEffect(() => {
+    const handleNavigateToLobbies = () => {
+      setActiveTab("Lobbies");
+    };
+
+    window.addEventListener(
+      "warpflow-navigate-to-lobbies",
+      handleNavigateToLobbies,
+    );
+    return () => {
+      window.removeEventListener(
+        "warpflow-navigate-to-lobbies",
+        handleNavigateToLobbies,
+      );
+    };
+  }, []);
+
   // Save tab to localStorage whenever it changes (only after hydration)
   useEffect(() => {
     if (isHydrated) {

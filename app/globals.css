@@ -36,19 +36,19 @@
   /* Colors - These create utilities like bg-near-black, text-cyan, etc. */
   --color-background: var(--color-near-black);
   --color-foreground: var(--color-text-primary);
-  
+
   /* Base Colors */
   --color-near-black: #0c1117;
   --color-slate: #1a2430;
   --color-steel: #223041;
   --color-gunmetal: #2b2f36;
-  
+
   /* Accent Colors */
   --color-phosphor-green: #6bff8f;
   --color-amber: #ffb84d;
   --color-cyan: #56d6ff;
   --color-warning-red: #ff4d4d;
-  
+
   /* Text Colors */
   --color-text-primary: #e2e8f0;
   --color-text-secondary: #94a3b8;
@@ -73,7 +73,7 @@
 body {
   background: var(--color-near-black);
   color: var(--color-text-primary);
-  font-family: var(--font-rajdhani), 'Arial Black', sans-serif;
+  font-family: var(--font-rajdhani), "Arial Black", sans-serif;
   /* Enable font smoothing for crisper text on WebKit/Blink */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -210,6 +210,101 @@ body {
   animation: laser-fade 0.5s linear forwards;
 }
 
+/* Flee: ship zooms off toward starting side */
+@keyframes flee-zoom-off {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(calc(var(--flee-direction, 1) * 200%));
+    opacity: 0.85;
+  }
+}
+
+/* Retreat engine glow: thrust-style pulsation */
+@keyframes thrust-pulse {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scaleY(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.1);
+  }
+}
+
+.animate-thrust-pulse {
+  animation: thrust-pulse 0.4s ease-in-out infinite;
+}
+
+/* Warp field collapsing (retreat last move) */
+@keyframes warp-collapse {
+  0% {
+    transform: scale(1.5);
+    opacity: 0.4;
+    filter: blur(0);
+  }
+  8% {
+    transform: scale(1.35);
+    opacity: 1;
+    filter: blur(0);
+  }
+  50% {
+    transform: scale(0.6);
+    opacity: 0.9;
+    filter: blur(0);
+  }
+  85% {
+    transform: scale(0.15);
+    opacity: 0.6;
+    filter: blur(2px);
+  }
+  100% {
+    transform: scale(0.12);
+    opacity: 0.5;
+    filter: blur(2px);
+  }
+}
+
+.animate-warp-collapse {
+  animation: warp-collapse 2s ease-in-out forwards;
+}
+
+/* Residue fades in as the collapse finishes so it feels like aftermath */
+@keyframes warp-residue-fade-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Looping pulse so the residue isn’t static */
+@keyframes warp-residue-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.08);
+    filter: brightness(1.15);
+  }
+}
+
+.animate-warp-residue-fade-in {
+  animation:
+    warp-residue-fade-in 0.8s ease-out 1.2s forwards,
+    warp-residue-pulse 2.5s ease-in-out 2s infinite;
+}
+
 /* EMP wave (specialType === 1) */
 @keyframes emp-wave-dash {
   0% {
@@ -289,7 +384,7 @@ body {
 @keyframes repair-drone-flight {
   0% {
     transform: translate(0px, 0px);
-    opacity: 0.0;
+    opacity: 0;
   }
   6% {
     opacity: 1;
@@ -325,34 +420,19 @@ body {
 
 @keyframes repair-drone-orbit {
   0% {
-    transform: translate(
-      calc(var(--orbit) * 1),
-      0px
-    );
+    transform: translate(calc(var(--orbit) * 1), 0px);
   }
   25% {
-    transform: translate(
-      0px,
-      calc(var(--orbit) * 1)
-    );
+    transform: translate(0px, calc(var(--orbit) * 1));
   }
   50% {
-    transform: translate(
-      calc(var(--orbit) * -1),
-      0px
-    );
+    transform: translate(calc(var(--orbit) * -1), 0px);
   }
   75% {
-    transform: translate(
-      0px,
-      calc(var(--orbit) * -1)
-    );
+    transform: translate(0px, calc(var(--orbit) * -1));
   }
   100% {
-    transform: translate(
-      calc(var(--orbit) * 1),
-      0px
-    );
+    transform: translate(calc(var(--orbit) * 1), 0px);
   }
 }
 
@@ -385,7 +465,7 @@ body {
   width: 6px;
   height: 6px;
   background: rgba(107, 255, 143, 0.65); /* subtle green service light */
-  opacity: 0.0;
+  opacity: 0;
   animation: repair-drone-orbit 0.55s linear infinite;
 }
 
@@ -412,7 +492,8 @@ body {
 
 /* Functional pulse for targeting, shields, weapons */
 @keyframes pulse-functional {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -512,7 +593,7 @@ body {
 
 /* System label styling */
 .system-label {
-  font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
+  font-family: var(--font-jetbrains-mono), "Courier New", monospace;
   font-size: 12px;
   font-weight: 500;
   text-transform: uppercase;
@@ -542,8 +623,12 @@ body {
 /* Square corners with 2px chamfer (optional) */
 .chamfer-2 {
   clip-path: polygon(
-    2px 0%, 100% 0%, 100% calc(100% - 2px), 
-    calc(100% - 2px) 100%, 0% 100%, 0% 2px
+    2px 0%,
+    100% 0%,
+    100% calc(100% - 2px),
+    calc(100% - 2px) 100%,
+    0% 100%,
+    0% 2px
   );
 }
 
@@ -563,7 +648,7 @@ select {
   border-top-color: var(--color-steel);
   border-left-color: var(--color-steel);
   color: var(--color-text-primary);
-  font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
+  font-family: var(--font-jetbrains-mono), "Courier New", monospace;
   border-radius: 0; /* Square corners */
   padding: 8px 12px;
   transition: border-color 0.15s ease;
@@ -626,7 +711,7 @@ input[type="checkbox"]:checked::after {
   color: var(--color-near-black);
   font-size: 12px;
   font-weight: bold;
-  font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
+  font-family: var(--font-jetbrains-mono), "Courier New", monospace;
 }
 
 input[type="checkbox"]:focus {

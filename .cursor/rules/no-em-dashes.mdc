@@ -1,0 +1,22 @@
+---
+description: Avoid em dashes in UI/copy
+alwaysApply: true
+---
+
+# No em dashes in copy
+
+- Do **not** use em dashes (`—`) in any UI text, headings, tooltips, labels, or documentation copy.
+
+## Preferred alternatives
+
+- Use a period: `Admiral. Your fleet is under attack.`
+- Use a colon: `Admiral: your fleet is under attack.`
+- Use a comma: `Admiral, your fleet is under attack.`
+- Use parentheses: `Admiral (your fleet is under attack).`
+- Use spaced hyphen when needed: `Admiral - your fleet is under attack.`
+
+## Quick examples
+
+- ❌ `Admiral—your fleet is under attack.`
+- ✅ `Admiral, your fleet is under attack.`
+
