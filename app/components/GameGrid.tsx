@@ -414,7 +414,7 @@ export function GameGrid({
                     // Allow selecting any ship (for viewing stats/range)
                     setSelectedShipId(cell.shipId);
                     setTargetShipId(null);
-                    setSelectedWeaponType("weapon"); // Reset to weapon when selecting new ship
+                    // Keep selectedWeaponType so it persists when switching ships
 
                     // If it's the current player's turn and they own this ship and it's on a scoring tile, set preview position
                     if (

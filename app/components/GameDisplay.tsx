@@ -1876,7 +1876,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         setPreviewPosition(null);
         setSelectedShipId(null);
         setTargetShipId(null);
-        setSelectedWeaponType("weapon");
+        // Keep selectedWeaponType so it only changes when player uses the dropdown
       }
     }
   }, [isMyTurn, address, clearAllTransactions]);
@@ -1898,7 +1898,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     setPreviewPosition(null);
     setSelectedShipId(null);
     setTargetShipId(null);
-    setSelectedWeaponType("weapon");
+    // Keep selectedWeaponType so it only changes when player uses the dropdown
   };
 
   // Handle Escape key to deselect ship and reset preview position
@@ -1910,7 +1910,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         setSelectedShipId(null);
         setPreviewPosition(null);
         setTargetShipId(null);
-        setSelectedWeaponType("weapon");
+        // Keep selectedWeaponType so it only changes when player uses the dropdown
         setDraggedShipId(null);
         setDragOverCell(null);
       }
@@ -2510,7 +2510,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     setActionOverride(ActionType.Retreat);
                     setTargetShipId(null);
                     setPreviewPosition(null);
-                    setSelectedWeaponType("weapon");
+                    // Keep selectedWeaponType so it only changes when player uses the dropdown
                   }}
                   className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 w-fit"
                   style={{
@@ -3032,7 +3032,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           setPreviewPosition(null);
                           setSelectedShipId(null);
                           setTargetShipId(null);
-                          setSelectedWeaponType("weapon");
+                          // Keep selectedWeaponType so it only changes when player uses the dropdown
                           toast.success("Move submitted successfully!");
                           // Track when player moved to trigger polling schedule
                           const moveTime = Date.now();
@@ -3571,7 +3571,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               <button
                                 onClick={() => {
                                   setTargetShipId(shipId);
-                                  setSelectedWeaponType("weapon"); // Reset to weapon for assist
+                                  // Keep selectedWeaponType so it only changes when player uses the dropdown
                                 }}
                                 className="mt-2 w-full text-xs uppercase font-semibold tracking-wider cursor-pointer transition-colors duration-150"
                                 style={{
