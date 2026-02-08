@@ -56,8 +56,6 @@ function formatLastMoveDescription(
     }
   } else if (lastMove.actionType === ActionType.Pass) {
     description = moved ? `${description} and passed` : `${shipName} passed`;
-  } else if (lastMove.actionType === ActionType.Assist) {
-    description += moved ? " and assisted" : `${shipName} assisted`;
   } else if (lastMove.actionType === ActionType.ClaimPoints) {
     description += moved
       ? " and claimed points"

@@ -435,9 +435,8 @@ export function MapDisplay({
                     if (!ship || !ship.id) return null;
 
                     const flipThis =
-                      (flippedShipIds &&
-                        flippedShipIds.some((id) => id === ship.id)) ||
-                      (!flippedShipIds?.length && isCreator); // fallback to legacy flip-all when flipped set not provided
+                      !!flippedShipIds?.length &&
+                      flippedShipIds.some((id) => id === ship.id);
 
                     return (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

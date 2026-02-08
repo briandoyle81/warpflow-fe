@@ -10,13 +10,13 @@ export function useOwnedShips() {
   // Get ship IDs owned by the user
   const shipIdsResult = useShipsRead(
     "getShipIdsOwned",
-    address ? [address] : undefined
+    address ? [address] : undefined,
   );
 
   // Get ship details for all owned ships
   const shipsDataResult = useShipsRead(
     "getShipsByIds",
-    shipIdsResult.data ? [shipIdsResult.data] : undefined
+    shipIdsResult.data ? [shipIdsResult.data] : undefined,
   );
 
   // Cache ship data when it's fetched

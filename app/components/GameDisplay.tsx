@@ -1019,126 +1019,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     specialType,
   ]);
 
-  // Get friendly ships with 0 hitpoints that are adjacent to the current ship
-  const assistableTargets = React.useMemo(() => {
-    if (!selectedShipId || !gameShips) return [];
-
-    const currentPosition = game.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId
-    );
-
-    if (!currentPosition) return [];
-
-    // Use preview position if available, otherwise use current position
-    const startRow = previewPosition
-      ? previewPosition.row
-      : currentPosition.position.row;
-    const startCol = previewPosition
-      ? previewPosition.col
-      : currentPosition.position.col;
-
-    const assistableShips: {
-      shipId: bigint;
-      position: { row: number; col: number };
-    }[] = [];
-
-    // Check all ships for adjacency
-    game.shipPositions.forEach((shipPosition) => {
-      const ship = shipMap.get(shipPosition.shipId);
-      if (!ship) return;
-
-      // Only friendly ships can be assisted
-      if (ship.owner !== address) return;
-
-      // Skip the current ship itself
-      if (shipPosition.shipId === selectedShipId) return;
-
-      const targetRow = shipPosition.position.row;
-      const targetCol = shipPosition.position.col;
-      const distance =
-        Math.abs(targetRow - startRow) + Math.abs(targetCol - startCol);
-
-      // Check if adjacent (distance of 1)
-      if (distance === 1) {
-        const targetAttributes = getShipAttributes(shipPosition.shipId);
-        // Check if the ship has 0 hitpoints
-        if (targetAttributes && targetAttributes.hullPoints === 0) {
-          assistableShips.push({
-            shipId: shipPosition.shipId,
-            position: { row: targetRow, col: targetCol },
-          });
-        }
-      }
-    });
-
-    return assistableShips;
-  }, [
-    selectedShipId,
-    previewPosition,
-    gameShips,
-    shipMap,
-    address,
-    game.shipPositions,
-    getShipAttributes,
-  ]);
-
-  // Get friendly ships with 0 hitpoints that are adjacent to the current ship's starting position
-  // This is used to show assist options even when not moving
-  const assistableTargetsFromStart = React.useMemo(() => {
-    if (!selectedShipId || !gameShips) return [];
-
-    const currentPosition = game.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId
-    );
-
-    if (!currentPosition) return [];
-
-    const startRow = currentPosition.position.row;
-    const startCol = currentPosition.position.col;
-
-    const assistableShips: {
-      shipId: bigint;
-      position: { row: number; col: number };
-    }[] = [];
-
-    // Check all ships for adjacency from starting position
-    game.shipPositions.forEach((shipPosition) => {
-      const ship = shipMap.get(shipPosition.shipId);
-      if (!ship) return;
-
-      // Only friendly ships can be assisted
-      if (ship.owner !== address) return;
-
-      // Skip the current ship itself
-      if (shipPosition.shipId === selectedShipId) return;
-
-      const targetRow = shipPosition.position.row;
-      const targetCol = shipPosition.position.col;
-      const distance =
-        Math.abs(targetRow - startRow) + Math.abs(targetCol - startCol);
-
-      // Check if adjacent (distance of 1)
-      if (distance === 1) {
-        const targetAttributes = getShipAttributes(shipPosition.shipId);
-        // Check if the ship has 0 hitpoints
-        if (targetAttributes && targetAttributes.hullPoints === 0) {
-          assistableShips.push({
-            shipId: shipPosition.shipId,
-            position: { row: targetRow, col: targetCol },
-          });
-        }
-      }
-    });
-
-    return assistableShips;
-  }, [
-    selectedShipId,
-    gameShips,
-    shipMap,
-    address,
-    game.shipPositions,
-    getShipAttributes,
-  ]);
+  // Assist action removed from contract; keep empty arrays for API compatibility
+  const assistableTargets = React.useMemo(() => [], []);
+  const assistableTargetsFromStart = React.useMemo(() => [], []);
 
   // Calculate shooting range for selected ship (where it could shoot from any valid move position)
   const shootingRange = React.useMemo(() => {
@@ -1801,8 +1684,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     selectedShipId,
   ]);
 
+  // For Retreat, newRow/newCol are -1 (fled); don't highlight a cell
   const highlightedMovePosition =
-    shouldShowLastMove && game.lastMove && !isShowingProposedMove
+    shouldShowLastMove &&
+    game.lastMove &&
+    !isShowingProposedMove &&
+    (game.lastMove.actionType as ActionType) !== ActionType.Retreat &&
+    game.lastMove.newRow >= 0 &&
+    game.lastMove.newCol >= 0
       ? { row: game.lastMove.newRow, col: game.lastMove.newCol }
       : null;
 
@@ -2200,21 +2089,21 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           }}
                         >
                           <TransactionButton
-                            transactionId={`seize-${game.metadata.gameId.toString()}`}
+                            transactionId={`timeout-${game.metadata.gameId.toString()}`}
                             contractAddress={gameContractConfig.address}
                             abi={gameContractConfig.abi}
-                            functionName="forceMoveOnTimeout"
+                            functionName="endGameOnTimeout"
                             args={[game.metadata.gameId]}
                             className="px-3 py-1 uppercase font-semibold tracking-wider transition-colors duration-150 w-full h-full animate-timeout-soft"
-                            loadingText="Seizing..."
+                            loadingText="Claiming..."
                             errorText="Failed"
                             onSuccess={() => {
-                              toast.success("Turn seized. Opponent timed out.");
+                              toast.success("Game ended. Opponent forfeited by timeout.");
                               refetchGame();
                               refetch?.();
                             }}
                           >
-                            Seize Turn
+                            Claim win (timeout)
                           </TransactionButton>
                         </div>
                       </div>
@@ -2364,6 +2253,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   My Score:
                 </span>
                 <span
+                  title="Scores update at end of round."
                   style={{
                     fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
                     color: "var(--color-text-primary)",
@@ -2387,6 +2277,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   Opponent:
                 </span>
                 <span
+                  title="Scores update at end of round."
                   style={{
                     fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
                     color: "var(--color-text-primary)",
@@ -2565,9 +2456,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               </div>
 
               {/* Center: Target Selection */}
-              {(validTargets.length > 0 ||
-                assistableTargets.length > 0 ||
-                assistableTargetsFromStart.length > 0) && (
+              {validTargets.length > 0 && (
                 <div className="flex-1">
                   <div
                     className="border border-solid p-3 min-h-[7.5rem]"
@@ -2768,52 +2657,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               </button>
                             );
                           })}
-                          {(assistableTargets.length > 0 ||
-                            assistableTargetsFromStart.length > 0) && (
-                            <>
-                              {[
-                                ...assistableTargets,
-                                ...assistableTargetsFromStart,
-                              ].map((target) => {
-                                const targetShip = shipMap.get(target.shipId);
-                                return (
-                                  <button
-                                    key={`assist-${target.shipId.toString()}`}
-                                    onClick={() =>
-                                      setTargetShipId(target.shipId)
-                                    }
-                                    className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
-                                    style={{
-                                      fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                                      borderColor: targetShipId === target.shipId ? "var(--color-cyan)" : "var(--color-gunmetal)",
-                                      borderTopColor: targetShipId === target.shipId ? "var(--color-cyan)" : "var(--color-steel)",
-                                      borderLeftColor: targetShipId === target.shipId ? "var(--color-cyan)" : "var(--color-steel)",
-                                      color: targetShipId === target.shipId ? "var(--color-cyan)" : "var(--color-cyan)",
-                                      backgroundColor: targetShipId === target.shipId ? "var(--color-steel)" : "var(--color-slate)",
-                                      borderWidth: "2px",
-                                      borderStyle: "solid",
-                                      borderRadius: 0,
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      if (targetShipId !== target.shipId) {
-                                        e.currentTarget.style.borderColor = "var(--color-cyan)";
-                                        e.currentTarget.style.backgroundColor = "var(--color-steel)";
-                                      }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      if (targetShipId !== target.shipId) {
-                                        e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-                                        e.currentTarget.style.backgroundColor = "var(--color-slate)";
-                                      }
-                                    }}
-                                  >
-                                    🆘 Assist #{target.shipId.toString()}
-                                    {targetShip && ` (${targetShip.name})`}
-                                  </button>
-                                );
-                              })}
-                            </>
-                          )}
                         </>
                       )}
                       {!(
@@ -2867,23 +2710,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       actionOverride != null
                         ? actionOverride
                         : targetShipId !== null && targetShipId !== 0n
-                          ? (() => {
-                              // Check if this is an assist action (friendly ship with 0 HP)
-                              const isAssistAction =
-                                assistableTargets.some(
-                                  (target) => target.shipId === targetShipId
-                                ) ||
-                                assistableTargetsFromStart.some(
-                                  (target) => target.shipId === targetShipId
-                                );
-                              if (isAssistAction) {
-                                return ActionType.Assist;
-                              }
-                              // Otherwise, check weapon type for shooting/special
-                              return selectedWeaponType === "special"
-                                ? ActionType.Special
-                                : ActionType.Shoot;
-                            })()
+                          ? selectedWeaponType === "special"
+                            ? ActionType.Special
+                            : ActionType.Shoot
                           : targetShipId === 0n &&
                               selectedWeaponType === "special" &&
                               specialType === 3
@@ -2918,12 +2747,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       }
                       if (previewPosition) {
                         // Moving
-                        if (computedActionType === ActionType.Assist) {
-                          return scoringGrid[computedRow] &&
-                            scoringGrid[computedRow][computedCol] > 0
-                            ? "➡️⭐🆘"
-                            : "➡️🆘";
-                        }
                         if (
                           computedActionType === ActionType.Special &&
                           specialType === 3
@@ -2970,9 +2793,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
                         if (computedActionType === ActionType.Pass) {
                           return isOnScoringTile ? "⏸️⭐" : "✓";
-                        }
-                        if (computedActionType === ActionType.Assist) {
-                          return "🆘";
                         }
                         if (
                           computedActionType === ActionType.Special &&
@@ -3098,16 +2918,22 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           if (!isShipOwnedByCurrentPlayer(selectedShipId)) {
                             return "You can only move your own ships";
                           }
-                          if (movedShipIdsSet.has(selectedShipId)) {
-                            return "This ship has already moved this round";
-                          }
+                          // Retreat: any ship can flee (even already moved or 0 HP)
                           if (
-                            computedRow < 0 ||
-                            computedRow >= GRID_HEIGHT ||
-                            computedCol < 0 ||
-                            computedCol >= GRID_WIDTH
+                            (computedActionType as ActionType) !==
+                            ActionType.Retreat
                           ) {
-                            return "Invalid position coordinates";
+                            if (movedShipIdsSet.has(selectedShipId)) {
+                              return "This ship has already moved this round";
+                            }
+                            if (
+                              computedRow < 0 ||
+                              computedRow >= GRID_HEIGHT ||
+                              computedCol < 0 ||
+                              computedCol >= GRID_WIDTH
+                            ) {
+                              return "Invalid position coordinates";
+                            }
                           }
                           return true;
                         }}
@@ -3164,29 +2990,18 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     ? currentPosition.position.col
                     : 0;
 
-                  const isAssistAction =
-                    targetShipId !== null &&
-                    (assistableTargets.some(
-                      (target) => target.shipId === targetShipId
-                    ) ||
-                      assistableTargetsFromStart.some(
-                        (target) => target.shipId === targetShipId
-                      ));
-
                   const actionType =
                     actionOverride != null
                       ? actionOverride
                       : targetShipId !== null && targetShipId !== 0n
-                        ? isAssistAction
-                          ? ActionType.Assist
-                          : selectedWeaponType === "special"
-                            ? ActionType.Special
-                            : ActionType.Shoot
+                        ? selectedWeaponType === "special"
+                          ? ActionType.Special
+                          : ActionType.Shoot
                         : targetShipId === 0n &&
                             selectedWeaponType === "special" &&
                             specialType === 3
-                          ? ActionType.Special // Flak AOE (targetShipId is 0n)
-                          : ActionType.Pass; // Stay instead (targetShipId is null) or no target
+                          ? ActionType.Special
+                          : ActionType.Pass;
 
                   const params = [
                     String(game.metadata.gameId),
@@ -3556,44 +3371,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           hasMoved={movedShipIdsSet.has(shipId)}
                           gameViewMode={true}
                         />
-                        {(() => {
-                          const isAssistableTarget =
-                            selectedShipId &&
-                            (assistableTargets.some(
-                              (target) => target.shipId === shipId
-                            ) ||
-                              assistableTargetsFromStart.some(
-                                (target) => target.shipId === shipId
-                              ));
-
-                          if (isAssistableTarget) {
-                            return (
-                              <button
-                                onClick={() => {
-                                  setTargetShipId(shipId);
-                                  // Keep selectedWeaponType so it only changes when player uses the dropdown
-                                }}
-                                className="mt-2 w-full text-xs uppercase font-semibold tracking-wider cursor-pointer transition-colors duration-150"
-                                style={{
-                                  fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-                                  color: "var(--color-cyan)",
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.color = "var(--color-cyan)";
-                                  e.currentTarget.style.textDecoration = "underline";
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.color = "var(--color-cyan)";
-                                  e.currentTarget.style.textDecoration = "none";
-                                }}
-                                title="Click to assist this ship"
-                              >
-                                Click to assist this ship
-                              </button>
-                            );
-                          }
-                          return null;
-                        })()}
                       </div>
                     );
                   })}

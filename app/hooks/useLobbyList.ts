@@ -78,8 +78,39 @@ export function useLobbyList() {
     setError(lobbiesData.error?.message || null);
   }, [lobbiesData.data, lobbiesData.isLoading, lobbiesData.error, address]);
 
-  const refetch = () => {
-    lobbiesData.refetch();
+  const processLobbyData = (data: unknown): Lobby[] => {
+    if (!data || !Array.isArray(data)) return [];
+    const fetchedLobbies: Lobby[] = [];
+    const seenIds = new Set<string>();
+    data.forEach((lobbyData, index) => {
+      if (
+        lobbyData &&
+        typeof lobbyData === "object" &&
+        (lobbyData as { basic?: { id?: unknown } }).basic &&
+        (lobbyData as { basic: { id: unknown } }).basic.id
+      ) {
+        try {
+          const lobby = lobbyData as Lobby;
+          const lobbyId = lobby.basic.id.toString();
+          if (!seenIds.has(lobbyId)) {
+            seenIds.add(lobbyId);
+            fetchedLobbies.push(lobby);
+          }
+        } catch (err) {
+          console.error(`Error converting lobby at index ${index}:`, err);
+        }
+      }
+    });
+    return fetchedLobbies;
+  };
+
+  const refetch = async (): Promise<Lobby[]> => {
+    const result = await lobbiesData.refetch();
+    const processed = processLobbyData(result.data);
+    if (processed.length > 0 || result.data !== undefined) {
+      setLobbies(processed);
+    }
+    return processed;
   };
 
   return {

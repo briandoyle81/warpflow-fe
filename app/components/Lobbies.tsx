@@ -184,9 +184,10 @@ const Lobbies: React.FC = () => {
   );
 
   // Live lobby data for the currently selected lobby (avoids relying on lobby list refresh timing)
-  const { lobby: selectedLobbyLive } = useLobby(selectedLobby ?? 0n, {
-    enabled: selectedLobby != null,
-  });
+  const { lobby: selectedLobbyLive, refetch: refetchSelectedLobby } =
+    useLobby(selectedLobby ?? 0n, {
+      enabled: selectedLobby != null,
+    });
 
   // Fleet ship data fetching
   const { data: fleetShipIds, isLoading: fleetShipIdsLoading } = useFleetsRead(
@@ -215,6 +216,31 @@ const Lobbies: React.FC = () => {
       }
     }
   }, [fleetShips]);
+
+  // When viewing a lobby that is waiting for the other player's fleet, poll so both players see updates
+  const currentLobbyForPolling =
+    selectedLobbyLive ??
+    (selectedLobby
+      ? lobbyList.lobbies.find((l) => l.basic.id === selectedLobby)
+      : null);
+  const isWaitingForOtherFleet =
+    currentLobbyForPolling &&
+    (currentLobbyForPolling.players.creatorFleetId === 0n ||
+      currentLobbyForPolling.players.joinerFleetId === 0n);
+
+  React.useEffect(() => {
+    if (!selectedLobby || !isWaitingForOtherFleet) return;
+    const interval = setInterval(() => {
+      loadLobbies();
+      refetchSelectedLobby();
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [
+    selectedLobby,
+    isWaitingForOtherFleet,
+    loadLobbies,
+    refetchSelectedLobby,
+  ]);
 
   // Determine the player's existing fleet ID when fleet selection modal is open
   const playerFleetId = React.useMemo(() => {
@@ -387,6 +413,7 @@ const Lobbies: React.FC = () => {
 
   // Get ship attributes for in-game properties
   const shipIds = React.useMemo(() => ships.map((ship) => ship.id), [ships]);
+  // Ship attributes (movement, weapon range, etc.) from contract – same source and calculation for creator and joiner
   const {
     attributes: shipAttributes,
     isLoading: attributesLoading,
@@ -477,10 +504,13 @@ const Lobbies: React.FC = () => {
 
       const isCreator = currentLobby.basic.creator === address;
 
-      // Check if position is valid for this player
-      const isValidPosition = isCreator
-        ? (row >= 0 && row < GRID_DIMENSIONS.HEIGHT && col >= 0 && col < GRID_DIMENSIONS.WIDTH)
-        : (row >= 0 && row < GRID_DIMENSIONS.HEIGHT && col >= 0 && col < GRID_DIMENSIONS.WIDTH);
+      // Same deployment zone rules as MapDisplay: creator left 4 cols (0-3), joiner right 4 cols (13-16)
+      const isValidPosition =
+        row >= 0 &&
+        row < GRID_DIMENSIONS.HEIGHT &&
+        col >= 0 &&
+        col < GRID_DIMENSIONS.WIDTH &&
+        (isCreator ? col <= 3 : col >= 13 && col <= 16);
 
       if (!isValidPosition) return;
 
@@ -499,6 +529,26 @@ const Lobbies: React.FC = () => {
         { shipId, row, col },
       ]);
       return;
+    }
+
+    // Same deployment zone rules as MapDisplay (creator 0-3, joiner 13-16)
+    const currentLobbyForMove = lobbyList.lobbies.find(
+      (lobby) => lobby.basic.id === selectedLobby
+    );
+    if (currentLobbyForMove) {
+      const isCreatorMove = currentLobbyForMove.basic.creator === address;
+      const inDeploymentZone = isCreatorMove
+        ? col >= 0 && col <= 3
+        : col >= 13 && col <= 16;
+      if (
+        row < 0 ||
+        row >= GRID_DIMENSIONS.HEIGHT ||
+        col < 0 ||
+        col >= GRID_DIMENSIONS.WIDTH ||
+        !inDeploymentZone
+      ) {
+        return;
+      }
     }
 
     // Check if position is already occupied
@@ -832,35 +882,30 @@ const Lobbies: React.FC = () => {
   // Track the last fleet creation lobby ID to show toast when receipt is received
   const lastFleetCreationLobbyRef = React.useRef<bigint | null>(null);
 
-  // Show toast when fleet creation receipt is received
+  // Show toast and refresh lobby state when fleet creation receipt is received
   React.useEffect(() => {
-    if (isFleetCreated && lastFleetCreationLobbyRef.current) {
-      const lobbyId = lastFleetCreationLobbyRef.current;
-      toast.success("Fleet created successfully!");
-      setShowFleetView(false);
-      setShowFleetConfirmation(false);
+    if (!isFleetCreated || !lastFleetCreationLobbyRef.current) return;
+    const lobbyId = lastFleetCreationLobbyRef.current;
+    lastFleetCreationLobbyRef.current = null;
 
-      // Check if both fleets are now selected - if so, navigate to game
-      setTimeout(() => {
-        loadLobbies();
-        setTimeout(() => {
-          const currentLobby = lobbyList.lobbies.find(
-            (lobby) => lobby.basic.id === lobbyId
-          );
-          if (
-            currentLobby &&
-            currentLobby.players.creatorFleetId > 0n &&
-            currentLobby.players.joinerFleetId > 0n
-          ) {
-            // Both fleets selected - navigate to game
-            navigateToGame(lobbyId);
-          }
-        }, 2000);
-      }, 1000);
+    toast.success("Fleet created successfully!");
+    setShowFleetView(false);
+    setShowFleetConfirmation(false);
 
-      lastFleetCreationLobbyRef.current = null;
-    }
-  }, [isFleetCreated, loadLobbies, lobbyList.lobbies, navigateToGame]);
+    (async () => {
+      const freshLobbies = await loadLobbies();
+      const currentLobby = freshLobbies.find(
+        (lobby) => lobby.basic.id === lobbyId
+      );
+      if (
+        currentLobby &&
+        currentLobby.players.creatorFleetId > 0n &&
+        currentLobby.players.joinerFleetId > 0n
+      ) {
+        navigateToGame(lobbyId);
+      }
+    })();
+  }, [isFleetCreated, loadLobbies, navigateToGame]);
 
   // Handle fleet creation errors
   React.useEffect(() => {
@@ -962,18 +1007,6 @@ const Lobbies: React.FC = () => {
       : lobby.players.creatorFleetId;
     return fid && fid > 0n ? fid : null;
   }, [selectedLobby, lobbyList.lobbies, address, selectedLobbyLive]);
-
-  // Whether the opponent fleet (when shown) belongs to the lobby creator
-  const opponentIsCreator = React.useMemo(() => {
-    if (!selectedLobby) return false;
-    const lobby =
-      selectedLobbyLive ??
-      lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
-    if (!lobby) return false;
-    const opponentFid = opponentFleetIdForGrid;
-    if (!opponentFid) return false;
-    return lobby.players.creatorFleetId === opponentFid;
-  }, [selectedLobby, lobbyList.lobbies, opponentFleetIdForGrid, selectedLobbyLive]);
 
   const [opponentGridPositions, setOpponentGridPositions] = React.useState<
     Array<{ shipId: bigint; row: number; col: number }>
@@ -1097,10 +1130,20 @@ const Lobbies: React.FC = () => {
 
   // Selection allowed only on current builder's ships
   const selectableShipIds = selectedShips;
-  // Flip opponent ships if opponent is creator (grid preview)
+  // Base sprite faces left. Flip creator's ships so they face right; joiner's ships stay unflipped (face left)
+  const isCreatorViewer = !!(
+    selectedLobby &&
+    (selectedLobbyLive ??
+      lobbyList.lobbies.find((l) => l.basic.id === selectedLobby)
+    )?.basic.creator === address
+  );
+  // Use ship IDs actually on grid: when creator is viewing, creator's ships are in shipPositions
   const flippedShipIds = React.useMemo(
-    () => (opponentIsCreator ? opponentGridShipIds : []),
-    [opponentIsCreator, opponentGridShipIds]
+    () =>
+      isCreatorViewer
+        ? shipPositions.map((p) => p.shipId)
+        : opponentGridShipIds,
+    [isCreatorViewer, shipPositions, opponentGridShipIds]
   );
 
   // Apply cache-first and update state when data loads
