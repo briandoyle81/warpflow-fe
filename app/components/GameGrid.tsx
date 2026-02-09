@@ -38,10 +38,10 @@ interface GameGridProps {
     shipId: bigint;
     position: { row: number; col: number };
   }>;
-  labelTargets: Array<{
+  labelTargets?: Array<{
     shipId: bigint;
     position: { row: number; col: number };
-  }>;
+  }>; // Optional: when provided (GameDisplay), used for damage labels; otherwise fall back to validTargets
   assistableTargets: Array<{
     shipId: bigint;
     position: { row: number; col: number };
@@ -1730,10 +1730,11 @@ export function GameGrid({
                 }
 
                 // Collect targets for damage labels:
-                // - When move + gun range: labelTargets contains all enemies in full threat range.
-                // - When only gun range: labelTargets matches validTargets from preview position.
+                // - When labelTargets provided (GameDisplay): move+gun = threat range, only gun = from preview.
+                // - When not provided (e.g. SimulatedGameDisplay): use validTargets.
+                const targetsForLabels = labelTargets ?? validTargets;
                 if (selectedShipId) {
-                  labelTargets.forEach((target) => {
+                  targetsForLabels.forEach((target) => {
                     if (
                       !targetsToShow.some((t) => t.shipId === target.shipId)
                     ) {
