@@ -920,7 +920,6 @@ const ManageNavy: React.FC = () => {
             </label>
           </div>
         </div>
-
       </div>
 
       {/* Ships Display */}
@@ -939,7 +938,8 @@ const ManageNavy: React.FC = () => {
                 color: "var(--color-text-primary)",
               }}
             >
-              [YOUR SHIPS] - Showing {filteredAndSortedShips.length} of {ships.length} ships
+              [YOUR SHIPS] - Showing {filteredAndSortedShips.length} of{" "}
+              {ships.length} ships
             </h4>
             <div className="flex items-center gap-2">
               <button

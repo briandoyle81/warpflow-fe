@@ -354,7 +354,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             `Current: turn=${currentState.currentTurn}, round=${currentState.currentRound}. ` +
             `Retrying in ${retryDelay}ms (attempt ${
               retryAttemptRef.current + 1
-            })`
+            })`,
         );
 
         // Clear any existing retry timeout
@@ -387,7 +387,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   const [turnSecondsLeft, setTurnSecondsLeft] = React.useState<number>(0);
   const turnTimeSec = React.useMemo(
     () => Number(game.turnState.turnTime || 0n),
-    [game.turnState.turnTime]
+    [game.turnState.turnTime],
   );
   const turnPercentRemaining = React.useMemo(() => {
     if (!turnTimeSec || turnTimeSec <= 0) return 0;
@@ -441,7 +441,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Get game map state directly from the Maps contract
   const { data: gameMapState, isLoading: mapLoading } = useGetGameMapState(
-    Number(game.metadata.gameId)
+    Number(game.metadata.gameId),
   );
 
   // Create grids to track blocked and scoring positions
@@ -464,7 +464,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     const gameMapData = gameMapState as
       | [
           Array<{ row: number; col: number }>,
-          Array<{ row: number; col: number; points: number; onlyOnce: boolean }>
+          Array<{
+            row: number;
+            col: number;
+            points: number;
+            onlyOnce: boolean;
+          }>,
         ]
       | undefined;
 
@@ -506,7 +511,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               onlyOnceGrid[pos.row][pos.col] = true;
             }
           }
-        }
+        },
       );
     }
 
@@ -556,7 +561,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
       return attributes;
     },
-    [game.shipAttributes, game.shipIds]
+    [game.shipAttributes, game.shipIds],
   );
 
   // Build a set of shipIds that have already moved this round (from game data)
@@ -580,7 +585,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       col0: number,
       row1: number,
       col1: number,
-      blockedGrid: boolean[][]
+      blockedGrid: boolean[][],
     ): boolean => {
       // Early checks - always check start and end
       if (blockedGrid[row0] && blockedGrid[row0][col0]) {
@@ -665,7 +670,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         }
       }
     },
-    []
+    [],
   );
 
   // Create a 2D array to represent the grid
@@ -719,7 +724,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
     if (canShowLastMove && game.lastMove) {
       const lastMoveShipPosition = game.shipPositions.find(
-        (pos) => pos.shipId === game.lastMove!.shipId
+        (pos) => pos.shipId === game.lastMove!.shipId,
       );
 
       if (lastMoveShipPosition) {
@@ -770,21 +775,19 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     if (!ship) return [];
 
     const attributes = getShipAttributes(selectedShipId);
+    // Disabled ships (0 HP) cannot move; only retreat is available
+    if (attributes && attributes.hullPoints === 0) return [];
+
     const movementRange = attributes?.movement || 1;
 
     const currentPosition = game.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId
+      (pos) => pos.shipId === selectedShipId,
     );
 
     if (!currentPosition) return [];
 
-    // If ship is already moved to a different preview position, don't show movement range
-    // But if preview position is the same as current position (staying on scoring tile), treat as no preview
-    if (
-      previewPosition &&
-      (previewPosition.row !== currentPosition.position.row ||
-        previewPosition.col !== currentPosition.position.col)
-    ) {
+    // If ship has a preview position (including "stay in place"), don't show movement range so only weapon range is shown
+    if (previewPosition) {
       return [];
     }
 
@@ -808,7 +811,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           // Check if position is not occupied by another ship
           // Blocked tiles only block line of sight, not movement
           const isOccupied = game.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col
+            (pos) => pos.position.row === row && pos.position.col === col,
           );
 
           if (!isOccupied) {
@@ -834,7 +837,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       targetShipId: bigint,
       weaponType?: "weapon" | "special",
       showReducedDamage?: boolean,
-      shooterShipIdOverride?: bigint
+      shooterShipIdOverride?: bigint,
     ) => {
       const shooterId = shooterShipIdOverride ?? selectedShipId;
       if (shooterId == null)
@@ -903,7 +906,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         // Regular weapons are affected by damage reduction, or show reduced damage for display
         reducedDamage = Math.max(
           0,
-          baseDamage - Math.floor((baseDamage * reduction) / 100)
+          baseDamage - Math.floor((baseDamage * reduction) / 100),
         );
       }
 
@@ -917,23 +920,24 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       selectedWeaponType,
       specialData,
       specialType,
-    ]
+    ],
   );
 
-  // Get valid targets (enemy ships in shooting range from preview position or current position)
+  // Valid targets: only ships in range from current position (or from preview position when move is set). Used for selection logic.
   const validTargets = React.useMemo(() => {
     if (!selectedShipId || !gameShips) return [];
 
     const attributes = getShipAttributes(selectedShipId);
-    // Use special range if special is selected, otherwise use weapon range
+    // Disabled ships (0 HP) cannot shoot; only retreat is available
+    if (attributes && attributes.hullPoints === 0) return [];
+
     const shootingRange =
       selectedWeaponType === "special" && specialRange !== undefined
         ? specialRange
         : attributes?.range || 1;
 
-    // Use preview position if available, otherwise use current position
     const currentPosition = game.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId
+      (pos) => pos.shipId === selectedShipId,
     );
 
     if (!currentPosition) return [];
@@ -950,26 +954,19 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       position: { row: number; col: number };
     }[] = [];
 
-    // Check all ships within shooting range
     game.shipPositions.forEach((shipPosition) => {
       const ship = shipMap.get(shipPosition.shipId);
       if (!ship) return;
 
-      // Filter targets based on weapon type
       if (selectedWeaponType === "special") {
-        // Flak targets ALL ships in range (friendly and enemy) except itself
         if (specialType === 3) {
-          // Flak hits everything except the ship using flak
-          if (shipPosition.shipId === selectedShipId) return; // Don't target self
+          if (shipPosition.shipId === selectedShipId) return;
         } else if (specialType === 1) {
-          // EMP targets enemy ships
-          if (ship.owner === address) return; // Don't target friendly ships
+          if (ship.owner === address) return;
         } else {
-          // Other special abilities target friendly ships (allies)
           if (ship.owner !== address) return;
         }
       } else {
-        // Weapons target enemy ships
         if (ship.owner === address) return;
       }
 
@@ -977,19 +974,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       const targetCol = shipPosition.position.col;
       const distance =
         Math.abs(targetRow - startRow) + Math.abs(targetCol - startCol);
-
-      // Ships can always shoot enemies that are exactly 1 square away
-      // OR within their normal shooting range
       const canShoot = distance === 1 || distance <= shootingRange;
 
       if (canShoot && distance > 0) {
-        // Ships can always shoot adjacent enemies (distance === 1) regardless of nebula squares
-        // OR special abilities ignore nebula squares
-        // OR regular weapons need line of sight
         const shouldCheckLineOfSight =
-          distance > 1 && // Not adjacent
+          distance > 1 &&
           (selectedWeaponType !== "special" ||
-            (specialType !== 1 && specialType !== 2 && specialType !== 3)); // Not EMP, Repair, or Flak
+            (specialType !== 1 && specialType !== 2 && specialType !== 3));
 
         if (
           !shouldCheckLineOfSight ||
@@ -1019,6 +1010,148 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     specialType,
   ]);
 
+  // Targets for damage labels:
+  // - When showing move + gun range (no preview), include any enemy ship that could be shot from
+  //   the current position OR from any valid move position (full threat range).
+  // - When showing only gun range (preview set), include only targets in range from the preview position.
+  const labelTargets = React.useMemo(() => {
+    if (!selectedShipId || !gameShips) return [];
+
+    const attributes = getShipAttributes(selectedShipId);
+    if (attributes && attributes.hullPoints === 0) return [];
+
+    const movementRangeAttr = attributes?.movement || 1;
+    const shootingRangeAttr =
+      selectedWeaponType === "special" && specialRange !== undefined
+        ? specialRange
+        : attributes?.range || 1;
+
+    const currentPosition = game.shipPositions.find(
+      (pos) => pos.shipId === selectedShipId,
+    );
+    if (!currentPosition) return [];
+
+    // Origins:
+    // - With preview: single origin = previewPosition (only gun range)
+    // - Without preview: current position + all valid move positions (threat range)
+    const origins: { row: number; col: number }[] = [];
+    if (previewPosition) {
+      origins.push({ row: previewPosition.row, col: previewPosition.col });
+    } else {
+      origins.push({
+        row: currentPosition.position.row,
+        col: currentPosition.position.col,
+      });
+      for (
+        let row = Math.max(
+          0,
+          currentPosition.position.row - movementRangeAttr,
+        );
+        row <=
+        Math.min(
+          GRID_HEIGHT - 1,
+          currentPosition.position.row + movementRangeAttr,
+        );
+        row++
+      ) {
+        for (
+          let col = Math.max(
+            0,
+            currentPosition.position.col - movementRangeAttr,
+          );
+          col <=
+          Math.min(
+            GRID_WIDTH - 1,
+            currentPosition.position.col + movementRangeAttr,
+          );
+          col++
+        ) {
+          const dist =
+            Math.abs(row - currentPosition.position.row) +
+            Math.abs(col - currentPosition.position.col);
+          if (dist <= movementRangeAttr && dist > 0) {
+            const occupied = game.shipPositions.some(
+              (pos) => pos.position.row === row && pos.position.col === col,
+            );
+            if (!occupied) origins.push({ row, col });
+          }
+        }
+      }
+    }
+
+    const targetMap = new Map<
+      bigint,
+      { shipId: bigint; position: { row: number; col: number } }
+    >();
+
+    for (const { row: startRow, col: startCol } of origins) {
+      game.shipPositions.forEach((shipPosition) => {
+        const ship = shipMap.get(shipPosition.shipId);
+        if (!ship) return;
+
+        // Same ownership/weapon-type filtering as validTargets
+        if (selectedWeaponType === "special") {
+          if (specialType === 3) {
+            if (shipPosition.shipId === selectedShipId) return;
+          } else if (specialType === 1) {
+            if (ship.owner === address) return;
+          } else {
+            if (ship.owner !== address) return;
+          }
+        } else {
+          if (ship.owner === address) return;
+        }
+
+        const targetRow = shipPosition.position.row;
+        const targetCol = shipPosition.position.col;
+        const distance =
+          Math.abs(targetRow - startRow) + Math.abs(targetCol - startCol);
+        const canShoot =
+          distance === 1 || distance <= shootingRangeAttr;
+
+        if (canShoot && distance > 0) {
+          const shouldCheckLineOfSight =
+            distance > 1 &&
+            (selectedWeaponType !== "special" ||
+              (specialType !== 1 &&
+                specialType !== 2 &&
+                specialType !== 3));
+
+          if (
+            !shouldCheckLineOfSight ||
+            hasLineOfSight(
+              startRow,
+              startCol,
+              targetRow,
+              targetCol,
+              blockedGrid,
+            )
+          ) {
+            targetMap.set(shipPosition.shipId, {
+              shipId: shipPosition.shipId,
+              position: { row: targetRow, col: targetCol },
+            });
+          }
+        }
+      });
+    }
+
+    return Array.from(targetMap.values());
+  }, [
+    selectedShipId,
+    previewPosition,
+    gameShips,
+    shipMap,
+    address,
+    getShipAttributes,
+    hasLineOfSight,
+    blockedGrid,
+    game.shipPositions,
+    selectedWeaponType,
+    specialRange,
+    specialType,
+  ]);
+
   // Assist action removed from contract; keep empty arrays for API compatibility
   const assistableTargets = React.useMemo(() => [], []);
   const assistableTargetsFromStart = React.useMemo(() => [], []);
@@ -1031,6 +1164,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     if (!ship) return [];
 
     const attributes = getShipAttributes(selectedShipId);
+    // Disabled ships (0 HP) have no move or threat range; only retreat is available
+    if (attributes && attributes.hullPoints === 0) return [];
+
     const movementRange = attributes?.movement || 1;
     // Use special range if special is selected, otherwise use weapon range
     const shootingRange =
@@ -1039,19 +1175,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         : attributes?.range || 1;
 
     const currentPosition = game.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId
+      (pos) => pos.shipId === selectedShipId,
     );
 
     if (!currentPosition) return [];
 
     const validShootingPositions: { row: number; col: number }[] = [];
 
-    if (
-      previewPosition &&
-      (previewPosition.row !== currentPosition.position.row ||
-        previewPosition.col !== currentPosition.position.col)
-    ) {
-      // If ship is moved to a different preview position, only show shooting range from that position
+    // When a move is entered (preview set), show gun range from that single origin only (same as after moving to another square)
+    if (previewPosition) {
       const startRow = previewPosition.row;
       const startCol = previewPosition.col;
 
@@ -1072,7 +1204,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           // Only add positions that are exactly 1 square away and not occupied
           if (distance === 1) {
             const isOccupied = game.shipPositions.some(
-              (pos) => pos.position.row === row && pos.position.col === col
+              (pos) => pos.position.row === row && pos.position.col === col,
             );
 
             if (!isOccupied) {
@@ -1099,7 +1231,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           if (distance <= shootingRange && distance > 1) {
             // Check if position is not occupied by another ship
             const isOccupied = game.shipPositions.some(
-              (pos) => pos.position.row === row && pos.position.col === col
+              (pos) => pos.position.row === row && pos.position.col === col,
             );
 
             if (!isOccupied) {
@@ -1148,7 +1280,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         // Only check positions that are exactly 1 square away from any valid move position
         if (distance === movementRange + 1) {
           const isOccupied = game.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col
+            (pos) => pos.position.row === row && pos.position.col === col,
           );
 
           if (!isOccupied) {
@@ -1173,7 +1305,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   const isMoveOccupied = game.shipPositions.some(
                     (pos) =>
                       pos.position.row === moveRow &&
-                      pos.position.col === moveCol
+                      pos.position.col === moveCol,
                   );
 
                   if (!isMoveOccupied) {
@@ -1222,7 +1354,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         ) {
           // Check if position is not occupied by another ship
           const isOccupied = game.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col
+            (pos) => pos.position.row === row && pos.position.col === col,
           );
 
           if (!isOccupied) {
@@ -1248,7 +1380,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   const isMoveOccupied = game.shipPositions.some(
                     (pos) =>
                       pos.position.row === moveRow &&
-                      pos.position.col === moveCol
+                      pos.position.col === moveCol,
                   );
 
                   if (!isMoveOccupied) {
@@ -1434,7 +1566,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         const distance = Math.abs(row - startRow) + Math.abs(col - startCol);
         if (distance === 1) {
           const isOccupied = game.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col
+            (pos) => pos.position.row === row && pos.position.col === col,
           );
           if (!isOccupied) {
             validShootingPositions.push({ row, col });
@@ -1457,7 +1589,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         const distance = Math.abs(row - startRow) + Math.abs(col - startCol);
         if (distance <= shootingRange && distance > 1) {
           const isOccupied = game.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col
+            (pos) => pos.position.row === row && pos.position.col === col,
           );
           if (!isOccupied) {
             const shouldCheckLineOfSight =
@@ -1574,7 +1706,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
     // Verify the ship is actually at the new position in the current game state
     const currentPosition = game.shipPositions.find(
-      (pos) => pos.shipId === game.lastMove!.shipId
+      (pos) => pos.shipId === game.lastMove!.shipId,
     );
     if (
       currentPosition &&
@@ -1599,20 +1731,42 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       const ship = shipMap.get(shipId);
       return ship ? ship.owner === address : false;
     },
-    [shipMap, address]
+    [shipMap, address],
   );
 
   // Track if we're showing a proposed move (not last move)
   const isShowingProposedMove = React.useMemo(() => {
     // Show move submission UI whenever it's your turn and you have one of your
-    // ships selected that hasn't moved yet (even if you haven't proposed a move).
+    // ships selected that hasn't moved yet, OR a disabled (0 HP) ship selected
+    // that can only Retreat.
     if (selectedShipId === null || !isMyTurn) {
       return false;
     }
     if (!isShipOwnedByCurrentPlayer(selectedShipId)) return false;
-    if (movedShipIdsSet.has(selectedShipId)) return false;
+    if (movedShipIdsSet.has(selectedShipId)) {
+      const attrs = getShipAttributes(selectedShipId);
+      const isDisabled = attrs && attrs.hullPoints === 0;
+      if (!isDisabled) return false;
+    }
     return true;
-  }, [selectedShipId, isMyTurn, isShipOwnedByCurrentPlayer, movedShipIdsSet]);
+  }, [
+    selectedShipId,
+    isMyTurn,
+    isShipOwnedByCurrentPlayer,
+    movedShipIdsSet,
+    getShipAttributes,
+  ]);
+
+  // When selecting a disabled ship (0 HP), default to Retreat and clear move/target.
+  React.useEffect(() => {
+    if (selectedShipId === null) return;
+    const attrs = getShipAttributes(selectedShipId);
+    if (attrs && attrs.hullPoints === 0) {
+      setActionOverride(ActionType.Retreat);
+      setTargetShipId(null);
+      setPreviewPosition(null);
+    }
+  }, [selectedShipId, getShipAttributes]);
 
   // When showing last move, set up the preview state to display it
   // This should NOT interfere with proposed moves
@@ -1708,6 +1862,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   const lastMoveActionType =
     shouldShowLastMove && game.lastMove && !isShowingProposedMove
       ? game.lastMove.actionType
+      : null;
+
+  const lastMoveTargetShipId =
+    shouldShowLastMove &&
+    game.lastMove &&
+    !isShowingProposedMove &&
+    (game.lastMove.actionType as ActionType) === ActionType.Special &&
+    game.lastMove.targetShipId !== 0n
+      ? game.lastMove.targetShipId
       : null;
 
   // Who made the last move: use ship owner when ship is in map; otherwise derive from turn (after a move, turn switches to the other player)
@@ -1913,23 +2076,23 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             <button
               onClick={onBack}
               className="px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
-            style={{
-              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-              borderColor: "var(--color-gunmetal)",
-              color: "var(--color-text-secondary)",
-              backgroundColor: "var(--color-steel)",
-              borderRadius: 0,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--color-slate)";
-              e.currentTarget.style.borderColor = "var(--color-cyan)";
-              e.currentTarget.style.color = "var(--color-cyan)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--color-steel)";
-              e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-              e.currentTarget.style.color = "var(--color-text-secondary)";
-            }}
+              style={{
+                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                borderColor: "var(--color-gunmetal)",
+                color: "var(--color-text-secondary)",
+                backgroundColor: "var(--color-steel)",
+                borderRadius: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                e.currentTarget.style.borderColor = "var(--color-cyan)";
+                e.currentTarget.style.color = "var(--color-cyan)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                e.currentTarget.style.color = "var(--color-text-secondary)";
+              }}
             >
               ←
             </button>
@@ -2011,16 +2174,22 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       <div
                         className="text-sm flex items-center gap-2 uppercase font-semibold tracking-wider"
                         style={{
-                          fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                          fontFamily:
+                            "var(--font-rajdhani), 'Arial Black', sans-serif",
                           color: "var(--color-text-secondary)",
                         }}
                       >
-                        <span style={{ color: "var(--color-cyan)" }}>YOUR TURN</span>
-                        <span style={{ color: "var(--color-text-muted)" }}>•</span>
+                        <span style={{ color: "var(--color-cyan)" }}>
+                          YOUR TURN
+                        </span>
+                        <span style={{ color: "var(--color-text-muted)" }}>
+                          •
+                        </span>
                         <span
                           className="font-mono animate-timeout-soft"
                           style={{
-                            fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                            fontFamily:
+                              "var(--font-jetbrains-mono), 'Courier New', monospace",
                             color: "var(--color-warning-red)",
                           }}
                         >
@@ -2079,7 +2248,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         <div
                           className="inline-block"
                           style={{
-                            fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                            fontFamily:
+                              "var(--font-rajdhani), 'Arial Black', sans-serif",
                             borderColor: "var(--color-amber)",
                             color: "var(--color-amber)",
                             backgroundColor: "var(--color-steel)",
@@ -2098,7 +2268,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             loadingText="Claiming..."
                             errorText="Failed"
                             onSuccess={() => {
-                              toast.success("Game ended. Opponent forfeited by timeout.");
+                              toast.success(
+                                "Game ended. Opponent forfeited by timeout.",
+                              );
                               refetchGame();
                               refetch?.();
                             }}
@@ -2157,22 +2329,28 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     <div
                       className="text-sm flex items-center gap-2 uppercase font-semibold tracking-wider"
                       style={{
-                        fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                        fontFamily:
+                          "var(--font-rajdhani), 'Arial Black', sans-serif",
                         color: "var(--color-text-secondary)",
                       }}
                     >
                       <span
                         style={{
-                          color: isMyTurn ? "var(--color-cyan)" : "var(--color-warning-red)",
+                          color: isMyTurn
+                            ? "var(--color-cyan)"
+                            : "var(--color-warning-red)",
                         }}
                       >
                         {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
                       </span>
-                      <span style={{ color: "var(--color-text-muted)" }}>•</span>
+                      <span style={{ color: "var(--color-text-muted)" }}>
+                        •
+                      </span>
                       <span
                         className="font-mono"
                         style={{
-                          fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                          fontFamily:
+                            "var(--font-jetbrains-mono), 'Courier New', monospace",
                           color:
                             turnSecondsLeft <= 10
                               ? "var(--color-warning-red)"
@@ -2193,11 +2371,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         <div
                           className="h-full transition-all duration-1000 ease-linear"
                           style={{
-                              width: `${turnPercentRemaining}%`,
-                              backgroundColor:
-                                turnSecondsLeft <= 10
-                                  ? "var(--color-warning-red)"
-                                  : "var(--color-cyan)",
+                            width: `${turnPercentRemaining}%`,
+                            backgroundColor:
+                              turnSecondsLeft <= 10
+                                ? "var(--color-warning-red)"
+                                : "var(--color-cyan)",
                             borderRadius: 0,
                           }}
                         />
@@ -2245,7 +2423,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               <div className="flex justify-between">
                 <span
                   style={{
-                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                    fontFamily:
+                      "var(--font-jetbrains-mono), 'Courier New', monospace",
                     color: "var(--color-text-secondary)",
                     fontSize: "14px",
                   }}
@@ -2255,7 +2434,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <span
                   title="Scores update at end of round."
                   style={{
-                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                    fontFamily:
+                      "var(--font-jetbrains-mono), 'Courier New', monospace",
                     color: "var(--color-text-primary)",
                     fontWeight: 600,
                   }}
@@ -2269,7 +2449,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               <div className="flex justify-between">
                 <span
                   style={{
-                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                    fontFamily:
+                      "var(--font-jetbrains-mono), 'Courier New', monospace",
                     color: "var(--color-text-secondary)",
                     fontSize: "14px",
                   }}
@@ -2279,7 +2460,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <span
                   title="Scores update at end of round."
                   style={{
-                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                    fontFamily:
+                      "var(--font-jetbrains-mono), 'Courier New', monospace",
                     color: "var(--color-text-primary)",
                     fontWeight: 600,
                   }}
@@ -2310,403 +2492,795 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           {isShowingProposedMove ? (
             <>
               <div className="flex items-center gap-6 p-4">
-              {/* Left: Ship Info */}
-              <div className="flex flex-col gap-2 min-w-0 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <span className="text-white font-semibold">
-                    {(() => {
-                      if (selectedShipId) {
-                        const selectedShip = shipMap.get(selectedShipId);
-                        return (
-                          selectedShip?.name ||
-                          `Ship #${selectedShipId.toString()}`
+                {/* Left: Ship Info */}
+                <div className="flex flex-col gap-2 min-w-0 flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <span className="text-white font-semibold">
+                      {(() => {
+                        if (selectedShipId) {
+                          const selectedShip = shipMap.get(selectedShipId);
+                          return (
+                            selectedShip?.name ||
+                            `Ship #${selectedShipId.toString()}`
+                          );
+                        }
+                        return "Unknown Ship";
+                      })()}
+                    </span>
+                    <span className="text-gray-500">→</span>
+                    <span className="text-gray-300 font-mono">
+                      {(() => {
+                        const currentPosition = game.shipPositions.find(
+                          (pos) => pos.shipId === selectedShipId,
                         );
-                      }
-                      return "Unknown Ship";
-                    })()}
-                  </span>
-                  <span className="text-gray-500">→</span>
-                  <span className="text-gray-300 font-mono">
+                        const isHoldingPosition =
+                          !previewPosition ||
+                          (!!currentPosition &&
+                            previewPosition.row ===
+                              currentPosition.position.row &&
+                            previewPosition.col ===
+                              currentPosition.position.col);
+
+                        if (isHoldingPosition) return "HOLD POSITION";
+                        return `(${previewPosition!.row}, ${previewPosition!.col})`;
+                      })()}
+                    </span>
                     {(() => {
-                      const currentPosition = game.shipPositions.find(
-                        (pos) => pos.shipId === selectedShipId
-                      );
-                      const isHoldingPosition =
-                        !previewPosition ||
-                        (!!currentPosition &&
-                          previewPosition.row === currentPosition.position.row &&
-                          previewPosition.col === currentPosition.position.col);
-
-                      if (isHoldingPosition) return "HOLD POSITION";
-                      return `(${previewPosition!.row}, ${previewPosition!.col})`;
+                      const points = (() => {
+                        if (previewPosition) {
+                          const row = previewPosition.row;
+                          const col = previewPosition.col;
+                          return (
+                            (scoringGrid[row] && scoringGrid[row][col]) || 0
+                          );
+                        }
+                        const currentPosition = game.shipPositions.find(
+                          (pos) => pos.shipId === selectedShipId,
+                        );
+                        if (!currentPosition) return 0;
+                        const r = currentPosition.position.row;
+                        const c = currentPosition.position.col;
+                        return (scoringGrid[r] && scoringGrid[r][c]) || 0;
+                      })();
+                      return points > 0 ? (
+                        <span className="text-yellow-400 text-sm">
+                          ⭐ {points}
+                        </span>
+                      ) : null;
                     })()}
-                  </span>
-                  {(() => {
-                    const points = (() => {
-                      if (previewPosition) {
-                        const row = previewPosition.row;
-                        const col = previewPosition.col;
-                        return (scoringGrid[row] && scoringGrid[row][col]) || 0;
-                      }
-                      const currentPosition = game.shipPositions.find(
-                        (pos) => pos.shipId === selectedShipId
-                      );
-                      if (!currentPosition) return 0;
-                      const r = currentPosition.position.row;
-                      const c = currentPosition.position.col;
-                      return (scoringGrid[r] && scoringGrid[r][c]) || 0;
-                    })();
-                    return points > 0 ? (
-                      <span className="text-yellow-400 text-sm">
-                        ⭐ {points}
-                      </span>
-                    ) : null;
-                  })()}
-                </div>
-                {selectedShip && selectedShip.equipment.special > 0 && (
-                  <select
-                    value={selectedWeaponType}
-                    onChange={(e) => {
-                      const newWeaponType = e.target.value as
-                        | "weapon"
-                        | "special";
-                      setSelectedWeaponType(newWeaponType);
-                      if (newWeaponType === "special" && specialType === 3) {
-                        setTargetShipId(0n);
-                      } else {
-                        setTargetShipId(null);
-                      }
-                    }}
-                    className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider"
-                    style={{
-                      fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-                      borderRadius: 0,
-                    }}
-                  >
-                    <option value="weapon">
-                      {selectedShip
-                        ? getMainWeaponName(selectedShip.equipment.mainWeapon)
-                        : "Weapon"}
-                    </option>
-                    <option value="special">
-                      {selectedShip
-                        ? getSpecialName(selectedShip.equipment.special)
-                        : "Special"}
-                    </option>
-                  </select>
-                )}
-                {/* Retreat: always below weapon select, independent of target */}
-                <button
-                  onClick={() => {
-                    setActionOverride(ActionType.Retreat);
-                    setTargetShipId(null);
-                    setPreviewPosition(null);
-                    // Keep selectedWeaponType so it only changes when player uses the dropdown
-                  }}
-                  className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 w-fit"
-                  style={{
-                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                    borderColor:
-                      actionOverride === ActionType.Retreat
-                        ? "var(--color-warning-red)"
-                        : "var(--color-gunmetal)",
-                    borderTopColor:
-                      actionOverride === ActionType.Retreat
-                        ? "var(--color-warning-red)"
-                        : "var(--color-steel)",
-                    borderLeftColor:
-                      actionOverride === ActionType.Retreat
-                        ? "var(--color-warning-red)"
-                        : "var(--color-steel)",
-                    color:
-                      actionOverride === ActionType.Retreat
-                        ? "var(--color-warning-red)"
-                        : "var(--color-text-secondary)",
-                    backgroundColor:
-                      actionOverride === ActionType.Retreat
-                        ? "rgba(255, 77, 77, 0.15)"
-                        : "var(--color-slate)",
-                    borderWidth: "2px",
-                    borderStyle: "solid",
-                    borderRadius: 0,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (actionOverride !== ActionType.Retreat) {
-                      e.currentTarget.style.borderColor =
-                        "var(--color-warning-red)";
-                      e.currentTarget.style.color =
-                        "var(--color-warning-red)";
-                      e.currentTarget.style.backgroundColor =
-                        "rgba(255, 77, 77, 0.12)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (actionOverride !== ActionType.Retreat) {
-                      e.currentTarget.style.borderColor =
-                        "var(--color-gunmetal)";
-                      e.currentTarget.style.color =
-                        "var(--color-text-secondary)";
-                      e.currentTarget.style.backgroundColor =
-                        "var(--color-slate)";
-                    }
-                  }}
-                >
-                  Retreat
-                </button>
-              </div>
-
-              {/* Center: Target Selection */}
-              {validTargets.length > 0 && (
-                <div className="flex-1">
-                  <div
-                    className="border border-solid p-3 min-h-[7.5rem]"
-                    style={{
-                      backgroundColor: "var(--color-near-black)",
-                      borderColor: "var(--color-gunmetal)",
-                      borderTopColor: "var(--color-steel)",
-                      borderLeftColor: "var(--color-steel)",
-                      borderRadius: 0,
-                    }}
-                  >
-                    <div
-                      className="text-xs mb-2 uppercase tracking-wide"
+                  </div>
+                  {selectedShip && selectedShip.equipment.special > 0 && (
+                    <select
+                      value={selectedWeaponType}
+                      onChange={(e) => {
+                        const newWeaponType = e.target.value as
+                          | "weapon"
+                          | "special";
+                        setSelectedWeaponType(newWeaponType);
+                        if (newWeaponType === "special" && specialType === 3) {
+                          setTargetShipId(0n);
+                        } else {
+                          setTargetShipId(null);
+                        }
+                      }}
+                      className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider"
                       style={{
-                        fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-                        color: "var(--color-text-secondary)",
+                        fontFamily:
+                          "var(--font-jetbrains-mono), 'Courier New', monospace",
+                        borderRadius: 0,
                       }}
                     >
-                      Select Target (Optional)
-                    </div>
-                    <div className="flex flex-wrap gap-2 min-h-[5rem]">
-                      {selectedWeaponType === "special" && specialType === 3 ? (
-                        <>
-                          <button
-                            onClick={() => setTargetShipId(0n)}
-                            className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
-                            style={{
-                              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                              borderColor: targetShipId === 0n ? "var(--color-amber)" : "var(--color-gunmetal)",
-                              borderTopColor: targetShipId === 0n ? "var(--color-amber)" : "var(--color-steel)",
-                              borderLeftColor: targetShipId === 0n ? "var(--color-amber)" : "var(--color-steel)",
-                              color: targetShipId === 0n ? "var(--color-amber)" : "var(--color-text-secondary)",
-                              backgroundColor: targetShipId === 0n ? "var(--color-steel)" : "var(--color-slate)",
-                              borderWidth: "2px",
-                              borderStyle: "solid",
-                              borderRadius: 0,
-                            }}
-                            onMouseEnter={(e) => {
-                              if (targetShipId !== 0n) {
-                                e.currentTarget.style.borderColor = "var(--color-amber)";
-                                e.currentTarget.style.color = "var(--color-amber)";
-                                e.currentTarget.style.backgroundColor = "var(--color-steel)";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (targetShipId !== 0n) {
-                                e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-                                e.currentTarget.style.color = "var(--color-text-secondary)";
-                                e.currentTarget.style.backgroundColor = "var(--color-slate)";
-                              }
-                            }}
-                          >
-                            💥 Flak ({validTargets.length})
-                          </button>
-                          {previewPosition && (
+                      <option value="weapon">
+                        {selectedShip
+                          ? getMainWeaponName(selectedShip.equipment.mainWeapon)
+                          : "Weapon"}
+                      </option>
+                      <option value="special">
+                        {selectedShip
+                          ? getSpecialName(selectedShip.equipment.special)
+                          : "Special"}
+                      </option>
+                    </select>
+                  )}
+                  {/* Retreat: always below weapon select, independent of target */}
+                  <button
+                    onClick={() => {
+                      setActionOverride(ActionType.Retreat);
+                      setTargetShipId(null);
+                      setPreviewPosition(null);
+                      // Keep selectedWeaponType so it only changes when player uses the dropdown
+                    }}
+                    className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 w-fit"
+                    style={{
+                      fontFamily:
+                        "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      borderColor:
+                        actionOverride === ActionType.Retreat
+                          ? "var(--color-warning-red)"
+                          : "var(--color-gunmetal)",
+                      borderTopColor:
+                        actionOverride === ActionType.Retreat
+                          ? "var(--color-warning-red)"
+                          : "var(--color-steel)",
+                      borderLeftColor:
+                        actionOverride === ActionType.Retreat
+                          ? "var(--color-warning-red)"
+                          : "var(--color-steel)",
+                      color:
+                        actionOverride === ActionType.Retreat
+                          ? "var(--color-warning-red)"
+                          : "var(--color-text-secondary)",
+                      backgroundColor:
+                        actionOverride === ActionType.Retreat
+                          ? "rgba(255, 77, 77, 0.15)"
+                          : "var(--color-slate)",
+                      borderWidth: "2px",
+                      borderStyle: "solid",
+                      borderRadius: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (actionOverride !== ActionType.Retreat) {
+                        e.currentTarget.style.borderColor =
+                          "var(--color-warning-red)";
+                        e.currentTarget.style.color =
+                          "var(--color-warning-red)";
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(255, 77, 77, 0.12)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (actionOverride !== ActionType.Retreat) {
+                        e.currentTarget.style.borderColor =
+                          "var(--color-gunmetal)";
+                        e.currentTarget.style.color =
+                          "var(--color-text-secondary)";
+                        e.currentTarget.style.backgroundColor =
+                          "var(--color-slate)";
+                      }
+                    }}
+                  >
+                    Retreat
+                  </button>
+                </div>
+
+                {/* Center: Target Selection */}
+                {validTargets.length > 0 && (
+                  <div className="flex-1">
+                    <div
+                      className="border border-solid p-3 min-h-[7.5rem]"
+                      style={{
+                        backgroundColor: "var(--color-near-black)",
+                        borderColor: "var(--color-gunmetal)",
+                        borderTopColor: "var(--color-steel)",
+                        borderLeftColor: "var(--color-steel)",
+                        borderRadius: 0,
+                      }}
+                    >
+                      <div
+                        className="text-xs mb-2 uppercase tracking-wide"
+                        style={{
+                          fontFamily:
+                            "var(--font-jetbrains-mono), 'Courier New', monospace",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        Select Target (Optional)
+                      </div>
+                      <div className="flex flex-wrap gap-2 min-h-[5rem]">
+                        {selectedWeaponType === "special" &&
+                        specialType === 3 ? (
+                          <>
                             <button
-                              onClick={() => setTargetShipId(null)}
+                              onClick={() => setTargetShipId(0n)}
                               className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
                               style={{
-                                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                                borderColor: targetShipId === null ? "var(--color-gunmetal)" : "var(--color-gunmetal)",
-                                borderTopColor: targetShipId === null ? "var(--color-steel)" : "var(--color-steel)",
-                                borderLeftColor: targetShipId === null ? "var(--color-steel)" : "var(--color-steel)",
-                                color: targetShipId === null ? "var(--color-text-primary)" : "var(--color-text-muted)",
-                                backgroundColor: targetShipId === null ? "var(--color-steel)" : "var(--color-slate)",
+                                fontFamily:
+                                  "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                borderColor:
+                                  targetShipId === 0n
+                                    ? "var(--color-amber)"
+                                    : "var(--color-gunmetal)",
+                                borderTopColor:
+                                  targetShipId === 0n
+                                    ? "var(--color-amber)"
+                                    : "var(--color-steel)",
+                                borderLeftColor:
+                                  targetShipId === 0n
+                                    ? "var(--color-amber)"
+                                    : "var(--color-steel)",
+                                color:
+                                  targetShipId === 0n
+                                    ? "var(--color-amber)"
+                                    : "var(--color-text-secondary)",
+                                backgroundColor:
+                                  targetShipId === 0n
+                                    ? "var(--color-steel)"
+                                    : "var(--color-slate)",
                                 borderWidth: "2px",
                                 borderStyle: "solid",
                                 borderRadius: 0,
                               }}
                               onMouseEnter={(e) => {
-                                if (targetShipId !== null) {
-                                  e.currentTarget.style.borderColor = "var(--color-cyan)";
-                                  e.currentTarget.style.color = "var(--color-cyan)";
-                                  e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                                if (targetShipId !== 0n) {
+                                  e.currentTarget.style.borderColor =
+                                    "var(--color-amber)";
+                                  e.currentTarget.style.color =
+                                    "var(--color-amber)";
+                                  e.currentTarget.style.backgroundColor =
+                                    "var(--color-steel)";
                                 }
                               }}
                               onMouseLeave={(e) => {
-                                if (targetShipId !== null) {
-                                  e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-                                  e.currentTarget.style.color = "var(--color-text-muted)";
-                                  e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                                if (targetShipId !== 0n) {
+                                  e.currentTarget.style.borderColor =
+                                    "var(--color-gunmetal)";
+                                  e.currentTarget.style.color =
+                                    "var(--color-text-secondary)";
+                                  e.currentTarget.style.backgroundColor =
+                                    "var(--color-slate)";
                                 }
                               }}
                             >
-                              Move Only
+                              💥 Flak ({validTargets.length})
                             </button>
-                          )}
-                        </>
-                      ) : selectedWeaponType === "special" &&
-                        specialType === 1 ? (
-                        validTargets.map((target) => {
-                          const targetShip = shipMap.get(target.shipId);
-                          return (
-                            <button
-                              key={target.shipId.toString()}
-                              onClick={() => setTargetShipId(target.shipId)}
-                              className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
-                              style={{
-                                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                                borderColor: targetShipId === target.shipId ? "var(--color-warning-red)" : "var(--color-gunmetal)",
-                                borderTopColor: targetShipId === target.shipId ? "var(--color-warning-red)" : "var(--color-steel)",
-                                borderLeftColor: targetShipId === target.shipId ? "var(--color-warning-red)" : "var(--color-steel)",
-                                color: targetShipId === target.shipId ? "var(--color-warning-red)" : "var(--color-warning-red)",
-                                backgroundColor: targetShipId === target.shipId ? "var(--color-steel)" : "var(--color-slate)",
-                                borderWidth: "2px",
-                                borderStyle: "solid",
-                                borderRadius: 0,
-                              }}
-                              onMouseEnter={(e) => {
-                                if (targetShipId !== target.shipId) {
-                                  e.currentTarget.style.borderColor = "var(--color-warning-red)";
-                                  e.currentTarget.style.backgroundColor = "var(--color-steel)";
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                if (targetShipId !== target.shipId) {
-                                  e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-                                  e.currentTarget.style.backgroundColor = "var(--color-slate)";
-                                }
-                              }}
-                            >
-                              ⚡ EMP{" "}
-                              {targetShip?.name ||
-                                `#${target.shipId.toString()}`}
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <>
-                          {validTargets.map((target) => {
+                            {previewPosition && (
+                              <button
+                                onClick={() => setTargetShipId(null)}
+                                className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
+                                style={{
+                                  fontFamily:
+                                    "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                  borderColor:
+                                    targetShipId === null
+                                      ? "var(--color-gunmetal)"
+                                      : "var(--color-gunmetal)",
+                                  borderTopColor:
+                                    targetShipId === null
+                                      ? "var(--color-steel)"
+                                      : "var(--color-steel)",
+                                  borderLeftColor:
+                                    targetShipId === null
+                                      ? "var(--color-steel)"
+                                      : "var(--color-steel)",
+                                  color:
+                                    targetShipId === null
+                                      ? "var(--color-text-primary)"
+                                      : "var(--color-text-muted)",
+                                  backgroundColor:
+                                    targetShipId === null
+                                      ? "var(--color-steel)"
+                                      : "var(--color-slate)",
+                                  borderWidth: "2px",
+                                  borderStyle: "solid",
+                                  borderRadius: 0,
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (targetShipId !== null) {
+                                    e.currentTarget.style.borderColor =
+                                      "var(--color-cyan)";
+                                    e.currentTarget.style.color =
+                                      "var(--color-cyan)";
+                                    e.currentTarget.style.backgroundColor =
+                                      "var(--color-steel)";
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (targetShipId !== null) {
+                                    e.currentTarget.style.borderColor =
+                                      "var(--color-gunmetal)";
+                                    e.currentTarget.style.color =
+                                      "var(--color-text-muted)";
+                                    e.currentTarget.style.backgroundColor =
+                                      "var(--color-slate)";
+                                  }
+                                }}
+                              >
+                                Move Only
+                              </button>
+                            )}
+                          </>
+                        ) : selectedWeaponType === "special" &&
+                          specialType === 1 ? (
+                          validTargets.map((target) => {
                             const targetShip = shipMap.get(target.shipId);
-                            const damage = calculateDamage(target.shipId);
                             return (
                               <button
                                 key={target.shipId.toString()}
                                 onClick={() => setTargetShipId(target.shipId)}
                                 className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
                                 style={{
-                                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                                  borderColor: targetShipId === target.shipId
-                                    ? selectedWeaponType === "special"
-                                      ? "var(--color-cyan)"
-                                      : "var(--color-warning-red)"
-                                    : "var(--color-gunmetal)",
-                                  borderTopColor: targetShipId === target.shipId
-                                    ? selectedWeaponType === "special"
-                                      ? "var(--color-cyan)"
-                                      : "var(--color-warning-red)"
-                                    : "var(--color-steel)",
-                                  borderLeftColor: targetShipId === target.shipId
-                                    ? selectedWeaponType === "special"
-                                      ? "var(--color-cyan)"
-                                      : "var(--color-warning-red)"
-                                    : "var(--color-steel)",
-                                  color: targetShipId === target.shipId
-                                    ? selectedWeaponType === "special"
-                                      ? "var(--color-cyan)"
-                                      : "var(--color-warning-red)"
-                                    : "var(--color-text-secondary)",
-                                  backgroundColor: targetShipId === target.shipId ? "var(--color-steel)" : "var(--color-slate)",
+                                  fontFamily:
+                                    "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                  borderColor:
+                                    targetShipId === target.shipId
+                                      ? "var(--color-warning-red)"
+                                      : "var(--color-gunmetal)",
+                                  borderTopColor:
+                                    targetShipId === target.shipId
+                                      ? "var(--color-warning-red)"
+                                      : "var(--color-steel)",
+                                  borderLeftColor:
+                                    targetShipId === target.shipId
+                                      ? "var(--color-warning-red)"
+                                      : "var(--color-steel)",
+                                  color:
+                                    targetShipId === target.shipId
+                                      ? "var(--color-warning-red)"
+                                      : "var(--color-warning-red)",
+                                  backgroundColor:
+                                    targetShipId === target.shipId
+                                      ? "var(--color-steel)"
+                                      : "var(--color-slate)",
                                   borderWidth: "2px",
                                   borderStyle: "solid",
                                   borderRadius: 0,
                                 }}
                                 onMouseEnter={(e) => {
                                   if (targetShipId !== target.shipId) {
-                                    const accentColor = selectedWeaponType === "special" ? "var(--color-cyan)" : "var(--color-warning-red)";
-                                    e.currentTarget.style.borderColor = accentColor;
-                                    e.currentTarget.style.color = accentColor;
-                                    e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                                    e.currentTarget.style.borderColor =
+                                      "var(--color-warning-red)";
+                                    e.currentTarget.style.backgroundColor =
+                                      "var(--color-steel)";
                                   }
                                 }}
                                 onMouseLeave={(e) => {
                                   if (targetShipId !== target.shipId) {
-                                    e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-                                    e.currentTarget.style.color = "var(--color-text-secondary)";
-                                    e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                                    e.currentTarget.style.borderColor =
+                                      "var(--color-gunmetal)";
+                                    e.currentTarget.style.backgroundColor =
+                                      "var(--color-slate)";
                                   }
                                 }}
                               >
-                                Target #{target.shipId.toString()}
-                                {targetShip && ` (${targetShip.name})`}
-                                {selectedWeaponType === "special" ? (
-                                  <span className="ml-1.5">
-                                    🔧 {damage.reducedDamage}
-                                  </span>
-                                ) : damage.reactorCritical ? (
-                                  <span className="ml-1.5">⚡ +1</span>
-                                ) : damage.willKill ? (
-                                  <span className="ml-1.5">
-                                    💀 {damage.reducedDamage}
-                                  </span>
-                                ) : (
-                                  <span className="ml-1.5">
-                                    ⚔️ {damage.reducedDamage}
-                                  </span>
-                                )}
+                                ⚡ EMP{" "}
+                                {targetShip?.name ||
+                                  `#${target.shipId.toString()}`}
                               </button>
                             );
-                          })}
-                        </>
-                      )}
-                      {!(
-                        selectedWeaponType === "special" &&
-                        specialType === 3 &&
-                        previewPosition
-                      ) && (
-                        <button
-                          onClick={() => {
-                            setActionOverride(null);
-                            setTargetShipId(null);
-                          }}
-                          className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
+                          })
+                        ) : (
+                          <>
+                            {validTargets.map((target) => {
+                              const targetShip = shipMap.get(target.shipId);
+                              const damage = calculateDamage(target.shipId);
+                              return (
+                                <button
+                                  key={target.shipId.toString()}
+                                  onClick={() => setTargetShipId(target.shipId)}
+                                  className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
+                                  style={{
+                                    fontFamily:
+                                      "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                    borderColor:
+                                      targetShipId === target.shipId
+                                        ? selectedWeaponType === "special"
+                                          ? "var(--color-cyan)"
+                                          : "var(--color-warning-red)"
+                                        : "var(--color-gunmetal)",
+                                    borderTopColor:
+                                      targetShipId === target.shipId
+                                        ? selectedWeaponType === "special"
+                                          ? "var(--color-cyan)"
+                                          : "var(--color-warning-red)"
+                                        : "var(--color-steel)",
+                                    borderLeftColor:
+                                      targetShipId === target.shipId
+                                        ? selectedWeaponType === "special"
+                                          ? "var(--color-cyan)"
+                                          : "var(--color-warning-red)"
+                                        : "var(--color-steel)",
+                                    color:
+                                      targetShipId === target.shipId
+                                        ? selectedWeaponType === "special"
+                                          ? "var(--color-cyan)"
+                                          : "var(--color-warning-red)"
+                                        : "var(--color-text-secondary)",
+                                    backgroundColor:
+                                      targetShipId === target.shipId
+                                        ? "var(--color-steel)"
+                                        : "var(--color-slate)",
+                                    borderWidth: "2px",
+                                    borderStyle: "solid",
+                                    borderRadius: 0,
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (targetShipId !== target.shipId) {
+                                      const accentColor =
+                                        selectedWeaponType === "special"
+                                          ? "var(--color-cyan)"
+                                          : "var(--color-warning-red)";
+                                      e.currentTarget.style.borderColor =
+                                        accentColor;
+                                      e.currentTarget.style.color = accentColor;
+                                      e.currentTarget.style.backgroundColor =
+                                        "var(--color-steel)";
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (targetShipId !== target.shipId) {
+                                      e.currentTarget.style.borderColor =
+                                        "var(--color-gunmetal)";
+                                      e.currentTarget.style.color =
+                                        "var(--color-text-secondary)";
+                                      e.currentTarget.style.backgroundColor =
+                                        "var(--color-slate)";
+                                    }
+                                  }}
+                                >
+                                  Target #{target.shipId.toString()}
+                                  {targetShip && ` (${targetShip.name})`}
+                                  {selectedWeaponType === "special" ? (
+                                    <span className="ml-1.5">
+                                      🔧 {damage.reducedDamage}
+                                    </span>
+                                  ) : damage.reactorCritical ? (
+                                    <span className="ml-1.5">⚡ +1</span>
+                                  ) : damage.willKill ? (
+                                    <span className="ml-1.5">
+                                      💀 {damage.reducedDamage}
+                                    </span>
+                                  ) : (
+                                    <span className="ml-1.5">
+                                      ⚔️ {damage.reducedDamage}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </>
+                        )}
+                        {!(
+                          selectedWeaponType === "special" &&
+                          specialType === 3 &&
+                          previewPosition
+                        ) && (
+                          <button
+                            onClick={() => {
+                              setActionOverride(null);
+                              setTargetShipId(null);
+                            }}
+                            className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
+                            style={{
+                              fontFamily:
+                                "var(--font-rajdhani), 'Arial Black', sans-serif",
+                              borderColor: "var(--color-gunmetal)",
+                              borderTopColor: "var(--color-steel)",
+                              borderLeftColor: "var(--color-steel)",
+                              color: "var(--color-text-muted)",
+                              backgroundColor: "var(--color-slate)",
+                              borderWidth: "2px",
+                              borderStyle: "solid",
+                              borderRadius: 0,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor =
+                                "var(--color-cyan)";
+                              e.currentTarget.style.color = "var(--color-cyan)";
+                              e.currentTarget.style.backgroundColor =
+                                "var(--color-steel)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor =
+                                "var(--color-gunmetal)";
+                              e.currentTarget.style.color =
+                                "var(--color-text-muted)";
+                              e.currentTarget.style.backgroundColor =
+                                "var(--color-slate)";
+                            }}
+                          >
+                            {previewPosition ? "Move Only" : "Stay"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Right: Actions */}
+                {/* Show action buttons for proposed moves */}
+                <div className="flex flex-col gap-2 flex-shrink-0 ml-auto">
+                  <>
+                    {(() => {
+                      // Compute the actual actionType that will be submitted (same as args)
+                      const computedActionType =
+                        actionOverride != null
+                          ? actionOverride
+                          : targetShipId !== null && targetShipId !== 0n
+                            ? selectedWeaponType === "special"
+                              ? ActionType.Special
+                              : ActionType.Shoot
+                            : targetShipId === 0n &&
+                                selectedWeaponType === "special" &&
+                                specialType === 3
+                              ? ActionType.Special // Flak AOE (targetShipId is 0n)
+                              : ActionType.Pass; // Stay instead (targetShipId is null) or no target
+
+                      const computedRow = previewPosition
+                        ? previewPosition.row
+                        : (() => {
+                            const currentPosition = game.shipPositions.find(
+                              (pos) => pos.shipId === selectedShipId,
+                            );
+                            return currentPosition
+                              ? currentPosition.position.row
+                              : 0;
+                          })();
+                      const computedCol = previewPosition
+                        ? previewPosition.col
+                        : (() => {
+                            const currentPosition = game.shipPositions.find(
+                              (pos) => pos.shipId === selectedShipId,
+                            );
+                            return currentPosition
+                              ? currentPosition.position.col
+                              : 0;
+                          })();
+
+                      // Determine button text based on computed actionType
+                      const getButtonText = () => {
+                        if (computedActionType === ActionType.Retreat) {
+                          return "🏳️";
+                        }
+                        if (previewPosition) {
+                          // Moving
+                          if (
+                            computedActionType === ActionType.Special &&
+                            specialType === 3
+                          ) {
+                            return scoringGrid[computedRow] &&
+                              scoringGrid[computedRow][computedCol] > 0
+                              ? "➡️⭐💥"
+                              : "➡️💥";
+                          }
+                          if (computedActionType === ActionType.Special) {
+                            const specialIcon =
+                              specialType === 1
+                                ? "⚡"
+                                : specialType === 2
+                                  ? "🔧"
+                                  : "✨";
+                            return scoringGrid[computedRow] &&
+                              scoringGrid[computedRow][computedCol] > 0
+                              ? `➡️⭐${specialIcon}`
+                              : `➡️${specialIcon}`;
+                          }
+                          if (computedActionType === ActionType.Shoot) {
+                            return scoringGrid[computedRow] &&
+                              scoringGrid[computedRow][computedCol] > 0
+                              ? "➡️⚔️⭐"
+                              : "➡️⚔️";
+                          }
+                          // Pass (shouldn't happen with previewPosition, but handle it)
+                          return scoringGrid[computedRow] &&
+                            scoringGrid[computedRow][computedCol] > 0
+                            ? "➡️⭐"
+                            : "➡️";
+                        } else {
+                          // Not moving (staying in place)
+                          const currentPosition = game.shipPositions.find(
+                            (pos) => pos.shipId === selectedShipId,
+                          );
+                          const isOnScoringTile =
+                            currentPosition &&
+                            scoringGrid[currentPosition.position.row] &&
+                            scoringGrid[currentPosition.position.row][
+                              currentPosition.position.col
+                            ] > 0;
+
+                          if (computedActionType === ActionType.Pass) {
+                            return isOnScoringTile ? "⏸️⭐" : "✓";
+                          }
+                          if (
+                            computedActionType === ActionType.Special &&
+                            specialType === 3
+                          ) {
+                            return isOnScoringTile ? "⏸️⭐💥" : "💥";
+                          }
+                          if (computedActionType === ActionType.Special) {
+                            const specialIcon =
+                              specialType === 1
+                                ? "⚡"
+                                : specialType === 2
+                                  ? "🔧"
+                                  : "✨";
+                            return isOnScoringTile
+                              ? `⏸️⭐${specialIcon}`
+                              : specialIcon;
+                          }
+                          if (computedActionType === ActionType.Shoot) {
+                            return "⚔️";
+                          }
+                          return "✓";
+                        }
+                      };
+
+                      return (
+                        <div
+                          className="inline-block"
                           style={{
-                            fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                            borderColor: "var(--color-gunmetal)",
-                            borderTopColor: "var(--color-steel)",
-                            borderLeftColor: "var(--color-steel)",
-                            color: "var(--color-text-muted)",
-                            backgroundColor: "var(--color-slate)",
+                            fontFamily:
+                              "var(--font-rajdhani), 'Arial Black', sans-serif",
+                            borderColor: "var(--color-phosphor-green)",
+                            color: "var(--color-phosphor-green)",
+                            backgroundColor: "var(--color-steel)",
                             borderWidth: "2px",
                             borderStyle: "solid",
                             borderRadius: 0,
                           }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = "var(--color-cyan)";
-                            e.currentTarget.style.color = "var(--color-cyan)";
-                            e.currentTarget.style.backgroundColor = "var(--color-steel)";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-                            e.currentTarget.style.color = "var(--color-text-muted)";
-                            e.currentTarget.style.backgroundColor = "var(--color-slate)";
-                          }}
                         >
-                          {previewPosition ? "Move Only" : "Stay"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
+                          <TransactionButton
+                            transactionId={`move-ship-${selectedShipId}-${game.metadata.gameId}`}
+                            contractAddress={gameContractConfig.address}
+                            abi={gameContractConfig.abi}
+                            functionName="moveShip"
+                            args={[
+                              game.metadata.gameId,
+                              selectedShipId,
+                              computedRow,
+                              computedCol,
+                              computedActionType,
+                              targetShipId || 0n,
+                            ]}
+                            className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 w-full h-full"
+                            loadingText="Submitting..."
+                            errorText="Error"
+                            onSuccess={() => {
+                              // Deselect ship after transaction receipt is received
+                              setPreviewPosition(null);
+                              setSelectedShipId(null);
+                              setTargetShipId(null);
+                              // Keep selectedWeaponType so it only changes when player uses the dropdown
+                              toast.success("Move submitted successfully!");
+                              // Track when player moved to trigger polling schedule
+                              const moveTime = Date.now();
+                              playerMoveTimeRef.current = moveTime;
+                              setPlayerMoveTimestamp(moveTime); // Trigger effect re-run
+                              // Refetch both the specific game and the game list
+                              refetchGame();
+                              refetch?.();
+                            }}
+                            onError={(error) => {
+                              console.error("Error submitting move:", error);
+                              const errorMessage =
+                                (error as Error)?.message ||
+                                String(error) ||
+                                "Unknown error";
 
-              {/* Right: Actions */}
-              {/* Show action buttons for proposed moves */}
-              <div className="flex flex-col gap-2 flex-shrink-0 ml-auto">
-                <>
+                              if (
+                                errorMessage.includes("User rejected") ||
+                                errorMessage.includes("User denied")
+                              ) {
+                                toast.error("Transaction declined by user");
+                              } else if (
+                                errorMessage.includes("insufficient funds")
+                              ) {
+                                toast.error(
+                                  "Insufficient funds for transaction",
+                                );
+                              } else if (errorMessage.includes("gas")) {
+                                toast.error(
+                                  "Transaction failed due to gas estimation error",
+                                );
+                              } else if (
+                                errorMessage.includes("execution reverted")
+                              ) {
+                                toast.error(
+                                  "Transaction reverted - check if it&apos;s your turn and ship is valid",
+                                );
+                              } else if (errorMessage.includes("NotYourTurn")) {
+                                toast.error("It&apos;s not your turn to move");
+                              } else if (
+                                errorMessage.includes("ShipNotFound")
+                              ) {
+                                toast.error("Ship not found in this game");
+                              } else if (errorMessage.includes("InvalidMove")) {
+                                toast.error(
+                                  "Invalid move - check ship position and movement range",
+                                );
+                              } else if (
+                                errorMessage.includes("PositionOccupied")
+                              ) {
+                                toast.error(
+                                  "Target position is already occupied",
+                                );
+                              } else {
+                                toast.error(
+                                  `Transaction failed: ${errorMessage}`,
+                                );
+                              }
+                            }}
+                            validateBeforeTransaction={() => {
+                              // Validate based on computed values (same logic as args that will be submitted)
+                              if (!selectedShipId) {
+                                return "No ship selected";
+                              }
+                              if (
+                                !game.metadata.gameId ||
+                                game.metadata.gameId === 0n
+                              ) {
+                                return "Invalid game ID";
+                              }
+                              if (!isShipOwnedByCurrentPlayer(selectedShipId)) {
+                                return "You can only move your own ships";
+                              }
+                              // Retreat: any ship can flee (even already moved or 0 HP)
+                              if (
+                                (computedActionType as ActionType) !==
+                                ActionType.Retreat
+                              ) {
+                                if (movedShipIdsSet.has(selectedShipId)) {
+                                  return "This ship has already moved this round";
+                                }
+                                if (
+                                  computedRow < 0 ||
+                                  computedRow >= GRID_HEIGHT ||
+                                  computedCol < 0 ||
+                                  computedCol >= GRID_WIDTH
+                                ) {
+                                  return "Invalid position coordinates";
+                                }
+                              }
+                              return true;
+                            }}
+                          >
+                            Submit {getButtonText()}
+                          </TransactionButton>
+                        </div>
+                      );
+                    })()}
+                    <button
+                      onClick={handleCancelMove}
+                      className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                      style={{
+                        fontFamily:
+                          "var(--font-rajdhani), 'Arial Black', sans-serif",
+                        borderColor: "var(--color-gunmetal)",
+                        color: "var(--color-text-secondary)",
+                        backgroundColor: "var(--color-steel)",
+                        borderWidth: "2px",
+                        borderStyle: "solid",
+                        borderRadius: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          "var(--color-slate)";
+                        e.currentTarget.style.borderColor = "var(--color-cyan)";
+                        e.currentTarget.style.color = "var(--color-cyan)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          "var(--color-steel)";
+                        e.currentTarget.style.borderColor =
+                          "var(--color-gunmetal)";
+                        e.currentTarget.style.color =
+                          "var(--color-text-secondary)";
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                </div>
+              </div>
+
+              {/* Debug: show moveShip params */}
+              {showDebug && (
+                <div className="px-4 pb-4 pt-2 border-t border-gray-700 text-xs text-gray-400 font-mono">
                   {(() => {
-                    // Compute the actual actionType that will be submitted (same as args)
-                    const computedActionType =
+                    const currentPosition = game.shipPositions.find(
+                      (pos) => pos.shipId === selectedShipId,
+                    );
+                    const row = previewPosition
+                      ? previewPosition.row
+                      : currentPosition
+                        ? currentPosition.position.row
+                        : 0;
+                    const col = previewPosition
+                      ? previewPosition.col
+                      : currentPosition
+                        ? currentPosition.position.col
+                        : 0;
+
+                    const actionType =
                       actionOverride != null
                         ? actionOverride
                         : targetShipId !== null && targetShipId !== 0n
@@ -2716,315 +3290,31 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           : targetShipId === 0n &&
                               selectedWeaponType === "special" &&
                               specialType === 3
-                            ? ActionType.Special // Flak AOE (targetShipId is 0n)
-                            : ActionType.Pass; // Stay instead (targetShipId is null) or no target
+                            ? ActionType.Special
+                            : ActionType.Pass;
 
-                    const computedRow = previewPosition
-                      ? previewPosition.row
-                      : (() => {
-                          const currentPosition = game.shipPositions.find(
-                            (pos) => pos.shipId === selectedShipId
-                          );
-                          return currentPosition
-                            ? currentPosition.position.row
-                            : 0;
-                        })();
-                    const computedCol = previewPosition
-                      ? previewPosition.col
-                      : (() => {
-                          const currentPosition = game.shipPositions.find(
-                            (pos) => pos.shipId === selectedShipId
-                          );
-                          return currentPosition
-                            ? currentPosition.position.col
-                            : 0;
-                        })();
-
-                    // Determine button text based on computed actionType
-                    const getButtonText = () => {
-                      if (computedActionType === ActionType.Retreat) {
-                        return "🏳️";
-                      }
-                      if (previewPosition) {
-                        // Moving
-                        if (
-                          computedActionType === ActionType.Special &&
-                          specialType === 3
-                        ) {
-                          return scoringGrid[computedRow] &&
-                            scoringGrid[computedRow][computedCol] > 0
-                            ? "➡️⭐💥"
-                            : "➡️💥";
-                        }
-                        if (computedActionType === ActionType.Special) {
-                          const specialIcon =
-                            specialType === 1
-                              ? "⚡"
-                              : specialType === 2
-                              ? "🔧"
-                              : "✨";
-                          return scoringGrid[computedRow] &&
-                            scoringGrid[computedRow][computedCol] > 0
-                            ? `➡️⭐${specialIcon}`
-                            : `➡️${specialIcon}`;
-                        }
-                        if (computedActionType === ActionType.Shoot) {
-                          return scoringGrid[computedRow] &&
-                            scoringGrid[computedRow][computedCol] > 0
-                            ? "➡️⚔️⭐"
-                            : "➡️⚔️";
-                        }
-                        // Pass (shouldn't happen with previewPosition, but handle it)
-                        return scoringGrid[computedRow] &&
-                          scoringGrid[computedRow][computedCol] > 0
-                          ? "➡️⭐"
-                          : "➡️";
-                      } else {
-                        // Not moving (staying in place)
-                        const currentPosition = game.shipPositions.find(
-                          (pos) => pos.shipId === selectedShipId
-                        );
-                        const isOnScoringTile =
-                          currentPosition &&
-                          scoringGrid[currentPosition.position.row] &&
-                          scoringGrid[currentPosition.position.row][
-                            currentPosition.position.col
-                          ] > 0;
-
-                        if (computedActionType === ActionType.Pass) {
-                          return isOnScoringTile ? "⏸️⭐" : "✓";
-                        }
-                        if (
-                          computedActionType === ActionType.Special &&
-                          specialType === 3
-                        ) {
-                          return isOnScoringTile ? "⏸️⭐💥" : "💥";
-                        }
-                        if (computedActionType === ActionType.Special) {
-                          const specialIcon =
-                            specialType === 1
-                              ? "⚡"
-                              : specialType === 2
-                              ? "🔧"
-                              : "✨";
-                          return isOnScoringTile
-                            ? `⏸️⭐${specialIcon}`
-                            : specialIcon;
-                        }
-                        if (computedActionType === ActionType.Shoot) {
-                          return "⚔️";
-                        }
-                        return "✓";
-                      }
-                    };
+                    const params = [
+                      String(game.metadata.gameId),
+                      String(selectedShipId || 0n),
+                      row,
+                      col,
+                      actionType,
+                      String(targetShipId || 0n),
+                    ];
 
                     return (
-                      <div
-                        className="inline-block"
-                        style={{
-                          fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                          borderColor: "var(--color-phosphor-green)",
-                          color: "var(--color-phosphor-green)",
-                          backgroundColor: "var(--color-steel)",
-                          borderWidth: "2px",
-                          borderStyle: "solid",
-                          borderRadius: 0,
-                        }}
-                      >
-                        <TransactionButton
-                          transactionId={`move-ship-${selectedShipId}-${game.metadata.gameId}`}
-                          contractAddress={gameContractConfig.address}
-                          abi={gameContractConfig.abi}
-                          functionName="moveShip"
-                          args={[
-                            game.metadata.gameId,
-                            selectedShipId,
-                            computedRow,
-                            computedCol,
-                            computedActionType,
-                            targetShipId || 0n,
-                          ]}
-                          className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 w-full h-full"
-                          loadingText="Submitting..."
-                          errorText="Error"
-                        onSuccess={() => {
-                          // Deselect ship after transaction receipt is received
-                          setPreviewPosition(null);
-                          setSelectedShipId(null);
-                          setTargetShipId(null);
-                          // Keep selectedWeaponType so it only changes when player uses the dropdown
-                          toast.success("Move submitted successfully!");
-                          // Track when player moved to trigger polling schedule
-                          const moveTime = Date.now();
-                          playerMoveTimeRef.current = moveTime;
-                          setPlayerMoveTimestamp(moveTime); // Trigger effect re-run
-                          // Refetch both the specific game and the game list
-                          refetchGame();
-                          refetch?.();
-                        }}
-                        onError={(error) => {
-                          console.error("Error submitting move:", error);
-                          const errorMessage =
-                            (error as Error)?.message ||
-                            String(error) ||
-                            "Unknown error";
-
-                          if (
-                            errorMessage.includes("User rejected") ||
-                            errorMessage.includes("User denied")
-                          ) {
-                            toast.error("Transaction declined by user");
-                          } else if (
-                            errorMessage.includes("insufficient funds")
-                          ) {
-                            toast.error("Insufficient funds for transaction");
-                          } else if (errorMessage.includes("gas")) {
-                            toast.error(
-                              "Transaction failed due to gas estimation error"
-                            );
-                          } else if (
-                            errorMessage.includes("execution reverted")
-                          ) {
-                            toast.error(
-                              "Transaction reverted - check if it&apos;s your turn and ship is valid"
-                            );
-                          } else if (errorMessage.includes("NotYourTurn")) {
-                            toast.error("It&apos;s not your turn to move");
-                          } else if (errorMessage.includes("ShipNotFound")) {
-                            toast.error("Ship not found in this game");
-                          } else if (errorMessage.includes("InvalidMove")) {
-                            toast.error(
-                              "Invalid move - check ship position and movement range"
-                            );
-                          } else if (
-                            errorMessage.includes("PositionOccupied")
-                          ) {
-                            toast.error("Target position is already occupied");
-                          } else {
-                            toast.error(`Transaction failed: ${errorMessage}`);
-                          }
-                        }}
-                        validateBeforeTransaction={() => {
-                          // Validate based on computed values (same logic as args that will be submitted)
-                          if (!selectedShipId) {
-                            return "No ship selected";
-                          }
-                          if (
-                            !game.metadata.gameId ||
-                            game.metadata.gameId === 0n
-                          ) {
-                            return "Invalid game ID";
-                          }
-                          if (!isShipOwnedByCurrentPlayer(selectedShipId)) {
-                            return "You can only move your own ships";
-                          }
-                          // Retreat: any ship can flee (even already moved or 0 HP)
-                          if (
-                            (computedActionType as ActionType) !==
-                            ActionType.Retreat
-                          ) {
-                            if (movedShipIdsSet.has(selectedShipId)) {
-                              return "This ship has already moved this round";
-                            }
-                            if (
-                              computedRow < 0 ||
-                              computedRow >= GRID_HEIGHT ||
-                              computedCol < 0 ||
-                              computedCol >= GRID_WIDTH
-                            ) {
-                              return "Invalid position coordinates";
-                            }
-                          }
-                          return true;
-                        }}
-                      >
-                        Submit {getButtonText()}
-                      </TransactionButton>
-                    </div>
-                  );
+                      <div>
+                        <span className="opacity-60 mr-1">Debug params:</span>
+                        <span>
+                          [gameId: {params[0]}, shipId: {params[1]}, row: {row},
+                          col: {col}, actionType: {actionType}, target:{" "}
+                          {params[5]}]
+                        </span>
+                      </div>
+                    );
                   })()}
-                  <button
-                    onClick={handleCancelMove}
-                    className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
-                    style={{
-                      fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                      borderColor: "var(--color-gunmetal)",
-                      color: "var(--color-text-secondary)",
-                      backgroundColor: "var(--color-steel)",
-                      borderWidth: "2px",
-                      borderStyle: "solid",
-                      borderRadius: 0,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--color-slate)";
-                      e.currentTarget.style.borderColor = "var(--color-cyan)";
-                      e.currentTarget.style.color = "var(--color-cyan)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--color-steel)";
-                      e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-                      e.currentTarget.style.color = "var(--color-text-secondary)";
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </>
-              </div>
-            </div>
-
-            {/* Debug: show moveShip params */}
-            {showDebug && (
-              <div className="px-4 pb-4 pt-2 border-t border-gray-700 text-xs text-gray-400 font-mono">
-                {(() => {
-                  const currentPosition = game.shipPositions.find(
-                    (pos) => pos.shipId === selectedShipId
-                  );
-                  const row = previewPosition
-                    ? previewPosition.row
-                    : currentPosition
-                    ? currentPosition.position.row
-                    : 0;
-                  const col = previewPosition
-                    ? previewPosition.col
-                    : currentPosition
-                    ? currentPosition.position.col
-                    : 0;
-
-                  const actionType =
-                    actionOverride != null
-                      ? actionOverride
-                      : targetShipId !== null && targetShipId !== 0n
-                        ? selectedWeaponType === "special"
-                          ? ActionType.Special
-                          : ActionType.Shoot
-                        : targetShipId === 0n &&
-                            selectedWeaponType === "special" &&
-                            specialType === 3
-                          ? ActionType.Special
-                          : ActionType.Pass;
-
-                  const params = [
-                    String(game.metadata.gameId),
-                    String(selectedShipId || 0n),
-                    row,
-                    col,
-                    actionType,
-                    String(targetShipId || 0n),
-                  ];
-
-                  return (
-                    <div>
-                      <span className="opacity-60 mr-1">Debug params:</span>
-                      <span>
-                        [gameId: {params[0]}, shipId: {params[1]}, row: {row},
-                        col: {col}, actionType: {actionType}, target:{" "}
-                        {params[5]}]
-                      </span>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
+                </div>
+              )}
             </>
           ) : (
             // Placeholder content to preserve height when UI isn't active
@@ -3037,7 +3327,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 </div>
                 <div className="flex-1">
                   <div className="border border-solid p-3">
-                    <div className="text-xs mb-2 uppercase tracking-wide">.</div>
+                    <div className="text-xs mb-2 uppercase tracking-wide">
+                      .
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       <button className="px-3 py-1.5 text-sm">.</button>
                     </div>
@@ -3074,7 +3366,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <span
                   className="uppercase font-bold tracking-wider"
                   style={{
-                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
                     color:
                       game.metadata.winner === address
                         ? "var(--color-phosphor-green)"
@@ -3119,6 +3412,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           movementRange={movementRange}
           shootingRange={shootingRange}
           validTargets={validTargets}
+          labelTargets={labelTargets}
           assistableTargets={assistableTargets}
           assistableTargetsFromStart={assistableTargetsFromStart}
           dragShootingRange={dragShootingRange}
@@ -3139,6 +3433,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           lastMoveShipId={lastMoveShipId}
           lastMoveOldPosition={lastMoveOldPosition}
           lastMoveActionType={lastMoveActionType}
+          lastMoveTargetShipId={lastMoveTargetShipId}
           lastMoveIsCurrentPlayer={lastMoveIsCurrentPlayer}
           retreatPrepShipId={retreatPrepShipId}
           retreatPrepIsCreator={retreatPrepIsCreator}
@@ -3314,7 +3609,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <h4
                   className="mb-3 uppercase font-bold tracking-wider"
                   style={{
-                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
                     color: "var(--color-cyan)",
                     fontSize: "18px",
                   }}
@@ -3323,7 +3619,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   <span
                     className="ml-2"
                     style={{
-                      fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      fontFamily:
+                        "var(--font-jetbrains-mono), 'Courier New', monospace",
                       color: "var(--color-text-secondary)",
                       fontSize: "14px",
                       fontWeight: 400,
@@ -3335,7 +3632,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {game.creatorActiveShipIds.map((shipId) => {
                     const shipPosition = game.shipPositions.find(
-                      (sp) => sp.shipId === shipId
+                      (sp) => sp.shipId === shipId,
                     );
                     const attributes = getShipAttributes(shipId);
                     const ship = shipMap.get(shipId);
@@ -3348,8 +3645,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       attributes.hullPoints === 0
                         ? "critical" // Red outline for reactor critical + 0 HP
                         : attributes.reactorCriticalTimer > 0
-                        ? "warning" // Yellow outline for reactor critical
-                        : "none";
+                          ? "warning" // Yellow outline for reactor critical
+                          : "none";
 
                     return (
                       <div key={shipId.toString()}>
@@ -3381,7 +3678,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <h4
                   className="mb-3 uppercase font-bold tracking-wider"
                   style={{
-                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
                     color: "var(--color-warning-red)",
                     fontSize: "18px",
                   }}
@@ -3390,7 +3688,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   <span
                     className="ml-2"
                     style={{
-                      fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      fontFamily:
+                        "var(--font-jetbrains-mono), 'Courier New', monospace",
                       color: "var(--color-text-secondary)",
                       fontSize: "14px",
                       fontWeight: 400,
@@ -3402,7 +3701,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {game.joinerActiveShipIds.map((shipId) => {
                     const shipPosition = game.shipPositions.find(
-                      (sp) => sp.shipId === shipId
+                      (sp) => sp.shipId === shipId,
                     );
                     const attributes = getShipAttributes(shipId);
                     const ship = shipMap.get(shipId);
@@ -3415,8 +3714,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       attributes.hullPoints === 0
                         ? "critical" // Red outline for reactor critical + 0 HP
                         : attributes.reactorCriticalTimer > 0
-                        ? "warning" // Yellow outline for reactor critical
-                        : "none";
+                          ? "warning" // Yellow outline for reactor critical
+                          : "none";
 
                     return (
                       <div key={shipId.toString()}>
@@ -3451,7 +3750,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <h4
                   className="mb-3 uppercase font-bold tracking-wider"
                   style={{
-                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
                     color: "var(--color-warning-red)",
                     fontSize: "18px",
                   }}
@@ -3460,7 +3760,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   <span
                     className="ml-2"
                     style={{
-                      fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      fontFamily:
+                        "var(--font-jetbrains-mono), 'Courier New', monospace",
                       color: "var(--color-text-secondary)",
                       fontSize: "14px",
                       fontWeight: 400,
@@ -3472,7 +3773,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {game.creatorActiveShipIds.map((shipId) => {
                     const shipPosition = game.shipPositions.find(
-                      (sp) => sp.shipId === shipId
+                      (sp) => sp.shipId === shipId,
                     );
                     const attributes = getShipAttributes(shipId);
                     const ship = shipMap.get(shipId);
@@ -3485,8 +3786,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       attributes.hullPoints === 0
                         ? "critical" // Red outline for reactor critical + 0 HP
                         : attributes.reactorCriticalTimer > 0
-                        ? "warning" // Yellow outline for reactor critical
-                        : "none";
+                          ? "warning" // Yellow outline for reactor critical
+                          : "none";
 
                     return (
                       <div key={shipId.toString()}>
@@ -3518,7 +3819,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <h4
                   className="mb-3 uppercase font-bold tracking-wider"
                   style={{
-                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
                     color: "var(--color-cyan)",
                     fontSize: "18px",
                   }}
@@ -3527,7 +3829,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   <span
                     className="ml-2"
                     style={{
-                      fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      fontFamily:
+                        "var(--font-jetbrains-mono), 'Courier New', monospace",
                       color: "var(--color-text-secondary)",
                       fontSize: "14px",
                       fontWeight: 400,
@@ -3539,7 +3842,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {game.joinerActiveShipIds.map((shipId) => {
                     const shipPosition = game.shipPositions.find(
-                      (sp) => sp.shipId === shipId
+                      (sp) => sp.shipId === shipId,
                     );
                     const attributes = getShipAttributes(shipId);
                     const ship = shipMap.get(shipId);
@@ -3552,8 +3855,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       attributes.hullPoints === 0
                         ? "critical" // Red outline for reactor critical + 0 HP
                         : attributes.reactorCriticalTimer > 0
-                        ? "warning" // Yellow outline for reactor critical
-                        : "none";
+                          ? "warning" // Yellow outline for reactor critical
+                          : "none";
 
                     return (
                       <div key={shipId.toString()}>

@@ -38,6 +38,10 @@ interface GameGridProps {
     shipId: bigint;
     position: { row: number; col: number };
   }>;
+  labelTargets: Array<{
+    shipId: bigint;
+    position: { row: number; col: number };
+  }>;
   assistableTargets: Array<{
     shipId: bigint;
     position: { row: number; col: number };
@@ -76,6 +80,7 @@ interface GameGridProps {
   lastMoveShipId?: bigint | null; // Ship ID for the last move (to show pulse effect)
   lastMoveOldPosition?: { row: number; col: number } | null; // Old position for last move preview
   lastMoveActionType?: ActionType | null; // When Retreat, show warp collapse at old position
+  lastMoveTargetShipId?: bigint | null; // When last move was Special (e.g. repair), target ship for animation
   lastMoveIsCurrentPlayer?: boolean | undefined; // true = blue outline, false = red outline
   retreatPrepShipId?: bigint | null; // When set, this ship shows flip + engine glow (Retreat selected)
   retreatPrepIsCreator?: boolean | null; // For retreat prep flip direction
@@ -110,6 +115,7 @@ export function GameGrid({
   movementRange,
   shootingRange,
   validTargets,
+  labelTargets,
   assistableTargets,
   assistableTargetsFromStart,
   dragShootingRange,
@@ -130,6 +136,7 @@ export function GameGrid({
   lastMoveShipId,
   lastMoveOldPosition,
   lastMoveActionType,
+  lastMoveTargetShipId,
   lastMoveIsCurrentPlayer,
   retreatPrepShipId,
   retreatPrepIsCreator,
@@ -194,9 +201,13 @@ export function GameGrid({
     }
 
     // Flak: show previews across all ships in range even when no specific target is selected
-    if (selectedWeaponType === "special" && specialType === 3 && targetShipId === 0n) {
+    if (
+      selectedWeaponType === "special" &&
+      specialType === 3 &&
+      targetShipId === 0n
+    ) {
       (draggedShipId && dragOverCell ? dragValidTargets : validTargets).forEach(
-        (t) => ids.add(t.shipId)
+        (t) => ids.add(t.shipId),
       );
     }
 
@@ -204,8 +215,11 @@ export function GameGrid({
       selectedWeaponType === "special" && specialType === 3 ? true : undefined;
 
     ids.forEach((id) => {
-      const dmg = calculateDamage(id, selectedWeaponType, showReducedDamage)
-        .reducedDamage;
+      const dmg = calculateDamage(
+        id,
+        selectedWeaponType,
+        showReducedDamage,
+      ).reducedDamage;
       if (dmg > 0) map.set(id, dmg);
     });
 
@@ -229,106 +243,34 @@ export function GameGrid({
     <>
       {/* Map Grid */}
       <div className="w-full px-2">
-        <div
-          ref={gridContainerRef}
-          key="game-grid"
-          className="relative w-full"
-        >
+        <div ref={gridContainerRef} key="game-grid" className="relative w-full">
           <div className="relative z-0 grid gap-0 border border-gray-900 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full">
-          {grid.map((row, rowIndex) =>
-            row.map((cell, colIndex) => {
-              const ship = cell ? shipMap.get(cell.shipId) : null;
-              const isSelected = selectedShipId === cell?.shipId;
-              const isMovementTile = movementRange.some(
-                (pos) => pos.row === rowIndex && pos.col === colIndex,
-              );
-              const isHighlightedMove =
-                highlightedMovePosition &&
-                highlightedMovePosition.row === rowIndex &&
-                highlightedMovePosition.col === colIndex;
-              const isShootingTile = shootingRange.some(
-                (pos) => pos.row === rowIndex && pos.col === colIndex,
-              );
+            {grid.map((row, rowIndex) =>
+              row.map((cell, colIndex) => {
+                const ship = cell ? shipMap.get(cell.shipId) : null;
+                const isSelected = selectedShipId === cell?.shipId;
+                const isMovementTile = movementRange.some(
+                  (pos) => pos.row === rowIndex && pos.col === colIndex,
+                );
+                const isHighlightedMove =
+                  highlightedMovePosition &&
+                  highlightedMovePosition.row === rowIndex &&
+                  highlightedMovePosition.col === colIndex;
+                const isShootingTile = shootingRange.some(
+                  (pos) => pos.row === rowIndex && pos.col === colIndex,
+                );
 
-              // Check if this ship has already moved this round
-              const hasShipMoved = cell && movedShipIdsSet.has(cell.shipId);
+                // Check if this ship has already moved this round
+                const hasShipMoved = cell && movedShipIdsSet.has(cell.shipId);
 
-              // Check if this cell contains a valid target
-              // When dragging, use dragValidTargets; otherwise use validTargets
-              const isValidTarget =
-                cell &&
-                selectedShipId &&
-                isCurrentPlayerTurn &&
-                isShipOwnedByCurrentPlayer(selectedShipId) &&
-                (() => {
-                  // Check if this is a valid target based on weapon type
-                  const isValidTargetType =
-                    selectedWeaponType === "special"
-                      ? specialType === 3 // Flak
-                        ? cell.shipId !== selectedShipId // Flak hits ALL ships in range except itself
-                        : specialType === 1 // EMP
-                          ? !isShipOwnedByCurrentPlayer(cell.shipId) // EMP targets enemy ships
-                          : isShipOwnedByCurrentPlayer(cell.shipId) // Other special abilities target friendly ships
-                      : !isShipOwnedByCurrentPlayer(cell.shipId); // Weapons target enemy ships
-                  return isValidTargetType;
-                })() &&
-                (draggedShipId && dragOverCell
-                  ? dragValidTargets.some(
-                      (target) => target.shipId === cell.shipId,
-                    )
-                  : validTargets.some(
-                      (target) => target.shipId === cell.shipId,
-                    ));
-
-              // Check if this cell contains an assistable target (friendly ship with 0 HP)
-              const isAssistableTarget =
-                cell &&
-                selectedShipId &&
-                isCurrentPlayerTurn &&
-                isShipOwnedByCurrentPlayer(selectedShipId) &&
-                (assistableTargets.some(
-                  (target) => target.shipId === cell.shipId,
-                ) ||
-                  assistableTargetsFromStart.some(
-                    (target) => target.shipId === cell.shipId,
-                  ));
-              const isSelectedTarget = cell && targetShipId === cell.shipId;
-
-              const handleCellClick = () => {
-                if (cell) {
-                  // Check for repair drone auto-switch FIRST (before any other logic)
-                  if (
-                    selectedShipId &&
-                    isCurrentPlayerTurn &&
-                    isShipOwnedByCurrentPlayer(selectedShipId)
-                  ) {
-                    const isFriendlyShip = isShipOwnedByCurrentPlayer(
-                      cell.shipId,
-                    );
-                    const selectedShip = shipMap.get(selectedShipId);
-                    const hasRepairDrones =
-                      selectedShip?.equipment.special === 2; // Repair special
-
-                    if (isFriendlyShip && hasRepairDrones) {
-                      // Check if the friendly ship is in repair range
-                      const isInRepairRange = validTargets.some(
-                        (target) => target.shipId === cell.shipId,
-                      );
-                      if (isInRepairRange) {
-                        // Switch to repair drones and target this ship
-                        setSelectedWeaponType("special");
-                        setTargetShipId(cell.shipId);
-                        return;
-                      }
-                    }
-                  }
-
-                  // If we have a selected ship and this is a valid target in range, select as target
-                  if (
-                    selectedShipId &&
-                    isCurrentPlayerTurn &&
-                    isShipOwnedByCurrentPlayer(selectedShipId)
-                  ) {
+                // Check if this cell contains a valid target
+                // When dragging, use dragValidTargets; otherwise use validTargets
+                const isValidTarget =
+                  cell &&
+                  selectedShipId &&
+                  isCurrentPlayerTurn &&
+                  isShipOwnedByCurrentPlayer(selectedShipId) &&
+                  (() => {
                     // Check if this is a valid target based on weapon type
                     const isValidTargetType =
                       selectedWeaponType === "special"
@@ -338,1401 +280,1565 @@ export function GameGrid({
                             ? !isShipOwnedByCurrentPlayer(cell.shipId) // EMP targets enemy ships
                             : isShipOwnedByCurrentPlayer(cell.shipId) // Other special abilities target friendly ships
                         : !isShipOwnedByCurrentPlayer(cell.shipId); // Weapons target enemy ships
-
-                    if (isValidTargetType) {
-                      const isInShootingRange = validTargets.some(
+                    return isValidTargetType;
+                  })() &&
+                  (draggedShipId && dragOverCell
+                    ? dragValidTargets.some(
                         (target) => target.shipId === cell.shipId,
+                      )
+                    : validTargets.some(
+                        (target) => target.shipId === cell.shipId,
+                      ));
+
+                // Check if this cell contains an assistable target (friendly ship with 0 HP)
+                const isAssistableTarget =
+                  cell &&
+                  selectedShipId &&
+                  isCurrentPlayerTurn &&
+                  isShipOwnedByCurrentPlayer(selectedShipId) &&
+                  (assistableTargets.some(
+                    (target) => target.shipId === cell.shipId,
+                  ) ||
+                    assistableTargetsFromStart.some(
+                      (target) => target.shipId === cell.shipId,
+                    ));
+                const isSelectedTarget = cell && targetShipId === cell.shipId;
+
+                const handleCellClick = () => {
+                  if (cell) {
+                    // Check for repair drone auto-switch FIRST (before any other logic)
+                    if (
+                      selectedShipId &&
+                      isCurrentPlayerTurn &&
+                      isShipOwnedByCurrentPlayer(selectedShipId)
+                    ) {
+                      const isFriendlyShip = isShipOwnedByCurrentPlayer(
+                        cell.shipId,
                       );
-                      if (isInShootingRange) {
-                        // If the player hasn't proposed a move yet, convert this into a
-                        // "stay in place + fire" intent by setting previewPosition to the
-                        // selected ship's current position. This enables shooting without moving.
-                        if (selectedWeaponType === "weapon" && previewPosition === null) {
-                          let found = false;
-                          for (let r = 0; r < grid.length && !found; r++) {
-                            const gridRow = grid[r];
-                            for (let c = 0; c < gridRow.length; c++) {
-                              const cellAt = gridRow[c];
-                              if (
-                                cellAt &&
-                                cellAt.shipId === selectedShipId &&
-                                !cellAt.isPreview
-                              ) {
-                                setPreviewPosition({ row: r, col: c });
-                                found = true;
-                                break;
+                      const selectedShip = shipMap.get(selectedShipId);
+                      const hasRepairDrones =
+                        selectedShip?.equipment.special === 2; // Repair special
+
+                      if (isFriendlyShip && hasRepairDrones) {
+                        // Check if the friendly ship is in repair range
+                        const isInRepairRange = validTargets.some(
+                          (target) => target.shipId === cell.shipId,
+                        );
+                        if (isInRepairRange) {
+                          // Switch to repair drones and target this ship
+                          setSelectedWeaponType("special");
+                          setTargetShipId(cell.shipId);
+                          return;
+                        }
+                      }
+                    }
+
+                    // If we have a selected ship and this is a valid target in range, select as target
+                    if (
+                      selectedShipId &&
+                      isCurrentPlayerTurn &&
+                      isShipOwnedByCurrentPlayer(selectedShipId)
+                    ) {
+                      // Check if this is a valid target based on weapon type
+                      const isValidTargetType =
+                        selectedWeaponType === "special"
+                          ? specialType === 3 // Flak
+                            ? cell.shipId !== selectedShipId // Flak hits ALL ships in range except itself
+                            : specialType === 1 // EMP
+                              ? !isShipOwnedByCurrentPlayer(cell.shipId) // EMP targets enemy ships
+                              : isShipOwnedByCurrentPlayer(cell.shipId) // Other special abilities target friendly ships
+                          : !isShipOwnedByCurrentPlayer(cell.shipId); // Weapons target enemy ships
+
+                      if (isValidTargetType) {
+                        const isInShootingRange = validTargets.some(
+                          (target) => target.shipId === cell.shipId,
+                        );
+                        if (isInShootingRange) {
+                          // If the player hasn't proposed a move yet, convert this into a
+                          // "stay in place + fire" intent by setting previewPosition to the
+                          // selected ship's current position. This enables shooting without moving.
+                          if (
+                            selectedWeaponType === "weapon" &&
+                            previewPosition === null
+                          ) {
+                            let found = false;
+                            for (let r = 0; r < grid.length && !found; r++) {
+                              const gridRow = grid[r];
+                              for (let c = 0; c < gridRow.length; c++) {
+                                const cellAt = gridRow[c];
+                                if (
+                                  cellAt &&
+                                  cellAt.shipId === selectedShipId &&
+                                  !cellAt.isPreview
+                                ) {
+                                  setPreviewPosition({ row: r, col: c });
+                                  found = true;
+                                  break;
+                                }
                               }
                             }
                           }
+                          // For flak special, select all targets in range
+                          if (
+                            selectedWeaponType === "special" &&
+                            specialType === 3
+                          ) {
+                            // Flak affects all targets in range, so we don't need to set a specific target
+                            // Just indicate that flak is ready to fire
+                            setTargetShipId(0n); // Use 0 to indicate area-of-effect
+                          } else {
+                            // EMP and other specials target individual ships
+                            setTargetShipId(cell.shipId);
+                          }
+                          return;
                         }
-                        // For flak special, select all targets in range
-                        if (
-                          selectedWeaponType === "special" &&
-                          specialType === 3
-                        ) {
-                          // Flak affects all targets in range, so we don't need to set a specific target
-                          // Just indicate that flak is ready to fire
-                          setTargetShipId(0n); // Use 0 to indicate area-of-effect
-                        } else {
-                          // EMP and other specials target individual ships
-                          setTargetShipId(cell.shipId);
-                        }
+                      }
+
+                      // Check if this is a friendly ship with 0 hitpoints that can be assisted
+                      const isAssistableTarget = assistableTargets.some(
+                        (target) => target.shipId === cell.shipId,
+                      );
+                      const isAssistableFromStart =
+                        assistableTargetsFromStart.some(
+                          (target) => target.shipId === cell.shipId,
+                        );
+                      if (isAssistableTarget || isAssistableFromStart) {
+                        setTargetShipId(cell.shipId);
                         return;
                       }
                     }
 
-                    // Check if this is a friendly ship with 0 hitpoints that can be assisted
-                    const isAssistableTarget = assistableTargets.some(
-                      (target) => target.shipId === cell.shipId,
-                    );
-                    const isAssistableFromStart =
-                      assistableTargetsFromStart.some(
-                        (target) => target.shipId === cell.shipId,
-                      );
-                    if (isAssistableTarget || isAssistableFromStart) {
-                      setTargetShipId(cell.shipId);
-                      return;
-                    }
-                  }
+                    // If clicking on the same ship: on own turn with owned unmoved ship, toggle stay-in-place ↔ move+threat; otherwise deselect
+                    if (selectedShipId === cell.shipId) {
+                      if (
+                        isCurrentPlayerTurn &&
+                        isShipOwnedByCurrentPlayer(cell.shipId) &&
+                        !movedShipIdsSet.has(cell.shipId)
+                      ) {
+                        // Toggle: if already showing gun range only (preview at this cell), clear to show movement + threat; else set stay in place
+                        if (
+                          previewPosition &&
+                          previewPosition.row === rowIndex &&
+                          previewPosition.col === colIndex
+                        ) {
+                          setPreviewPosition(null);
+                          setTargetShipId(null);
+                        } else {
+                          setPreviewPosition({ row: rowIndex, col: colIndex });
+                          setTargetShipId(null);
+                        }
+                      } else {
+                        setSelectedShipId(null);
+                        setPreviewPosition(null);
+                        setTargetShipId(null);
+                      }
+                    } else {
+                      // Check if this is the current player's turn and they're trying to select a moved ship.
+                      // Exception: ships with 0 hull (disabled) should still be selectable so players can inspect reactor overload.
+                      if (
+                        isCurrentPlayerTurn &&
+                        isShipOwnedByCurrentPlayer(cell.shipId) &&
+                        movedShipIdsSet.has(cell.shipId)
+                      ) {
+                        const attrs = getShipAttributes(cell.shipId);
+                        const isDisabled =
+                          attrs && typeof attrs.hullPoints === "number"
+                            ? attrs.hullPoints === 0
+                            : false;
+                        if (!isDisabled) {
+                          // Don't allow selecting ships that have already moved this round (unless they are disabled)
+                          return;
+                        }
+                      }
 
-                  // If clicking on the same ship, deselect it and reset preview
-                  if (selectedShipId === cell.shipId) {
+                      // Allow selecting any ship (for viewing stats/range)
+                      setSelectedShipId(cell.shipId);
+                      setTargetShipId(null);
+                      setPreviewPosition(null);
+                      // Keep selectedWeaponType so it persists when switching ships
+                      // Do not auto-set preview for ships on scoring tiles: first select shows movement + threat; second click does stay-in-place flow
+                    }
+                  } else if (
+                    isMovementTile &&
+                    selectedShipId &&
+                    isCurrentPlayerTurn &&
+                    isShipOwnedByCurrentPlayer(selectedShipId) &&
+                    !movedShipIdsSet.has(selectedShipId)
+                  ) {
+                    // Only allow moving ships owned by the current player
+                    setPreviewPosition({ row: rowIndex, col: colIndex });
+                    setTargetShipId(null); // Clear target when moving
+                  } else if (selectedShipId !== null) {
+                    // Empty cell that is not a valid move and not a target: clear selection
                     setSelectedShipId(null);
                     setPreviewPosition(null);
                     setTargetShipId(null);
-                  } else {
-                    // Check if this is the current player's turn and they're trying to select a moved ship
-                    if (
-                      isCurrentPlayerTurn &&
-                      isShipOwnedByCurrentPlayer(cell.shipId) &&
-                      movedShipIdsSet.has(cell.shipId)
-                    ) {
-                      // Don't allow selecting ships that have already moved this round
-                      return;
-                    }
-
-                    // Allow selecting any ship (for viewing stats/range)
-                    setSelectedShipId(cell.shipId);
-                    setTargetShipId(null);
-                    // Keep selectedWeaponType so it persists when switching ships
-
-                    // If it's the current player's turn and they own this ship and it's on a scoring tile, set preview position
-                    if (
-                      isCurrentPlayerTurn &&
-                      isShipOwnedByCurrentPlayer(cell.shipId) &&
-                      !movedShipIdsSet.has(cell.shipId) &&
-                      scoringGrid[rowIndex] &&
-                      scoringGrid[rowIndex][colIndex] > 0
-                    ) {
-                      setPreviewPosition({ row: rowIndex, col: colIndex });
-                    } else {
-                      setPreviewPosition(null);
-                    }
                   }
-                } else if (
-                  isMovementTile &&
-                  selectedShipId &&
-                  isCurrentPlayerTurn &&
-                  isShipOwnedByCurrentPlayer(selectedShipId) &&
-                  !movedShipIdsSet.has(selectedShipId)
-                ) {
-                  // Only allow moving ships owned by the current player
-                  setPreviewPosition({ row: rowIndex, col: colIndex });
-                  setTargetShipId(null); // Clear target when moving
-                }
-              };
+                };
 
-              const canMoveShip = selectedShipId
-                ? isShipOwnedByCurrentPlayer(selectedShipId) && isMyTurn
-                : false;
+                const canMoveShip = selectedShipId
+                  ? isShipOwnedByCurrentPlayer(selectedShipId) && isMyTurn
+                  : false;
 
-              // Check if this cell has a ship on a scoring tile
-              const isShipOnScoringTile =
-                cell &&
-                scoringGrid[rowIndex] &&
-                scoringGrid[rowIndex][colIndex] > 0;
+                // Check if this cell has a ship on a scoring tile
+                const isShipOnScoringTile =
+                  cell &&
+                  scoringGrid[rowIndex] &&
+                  scoringGrid[rowIndex][colIndex] > 0;
 
-              return (
-                <div
-                  key={`cell-${rowIndex}-${colIndex}`}
-                  className={`w-full h-full aspect-square ${
-                    isShipOnScoringTile
-                      ? "border-2 border-yellow-400"
-                      : "border-0"
-                  } outline outline-1 outline-gray-900 relative cursor-pointer ${(() => {
-                    // Check if this is the "from" position (original position when proposing a move)
-                    const isProposedMoveOriginal =
-                      selectedShipId === cell?.shipId && previewPosition;
-                    // Check if this is the "to" position (preview cell)
-                    const isProposedMovePreview =
-                      cell?.isPreview &&
-                      previewPosition !== null &&
-                      selectedShipId !== null;
+                return (
+                  <div
+                    key={`cell-${rowIndex}-${colIndex}`}
+                    className={`w-full h-full aspect-square ${
+                      isShipOnScoringTile
+                        ? "border-2 border-yellow-400"
+                        : "border-0"
+                    } outline outline-1 outline-gray-900 relative cursor-pointer ${(() => {
+                      // Check if this is the "from" position (original position when proposing a move)
+                      const isProposedMoveOriginal =
+                        selectedShipId === cell?.shipId && previewPosition;
+                      // Check if this is the "to" position (preview cell)
+                      const isProposedMovePreview =
+                        cell?.isPreview &&
+                        previewPosition !== null &&
+                        selectedShipId !== null;
 
-                    // Show blue background for "from" or "to" positions
-                    if (isProposedMoveOriginal || isProposedMovePreview) {
-                      // Add blue background, but still need to handle other conditions
-                      const baseBg = canMoveShip
-                        ? "bg-blue-900 ring-2 ring-blue-400"
-                        : "bg-purple-900 ring-2 ring-purple-400";
+                      // Show blue background for "from" or "to" positions
+                      if (isProposedMoveOriginal || isProposedMovePreview) {
+                        // Add blue background, but still need to handle other conditions
+                        const baseBg = canMoveShip
+                          ? "bg-blue-900 ring-2 ring-blue-400"
+                          : "bg-purple-900 ring-2 ring-purple-400";
 
-                      // Check for other conditions that might override - gray for any moved ship
-                      if (hasShipMoved) {
-                        return "bg-gray-700 opacity-60 cursor-not-allowed";
-                      }
-                      if (isSelectedTarget) {
-                        const isAssistAction =
-                          assistableTargets.some(
-                            (target) => target.shipId === cell.shipId,
-                          ) ||
-                          assistableTargetsFromStart.some(
-                            (target) => target.shipId === cell.shipId,
-                          );
-                        if (isAssistAction) {
-                          return "bg-cyan-900 ring-2 ring-cyan-400";
+                        // Check for other conditions that might override - gray for any moved ship
+                        if (hasShipMoved) {
+                          return "bg-gray-700 opacity-60 cursor-not-allowed";
                         }
-                        return selectedWeaponType === "special"
-                          ? specialType === 3 // Flak
-                            ? "bg-red-900 ring-2 ring-red-400"
-                            : "bg-blue-900 ring-2 ring-blue-400"
-                          : "bg-red-900 ring-2 ring-red-400";
-                      }
-                      // Return blue background for from/to positions
-                      return baseBg;
-                    }
-
-                    // Otherwise, apply normal selected styling
-                    if (isSelected) {
-                      return canMoveShip
-                        ? "bg-blue-900 ring-2 ring-blue-400"
-                        : "bg-purple-900 ring-2 ring-purple-400";
-                    }
-
-                    // Default styling chain - gray for any ship that has moved this round (both players see it)
-                    let cursorSuffix = "";
-                    if (cell != null && isCurrentPlayerTurn) {
-                      if (isShipOwnedByCurrentPlayer(cell.shipId)) {
-                        cursorSuffix = " cursor-not-allowed";
-                      }
-                    }
-                    const movedStyle = "bg-gray-700 opacity-60" + cursorSuffix;
-                    return hasShipMoved
-                      ? movedStyle
-                      : isSelectedTarget && cell
-                        ? (() => {
-                            // Check if this is an assist action
-                            const isAssistAction =
-                              assistableTargets.some(
-                                (target) => target.shipId === cell.shipId,
-                              ) ||
-                              assistableTargetsFromStart.some(
-                                (target) => target.shipId === cell.shipId,
-                              );
-                            if (isAssistAction) {
-                              return "bg-cyan-900 ring-2 ring-cyan-400";
-                            }
-                            // Otherwise use weapon-based styling
-                            return selectedWeaponType === "special"
-                              ? specialType === 3 // Flak
-                                ? "bg-red-900 ring-2 ring-red-400" // Flak uses red highlighting like regular weapons
-                                : "bg-blue-900 ring-2 ring-blue-400" // Other specials use blue
-                              : "bg-red-900 ring-2 ring-red-400";
-                          })()
-                        : isValidTarget
-                          ? selectedWeaponType === "special"
+                        if (isSelectedTarget) {
+                          const isAssistAction =
+                            assistableTargets.some(
+                              (target) => target.shipId === cell.shipId,
+                            ) ||
+                            assistableTargetsFromStart.some(
+                              (target) => target.shipId === cell.shipId,
+                            );
+                          if (isAssistAction) {
+                            return "bg-cyan-900 ring-2 ring-cyan-400";
+                          }
+                          return selectedWeaponType === "special"
                             ? specialType === 3 // Flak
-                              ? "bg-red-900/50 ring-1 ring-red-400" // Flak uses red highlighting like regular weapons
-                              : "bg-blue-900/50 ring-1 ring-blue-400" // Other specials use blue
-                            : "bg-orange-900/50 ring-1 ring-orange-400"
-                          : isAssistableTarget
-                            ? "bg-cyan-900/50 ring-1 ring-cyan-400"
-                            : isMovementTile
-                              ? "bg-green-900/50"
-                              : "bg-gray-950";
-                  })()}`}
-                  onClick={handleCellClick}
-                  onMouseEnter={
-                    cell
-                      ? (e) => {
-                          const ship = shipMap.get(cell.shipId);
-                          if (ship) {
-                            setHoveredCell({
-                              shipId: cell.shipId,
-                              row: rowIndex,
-                              col: colIndex,
-                              mouseX: e.clientX,
-                              mouseY: e.clientY,
-                              isCreator: cell.isCreator,
-                            });
-                          }
+                              ? "bg-red-900 ring-2 ring-red-400"
+                              : "bg-blue-900 ring-2 ring-blue-400"
+                            : "bg-red-900 ring-2 ring-red-400";
                         }
-                      : undefined
-                  }
-                  onMouseMove={
-                    cell
-                      ? (e) => {
-                          if (
-                            hoveredCell &&
-                            hoveredCell.shipId === cell.shipId
-                          ) {
-                            setHoveredCell({
-                              ...hoveredCell,
-                              mouseX: e.clientX,
-                              mouseY: e.clientY,
-                            });
-                          }
-                        }
-                      : undefined
-                  }
-                  onMouseLeave={cell ? () => setHoveredCell(null) : undefined}
-                  onDragOver={(e) => {
-                    if (draggedShipId) {
-                      e.preventDefault();
-                      // Only update state if the cell actually changed
-                      const newCell = { row: rowIndex, col: colIndex };
-                      const lastCell = lastDragOverCellRef.current;
-                      if (
-                        !lastCell ||
-                        lastCell.row !== newCell.row ||
-                        lastCell.col !== newCell.col
-                      ) {
-                        lastDragOverCellRef.current = newCell;
-                        setDragOverCell(newCell);
+                        // Return blue background for from/to positions
+                        return baseBg;
                       }
-                    }
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (draggedShipId && isMovementTile) {
-                      // Update preview position - works whether dragging from original or preview position
-                      setPreviewPosition({ row: rowIndex, col: colIndex });
-                      setTargetShipId(null);
-                      setDraggedShipId(null);
-                      setDragOverCell(null);
-                      lastDragOverCellRef.current = null;
-                    }
-                  }}
-                  {...(!cell && {
-                    title: onlyOnceGrid[rowIndex][colIndex]
-                      ? `Crystal Deposit: ${scoringGrid[rowIndex][colIndex]} points (only once) (${rowIndex}, ${colIndex})`
-                      : scoringGrid[rowIndex][colIndex] > 0
-                        ? `Gold Deposit: ${scoringGrid[rowIndex][colIndex]} points (${rowIndex}, ${colIndex})`
-                        : blockedGrid[rowIndex][colIndex]
-                          ? `Blocked Line of Sight (${rowIndex}, ${colIndex})`
-                          : isMovementTile
-                            ? `Move here (${rowIndex}, ${colIndex})`
-                            : isShootingTile
-                              ? `Shooting range (${rowIndex}, ${colIndex})`
-                              : isAssistableTarget
-                                ? `Click to assist this ship (${rowIndex}, ${colIndex})`
-                                : isValidTarget
-                                  ? `Click to target this ship (${rowIndex}, ${colIndex})`
-                                  : `Empty (${rowIndex}, ${colIndex})`,
-                  })}
-                >
-                  {/* Blocked line of sight tile - lowest layer */}
-                  {blockedGrid[rowIndex][colIndex] && (
-                    <div className="absolute inset-0 z-0">
-                      <Image
-                        src="/img/nebula-tile.png"
-                        alt="Blocked line of sight"
-                        fill
-                        className="object-cover opacity-30"
-                      />
-                    </div>
-                  )}
 
-                  {/* Crystal for scoring positions that can only be claimed once */}
-                  {onlyOnceGrid[rowIndex][colIndex] && (
-                    <div className="absolute inset-0 z-1">
-                      <Image
-                        src="/img/crystal.png"
-                        alt="Crystal deposit"
-                        fill
-                        className="object-cover opacity-80"
-                      />
-                    </div>
-                  )}
+                      // Otherwise, apply normal selected styling
+                      if (isSelected) {
+                        return canMoveShip
+                          ? "bg-blue-900 ring-2 ring-blue-400"
+                          : "bg-purple-900 ring-2 ring-purple-400";
+                      }
 
-                  {/* Gold deposit for regular scoring positions */}
-                  {scoringGrid[rowIndex][colIndex] > 0 &&
-                    !onlyOnceGrid[rowIndex][colIndex] && (
+                      // Default styling chain - gray for any ship that has moved this round (both players see it)
+                      let cursorSuffix = "";
+                      if (cell != null && isCurrentPlayerTurn) {
+                        if (isShipOwnedByCurrentPlayer(cell.shipId)) {
+                          cursorSuffix = " cursor-not-allowed";
+                        }
+                      }
+                      const movedStyle =
+                        "bg-gray-700 opacity-60" + cursorSuffix;
+                      return hasShipMoved
+                        ? movedStyle
+                        : isSelectedTarget && cell
+                          ? (() => {
+                              // Check if this is an assist action
+                              const isAssistAction =
+                                assistableTargets.some(
+                                  (target) => target.shipId === cell.shipId,
+                                ) ||
+                                assistableTargetsFromStart.some(
+                                  (target) => target.shipId === cell.shipId,
+                                );
+                              if (isAssistAction) {
+                                return "bg-cyan-900 ring-2 ring-cyan-400";
+                              }
+                              // Otherwise use weapon-based styling
+                              return selectedWeaponType === "special"
+                                ? specialType === 3 // Flak
+                                  ? "bg-red-900 ring-2 ring-red-400" // Flak uses red highlighting like regular weapons
+                                  : "bg-blue-900 ring-2 ring-blue-400" // Other specials use blue
+                                : "bg-red-900 ring-2 ring-red-400";
+                            })()
+                          : isValidTarget
+                            ? selectedWeaponType === "special"
+                              ? specialType === 3 // Flak
+                                ? "bg-red-900/50 ring-1 ring-red-400" // Flak uses red highlighting like regular weapons
+                                : "bg-blue-900/50 ring-1 ring-blue-400" // Other specials use blue
+                              : "bg-orange-900/50 ring-1 ring-orange-400"
+                            : isAssistableTarget
+                              ? "bg-cyan-900/50 ring-1 ring-cyan-400"
+                              : isMovementTile
+                                ? "bg-green-900/50"
+                                : "bg-gray-950";
+                    })()}`}
+                    onClick={handleCellClick}
+                    onMouseEnter={
+                      cell
+                        ? (e) => {
+                            const ship = shipMap.get(cell.shipId);
+                            if (ship) {
+                              setHoveredCell({
+                                shipId: cell.shipId,
+                                row: rowIndex,
+                                col: colIndex,
+                                mouseX: e.clientX,
+                                mouseY: e.clientY,
+                                isCreator: cell.isCreator,
+                              });
+                            }
+                          }
+                        : undefined
+                    }
+                    onMouseMove={
+                      cell
+                        ? (e) => {
+                            if (
+                              hoveredCell &&
+                              hoveredCell.shipId === cell.shipId
+                            ) {
+                              setHoveredCell({
+                                ...hoveredCell,
+                                mouseX: e.clientX,
+                                mouseY: e.clientY,
+                              });
+                            }
+                          }
+                        : undefined
+                    }
+                    onMouseLeave={cell ? () => setHoveredCell(null) : undefined}
+                    onDragOver={(e) => {
+                      if (draggedShipId) {
+                        e.preventDefault();
+                        // Only update state if the cell actually changed
+                        const newCell = { row: rowIndex, col: colIndex };
+                        const lastCell = lastDragOverCellRef.current;
+                        if (
+                          !lastCell ||
+                          lastCell.row !== newCell.row ||
+                          lastCell.col !== newCell.col
+                        ) {
+                          lastDragOverCellRef.current = newCell;
+                          setDragOverCell(newCell);
+                        }
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedShipId && isMovementTile) {
+                        // Update preview position - works whether dragging from original or preview position
+                        setPreviewPosition({ row: rowIndex, col: colIndex });
+                        setTargetShipId(null);
+                        setDraggedShipId(null);
+                        setDragOverCell(null);
+                        lastDragOverCellRef.current = null;
+                      }
+                    }}
+                    {...(!cell && {
+                      title: onlyOnceGrid[rowIndex][colIndex]
+                        ? `Crystal Deposit: ${scoringGrid[rowIndex][colIndex]} points (only once) (${rowIndex}, ${colIndex})`
+                        : scoringGrid[rowIndex][colIndex] > 0
+                          ? `Gold Deposit: ${scoringGrid[rowIndex][colIndex]} points (${rowIndex}, ${colIndex})`
+                          : blockedGrid[rowIndex][colIndex]
+                            ? `Blocked Line of Sight (${rowIndex}, ${colIndex})`
+                            : isMovementTile
+                              ? `Move here (${rowIndex}, ${colIndex})`
+                              : isShootingTile
+                                ? `Shooting range (${rowIndex}, ${colIndex})`
+                                : isAssistableTarget
+                                  ? `Click to assist this ship (${rowIndex}, ${colIndex})`
+                                  : isValidTarget
+                                    ? `Click to target this ship (${rowIndex}, ${colIndex})`
+                                    : `Empty (${rowIndex}, ${colIndex})`,
+                    })}
+                  >
+                    {/* Blocked line of sight tile - lowest layer */}
+                    {blockedGrid[rowIndex][colIndex] && (
+                      <div className="absolute inset-0 z-0">
+                        <Image
+                          src="/img/nebula-tile.png"
+                          alt="Blocked line of sight"
+                          fill
+                          className="object-cover opacity-30"
+                        />
+                      </div>
+                    )}
+
+                    {/* Crystal for scoring positions that can only be claimed once */}
+                    {onlyOnceGrid[rowIndex][colIndex] && (
                       <div className="absolute inset-0 z-1">
                         <Image
-                          src="/img/gold-deposit.png"
-                          alt="Gold deposit"
+                          src="/img/crystal.png"
+                          alt="Crystal deposit"
                           fill
                           className="object-cover opacity-80"
                         />
                       </div>
                     )}
 
-                  {/* Movement range highlight */}
-                  {isMovementTile && (
-                    <div
-                      className={`absolute inset-0 z-2 border-1 pointer-events-none ${
-                        isHighlightedMove
-                          ? "border-yellow-400/50 bg-yellow-500/20 animate-pulse"
-                          : "border-green-400/50 bg-green-500/10"
-                      }`}
-                    />
-                  )}
-
-                  {/* Shooting range highlight */}
-                  {isShootingTile && (
-                    <div className="absolute inset-0 z-2 border-1 border-orange-400/50 bg-orange-500/10 pointer-events-none" />
-                  )}
-
-                  {/* Drag range highlight - show range from drag position */}
-                  {draggedShipId && dragOverCell && (
-                    <>
-                      {dragShootingRange.some(
-                        (pos) => pos.row === rowIndex && pos.col === colIndex,
-                      ) && (
-                        <div className="absolute inset-0 z-2 border-1 border-orange-400/50 bg-orange-500/10 pointer-events-none" />
+                    {/* Gold deposit for regular scoring positions */}
+                    {scoringGrid[rowIndex][colIndex] > 0 &&
+                      !onlyOnceGrid[rowIndex][colIndex] && (
+                        <div className="absolute inset-0 z-1">
+                          <Image
+                            src="/img/gold-deposit.png"
+                            alt="Gold deposit"
+                            fill
+                            className="object-cover opacity-80"
+                          />
+                        </div>
                       )}
-                      {/* Green outline on the cell being dragged over */}
-                      {dragOverCell.row === rowIndex &&
-                        dragOverCell.col === colIndex && (
-                          <div className="absolute inset-0 z-3 border-4 border-green-400 bg-green-500/10 pointer-events-none" />
-                        )}
-                    </>
-                  )}
 
-                  {/* Critical hull glow effect */}
-                  {cell &&
-                    (() => {
-                      const attributes = getShipAttributes(cell.shipId);
-                      return attributes && attributes.hullPoints === 0;
-                    })() && (
-                      <div className="absolute inset-0 z-1 border-2 border-red-400 bg-red-500/10 pointer-events-none animate-pulse" />
-                    )}
-
-                  {/* Retreat last move: outline on the cell (blue = current player, red = opponent) */}
-                  {(lastMoveActionType as ActionType) === ActionType.Retreat &&
-                    lastMoveOldPosition != null &&
-                    rowIndex === lastMoveOldPosition.row &&
-                    colIndex === lastMoveOldPosition.col && (
+                    {/* Movement range highlight */}
+                    {isMovementTile && (
                       <div
-                        className={`absolute inset-0 ring-4 border-2 border-dashed rounded-sm pointer-events-none z-20 ${
-                          lastMoveIsCurrentPlayer === true
-                            ? "ring-blue-400 border-blue-400 bg-blue-500/20"
-                            : lastMoveIsCurrentPlayer === false
-                              ? "ring-red-400 border-red-400 bg-red-500/20"
-                              : "ring-yellow-400 border-yellow-400 bg-yellow-500/20"
+                        className={`absolute inset-0 z-2 border-1 pointer-events-none ${
+                          isHighlightedMove
+                            ? "border-yellow-400/50 bg-yellow-500/20 animate-pulse"
+                            : "border-green-400/50 bg-green-500/10"
                         }`}
                       />
                     )}
 
-                  {cell && ship ? (
-                    <div
-                      className="w-full h-full relative z-10"
-                      draggable={
-                        isCurrentPlayerTurn &&
-                        isShipOwnedByCurrentPlayer(cell.shipId) &&
-                        !movedShipIdsSet.has(cell.shipId)
-                      }
-                      onDragStart={(e) => {
-                        if (
+                    {/* Shooting range highlight */}
+                    {isShootingTile && (
+                      <div className="absolute inset-0 z-2 border-1 border-orange-400/50 bg-orange-500/10 pointer-events-none" />
+                    )}
+
+                    {/* Drag range highlight - show range from drag position */}
+                    {draggedShipId && dragOverCell && (
+                      <>
+                        {dragShootingRange.some(
+                          (pos) => pos.row === rowIndex && pos.col === colIndex,
+                        ) && (
+                          <div className="absolute inset-0 z-2 border-1 border-orange-400/50 bg-orange-500/10 pointer-events-none" />
+                        )}
+                        {/* Green outline on the cell being dragged over */}
+                        {dragOverCell.row === rowIndex &&
+                          dragOverCell.col === colIndex && (
+                            <div className="absolute inset-0 z-3 border-4 border-green-400 bg-green-500/10 pointer-events-none" />
+                          )}
+                      </>
+                    )}
+
+                    {/* Critical hull glow effect */}
+                    {cell &&
+                      (() => {
+                        const attributes = getShipAttributes(cell.shipId);
+                        return attributes && attributes.hullPoints === 0;
+                      })() && (
+                        <div className="absolute inset-0 z-1 border-2 border-red-400 bg-red-500/10 pointer-events-none animate-pulse" />
+                      )}
+
+                    {/* Retreat last move: outline on the cell (blue = current player, red = opponent) */}
+                    {(lastMoveActionType as ActionType) ===
+                      ActionType.Retreat &&
+                      lastMoveOldPosition != null &&
+                      rowIndex === lastMoveOldPosition.row &&
+                      colIndex === lastMoveOldPosition.col && (
+                        <div
+                          className={`absolute inset-0 ring-4 border-2 border-dashed rounded-sm pointer-events-none z-20 ${
+                            lastMoveIsCurrentPlayer === true
+                              ? "ring-blue-400 border-blue-400 bg-blue-500/20"
+                              : lastMoveIsCurrentPlayer === false
+                                ? "ring-red-400 border-red-400 bg-red-500/20"
+                                : "ring-yellow-400 border-yellow-400 bg-yellow-500/20"
+                          }`}
+                        />
+                      )}
+
+                    {cell && ship ? (
+                      <div
+                        className="w-full h-full relative z-10"
+                        draggable={
                           isCurrentPlayerTurn &&
                           isShipOwnedByCurrentPlayer(cell.shipId) &&
                           !movedShipIdsSet.has(cell.shipId)
-                        ) {
-                          setDraggedShipId(cell.shipId);
-                          setSelectedShipId(cell.shipId);
-
-                          // If dragging from preview position, capture it and use as starting point
-                          // Otherwise start at current cell position
-                          const startPosition =
-                            cell.isPreview && previewPosition
-                              ? {
-                                  row: previewPosition.row,
-                                  col: previewPosition.col,
-                                }
-                              : { row: rowIndex, col: colIndex };
-
-                          // Clear preview position when starting drag - enter positioning state
-                          // The preview will be replaced by the drag state
-                          setPreviewPosition(null);
-                          // Start dragOverCell at the position we're dragging from (preview or original)
-                          // This ensures ranges calculate from the correct starting position
-                          setDragOverCell(startPosition);
-                          lastDragOverCellRef.current = startPosition;
-                          e.dataTransfer.effectAllowed = "move";
-                          e.dataTransfer.setData(
-                            "text/plain",
-                            cell.shipId.toString(),
-                          );
-
-                          // Create custom drag image that preserves ship orientation
-                          // Find the ship image element (it's inside a div with class "relative")
-                          const shipImageContainer =
-                            e.currentTarget.querySelector(
-                              ".relative img",
-                            ) as HTMLImageElement;
+                        }
+                        onDragStart={(e) => {
                           if (
-                            shipImageContainer &&
-                            shipImageContainer.complete &&
-                            shipImageContainer.naturalWidth > 0
+                            isCurrentPlayerTurn &&
+                            isShipOwnedByCurrentPlayer(cell.shipId) &&
+                            !movedShipIdsSet.has(cell.shipId)
                           ) {
-                            // Create a canvas to capture the ship image with its current transform
-                            const canvas = document.createElement("canvas");
-                            canvas.width = 64;
-                            canvas.height = 64;
-                            const ctx = canvas.getContext("2d");
+                            setDraggedShipId(cell.shipId);
+                            setSelectedShipId(cell.shipId);
 
-                            if (ctx) {
-                              // Apply flip transformation if needed (creator ships are flipped)
-                              if (cell.isCreator) {
-                                ctx.translate(64, 0);
-                                ctx.scale(-1, 1);
-                              }
+                            // If dragging from preview position, capture it and use as starting point
+                            // Otherwise start at current cell position
+                            const startPosition =
+                              cell.isPreview && previewPosition
+                                ? {
+                                    row: previewPosition.row,
+                                    col: previewPosition.col,
+                                  }
+                                : { row: rowIndex, col: colIndex };
 
-                              // Draw the ship image
-                              ctx.drawImage(shipImageContainer, 0, 0, 64, 64);
+                            // Clear preview position when starting drag - enter positioning state
+                            // The preview will be replaced by the drag state
+                            setPreviewPosition(null);
+                            // Start dragOverCell at the position we're dragging from (preview or original)
+                            // This ensures ranges calculate from the correct starting position
+                            setDragOverCell(startPosition);
+                            lastDragOverCellRef.current = startPosition;
+                            e.dataTransfer.effectAllowed = "move";
+                            e.dataTransfer.setData(
+                              "text/plain",
+                              cell.shipId.toString(),
+                            );
 
-                              // Create a temporary element for the drag image
-                              const dragImage = document.createElement("img");
-                              dragImage.src = canvas.toDataURL();
-                              dragImage.style.position = "absolute";
-                              dragImage.style.top = "-1000px";
-                              dragImage.style.width = "64px";
-                              dragImage.style.height = "64px";
-                              document.body.appendChild(dragImage);
+                            // Create custom drag image that preserves ship orientation
+                            // Find the ship image element (it's inside a div with class "relative")
+                            const shipImageContainer =
+                              e.currentTarget.querySelector(
+                                ".relative img",
+                              ) as HTMLImageElement;
+                            if (
+                              shipImageContainer &&
+                              shipImageContainer.complete &&
+                              shipImageContainer.naturalWidth > 0
+                            ) {
+                              // Create a canvas to capture the ship image with its current transform
+                              const canvas = document.createElement("canvas");
+                              canvas.width = 64;
+                              canvas.height = 64;
+                              const ctx = canvas.getContext("2d");
 
-                              // Set the drag image with offset to center it
-                              e.dataTransfer.setDragImage(dragImage, 32, 32);
-
-                              // Clean up after a short delay
-                              setTimeout(() => {
-                                if (document.body.contains(dragImage)) {
-                                  document.body.removeChild(dragImage);
+                              if (ctx) {
+                                // Apply flip transformation if needed (creator ships are flipped)
+                                if (cell.isCreator) {
+                                  ctx.translate(64, 0);
+                                  ctx.scale(-1, 1);
                                 }
-                              }, 0);
+
+                                // Draw the ship image
+                                ctx.drawImage(shipImageContainer, 0, 0, 64, 64);
+
+                                // Create a temporary element for the drag image
+                                const dragImage = document.createElement("img");
+                                dragImage.src = canvas.toDataURL();
+                                dragImage.style.position = "absolute";
+                                dragImage.style.top = "-1000px";
+                                dragImage.style.width = "64px";
+                                dragImage.style.height = "64px";
+                                document.body.appendChild(dragImage);
+
+                                // Set the drag image with offset to center it
+                                e.dataTransfer.setDragImage(dragImage, 32, 32);
+
+                                // Clean up after a short delay
+                                setTimeout(() => {
+                                  if (document.body.contains(dragImage)) {
+                                    document.body.removeChild(dragImage);
+                                  }
+                                }, 0);
+                              }
                             }
                           }
-                        }
-                      }}
-                      onDragEnd={() => {
-                        setDraggedShipId(null);
-                        setDragOverCell(null);
-                        lastDragOverCellRef.current = null;
-                        // If we were dragging from preview position and didn't drop, keep preview
-                        // If we dropped, previewPosition will be updated in onDrop handler
-                      }}
-                    >
-                      {/* Health bar inside cell top, adjacent to team dot */}
-                      {(() => {
-                        const attributes = getShipAttributes(cell.shipId);
-                        if (!attributes) return null;
-                        if (attributes.hullPoints <= 0) return null; // show skull only
-                        const previewDamage =
-                          projectedDamageByShipId.get(cell.shipId) ?? 0;
-                        const showDamagePreview = previewDamage > 0;
-                        if (
-                          attributes.hullPoints >= attributes.maxHullPoints &&
-                          !showDamagePreview
-                        ) {
-                          return null; // full health - no bar (unless showing preview)
-                        }
+                        }}
+                        onDragEnd={() => {
+                          setDraggedShipId(null);
+                          setDragOverCell(null);
+                          lastDragOverCellRef.current = null;
+                          // If we were dragging from preview position and didn't drop, keep preview
+                          // If we dropped, previewPosition will be updated in onDrop handler
+                        }}
+                      >
+                        {/* Skull icon on cell for 0 HP (disabled) ships */}
+                        {(() => {
+                          const attributes = getShipAttributes(cell.shipId);
+                          if (
+                            !attributes ||
+                            typeof attributes.hullPoints !== "number" ||
+                            attributes.hullPoints > 0
+                          )
+                            return null;
+                          return (
+                            <div
+                              className="absolute top-0 left-1/2 -translate-x-1/2 mt-0.5 z-10 flex items-center justify-center pointer-events-none"
+                              title="Disabled (0 HP)"
+                            >
+                              <div className="w-5 h-5 rounded-full bg-red-600/90 flex items-center justify-center border border-red-400/80">
+                                <span className="text-xs leading-none">💀</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        {/* Health bar inside cell top, adjacent to team dot */}
+                        {(() => {
+                          const attributes = getShipAttributes(cell.shipId);
+                          if (!attributes) return null;
+                          if (attributes.hullPoints <= 0) return null; // skull shown above
+                          const previewDamage =
+                            projectedDamageByShipId.get(cell.shipId) ?? 0;
+                          const showDamagePreview = previewDamage > 0;
+                          if (
+                            attributes.hullPoints >= attributes.maxHullPoints &&
+                            !showDamagePreview
+                          ) {
+                            return null; // full health - no bar (unless showing preview)
+                          }
 
-                        const healthPercentage =
-                          (attributes.hullPoints / attributes.maxHullPoints) *
-                          100;
-                        const isLowHealth = healthPercentage <= 25;
+                          const healthPercentage =
+                            (attributes.hullPoints / attributes.maxHullPoints) *
+                            100;
+                          const isLowHealth = healthPercentage <= 25;
 
-                        const currentHp = attributes.hullPoints;
-                        const maxHp = attributes.maxHullPoints;
-                        const remainingHp = showDamagePreview
-                          ? Math.max(0, currentHp - previewDamage)
-                          : currentHp;
-                        const remainingPct = showDamagePreview
-                          ? (remainingHp / maxHp) * 100
-                          : healthPercentage;
-                        const damagePct = showDamagePreview
-                          ? Math.max(0, healthPercentage - remainingPct)
-                          : 0;
+                          const currentHp = attributes.hullPoints;
+                          const maxHp = attributes.maxHullPoints;
+                          const remainingHp = showDamagePreview
+                            ? Math.max(0, currentHp - previewDamage)
+                            : currentHp;
+                          const remainingPct = showDamagePreview
+                            ? (remainingHp / maxHp) * 100
+                            : healthPercentage;
+                          const damagePct = showDamagePreview
+                            ? Math.max(0, healthPercentage - remainingPct)
+                            : 0;
 
-                        // Position: fill the top edge excluding the team dot side
-                        // Dot is w-2 (0.5rem) with m-0.5 (0.125rem). Add an extra 0.125rem gap.
-                        const dotOffset = "0.75rem"; // 0.5 + 0.125 + 0.125
-                        const topOffset = "0.125rem"; // align with dot's margin
+                          // Position: fill the top edge excluding the team dot side
+                          // Dot is w-2 (0.5rem) with m-0.5 (0.125rem). Add an extra 0.125rem gap.
+                          const dotOffset = "0.75rem"; // 0.5 + 0.125 + 0.125
+                          const topOffset = "0.125rem"; // align with dot's margin
 
-                        const style = cell.isCreator
-                          ? { top: topOffset, left: dotOffset, right: 0 }
-                          : { top: topOffset, left: 0, right: dotOffset };
+                          const style = cell.isCreator
+                            ? { top: topOffset, left: dotOffset, right: 0 }
+                            : { top: topOffset, left: 0, right: dotOffset };
 
-                        return (
-                          <div className="absolute z-15" style={style}>
-                            <div className="w-full h-1 bg-gray-700 rounded-sm overflow-hidden relative">
-                              <div
-                                className={`h-full transition-all duration-300 ${
-                                  // For damage previews, always keep the remaining-health segment green
-                                  // so the projected damage is clearly red on the right.
-                                  showDamagePreview
-                                    ? "bg-green-500"
-                                    : isLowHealth
-                                      ? "bg-red-500"
-                                      : "bg-green-500"
-                                }`}
-                                style={{
-                                  // Always render health left-to-right (no mirroring).
-                                  // Damage preview overlays the right-side portion.
-                                  width: `${healthPercentage}%`,
-                                  left: 0,
-                                  right: "auto",
-                                  position: "absolute",
-                                }}
-                              />
-                              {showDamagePreview && damagePct > 0 && (
+                          return (
+                            <div className="absolute z-15" style={style}>
+                              <div className="w-full h-1 bg-gray-700 rounded-sm overflow-hidden relative">
                                 <div
-                                  className="absolute top-0 bottom-0 bg-red-500/80 animate-damage-flash"
+                                  className={`h-full transition-all duration-300 ${
+                                    // For damage previews, always keep the remaining-health segment green
+                                    // so the projected damage is clearly red on the right.
+                                    showDamagePreview
+                                      ? "bg-green-500"
+                                      : isLowHealth
+                                        ? "bg-red-500"
+                                        : "bg-green-500"
+                                  }`}
                                   style={{
-                                    // Remaining HP on the left, projected damage flashing on the right.
-                                    left: `${remainingPct}%`,
-                                    width: `${damagePct}%`,
+                                    // Always render health left-to-right (no mirroring).
+                                    // Damage preview overlays the right-side portion.
+                                    width: `${healthPercentage}%`,
+                                    left: 0,
+                                    right: "auto",
+                                    position: "absolute",
                                   }}
                                 />
-                              )}
-                              {showDamagePreview && (
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-mono text-red-400 animate-damage-flash whitespace-nowrap">
-                                  -{Math.floor(previewDamage)}
-                                </div>
-                              )}
+                                {showDamagePreview && damagePct > 0 && (
+                                  <div
+                                    className="absolute top-0 bottom-0 bg-red-500/80 animate-damage-flash"
+                                    style={{
+                                      // Remaining HP on the left, projected damage flashing on the right.
+                                      left: `${remainingPct}%`,
+                                      width: `${damagePct}%`,
+                                    }}
+                                  />
+                                )}
+                                {showDamagePreview && (
+                                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-mono text-red-400 animate-damage-flash whitespace-nowrap">
+                                    -{Math.floor(previewDamage)}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })()}
+                          );
+                        })()}
 
-                      {/* Retreat prep: flip + engine glow when player selected Retreat (before tx) */}
-                      {retreatPrepShipId === cell.shipId &&
-                        retreatPrepIsCreator != null && (
-                          <RetreatPrepAnimation
-                            ship={ship}
-                            isCreator={retreatPrepIsCreator}
-                            selectionOutlineClassName={
-                              canMoveShip
-                                ? "ring-2 ring-blue-400"
-                                : "ring-2 ring-purple-400"
+                        {/* Retreat prep: flip + engine glow when player selected Retreat (before tx) */}
+                        {retreatPrepShipId === cell.shipId &&
+                          retreatPrepIsCreator != null && (
+                            <RetreatPrepAnimation
+                              ship={ship}
+                              isCreator={retreatPrepIsCreator}
+                              selectionOutlineClassName={
+                                canMoveShip
+                                  ? "ring-2 ring-blue-400"
+                                  : "ring-2 ring-purple-400"
+                              }
+                            />
+                          )}
+                        <ShipImage
+                          ship={ship}
+                          className={`w-full h-full relative z-10 ${
+                            retreatPrepShipId === cell.shipId
+                              ? "opacity-0 pointer-events-none"
+                              : cell.isCreator
+                                ? "scale-x-[-1]"
+                                : ""
+                          } ${(() => {
+                            // Last move old position: hide ghost when showing Retreat zoom-off
+                            if (
+                              lastMoveShipId === cell.shipId &&
+                              lastMoveOldPosition &&
+                              rowIndex === lastMoveOldPosition.row &&
+                              colIndex === lastMoveOldPosition.col &&
+                              lastMoveActionType === ActionType.Retreat
+                            ) {
+                              return "opacity-0 pointer-events-none";
                             }
-                          />
-                        )}
-                      <ShipImage
-                        ship={ship}
-                        className={`w-full h-full relative z-10 ${
-                          retreatPrepShipId === cell.shipId
-                            ? "opacity-0 pointer-events-none"
-                            : cell.isCreator
-                              ? "scale-x-[-1]"
-                              : ""
-                        } ${(() => {
-                          // Last move old position: hide ghost when showing Retreat zoom-off
-                          if (
-                            lastMoveShipId === cell.shipId &&
-                            lastMoveOldPosition &&
-                            rowIndex === lastMoveOldPosition.row &&
-                            colIndex === lastMoveOldPosition.col &&
-                            lastMoveActionType === ActionType.Retreat
-                          ) {
-                            return "opacity-0 pointer-events-none";
-                          }
-                          // Last move old position: 50% opacity, no animation (check first)
-                          if (
-                            lastMoveShipId === cell.shipId &&
-                            lastMoveOldPosition &&
-                            rowIndex === lastMoveOldPosition.row &&
-                            colIndex === lastMoveOldPosition.col
-                          ) {
-                            return "opacity-50";
-                          }
-
-                          // Last move new position: 100% opacity (no class = default 100%)
-                          if (
-                            lastMoveShipId &&
-                            lastMoveShipId === cell.shipId &&
-                            lastMoveOldPosition &&
-                            (rowIndex !== lastMoveOldPosition.row ||
-                              colIndex !== lastMoveOldPosition.col) &&
-                            !cell.isPreview
-                          ) {
-                            return ""; // No opacity class = 100% opacity
-                          }
-
-                          // "From" position: 50% opacity, no animation
-                          if (
-                            selectedShipId === cell.shipId &&
-                            previewPosition
-                          ) {
-                            return "opacity-50";
-                          }
-
-                          // Proposed move preview (to position): 100% opacity
-                          if (
-                            cell.isPreview &&
-                            previewPosition !== null &&
-                            selectedShipId !== null &&
-                            !(
+                            // Last move old position: 50% opacity, no animation (check first)
+                            if (
                               lastMoveShipId === cell.shipId &&
                               lastMoveOldPosition &&
                               rowIndex === lastMoveOldPosition.row &&
                               colIndex === lastMoveOldPosition.col
-                            )
-                          ) {
-                            return ""; // No opacity class = 100% opacity
-                          }
+                            ) {
+                              return "opacity-50";
+                            }
 
-                          // Preview cells: animation only
-                          if (cell.isPreview) {
-                            return "animate-pulse-preview";
-                          }
+                            // Last move new position: 100% opacity (no class = default 100%)
+                            if (
+                              lastMoveShipId &&
+                              lastMoveShipId === cell.shipId &&
+                              lastMoveOldPosition &&
+                              (rowIndex !== lastMoveOldPosition.row ||
+                                colIndex !== lastMoveOldPosition.col) &&
+                              !cell.isPreview
+                            ) {
+                              return ""; // No opacity class = 100% opacity
+                            }
 
-                          return "";
-                        })()}`}
-                        showLoadingState={true}
-                      />
-                      {/* Moved badge */}
-                      {movedShipIdsSet.has(cell.shipId) && (
-                        <div
-                          className={`absolute ${
-                            cell.isCreator
-                              ? "bottom-0 right-0"
-                              : "bottom-0 left-0"
-                          } m-0.5 w-3 h-3 rounded-full text-[8px] font-mono flex items-center justify-center ${
-                            isShipOwnedByCurrentPlayer(cell.shipId)
-                              ? "bg-blue-700/80"
-                              : "bg-red-700/80"
-                          } text-white`}
-                        >
-                          M
-                        </div>
-                      )}
-                      {/* Reactor damage skulls */}
-                      {(() => {
-                        const attributes = getShipAttributes(cell.shipId);
-                        if (
-                          !attributes ||
-                          attributes.reactorCriticalTimer === 0
-                        )
-                          return null;
+                            // "From" position: 50% opacity, no animation
+                            if (
+                              selectedShipId === cell.shipId &&
+                              previewPosition
+                            ) {
+                              return "opacity-50";
+                            }
 
-                        const skullCount = Math.min(
-                          attributes.reactorCriticalTimer,
-                          3,
-                        );
-                        const skulls = "💀".repeat(skullCount);
+                            // Proposed move preview (to position): 100% opacity
+                            if (
+                              cell.isPreview &&
+                              previewPosition !== null &&
+                              selectedShipId !== null &&
+                              !(
+                                lastMoveShipId === cell.shipId &&
+                                lastMoveOldPosition &&
+                                rowIndex === lastMoveOldPosition.row &&
+                                colIndex === lastMoveOldPosition.col
+                              )
+                            ) {
+                              return ""; // No opacity class = 100% opacity
+                            }
 
-                        return (
+                            // Preview cells: animation only
+                            if (cell.isPreview) {
+                              return "animate-pulse-preview";
+                            }
+
+                            return "";
+                          })()}`}
+                          showLoadingState={true}
+                        />
+                        {/* Moved badge */}
+                        {movedShipIdsSet.has(cell.shipId) && (
                           <div
                             className={`absolute ${
                               cell.isCreator
-                                ? "bottom-0 left-0"
-                                : "bottom-0 right-0"
-                            } m-0.5 flex items-center justify-center`}
+                                ? "bottom-0 right-0"
+                                : "bottom-0 left-0"
+                            } m-0.5 w-3 h-3 rounded-full text-[8px] font-mono flex items-center justify-center ${
+                              isShipOwnedByCurrentPlayer(cell.shipId)
+                                ? "bg-blue-700/80"
+                                : "bg-red-700/80"
+                            } text-white`}
                           >
-                            <div className="w-4 h-4 rounded-full bg-red-500/90 flex items-center justify-center">
-                              <span className="text-[8px] font-mono">
-                                {skulls}
-                              </span>
-                            </div>
+                            M
                           </div>
-                        );
-                      })()}
-                      {/* Team indicator overlay */}
-                      <div
-                        className={`absolute top-0 ${
-                          cell.isCreator ? "left-0" : "right-0"
-                        } w-2 h-2 rounded-full ${
-                          isShipOwnedByCurrentPlayer(cell.shipId)
-                            ? "bg-blue-500"
-                            : "bg-red-500"
-                        } ${(() => {
-                          // Check if this is the "from" position (original position when proposing a move)
-                          const isProposedMoveOriginal =
-                            selectedShipId === cell.shipId && previewPosition;
+                        )}
+                        {/* Reactor damage skulls */}
+                        {(() => {
+                          const attributes = getShipAttributes(cell.shipId);
+                          if (
+                            !attributes ||
+                            attributes.reactorCriticalTimer === 0
+                          )
+                            return null;
 
-                          // Check if this is a proposed move preview (to position)
-                          const isProposedMovePreview =
-                            cell.isPreview &&
-                            previewPosition !== null &&
-                            selectedShipId !== null &&
-                            !(
+                          const skullCount = Math.min(
+                            attributes.reactorCriticalTimer,
+                            3,
+                          );
+                          const skulls = "💀".repeat(skullCount);
+
+                          return (
+                            <div
+                              className={`absolute ${
+                                cell.isCreator
+                                  ? "bottom-0 left-0"
+                                  : "bottom-0 right-0"
+                              } m-0.5 flex items-center justify-center`}
+                            >
+                              <div className="w-4 h-4 rounded-full bg-red-500/90 flex items-center justify-center">
+                                <span className="text-[8px] font-mono">
+                                  {skulls}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        {/* Team indicator overlay */}
+                        <div
+                          className={`absolute top-0 ${
+                            cell.isCreator ? "left-0" : "right-0"
+                          } w-2 h-2 rounded-full ${
+                            isShipOwnedByCurrentPlayer(cell.shipId)
+                              ? "bg-blue-500"
+                              : "bg-red-500"
+                          } ${(() => {
+                            // Check if this is the "from" position (original position when proposing a move)
+                            const isProposedMoveOriginal =
+                              selectedShipId === cell.shipId && previewPosition;
+
+                            // Check if this is a proposed move preview (to position)
+                            const isProposedMovePreview =
+                              cell.isPreview &&
+                              previewPosition !== null &&
+                              selectedShipId !== null &&
+                              !(
+                                lastMoveShipId === cell.shipId &&
+                                lastMoveOldPosition &&
+                                rowIndex === lastMoveOldPosition.row &&
+                                colIndex === lastMoveOldPosition.col
+                              );
+
+                            // "From" position: 50% opacity, no animation
+                            if (isProposedMoveOriginal) {
+                              return "opacity-50";
+                            }
+
+                            // Don't animate proposed move previews
+                            if (isProposedMovePreview) {
+                              return "";
+                            }
+
+                            // Last move old position: 50% opacity, no animation
+                            if (
                               lastMoveShipId === cell.shipId &&
                               lastMoveOldPosition &&
                               rowIndex === lastMoveOldPosition.row &&
                               colIndex === lastMoveOldPosition.col
-                            );
+                            ) {
+                              return "opacity-50";
+                            }
 
-                          // "From" position: 50% opacity, no animation
-                          if (isProposedMoveOriginal) {
-                            return "opacity-50";
-                          }
-
-                          // Don't animate proposed move previews
-                          if (isProposedMovePreview) {
+                            // Apply animation for other cases
+                            if (cell.isPreview) {
+                              return "animate-pulse-preview";
+                            }
                             return "";
-                          }
-
-                          // Last move old position: 50% opacity, no animation
-                          if (
+                          })()}`}
+                        />
+                        {/* Movement path borders */}
+                        {(() => {
+                          const isPreviewCell = cell.isPreview;
+                          const isProposedMoveOriginal =
+                            selectedShipId === cell.shipId && previewPosition;
+                          const isLastMoveOldPosition =
                             lastMoveShipId === cell.shipId &&
                             lastMoveOldPosition &&
                             rowIndex === lastMoveOldPosition.row &&
-                            colIndex === lastMoveOldPosition.col
-                          ) {
-                            return "opacity-50";
-                          }
+                            colIndex === lastMoveOldPosition.col;
+                          const isLastMoveNewPosition =
+                            lastMoveShipId === cell.shipId &&
+                            lastMoveOldPosition &&
+                            !isLastMoveOldPosition; // New position is where the ship is but not at old position
 
-                          // Apply animation for other cases
-                          if (cell.isPreview) {
-                            return "animate-pulse-preview";
-                          }
-                          return "";
-                        })()}`}
-                      />
-                      {/* Movement path borders */}
-                      {(() => {
-                        const isPreviewCell = cell.isPreview;
-                        const isProposedMoveOriginal =
-                          selectedShipId === cell.shipId && previewPosition;
-                        const isLastMoveOldPosition =
-                          lastMoveShipId === cell.shipId &&
-                          lastMoveOldPosition &&
-                          rowIndex === lastMoveOldPosition.row &&
-                          colIndex === lastMoveOldPosition.col;
-                        const isLastMoveNewPosition =
-                          lastMoveShipId === cell.shipId &&
-                          lastMoveOldPosition &&
-                          !isLastMoveOldPosition; // New position is where the ship is but not at old position
+                          // Check if this is a proposed move preview (to position)
+                          // It's a proposed move preview if: it's a preview cell AND there's an active proposed move (previewPosition exists) AND it's not the last move old position
+                          const isProposedMovePreview =
+                            isPreviewCell &&
+                            previewPosition !== null &&
+                            selectedShipId !== null &&
+                            !isLastMoveOldPosition;
 
-                        // Check if this is a proposed move preview (to position)
-                        // It's a proposed move preview if: it's a preview cell AND there's an active proposed move (previewPosition exists) AND it's not the last move old position
-                        const isProposedMovePreview =
-                          isPreviewCell &&
-                          previewPosition !== null &&
-                          selectedShipId !== null &&
-                          !isLastMoveOldPosition;
+                          const shouldShowBorder =
+                            isPreviewCell ||
+                            isProposedMoveOriginal ||
+                            isLastMoveOldPosition ||
+                            isLastMoveNewPosition;
 
-                        const shouldShowBorder =
-                          isPreviewCell ||
-                          isProposedMoveOriginal ||
-                          isLastMoveOldPosition ||
-                          isLastMoveNewPosition;
+                          if (!shouldShowBorder) return null;
 
-                        if (!shouldShowBorder) return null;
+                          // For proposed moves: preview (to) is solid, original (from) is dashed
+                          // For last move: old position is dashed, new position is solid
+                          // Dashed for: proposed move original position, last move old position
+                          // Solid for: proposed move preview (to), last move new position
+                          const isDashed =
+                            isProposedMoveOriginal || isLastMoveOldPosition;
+                          // Don't animate "from" position, new position of last move, or last move old position
+                          const shouldAnimate =
+                            isPreviewCell &&
+                            !isProposedMovePreview &&
+                            !isLastMoveOldPosition;
 
-                        // For proposed moves: preview (to) is solid, original (from) is dashed
-                        // For last move: old position is dashed, new position is solid
-                        // Dashed for: proposed move original position, last move old position
-                        // Solid for: proposed move preview (to), last move new position
-                        const isDashed =
-                          isProposedMoveOriginal || isLastMoveOldPosition;
-                        // Don't animate "from" position, new position of last move, or last move old position
-                        const shouldAnimate =
-                          isPreviewCell &&
-                          !isProposedMovePreview &&
-                          !isLastMoveOldPosition;
+                          // Explicitly ensure proposed move previews are solid
+                          const borderStyle = isProposedMovePreview
+                            ? "border-solid"
+                            : isDashed
+                              ? "border-dashed"
+                              : "border-solid";
 
-                        // Explicitly ensure proposed move previews are solid
-                        const borderStyle = isProposedMovePreview
-                          ? "border-solid"
-                          : isDashed
-                            ? "border-dashed"
-                            : "border-solid";
+                          // Make proposed move preview borders thicker
+                          const borderWidth = isProposedMovePreview
+                            ? "border-4"
+                            : "border-2";
 
-                        // Make proposed move preview borders thicker
-                        const borderWidth = isProposedMovePreview
-                          ? "border-4"
-                          : "border-2";
+                          // Don't animate proposed move previews (to position), but animate others
+                          const animationClass = isProposedMovePreview
+                            ? ""
+                            : shouldAnimate
+                              ? isPreviewCell
+                                ? "animate-pulse-preview"
+                                : "animate-pulse-original"
+                              : "";
 
-                        // Don't animate proposed move previews (to position), but animate others
-                        const animationClass = isProposedMovePreview
-                          ? ""
-                          : shouldAnimate
-                            ? isPreviewCell
-                              ? "animate-pulse-preview"
-                              : "animate-pulse-original"
-                            : "";
+                          // Last move outline: blue = current player, red = opponent; proposed move stays yellow
+                          const isLastMoveCell =
+                            isLastMoveOldPosition || isLastMoveNewPosition;
+                          const borderColor = isLastMoveCell
+                            ? lastMoveIsCurrentPlayer === true
+                              ? "border-blue-400"
+                              : lastMoveIsCurrentPlayer === false
+                                ? "border-red-400"
+                                : "border-yellow-400"
+                            : "border-yellow-400";
 
-                        // Last move outline: blue = current player, red = opponent; proposed move stays yellow
-                        const isLastMoveCell =
-                          isLastMoveOldPosition || isLastMoveNewPosition;
-                        const borderColor = isLastMoveCell
-                          ? lastMoveIsCurrentPlayer === true
-                            ? "border-blue-400"
-                            : lastMoveIsCurrentPlayer === false
-                              ? "border-red-400"
-                              : "border-yellow-400"
-                          : "border-yellow-400";
-
-                        return (
-                          <div
-                            className={`absolute inset-0 ${borderWidth} ${borderColor} rounded-sm pointer-events-none ${borderStyle} ${animationClass}`}
-                          />
-                        );
-                      })()}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            }),
-          )}
+                          return (
+                            <div
+                              className={`absolute inset-0 ${borderWidth} ${borderColor} rounded-sm pointer-events-none ${borderStyle} ${animationClass}`}
+                            />
+                          );
+                        })()}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }),
+            )}
           </div>
 
           {/* Overlays: positioned above grid via z-50 so they always paint on top */}
           <div className="absolute inset-0 z-50 pointer-events-none">
-          {/* Retreat last move: warp field collapsing at the position (no ship data needed) */}
-          {(lastMoveActionType as ActionType) === ActionType.Retreat &&
-            lastMoveOldPosition != null && (
-              <WarpFieldCollapseAnimation
-                gridContainerRef={gridContainerRef}
-                row={lastMoveOldPosition.row}
-                col={lastMoveOldPosition.col}
-              />
-            )}
+            {/* Retreat last move: warp field collapsing at the position (no ship data needed) */}
+            {(lastMoveActionType as ActionType) === ActionType.Retreat &&
+              lastMoveOldPosition != null && (
+                <WarpFieldCollapseAnimation
+                  gridContainerRef={gridContainerRef}
+                  row={lastMoveOldPosition.row}
+                  col={lastMoveOldPosition.col}
+                />
+              )}
 
-          {/* Laser Shooting Animation */}
-          {(selectedShipId || lastMoveShipId) &&
-            targetShipId &&
-            selectedWeaponType === "weapon" &&
-            (() => {
-              // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
-              const shipId = selectedShipId || lastMoveShipId;
-              if (!shipId) return null;
+            {/* Laser Shooting Animation */}
+            {(selectedShipId || lastMoveShipId) &&
+              targetShipId &&
+              selectedWeaponType === "weapon" &&
+              (() => {
+                // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
+                const shipId = selectedShipId || lastMoveShipId;
+                if (!shipId) return null;
 
-              // Check if the ship has a Laser weapon (mainWeapon === 0)
-              const ship = shipMap.get(shipId);
-              if (!ship || ship.equipment.mainWeapon !== 0) {
-                return null;
-              }
+                // Check if the ship has a Laser weapon (mainWeapon === 0)
+                const ship = shipMap.get(shipId);
+                if (!ship || ship.equipment.mainWeapon !== 0) {
+                  return null;
+                }
 
-              // Find positions of attacking and target ships
-              // Use previewPosition or dragOverCell (to position) - no fallback
-              // For last move, use previewPosition which is set to the new position
-              let attackerRow = -1;
-              let attackerCol = -1;
+                // Find positions of attacking and target ships
+                // Use previewPosition or dragOverCell (to position) - no fallback
+                // For last move, use previewPosition which is set to the new position
+                let attackerRow = -1;
+                let attackerCol = -1;
 
-              if (previewPosition) {
-                attackerRow = previewPosition.row;
-                attackerCol = previewPosition.col;
-              } else if (draggedShipId && dragOverCell) {
-                attackerRow = dragOverCell.row;
-                attackerCol = dragOverCell.col;
-              } else if (lastMoveShipId && shipId === lastMoveShipId) {
-                // For last move display, use the new position from lastMoveOldPosition context
-                // previewPosition should already be set, but if not, find from grid
+                if (previewPosition) {
+                  attackerRow = previewPosition.row;
+                  attackerCol = previewPosition.col;
+                } else if (draggedShipId && dragOverCell) {
+                  attackerRow = dragOverCell.row;
+                  attackerCol = dragOverCell.col;
+                } else if (lastMoveShipId && shipId === lastMoveShipId) {
+                  // For last move display, use the new position from lastMoveOldPosition context
+                  // previewPosition should already be set, but if not, find from grid
+                  grid.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                      if (cell?.shipId === shipId) {
+                        attackerRow = r;
+                        attackerCol = c;
+                      }
+                    });
+                  });
+                  if (attackerRow === -1 || attackerCol === -1) return null;
+                } else {
+                  // No preview or drag position - don't show animation
+                  return null;
+                }
+
+                let targetRow = -1;
+                let targetCol = -1;
                 grid.forEach((row, r) => {
                   row.forEach((cell, c) => {
-                    if (cell?.shipId === shipId) {
-                      attackerRow = r;
-                      attackerCol = c;
+                    if (cell?.shipId === targetShipId) {
+                      targetRow = r;
+                      targetCol = c;
                     }
                   });
                 });
-                if (attackerRow === -1 || attackerCol === -1) return null;
-              } else {
-                // No preview or drag position - don't show animation
-                return null;
-              }
 
-              let targetRow = -1;
-              let targetCol = -1;
-              grid.forEach((row, r) => {
-                row.forEach((cell, c) => {
-                  if (cell?.shipId === targetShipId) {
-                    targetRow = r;
-                    targetCol = c;
-                  }
-                });
-              });
+                // Only show animation if target is found
+                if (targetRow === -1 || targetCol === -1) return null;
 
-              // Only show animation if target is found
-              if (targetRow === -1 || targetCol === -1) return null;
+                return (
+                  <LaserShootingAnimation
+                    gridContainerRef={gridContainerRef}
+                    attackerRow={attackerRow}
+                    attackerCol={attackerCol}
+                    targetRow={targetRow}
+                    targetCol={targetCol}
+                  />
+                );
+              })()}
 
-              return (
-                <LaserShootingAnimation
-                  gridContainerRef={gridContainerRef}
-                  attackerRow={attackerRow}
-                  attackerCol={attackerCol}
-                  targetRow={targetRow}
-                  targetCol={targetCol}
-                />
-              );
-            })()}
+            {/* Missile Shooting Animation */}
+            {(selectedShipId || lastMoveShipId) &&
+              targetShipId &&
+              selectedWeaponType === "weapon" &&
+              (() => {
+                // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
+                const shipId = selectedShipId || lastMoveShipId;
+                if (!shipId) return null;
 
-          {/* Missile Shooting Animation */}
-          {(selectedShipId || lastMoveShipId) &&
-            targetShipId &&
-            selectedWeaponType === "weapon" &&
-            (() => {
-              // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
-              const shipId = selectedShipId || lastMoveShipId;
-              if (!shipId) return null;
+                // Check if the ship has a Missile weapon (mainWeapon === 2)
+                const ship = shipMap.get(shipId);
+                if (!ship || ship.equipment.mainWeapon !== 2) {
+                  return null;
+                }
 
-              // Check if the ship has a Missile weapon (mainWeapon === 2)
-              const ship = shipMap.get(shipId);
-              if (!ship || ship.equipment.mainWeapon !== 2) {
-                return null;
-              }
+                // Find positions of attacking and target ships
+                // Use previewPosition or dragOverCell (to position) - no fallback
+                // For last move, use previewPosition which is set to the new position
+                let attackerRow = -1;
+                let attackerCol = -1;
 
-              // Find positions of attacking and target ships
-              // Use previewPosition or dragOverCell (to position) - no fallback
-              // For last move, use previewPosition which is set to the new position
-              let attackerRow = -1;
-              let attackerCol = -1;
+                if (previewPosition) {
+                  attackerRow = previewPosition.row;
+                  attackerCol = previewPosition.col;
+                } else if (draggedShipId && dragOverCell) {
+                  attackerRow = dragOverCell.row;
+                  attackerCol = dragOverCell.col;
+                } else if (lastMoveShipId && shipId === lastMoveShipId) {
+                  // For last move display, use the new position from lastMoveOldPosition context
+                  // previewPosition should already be set, but if not, find from grid
+                  grid.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                      if (cell?.shipId === shipId) {
+                        attackerRow = r;
+                        attackerCol = c;
+                      }
+                    });
+                  });
+                  if (attackerRow === -1 || attackerCol === -1) return null;
+                } else {
+                  // No preview or drag position - don't show animation
+                  return null;
+                }
 
-              if (previewPosition) {
-                attackerRow = previewPosition.row;
-                attackerCol = previewPosition.col;
-              } else if (draggedShipId && dragOverCell) {
-                attackerRow = dragOverCell.row;
-                attackerCol = dragOverCell.col;
-              } else if (lastMoveShipId && shipId === lastMoveShipId) {
-                // For last move display, use the new position from lastMoveOldPosition context
-                // previewPosition should already be set, but if not, find from grid
+                let targetRow = -1;
+                let targetCol = -1;
                 grid.forEach((row, r) => {
                   row.forEach((cell, c) => {
-                    if (cell?.shipId === shipId) {
-                      attackerRow = r;
-                      attackerCol = c;
+                    if (cell?.shipId === targetShipId) {
+                      targetRow = r;
+                      targetCol = c;
                     }
                   });
                 });
-                if (attackerRow === -1 || attackerCol === -1) return null;
-              } else {
-                // No preview or drag position - don't show animation
-                return null;
-              }
 
-              let targetRow = -1;
-              let targetCol = -1;
-              grid.forEach((row, r) => {
-                row.forEach((cell, c) => {
-                  if (cell?.shipId === targetShipId) {
-                    targetRow = r;
-                    targetCol = c;
-                  }
-                });
-              });
+                // Only show animation if target is found
+                if (targetRow === -1 || targetCol === -1) return null;
 
-              // Only show animation if target is found
-              if (targetRow === -1 || targetCol === -1) return null;
+                return (
+                  <MissileShootingAnimation
+                    gridContainerRef={gridContainerRef}
+                    attackerRow={attackerRow}
+                    attackerCol={attackerCol}
+                    targetRow={targetRow}
+                    targetCol={targetCol}
+                  />
+                );
+              })()}
 
-              return (
-                <MissileShootingAnimation
-                  gridContainerRef={gridContainerRef}
-                  attackerRow={attackerRow}
-                  attackerCol={attackerCol}
-                  targetRow={targetRow}
-                  targetCol={targetCol}
-                />
-              );
-            })()}
+            {/* Plasma Shooting Animation */}
+            {(selectedShipId || lastMoveShipId) &&
+              targetShipId &&
+              selectedWeaponType === "weapon" &&
+              (() => {
+                // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
+                const shipId = selectedShipId || lastMoveShipId;
+                if (!shipId) return null;
 
-          {/* Plasma Shooting Animation */}
-          {(selectedShipId || lastMoveShipId) &&
-            targetShipId &&
-            selectedWeaponType === "weapon" &&
-            (() => {
-              // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
-              const shipId = selectedShipId || lastMoveShipId;
-              if (!shipId) return null;
+                // Check if the ship has a Plasma weapon (mainWeapon === 3)
+                const ship = shipMap.get(shipId);
+                if (!ship || ship.equipment.mainWeapon !== 3) {
+                  return null;
+                }
 
-              // Check if the ship has a Plasma weapon (mainWeapon === 3)
-              const ship = shipMap.get(shipId);
-              if (!ship || ship.equipment.mainWeapon !== 3) {
-                return null;
-              }
+                // Find positions of attacking and target ships
+                // Use previewPosition or dragOverCell (to position) - no fallback
+                // For last move, use previewPosition which is set to the new position
+                let attackerRow = -1;
+                let attackerCol = -1;
 
-              // Find positions of attacking and target ships
-              // Use previewPosition or dragOverCell (to position) - no fallback
-              // For last move, use previewPosition which is set to the new position
-              let attackerRow = -1;
-              let attackerCol = -1;
+                if (previewPosition) {
+                  attackerRow = previewPosition.row;
+                  attackerCol = previewPosition.col;
+                } else if (draggedShipId && dragOverCell) {
+                  attackerRow = dragOverCell.row;
+                  attackerCol = dragOverCell.col;
+                } else if (lastMoveShipId && shipId === lastMoveShipId) {
+                  // For last move display, use the new position from lastMoveOldPosition context
+                  // previewPosition should already be set, but if not, find from grid
+                  grid.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                      if (cell?.shipId === shipId) {
+                        attackerRow = r;
+                        attackerCol = c;
+                      }
+                    });
+                  });
+                  if (attackerRow === -1 || attackerCol === -1) return null;
+                } else {
+                  // No preview or drag position - don't show animation
+                  return null;
+                }
 
-              if (previewPosition) {
-                attackerRow = previewPosition.row;
-                attackerCol = previewPosition.col;
-              } else if (draggedShipId && dragOverCell) {
-                attackerRow = dragOverCell.row;
-                attackerCol = dragOverCell.col;
-              } else if (lastMoveShipId && shipId === lastMoveShipId) {
-                // For last move display, use the new position from lastMoveOldPosition context
-                // previewPosition should already be set, but if not, find from grid
+                let targetRow = -1;
+                let targetCol = -1;
                 grid.forEach((row, r) => {
                   row.forEach((cell, c) => {
-                    if (cell?.shipId === shipId) {
-                      attackerRow = r;
-                      attackerCol = c;
+                    if (cell?.shipId === targetShipId) {
+                      targetRow = r;
+                      targetCol = c;
                     }
                   });
                 });
-                if (attackerRow === -1 || attackerCol === -1) return null;
-              } else {
-                // No preview or drag position - don't show animation
-                return null;
-              }
 
-              let targetRow = -1;
-              let targetCol = -1;
-              grid.forEach((row, r) => {
-                row.forEach((cell, c) => {
-                  if (cell?.shipId === targetShipId) {
-                    targetRow = r;
-                    targetCol = c;
-                  }
-                });
-              });
+                // Only show animation if target is found
+                if (targetRow === -1 || targetCol === -1) return null;
 
-              // Only show animation if target is found
-              if (targetRow === -1 || targetCol === -1) return null;
+                return (
+                  <PlasmaShootingAnimation
+                    gridContainerRef={gridContainerRef}
+                    attackerRow={attackerRow}
+                    attackerCol={attackerCol}
+                    targetRow={targetRow}
+                    targetCol={targetCol}
+                  />
+                );
+              })()}
 
-              return (
-                <PlasmaShootingAnimation
-                  gridContainerRef={gridContainerRef}
-                  attackerRow={attackerRow}
-                  attackerCol={attackerCol}
-                  targetRow={targetRow}
-                  targetCol={targetCol}
-                />
-              );
-            })()}
+            {/* Railgun Shooting Animation */}
+            {(selectedShipId || lastMoveShipId) &&
+              targetShipId &&
+              selectedWeaponType === "weapon" &&
+              (() => {
+                // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
+                const shipId = selectedShipId || lastMoveShipId;
+                if (!shipId) return null;
 
-          {/* Railgun Shooting Animation */}
-          {(selectedShipId || lastMoveShipId) &&
-            targetShipId &&
-            selectedWeaponType === "weapon" &&
-            (() => {
-              // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
-              const shipId = selectedShipId || lastMoveShipId;
-              if (!shipId) return null;
+                // Check if the ship has a Railgun weapon (mainWeapon === 1)
+                const ship = shipMap.get(shipId);
+                if (!ship || ship.equipment.mainWeapon !== 1) {
+                  return null;
+                }
 
-              // Check if the ship has a Railgun weapon (mainWeapon === 1)
-              const ship = shipMap.get(shipId);
-              if (!ship || ship.equipment.mainWeapon !== 1) {
-                return null;
-              }
+                // Find positions of attacking and target ships
+                // Use previewPosition or dragOverCell (to position) - no fallback
+                // For last move, use previewPosition which is set to the new position
+                let attackerRow = -1;
+                let attackerCol = -1;
 
-              // Find positions of attacking and target ships
-              // Use previewPosition or dragOverCell (to position) - no fallback
-              // For last move, use previewPosition which is set to the new position
-              let attackerRow = -1;
-              let attackerCol = -1;
+                if (previewPosition) {
+                  attackerRow = previewPosition.row;
+                  attackerCol = previewPosition.col;
+                } else if (draggedShipId && dragOverCell) {
+                  attackerRow = dragOverCell.row;
+                  attackerCol = dragOverCell.col;
+                } else if (lastMoveShipId && shipId === lastMoveShipId) {
+                  // For last move display, use the new position from lastMoveOldPosition context
+                  // previewPosition should already be set, but if not, find from grid
+                  grid.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                      if (cell?.shipId === shipId) {
+                        attackerRow = r;
+                        attackerCol = c;
+                      }
+                    });
+                  });
+                  if (attackerRow === -1 || attackerCol === -1) return null;
+                } else {
+                  // No preview or drag position - don't show animation
+                  return null;
+                }
 
-              if (previewPosition) {
-                attackerRow = previewPosition.row;
-                attackerCol = previewPosition.col;
-              } else if (draggedShipId && dragOverCell) {
-                attackerRow = dragOverCell.row;
-                attackerCol = dragOverCell.col;
-              } else if (lastMoveShipId && shipId === lastMoveShipId) {
-                // For last move display, use the new position from lastMoveOldPosition context
-                // previewPosition should already be set, but if not, find from grid
+                let targetRow = -1;
+                let targetCol = -1;
                 grid.forEach((row, r) => {
                   row.forEach((cell, c) => {
-                    if (cell?.shipId === shipId) {
-                      attackerRow = r;
-                      attackerCol = c;
+                    if (cell?.shipId === targetShipId) {
+                      targetRow = r;
+                      targetCol = c;
                     }
                   });
                 });
-                if (attackerRow === -1 || attackerCol === -1) return null;
-              } else {
-                // No preview or drag position - don't show animation
-                return null;
-              }
 
-              let targetRow = -1;
-              let targetCol = -1;
-              grid.forEach((row, r) => {
-                row.forEach((cell, c) => {
-                  if (cell?.shipId === targetShipId) {
-                    targetRow = r;
-                    targetCol = c;
-                  }
-                });
-              });
+                // Only show animation if target is found
+                if (targetRow === -1 || targetCol === -1) return null;
 
-              // Only show animation if target is found
-              if (targetRow === -1 || targetCol === -1) return null;
+                return (
+                  <RailgunShootingAnimation
+                    gridContainerRef={gridContainerRef}
+                    attackerRow={attackerRow}
+                    attackerCol={attackerCol}
+                    targetRow={targetRow}
+                    targetCol={targetCol}
+                  />
+                );
+              })()}
 
-              return (
-                <RailgunShootingAnimation
+            {/* Flak Area-of-Effect animation */}
+            {selectedShipId &&
+              selectedWeaponType === "special" &&
+              specialType === 3 &&
+              targetShipId === 0n && (
+                <FlakExplosionAnimation
                   gridContainerRef={gridContainerRef}
-                  attackerRow={attackerRow}
-                  attackerCol={attackerCol}
-                  targetRow={targetRow}
-                  targetCol={targetCol}
+                  targetCells={flakEffectCells}
                 />
-              );
-            })()}
+              )}
 
-          {/* Flak Area-of-Effect animation */}
-          {selectedShipId &&
-            selectedWeaponType === "special" &&
-            specialType === 3 &&
-            targetShipId === 0n && (
-              <FlakExplosionAnimation
-                gridContainerRef={gridContainerRef}
-                targetCells={flakEffectCells}
-              />
-            )}
+            {/* EMP wave animation (selected + has a target ship) */}
+            {selectedShipId &&
+              selectedWeaponType === "special" &&
+              specialType === 1 &&
+              targetShipId != null &&
+              targetShipId !== 0n &&
+              (() => {
+                // Determine attacker position: preview > drag > current
+                let attackerRow = -1;
+                let attackerCol = -1;
+                if (previewPosition) {
+                  attackerRow = previewPosition.row;
+                  attackerCol = previewPosition.col;
+                } else if (draggedShipId && dragOverCell) {
+                  attackerRow = dragOverCell.row;
+                  attackerCol = dragOverCell.col;
+                } else {
+                  grid.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                      if (cell?.shipId === selectedShipId && !cell.isPreview) {
+                        attackerRow = r;
+                        attackerCol = c;
+                      }
+                    });
+                  });
+                }
 
-          {/* EMP wave animation (selected + has a target ship) */}
-          {selectedShipId &&
-            selectedWeaponType === "special" &&
-            specialType === 1 &&
-            targetShipId != null &&
-            targetShipId !== 0n &&
-            (() => {
-              // Determine attacker position: preview > drag > current
-              let attackerRow = -1;
-              let attackerCol = -1;
-              if (previewPosition) {
-                attackerRow = previewPosition.row;
-                attackerCol = previewPosition.col;
-              } else if (draggedShipId && dragOverCell) {
-                attackerRow = dragOverCell.row;
-                attackerCol = dragOverCell.col;
-              } else {
+                let targetRow = -1;
+                let targetCol = -1;
                 grid.forEach((row, r) => {
                   row.forEach((cell, c) => {
-                    if (cell?.shipId === selectedShipId && !cell.isPreview) {
-                      attackerRow = r;
-                      attackerCol = c;
+                    if (cell?.shipId === targetShipId) {
+                      targetRow = r;
+                      targetCol = c;
                     }
                   });
                 });
-              }
 
-              let targetRow = -1;
-              let targetCol = -1;
-              grid.forEach((row, r) => {
-                row.forEach((cell, c) => {
-                  if (cell?.shipId === targetShipId) {
-                    targetRow = r;
-                    targetCol = c;
-                  }
-                });
-              });
+                if (
+                  attackerRow === -1 ||
+                  attackerCol === -1 ||
+                  targetRow === -1 ||
+                  targetCol === -1
+                ) {
+                  return null;
+                }
 
-              if (
-                attackerRow === -1 ||
-                attackerCol === -1 ||
-                targetRow === -1 ||
-                targetCol === -1
-              ) {
-                return null;
-              }
+                return (
+                  <EmpWaveAnimation
+                    gridContainerRef={gridContainerRef}
+                    attackerRow={attackerRow}
+                    attackerCol={attackerCol}
+                    targetRow={targetRow}
+                    targetCol={targetCol}
+                  />
+                );
+              })()}
 
-              return (
-                <EmpWaveAnimation
-                  gridContainerRef={gridContainerRef}
-                  attackerRow={attackerRow}
-                  attackerCol={attackerCol}
-                  targetRow={targetRow}
-                  targetCol={targetCol}
-                />
-              );
-            })()}
+            {/* Repair drones animation (selected + has a target ship) */}
+            {selectedShipId &&
+              selectedWeaponType === "special" &&
+              specialType === 2 &&
+              targetShipId != null &&
+              targetShipId !== 0n &&
+              (() => {
+                // Determine attacker position: preview > drag > current
+                let attackerRow = -1;
+                let attackerCol = -1;
+                if (previewPosition) {
+                  attackerRow = previewPosition.row;
+                  attackerCol = previewPosition.col;
+                } else if (draggedShipId && dragOverCell) {
+                  attackerRow = dragOverCell.row;
+                  attackerCol = dragOverCell.col;
+                } else {
+                  grid.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                      if (cell?.shipId === selectedShipId && !cell.isPreview) {
+                        attackerRow = r;
+                        attackerCol = c;
+                      }
+                    });
+                  });
+                }
 
-          {/* Repair drones animation (selected + has a target ship) */}
-          {selectedShipId &&
-            selectedWeaponType === "special" &&
-            specialType === 2 &&
-            targetShipId != null &&
-            targetShipId !== 0n &&
-            (() => {
-              // Determine attacker position: preview > drag > current
-              let attackerRow = -1;
-              let attackerCol = -1;
-              if (previewPosition) {
-                attackerRow = previewPosition.row;
-                attackerCol = previewPosition.col;
-              } else if (draggedShipId && dragOverCell) {
-                attackerRow = dragOverCell.row;
-                attackerCol = dragOverCell.col;
-              } else {
+                let targetRow = -1;
+                let targetCol = -1;
                 grid.forEach((row, r) => {
                   row.forEach((cell, c) => {
-                    if (cell?.shipId === selectedShipId && !cell.isPreview) {
-                      attackerRow = r;
-                      attackerCol = c;
+                    if (cell?.shipId === targetShipId) {
+                      targetRow = r;
+                      targetCol = c;
                     }
                   });
                 });
-              }
 
-              let targetRow = -1;
-              let targetCol = -1;
-              grid.forEach((row, r) => {
-                row.forEach((cell, c) => {
-                  if (cell?.shipId === targetShipId) {
-                    targetRow = r;
-                    targetCol = c;
-                  }
-                });
-              });
+                if (
+                  attackerRow === -1 ||
+                  attackerCol === -1 ||
+                  targetRow === -1 ||
+                  targetCol === -1
+                ) {
+                  return null;
+                }
 
-              if (
-                attackerRow === -1 ||
-                attackerCol === -1 ||
-                targetRow === -1 ||
-                targetCol === -1
-              ) {
-                return null;
-              }
+                return (
+                  <RepairDroneAnimation
+                    gridContainerRef={gridContainerRef}
+                    attackerRow={attackerRow}
+                    attackerCol={attackerCol}
+                    targetRow={targetRow}
+                    targetCol={targetCol}
+                  />
+                );
+              })()}
 
-              return (
-                <RepairDroneAnimation
-                  gridContainerRef={gridContainerRef}
-                  attackerRow={attackerRow}
-                  attackerCol={attackerCol}
-                  targetRow={targetRow}
-                  targetCol={targetCol}
-                />
-              );
-            })()}
-
-          {/* Damage Labels - Rendered at grid level above weapon animations */}
-          {gridContainerRef.current &&
-            (() => {
-              const targetsToShow: Array<{
-                shipId: bigint;
-                row: number;
-                col: number;
-              }> = [];
-
-              // Collect selected target
-              if (targetShipId) {
+            {/* Repair drones animation for last move (when last move was repair) */}
+            {lastMoveShipId != null &&
+              (lastMoveActionType as ActionType) === ActionType.Special &&
+              lastMoveTargetShipId != null &&
+              lastMoveTargetShipId !== 0n &&
+              shipMap.get(lastMoveShipId)?.equipment.special === 2 &&
+              (() => {
+                let attackerRow = -1;
+                let attackerCol = -1;
+                let targetRow = -1;
+                let targetCol = -1;
                 grid.forEach((row, r) => {
                   row.forEach((cell, c) => {
-                    if (cell && cell.shipId === targetShipId) {
+                    if (cell?.shipId === lastMoveShipId) {
+                      attackerRow = r;
+                      attackerCol = c;
+                    }
+                    if (cell?.shipId === lastMoveTargetShipId) {
+                      targetRow = r;
+                      targetCol = c;
+                    }
+                  });
+                });
+                if (
+                  attackerRow === -1 ||
+                  attackerCol === -1 ||
+                  targetRow === -1 ||
+                  targetCol === -1
+                )
+                  return null;
+                return (
+                  <RepairDroneAnimation
+                    gridContainerRef={gridContainerRef}
+                    attackerRow={attackerRow}
+                    attackerCol={attackerCol}
+                    targetRow={targetRow}
+                    targetCol={targetCol}
+                  />
+                );
+              })()}
+
+            {/* Damage Labels - Rendered at grid level above weapon animations */}
+            {gridContainerRef.current &&
+              (() => {
+                const targetsToShow: Array<{
+                  shipId: bigint;
+                  row: number;
+                  col: number;
+                }> = [];
+
+                // Collect selected target
+                if (targetShipId) {
+                  grid.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                      if (cell && cell.shipId === targetShipId) {
+                        targetsToShow.push({
+                          shipId: cell.shipId,
+                          row: r,
+                          col: c,
+                        });
+                      }
+                    });
+                  });
+                }
+
+                // Collect drag targets
+                if (draggedShipId && dragOverCell) {
+                  dragValidTargets.forEach((target) => {
+                    if (
+                      !targetsToShow.some((t) => t.shipId === target.shipId)
+                    ) {
                       targetsToShow.push({
-                        shipId: cell.shipId,
-                        row: r,
-                        col: c,
+                        shipId: target.shipId,
+                        row: target.position.row,
+                        col: target.position.col,
                       });
                     }
                   });
-                });
-              }
+                }
 
-              // Collect drag targets
-              if (draggedShipId && dragOverCell) {
-                dragValidTargets.forEach((target) => {
-                  if (!targetsToShow.some((t) => t.shipId === target.shipId)) {
-                    targetsToShow.push({
-                      shipId: target.shipId,
-                      row: target.position.row,
-                      col: target.position.col,
-                    });
-                  }
-                });
-              }
-
-              // Collect preview targets
-              if (previewPosition) {
-                validTargets.forEach((target) => {
-                  if (!targetsToShow.some((t) => t.shipId === target.shipId)) {
-                    targetsToShow.push({
-                      shipId: target.shipId,
-                      row: target.position.row,
-                      col: target.position.col,
-                    });
-                  }
-                });
-              }
-
-              if (targetsToShow.length === 0) return null;
-
-              const gridRect = gridContainerRef.current.getBoundingClientRect();
-              const cellWidth = gridRect.width / 17;
-              const cellHeight = gridRect.height / 11;
-
-              return (
-                <div
-                  className="absolute pointer-events-none z-50"
-                  style={{
-                    left: `0px`,
-                    top: `0px`,
-                    width: `${gridRect.width}px`,
-                    height: `${gridRect.height}px`,
-                  }}
-                >
-                  {targetsToShow.map((target) => {
-                    const isLastMoveTarget =
-                      lastMoveShipId != null &&
-                      targetShipId != null &&
-                      target.shipId === targetShipId;
-                    const damage = calculateDamage(
-                      target.shipId,
-                      selectedWeaponType,
-                      selectedWeaponType === "special" && specialType === 3
-                        ? true
-                        : undefined,
-                      isLastMoveTarget
-                        ? (lastMoveShipId ?? undefined)
-                        : undefined,
-                    );
-
-                    // For last move display, never show (KILL) since we don't know if it actually killed
-                    const showAsKill = damage.willKill && !isLastMoveTarget;
-                    let labelText: string;
-                    if (selectedWeaponType === "special") {
-                      // Flak does damage, other special abilities repair/heal
-                      if (specialType === 3) {
-                        // Flak special - show damage effect
-                        if (damage.reactorCritical) {
-                          labelText = "⚡ Reactor Critical +1";
-                        } else if (showAsKill) {
-                          labelText = `💀 ${damage.reducedDamage} DMG (KILL)`;
-                        } else {
-                          labelText = `⚔️ ${damage.reducedDamage} DMG`;
-                        }
-                      } else if (specialType === 1) {
-                        // EMP: show reactor damage label (not repair)
-                        labelText = "1 Reactor 💀";
-                      } else {
-                        // Other special abilities - show repair/heal effect
-                        labelText = `🔧 Repair ${damage.reducedDamage} HP`;
-                      }
-                    } else if (damage.reactorCritical) {
-                      labelText = "⚡ Reactor Critical +1";
-                    } else if (showAsKill) {
-                      labelText = `💀 ${damage.reducedDamage} DMG (KILL)`;
-                    } else {
-                      labelText = `⚔️ ${damage.reducedDamage} DMG`;
+                // Collect targets for damage labels:
+                // - When move + gun range: labelTargets contains all enemies in full threat range.
+                // - When only gun range: labelTargets matches validTargets from preview position.
+                if (selectedShipId) {
+                  labelTargets.forEach((target) => {
+                    if (
+                      !targetsToShow.some((t) => t.shipId === target.shipId)
+                    ) {
+                      targetsToShow.push({
+                        shipId: target.shipId,
+                        row: target.position.row,
+                        col: target.position.col,
+                      });
                     }
+                  });
+                }
 
-                    // Calculate position above target cell (relative to grid container)
-                    const cellX = target.col * cellWidth + cellWidth / 2;
-                    const cellTop = target.row * cellHeight; // Top edge of the cell
+                if (targetsToShow.length === 0) return null;
 
-                    return (
-                      <div
-                        key={target.shipId.toString()}
-                        className={`absolute rounded px-2 py-1 text-xs font-mono text-white whitespace-nowrap ${
-                          selectedWeaponType === "special"
-                            ? specialType === 3 // Flak
-                              ? "bg-orange-900 border border-orange-500" // Orange for flak
-                              : specialType === 1 // EMP
-                                ? "bg-red-900 border border-red-500" // Red for EMP reactor damage
-                                : "bg-blue-900 border border-blue-500" // Blue for other specials
-                            : "bg-red-900 border border-red-500"
-                        }`}
-                        style={{
-                          left: `${cellX}px`,
-                          top: `${cellTop - 32}px`, // Position 32px above the top of the target cell
-                          transform: "translateX(-50%)",
-                        }}
-                      >
-                        {labelText}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+                const gridRect =
+                  gridContainerRef.current.getBoundingClientRect();
+                const cellWidth = gridRect.width / 17;
+                const cellHeight = gridRect.height / 11;
+
+                return (
+                  <div
+                    className="absolute pointer-events-none z-50"
+                    style={{
+                      left: `0px`,
+                      top: `0px`,
+                      width: `${gridRect.width}px`,
+                      height: `${gridRect.height}px`,
+                    }}
+                  >
+                    {targetsToShow.map((target) => {
+                      const isLastMoveTarget =
+                        lastMoveShipId != null &&
+                        targetShipId != null &&
+                        target.shipId === targetShipId;
+
+                      // Don't show damage labels for the prior move (we don't have actual damage/overload data)
+                      if (isLastMoveTarget) {
+                        return null;
+                      }
+
+                      const damage = calculateDamage(
+                        target.shipId,
+                        selectedWeaponType,
+                        selectedWeaponType === "special" && specialType === 3
+                          ? true
+                          : undefined,
+                      );
+
+                      const showAsKill = damage.willKill;
+                      let labelText: string;
+                      if (selectedWeaponType === "special") {
+                        // Flak does damage, other special abilities repair/heal
+                        if (specialType === 3) {
+                          // Flak special - show damage effect
+                          if (damage.reactorCritical) {
+                            labelText = "⚡ Reactor Critical +1";
+                          } else if (showAsKill) {
+                            labelText = `💀 ${damage.reducedDamage} DMG (KILL)`;
+                          } else {
+                            labelText = `⚔️ ${damage.reducedDamage} DMG`;
+                          }
+                        } else if (specialType === 1) {
+                          // EMP: show reactor damage label (not repair)
+                          labelText = "1 Reactor 💀";
+                        } else {
+                          // Other special abilities - show repair/heal effect
+                          labelText = `🔧 Repair ${damage.reducedDamage} HP`;
+                        }
+                      } else if (damage.reactorCritical) {
+                        labelText = "⚡ Reactor Critical +1";
+                      } else if (showAsKill) {
+                        labelText = `💀 ${damage.reducedDamage} DMG (KILL)`;
+                      } else {
+                        labelText = `⚔️ ${damage.reducedDamage} DMG`;
+                      }
+
+                      // Calculate position above target cell (relative to grid container)
+                      const cellX = target.col * cellWidth + cellWidth / 2;
+                      const cellTop = target.row * cellHeight; // Top edge of the cell
+
+                      return (
+                        <div
+                          key={target.shipId.toString()}
+                          className={`absolute rounded px-2 py-1 text-xs font-mono text-white whitespace-nowrap ${
+                            selectedWeaponType === "special"
+                              ? specialType === 3 // Flak
+                                ? "bg-orange-900 border border-orange-500" // Orange for flak
+                                : specialType === 1 // EMP
+                                  ? "bg-red-900 border border-red-500" // Red for EMP reactor damage
+                                  : "bg-blue-900 border border-blue-500" // Blue for other specials
+                              : "bg-red-900 border border-red-500"
+                          }`}
+                          style={{
+                            left: `${cellX}px`,
+                            top: `${cellTop - 32}px`, // Position 32px above the top of the target cell
+                            transform: "translateX(-50%)",
+                          }}
+                        >
+                          {labelText}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
           </div>
         </div>
       </div>
