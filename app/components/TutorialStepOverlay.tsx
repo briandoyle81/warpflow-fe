@@ -1,33 +1,33 @@
 "use client";
 
 import React from "react";
-import { TutorialStep } from "../types/onboarding";
+import { TUTORIAL_STEPS } from "../data/tutorialSteps";
+import { useTutorialContext } from "./OnboardingTutorial";
 
 interface TutorialStepOverlayProps {
-  step: TutorialStep;
-  currentStepIndex: number;
-  totalSteps: number;
-  isStepComplete: boolean;
-  onNext: () => void;
-  onPrevious: () => void;
   onSkip?: () => void;
-  onReset?: () => void;
 }
 
-export function TutorialStepOverlay({
-  step,
-  currentStepIndex,
-  totalSteps,
-  isStepComplete,
-  onNext,
-  onPrevious,
-  onSkip,
-  onReset,
-}: TutorialStepOverlayProps) {
+export function TutorialStepOverlay({ onSkip }: TutorialStepOverlayProps) {
+  const {
+    currentStepIndex,
+    currentStep,
+    isStepComplete,
+    nextStep,
+    previousStep,
+    resetTutorial,
+  } = useTutorialContext();
+
+  const step = currentStep;
+  const totalSteps = TUTORIAL_STEPS.length;
+  const canAdvance =
+    currentStepIndex < totalSteps - 1 && isStepComplete;
+
+  if (!step) return null;
+
   return (
-    <div className="fixed inset-0 z-[150] pointer-events-none">
-      {/* Instruction Panel */}
-      <div className="absolute top-4 left-4 right-4 max-w-2xl mx-auto pointer-events-auto">
+    <div className="fixed inset-0 z-[9999] pointer-events-none">
+      <div className="absolute top-4 left-4 right-4 max-w-2xl mx-auto pointer-events-auto z-10">
         <div className="bg-gray-900/95 border-2 border-cyan-400 rounded-lg p-6 shadow-lg shadow-cyan-400/20">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
@@ -40,16 +40,16 @@ export function TutorialStepOverlay({
               </p>
             </div>
             <div className="flex gap-2">
-              {onReset && (
-                <button
-                  onClick={onReset}
-                  className="px-3 py-1 text-xs bg-yellow-700 text-yellow-200 rounded font-mono hover:bg-yellow-600 transition-colors"
-                >
-                  Reset Tutorial
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => resetTutorial()}
+                className="px-3 py-1 text-xs bg-yellow-700 text-yellow-200 rounded font-mono hover:bg-yellow-600 transition-colors cursor-pointer"
+              >
+                Reset Tutorial
+              </button>
               {onSkip && (
                 <button
+                  type="button"
                   onClick={onSkip}
                   className="px-3 py-1 text-xs bg-gray-700 text-gray-300 rounded font-mono hover:bg-gray-600 transition-colors"
                 >
@@ -81,15 +81,17 @@ export function TutorialStepOverlay({
           {/* Navigation */}
           <div className="flex gap-3">
             <button
-              onClick={onPrevious}
+              type="button"
+              onClick={() => previousStep()}
               disabled={currentStepIndex === 0}
               className="px-4 py-2 bg-gray-700 text-white rounded font-mono hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ← Previous
             </button>
             <button
-              onClick={onNext}
-              disabled={currentStepIndex === totalSteps - 1 || !isStepComplete}
+              type="button"
+              onClick={() => nextStep()}
+              disabled={!canAdvance}
               className="px-4 py-2 bg-cyan-600 text-white rounded font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
             >
               {currentStepIndex === totalSteps - 1 ? "Finish" : "Next →"}
@@ -97,7 +99,6 @@ export function TutorialStepOverlay({
           </div>
         </div>
       </div>
-
     </div>
   );
 }

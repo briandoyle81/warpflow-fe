@@ -32,12 +32,8 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingTutorialPro
     currentStepIndex,
     isTransactionDialogOpen,
     pendingAction,
-    isStepComplete,
     approveTransaction,
     rejectTransaction,
-    nextStep,
-    previousStep,
-    resetTutorial,
   } = tutorialContext;
 
   // Handle completion
@@ -68,12 +64,6 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingTutorialPro
     }
   };
 
-  const handleReset = () => {
-    if (window.confirm("Are you sure you want to reset the tutorial? This will start from the beginning.")) {
-      resetTutorial();
-    }
-  };
-
   if (!currentStep) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -85,22 +75,10 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingTutorialPro
   return (
     <TutorialContext.Provider value={tutorialContext}>
       <div className="relative w-full h-full min-h-screen">
-        {/* Simulated Game Display */}
         <SimulatedGameDisplay tutorialContext={tutorialContext} />
 
-        {/* Tutorial Overlay */}
-        <TutorialStepOverlay
-          step={currentStep}
-          currentStepIndex={currentStepIndex}
-          totalSteps={TUTORIAL_STEPS.length}
-          isStepComplete={isStepComplete}
-          onNext={nextStep}
-          onPrevious={previousStep}
-          onSkip={handleSkip}
-          onReset={handleReset}
-        />
+        <TutorialStepOverlay onSkip={handleSkip} />
 
-        {/* Transaction Dialog */}
         <SimulatedTransactionDialog
           isOpen={isTransactionDialogOpen}
           action={pendingAction}

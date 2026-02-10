@@ -547,7 +547,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                         </span>
                       </div>
                       <div className="flex items-center">
-                        <span className="opacity-60">Cost:</span>
+                        <span className="opacity-60">Threat:</span>
                         <span className="ml-2 font-bold">
                           {ship.shipData.cost}
                         </span>
@@ -621,7 +621,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <span className="opacity-60">Cost:</span>
+                    <span className="opacity-60">Threat:</span>
                     <span className="ml-2 font-bold">{ship.shipData.cost}</span>
                   </div>
                 </div>

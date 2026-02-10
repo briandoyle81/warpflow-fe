@@ -8,15 +8,36 @@ import { useState, useEffect, useCallback } from "react";
 // Cache expiration time (24 hours) - only for unclaimed addresses
 const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
+const DEFAULT_COOLDOWN_SECONDS = 28 * 24 * 60 * 60; // 28 days
+
+type EligibilityCacheEntry = {
+  eligible: boolean;
+  timestamp: number;
+  checked: boolean;
+  lastClaimTimestamp?: string;
+  claimCooldownPeriod?: string;
+};
+
+function formatTimeUntil(secondsRemaining: number): string {
+  if (secondsRemaining <= 0) return "0m";
+  const d = Math.floor(secondsRemaining / 86400);
+  const h = Math.floor((secondsRemaining % 86400) / 3600);
+  const m = Math.floor((secondsRemaining % 3600) / 60);
+  const parts: string[] = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  parts.push(`${m}m`);
+  return parts.join(" ");
+}
+
 export function useFreeShipClaiming() {
   const { address } = useAccount();
   const { refetch } = useOwnedShips();
 
-  // Cache for eligibility status to avoid repeated checks
+  // Cache for eligibility status and countdown (lastClaim + cooldown for "next claim in")
   const [eligibilityCache, setEligibilityCache] = useState<{
-    [key: string]: { eligible: boolean; timestamp: number; checked: boolean };
+    [key: string]: EligibilityCacheEntry;
   }>(() => {
-    // Load from localStorage on initialization
     if (typeof window !== "undefined") {
       try {
         const stored = localStorage.getItem("warpflow-eligibility-cache");
@@ -32,6 +53,9 @@ export function useFreeShipClaiming() {
     return {};
   });
 
+  // Live countdown (updates every second when not eligible)
+  const [secondsUntilNextClaim, setSecondsUntilNextClaim] = useState<number | null>(null);
+
   // Check if user can claim free ships (using lastClaimTimestamp)
   const {
     data: lastClaimTimestamp,
@@ -44,6 +68,17 @@ export function useFreeShipClaiming() {
     functionName: "lastClaimTimestamp",
     args: address ? [address] : undefined,
   });
+
+  // Cooldown period from contract (seconds)
+  const { data: claimCooldownPeriod } = useReadContract({
+    address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+    abi: CONTRACT_ABIS.SHIPS as Abi,
+    functionName: "claimCooldownPeriod",
+  });
+  const cooldownSeconds =
+    claimCooldownPeriod !== undefined && claimCooldownPeriod !== null
+      ? Number(claimCooldownPeriod)
+      : DEFAULT_COOLDOWN_SECONDS;
 
   // Write contract for claiming
   const { writeContract, isPending, error, data: hash } = useWriteContract();
@@ -120,10 +155,10 @@ export function useFreeShipClaiming() {
   // Update cache when eligibility status changes (only on successful reads)
   useEffect(() => {
     if (address && lastClaimTimestamp !== undefined && !claimStatusError) {
-      // Check if cooldown period has passed (28 days = 2419200 seconds)
-      const cooldownPeriod = 28 * 24 * 60 * 60; // 28 days in seconds
       const currentTimestamp = Math.floor(Date.now() / 1000);
-      const canClaim = lastClaimTimestamp === 0n || (currentTimestamp - Number(lastClaimTimestamp)) >= cooldownPeriod;
+      const canClaim =
+        lastClaimTimestamp === 0n ||
+        currentTimestamp - Number(lastClaimTimestamp) >= cooldownSeconds;
 
       setEligibilityCache((prevCache) => {
         const newCache = {
@@ -132,6 +167,11 @@ export function useFreeShipClaiming() {
             eligible: canClaim,
             timestamp: Date.now(),
             checked: true,
+            ...(lastClaimTimestamp != null &&
+              lastClaimTimestamp !== 0n && {
+                lastClaimTimestamp: lastClaimTimestamp.toString(),
+                claimCooldownPeriod: String(cooldownSeconds),
+              }),
           },
         };
         const cleanedCache = cleanupExpiredCache(newCache);
@@ -143,8 +183,71 @@ export function useFreeShipClaiming() {
     address,
     lastClaimTimestamp,
     claimStatusError,
+    cooldownSeconds,
     cleanupExpiredCache,
     saveCacheToStorage,
+  ]);
+
+  // Check if cache entry is still valid
+  const isCacheValid = useCallback(
+    (cacheEntry: { timestamp: number; eligible: boolean }) => {
+      if (!cacheEntry.eligible) return true;
+      return Date.now() - cacheEntry.timestamp < CACHE_EXPIRY_TIME;
+    },
+    []
+  );
+
+  // Check if user is eligible (from cache or contract)
+  const isEligible = address
+    ? (() => {
+        const cacheEntry = eligibilityCache[address];
+        if (cacheEntry && isCacheValid(cacheEntry)) {
+          return cacheEntry.eligible;
+        }
+        if (claimStatusError) return true;
+        if (lastClaimTimestamp === undefined || lastClaimTimestamp === null)
+          return false;
+        if (lastClaimTimestamp === 0n) return true;
+        const currentTimestamp = Math.floor(Date.now() / 1000);
+        return (
+          currentTimestamp - Number(lastClaimTimestamp) >= cooldownSeconds
+        );
+      })()
+    : false;
+
+  // Compute seconds until next claim and update every second when not eligible
+  useEffect(() => {
+    if (!address || isEligible) {
+      setSecondsUntilNextClaim(null);
+      return;
+    }
+    const getSecondsRemaining = (): number | null => {
+      const cacheEntry = eligibilityCache[address];
+      const lastTs =
+        lastClaimTimestamp !== undefined && lastClaimTimestamp !== 0n
+          ? Number(lastClaimTimestamp)
+          : cacheEntry?.lastClaimTimestamp
+            ? Number(cacheEntry.lastClaimTimestamp)
+            : null;
+      const cooldown =
+        cacheEntry?.claimCooldownPeriod != null
+          ? Number(cacheEntry.claimCooldownPeriod)
+          : cooldownSeconds;
+      if (lastTs == null) return null;
+      const nextAt = lastTs + cooldown;
+      const now = Math.floor(Date.now() / 1000);
+      return Math.max(0, nextAt - now);
+    };
+    const tick = () => setSecondsUntilNextClaim(getSecondsRemaining());
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [
+    address,
+    isEligible,
+    lastClaimTimestamp,
+    cooldownSeconds,
+    eligibilityCache,
   ]);
 
   // Show toast and update cache when receipt is received
@@ -200,41 +303,6 @@ export function useFreeShipClaiming() {
     }
   }, [receiptError]);
 
-  // Check if cache entry is still valid
-  const isCacheValid = (cacheEntry: {
-    timestamp: number;
-    eligible: boolean;
-  }) => {
-    // If they've claimed (not eligible), cache is permanent
-    if (!cacheEntry.eligible) {
-      return true;
-    }
-    // If they're eligible, cache expires after 24 hours
-    return Date.now() - cacheEntry.timestamp < CACHE_EXPIRY_TIME;
-  };
-
-  // Check if user is eligible (from cache or contract)
-  const isEligible = address
-    ? (() => {
-        const cacheEntry = eligibilityCache[address];
-        if (cacheEntry && isCacheValid(cacheEntry)) {
-          return cacheEntry.eligible;
-        }
-        // If cache is invalid or doesn't exist, fall back to contract data
-        // But only if there's no read error
-        if (claimStatusError) {
-          // If there's a read error, assume eligible (let them try)
-          return true;
-        }
-        // Check if cooldown period has passed
-        if (lastClaimTimestamp === undefined) return false;
-        if (lastClaimTimestamp === 0n) return true; // Never claimed
-        const cooldownPeriod = 28 * 24 * 60 * 60; // 28 days in seconds
-        const currentTimestamp = Math.floor(Date.now() / 1000);
-        return (currentTimestamp - Number(lastClaimTimestamp)) >= cooldownPeriod;
-      })()
-    : false;
-
   // Check if we've already determined eligibility for this user
   const hasCheckedEligibility = address
     ? (() => {
@@ -289,11 +357,20 @@ export function useFreeShipClaiming() {
     }
   };
 
+  const nextClaimInFormatted =
+    secondsUntilNextClaim != null && secondsUntilNextClaim > 0
+      ? formatTimeUntil(secondsUntilNextClaim)
+      : null;
+
   return {
     // Data
     isEligible,
     hasCheckedEligibility,
     hasClaimed: !isEligible,
+
+    // Next claim countdown (when has claimed)
+    secondsUntilNextClaim,
+    nextClaimInFormatted,
 
     // Loading states
     isLoadingClaimStatus,
@@ -302,9 +379,9 @@ export function useFreeShipClaiming() {
     claimFreeShips,
 
     // Contract state
-    isPending: isPending || isConfirming, // Include confirmation state
-    isConfirmed, // Transaction confirmed on chain
-    error: showError ? (error || receiptError) : null, // Only show error when showError is true
-    claimStatusError, // Expose read contract error separately if needed
+    isPending: isPending || isConfirming,
+    isConfirmed,
+    error: showError ? (error || receiptError) : null,
+    claimStatusError,
   };
 }

@@ -451,7 +451,7 @@ export function GameGrid({
                         }
                       }
 
-                      // Allow selecting any ship (for viewing stats/range)
+                      // Allow selecting any ship (for viewing stats/range); tutorial validates in wrapper
                       setSelectedShipId(cell.shipId);
                       setTargetShipId(null);
                       setPreviewPosition(null);

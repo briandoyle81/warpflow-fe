@@ -31,6 +31,7 @@ import {
 import { FleeSafetySwitch } from "./FleeSafetySwitch";
 import { GameEvents } from "./GameEvents";
 import { GameGrid } from "./GameGrid";
+import { buildMapGridsFromContractMap } from "../utils/mapGridUtils";
 
 interface GameDisplayProps {
   game: GameDataView;
@@ -444,23 +445,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     Number(game.metadata.gameId),
   );
 
-  // Create grids to track blocked and scoring positions
+  // Create grids from contract map (same format as tutorial map grids)
   const { blockedGrid, scoringGrid, onlyOnceGrid } = React.useMemo(() => {
-    const blockedGrid = Array(GRID_HEIGHT)
-      .fill(null)
-      .map(() => Array(GRID_WIDTH).fill(false));
-
-    const scoringGrid = Array(GRID_HEIGHT)
-      .fill(null)
-      .map(() => Array(GRID_WIDTH).fill(0));
-
-    const onlyOnceGrid = Array(GRID_HEIGHT)
-      .fill(null)
-      .map(() => Array(GRID_WIDTH).fill(false));
-
-    // The contract returns [blockedPositions, scoringPositions] as a tuple
-    // blockedPositions: Array<Position> where Position = { row: int16, col: int16 }
-    // scoringPositions: Array<ScoringPosition> where ScoringPosition = { row: int16, col: int16, points: uint8, onlyOnce: bool }
     const gameMapData = gameMapState as
       | [
           Array<{ row: number; col: number }>,
@@ -472,50 +458,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           }>,
         ]
       | undefined;
-
-    const blockedPositions = gameMapData?.[0];
-    const scoringPositions = gameMapData?.[1];
-
-    // Process blocked positions
-    if (blockedPositions && Array.isArray(blockedPositions)) {
-      blockedPositions.forEach((pos: { row: number; col: number }) => {
-        if (
-          pos.row >= 0 &&
-          pos.row < GRID_HEIGHT &&
-          pos.col >= 0 &&
-          pos.col < GRID_WIDTH
-        ) {
-          blockedGrid[pos.row][pos.col] = true;
-        }
-      });
-    }
-
-    // Process scoring positions
-    if (scoringPositions && Array.isArray(scoringPositions)) {
-      scoringPositions.forEach(
-        (pos: {
-          row: number;
-          col: number;
-          points: number;
-          onlyOnce: boolean;
-        }) => {
-          if (
-            pos.row >= 0 &&
-            pos.row < GRID_HEIGHT &&
-            pos.col >= 0 &&
-            pos.col < GRID_WIDTH
-          ) {
-            scoringGrid[pos.row][pos.col] = pos.points;
-            // Track if this scoring position can only be claimed once
-            if (pos.onlyOnce) {
-              onlyOnceGrid[pos.row][pos.col] = true;
-            }
-          }
-        },
-      );
-    }
-
-    return { blockedGrid, scoringGrid, onlyOnceGrid };
+    return buildMapGridsFromContractMap(
+      gameMapData?.[0],
+      gameMapData?.[1],
+      GRID_WIDTH,
+      GRID_HEIGHT,
+    );
   }, [gameMapState]);
 
   // Get all ship IDs from the game

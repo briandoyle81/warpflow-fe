@@ -218,14 +218,13 @@ export function useOnboardingTutorial() {
   }, [resetState]);
 
   const resetTutorial = useCallback(() => {
-    setCurrentStepIndex(0);
     setIsTransactionDialogOpen(false);
     setPendingAction(null);
     setLastAction(null);
     resetState();
-    // Clear saved step index from localStorage
+    setCurrentStepIndex(0);
     if (typeof window !== "undefined") {
-      localStorage.removeItem(TUTORIAL_STEP_STORAGE_KEY);
+      localStorage.setItem(TUTORIAL_STEP_STORAGE_KEY, "0");
     }
   }, [resetState]);
 

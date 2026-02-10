@@ -94,7 +94,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
           <li><span className="text-orange-400">Orange tiles</span> = Their threat range (where they can shoot to)</li>
           <li>Their ship stats (hull, weapons, equipment)</li>
         </ul>
-        <p className="text-yellow-300 font-bold">Try clicking on one of the enemy ships now</p>
+        <p className="text-yellow-300 font-bold">Try clicking on one of the enemy ships now.</p>
       </div>
     ),
     allowedActions: {
@@ -104,9 +104,13 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       ships: [2001n, 2002n, 2003n],
     },
     onStepComplete: (actionData) => {
-      return actionData?.type === "selectShip" &&
-             actionData?.shipId !== undefined &&
-             (actionData.shipId === 2001n || actionData.shipId === 2002n || actionData.shipId === 2003n);
+      return (
+        actionData?.type === "selectShip" &&
+        actionData?.shipId !== undefined &&
+        (actionData.shipId === 2001n ||
+          actionData.shipId === 2002n ||
+          actionData.shipId === 2003n)
+      );
     },
   },
   {

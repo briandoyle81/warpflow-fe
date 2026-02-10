@@ -7,6 +7,10 @@ import {
   ALL_TUTORIAL_SHIPS,
   TUTORIAL_PLAYER_ADDRESS,
 } from "../data/tutorialShips";
+import {
+  buildMapGridsFromDefaultMap,
+  type DefaultMapShape,
+} from "../utils/mapGridUtils";
 import { toast } from "react-hot-toast";
 import { ActionType, ShipPosition, Attributes, Ship } from "../types/types";
 import { GameGrid } from "./GameGrid";
@@ -72,61 +76,16 @@ export function SimulatedGameDisplay({
     );
   }, []);
 
-  // Create grids to track blocked and scoring positions from default map
-  const { blockedGrid, scoringGrid, onlyOnceGrid } = useMemo(() => {
-    const blockedGrid = Array(GRID_HEIGHT)
-      .fill(null)
-      .map(() => Array(GRID_WIDTH).fill(false));
-
-    const scoringGrid = Array(GRID_HEIGHT)
-      .fill(null)
-      .map(() => Array(GRID_WIDTH).fill(0));
-
-    const onlyOnceGrid = Array(GRID_HEIGHT)
-      .fill(null)
-      .map(() => Array(GRID_WIDTH).fill(false));
-
-    // Process blocked tiles from default map
-    if (defaultMap.blockedTiles && Array.isArray(defaultMap.blockedTiles)) {
-      defaultMap.blockedTiles.forEach((row, rowIndex) => {
-        if (Array.isArray(row)) {
-          row.forEach((isBlocked, colIndex) => {
-            if (isBlocked && rowIndex < GRID_HEIGHT && colIndex < GRID_WIDTH) {
-              blockedGrid[rowIndex][colIndex] = true;
-            }
-          });
-        }
-      });
-    }
-
-    // Process scoring tiles from default map
-    if (defaultMap.scoringTiles && Array.isArray(defaultMap.scoringTiles)) {
-      defaultMap.scoringTiles.forEach((row, rowIndex) => {
-        if (Array.isArray(row)) {
-          row.forEach((points, colIndex) => {
-            if (points > 0 && rowIndex < GRID_HEIGHT && colIndex < GRID_WIDTH) {
-              scoringGrid[rowIndex][colIndex] = points;
-            }
-          });
-        }
-      });
-    }
-
-    // Process only once tiles from default map
-    if (defaultMap.onlyOnceTiles && Array.isArray(defaultMap.onlyOnceTiles)) {
-      defaultMap.onlyOnceTiles.forEach((row, rowIndex) => {
-        if (Array.isArray(row)) {
-          row.forEach((onlyOnce, colIndex) => {
-            if (onlyOnce && rowIndex < GRID_HEIGHT && colIndex < GRID_WIDTH) {
-              onlyOnceGrid[rowIndex][colIndex] = true;
-            }
-          });
-        }
-      });
-    }
-
-    return { blockedGrid, scoringGrid, onlyOnceGrid };
-  }, []);
+  // Create grids from default map (same format as real game map grids)
+  const { blockedGrid, scoringGrid, onlyOnceGrid } = useMemo(
+    () =>
+      buildMapGridsFromDefaultMap(
+        defaultMap as DefaultMapShape,
+        GRID_WIDTH,
+        GRID_HEIGHT,
+      ),
+    [],
+  );
 
   // Get ship attributes by ship ID from game state
   const getShipAttributes = useCallback(

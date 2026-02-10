@@ -78,6 +78,7 @@ const ManageNavy: React.FC = () => {
     error: freeShipError,
     claimStatusError,
     isLoadingClaimStatus,
+    nextClaimInFormatted,
   } = useFreeShipClaiming();
 
   // Phase 3: Real-time updates
@@ -444,7 +445,7 @@ const ManageNavy: React.FC = () => {
               color: "var(--color-cyan)",
             }}
           >
-            COST
+            THREAT
           </h4>
           <p
             className="text-lg font-bold"
@@ -687,12 +688,23 @@ const ManageNavy: React.FC = () => {
               isEligible={isEligible}
               className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onSuccess={() => {
-                // Refetch ships data after successful claim (toast is shown by hook on confirmation)
                 refetch();
               }}
             >
               [CLAIM FREE SHIPS]
             </FreeShipClaimButton>
+          )}
+        {!isLoadingClaimStatus &&
+          !freeShipError &&
+          !claimStatusError &&
+          !isEligible &&
+          nextClaimInFormatted != null && (
+            <div
+              className="px-6 py-3 rounded-none border-2 border-amber-400/80 text-amber-400 font-mono font-bold tracking-wider bg-amber-400/5"
+              title="Time until you can claim free ships again"
+            >
+              NEXT CLAIM IN: {nextClaimInFormatted}
+            </div>
           )}
 
         {selectedShips.size > 0 &&
@@ -865,7 +877,7 @@ const ManageNavy: React.FC = () => {
               }}
             >
               <option value="id">ID</option>
-              <option value="cost">COST</option>
+              <option value="cost">THREAT</option>
               <option value="accuracy">ACCURACY</option>
               <option value="hull">HULL</option>
               <option value="speed">SPEED</option>

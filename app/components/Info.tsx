@@ -4,11 +4,22 @@ import React, { useState } from "react";
 import { OnboardingTutorial } from "./OnboardingTutorial";
 import { useAccount } from "wagmi";
 import { HeroShipShowcase } from "./HeroShipShowcase";
+import { useFreeShipClaiming } from "../hooks/useFreeShipClaiming";
+import { useOwnedShips } from "../hooks/useOwnedShips";
+import { FreeShipClaimButton } from "./FreeShipClaimButton";
 
 const TUTORIAL_STEP_STORAGE_KEY = "warpflow-tutorial-step-index";
 
 const Info: React.FC = () => {
   const { isConnected } = useAccount();
+  const { refetch } = useOwnedShips();
+  const {
+    isEligible,
+    isLoadingClaimStatus,
+    claimStatusError,
+    nextClaimInFormatted,
+    error: freeShipError,
+  } = useFreeShipClaiming();
   // Check if there's a saved tutorial step on mount
   const [showTutorial, setShowTutorial] = useState(() => {
     if (typeof window !== "undefined") {
@@ -29,14 +40,7 @@ const Info: React.FC = () => {
   }
 
   const handlePlayNow = () => {
-    // Single CTA behavior:
-    // - Connected: go straight to real lobbies
-    // - Not connected: launch the no-wallet demo (tutorial experience)
-    if (isConnected) {
-      window.dispatchEvent(new Event("warpflow-navigate-to-lobbies"));
-    } else {
-      setShowTutorial(true);
-    }
+    setShowTutorial(true);
   };
 
   return (
@@ -100,20 +104,48 @@ const Info: React.FC = () => {
               range control, and ruthless target priority.
             </p>
             <div className="flex flex-col gap-3 items-center md:items-start">
-              <button
-                onClick={handlePlayNow}
-                className="px-10 py-4 border-2 border-solid uppercase font-black tracking-wider transition-colors duration-150 w-full md:w-auto"
-                style={{
-                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                  borderColor: "var(--color-cyan)",
-                  color: "var(--color-cyan)",
-                  backgroundColor: "rgba(34, 48, 65, 0.85)", // steel-ish
-                  borderRadius: 0,
-                  boxShadow: "0 0 22px rgba(86, 214, 255, 0.18)",
-                }}
-              >
-                [PLAY NOW]
-              </button>
+              <div className="flex flex-wrap gap-3 items-center w-full md:w-auto">
+                <button
+                  onClick={handlePlayNow}
+                  className="px-10 py-4 border-2 border-solid uppercase font-black tracking-wider transition-colors duration-150 w-full md:w-auto"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    borderColor: "var(--color-cyan)",
+                    color: "var(--color-cyan)",
+                    backgroundColor: "rgba(34, 48, 65, 0.85)",
+                    borderRadius: 0,
+                    boxShadow: "0 0 22px rgba(86, 214, 255, 0.18)",
+                  }}
+                >
+                  [PLAY NOW]
+                </button>
+                {isConnected &&
+                  !isLoadingClaimStatus &&
+                  !freeShipError &&
+                  !claimStatusError &&
+                  isEligible && (
+                    <FreeShipClaimButton
+                      isEligible={isEligible}
+                      className="px-8 py-4 border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
+                      onSuccess={() => refetch()}
+                    >
+                      [CLAIM FREE SHIPS]
+                    </FreeShipClaimButton>
+                  )}
+                {isConnected &&
+                  !isLoadingClaimStatus &&
+                  !freeShipError &&
+                  !claimStatusError &&
+                  !isEligible &&
+                  nextClaimInFormatted != null && (
+                    <div
+                      className="px-8 py-4 border-2 border-amber-400/80 text-amber-400 font-mono font-bold tracking-wider bg-amber-400/5 rounded-none"
+                      title="Time until you can claim free ships again"
+                    >
+                      NEXT CLAIM IN: {nextClaimInFormatted}
+                    </div>
+                  )}
+              </div>
               {!isConnected && (
                 <p
                   className="text-sm opacity-70"

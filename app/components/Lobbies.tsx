@@ -862,6 +862,10 @@ const Lobbies: React.FC = () => {
     setShowFleetView(false);
     setShowFleetConfirmation(false);
 
+    // Refetch selected lobby and lobby list so UI shows updated fleet state immediately
+    refetchSelectedLobby();
+    refetchGames();
+
     (async () => {
       const freshLobbies = await loadLobbies();
       const currentLobby = freshLobbies.find(
@@ -875,7 +879,13 @@ const Lobbies: React.FC = () => {
         navigateToGamesTab();
       }
     })();
-  }, [isFleetCreated, loadLobbies, navigateToGamesTab]);
+  }, [
+    isFleetCreated,
+    loadLobbies,
+    navigateToGamesTab,
+    refetchSelectedLobby,
+    refetchGames,
+  ]);
 
   // Handle fleet creation errors
   React.useEffect(() => {
@@ -1364,7 +1374,7 @@ const Lobbies: React.FC = () => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm text-gray-400 mb-1">
-                Fleet Cost Limit
+                Fleet Threat Limit
               </label>
               <input
                 type="number"
@@ -1374,7 +1384,7 @@ const Lobbies: React.FC = () => {
                 readOnly
               />
               <p className="text-xs text-gray-500 mt-1">
-                Maximum total cost for each player&apos;s fleet (fixed at 1000)
+                Maximum total threat (points) for each player&apos;s fleet (fixed at 1000)
               </p>
             </div>
             <div>
@@ -1719,7 +1729,7 @@ const Lobbies: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                 <div>
-                  <span className="text-gray-400">Fleet Cost Limit:</span>
+                  <span className="text-gray-400">Fleet Threat Limit:</span>
                   <span className="ml-2">
                     {lobby.basic.costLimit.toString()}
                   </span>
@@ -2315,10 +2325,10 @@ const Lobbies: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Cost Range */}
+                        {/* Threat Range */}
                         <div>
                           <label className="block text-gray-400 mb-1">
-                            Cost Range
+                            Threat Range
                           </label>
                           <div className="space-y-1">
                             <input
@@ -2914,7 +2924,7 @@ const Lobbies: React.FC = () => {
           );
         })()}
 
-      {/* Fleet Cost Confirmation Dialog */}
+      {/* Fleet Threat Confirmation Dialog */}
       {showFleetConfirmation &&
         selectedLobby &&
         (() => {
@@ -2935,10 +2945,10 @@ const Lobbies: React.FC = () => {
                 <div className="text-center">
                   <div className="text-yellow-400 text-4xl mb-4">⚠️</div>
                   <h3 className="text-xl font-bold text-yellow-400 mb-4">
-                    FLEET COST WARNING
+                    FLEET THREAT WARNING
                   </h3>
                   <p className="text-gray-300 mb-6">
-                    Your fleet cost ({totalCost}) is less than 90% of the
+                    Your fleet threat ({totalCost}) is less than 90% of the
                     maximum ({costLimit}). You&apos;re only using{" "}
                     {Math.round((totalCost / costLimit) * 100)}% of your
                     available budget.
@@ -3083,7 +3093,7 @@ const Lobbies: React.FC = () => {
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="opacity-60">Cost:</span>
+                              <span className="opacity-60">Threat:</span>
                               <span className="ml-2">
                                 {shipData.shipData?.cost || 0}
                               </span>
