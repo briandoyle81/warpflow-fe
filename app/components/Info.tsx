@@ -100,7 +100,7 @@ const Info: React.FC = () => {
                 color: "var(--color-text-secondary)",
               }}
             >
-              Deploy on the grid. Outmaneuver real opponents with positioning,
+              Deploy your ships. Outmaneuver real opponents with positioning,
               range control, and ruthless target priority.
             </p>
             <div className="flex flex-col gap-3 items-center md:items-start">
@@ -109,7 +109,8 @@ const Info: React.FC = () => {
                   onClick={handlePlayNow}
                   className="px-10 py-4 border-2 border-solid uppercase font-black tracking-wider transition-colors duration-150 w-full md:w-auto"
                   style={{
-                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
                     borderColor: "var(--color-cyan)",
                     color: "var(--color-cyan)",
                     backgroundColor: "rgba(34, 48, 65, 0.85)",
@@ -119,6 +120,15 @@ const Info: React.FC = () => {
                 >
                   [PLAY NOW]
                 </button>
+                {!isConnected && (
+                  <button
+                    disabled
+                    className="px-8 py-4 border-2 border-green-400 text-green-400 font-mono font-bold tracking-wider transition-all duration-200 opacity-50 cursor-not-allowed w-full md:w-auto rounded-none"
+                    style={{ borderRadius: 0 }}
+                  >
+                    [LOG IN TO CLAIM FREE SHIPS]
+                  </button>
+                )}
                 {isConnected &&
                   !isLoadingClaimStatus &&
                   !freeShipError &&
@@ -136,27 +146,31 @@ const Info: React.FC = () => {
                   !isLoadingClaimStatus &&
                   !freeShipError &&
                   !claimStatusError &&
-                  !isEligible &&
-                  nextClaimInFormatted != null && (
-                    <div
-                      className="px-8 py-4 border-2 border-amber-400/80 text-amber-400 font-mono font-bold tracking-wider bg-amber-400/5 rounded-none"
-                      title="Time until you can claim free ships again"
-                    >
-                      NEXT CLAIM IN: {nextClaimInFormatted}
-                    </div>
+                  !isEligible && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent("warpflow-navigate-to-manage-navy"),
+                          )
+                        }
+                        className="px-8 py-4 border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 w-full md:w-auto rounded-none"
+                        style={{ borderRadius: 0 }}
+                      >
+                        [VIEW FLEET]
+                      </button>
+                      {nextClaimInFormatted != null && (
+                        <div
+                          className="px-8 py-4 border-2 border-amber-400/80 text-amber-400 font-mono font-bold tracking-wider bg-amber-400/5 rounded-none"
+                          title="Time until you can claim free ships again"
+                        >
+                          NEXT CLAIM IN: {nextClaimInFormatted}
+                        </div>
+                      )}
+                    </>
                   )}
               </div>
-              {!isConnected && (
-                <p
-                  className="text-sm opacity-70"
-                  style={{
-                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-                    color: "var(--color-text-muted)",
-                  }}
-                >
-                  No wallet required to try the demo. Connect later to save.
-                </p>
-              )}
             </div>
           </div>
 
@@ -192,31 +206,13 @@ const Info: React.FC = () => {
             color: "var(--color-phosphor-green)",
           }}
         >
-          [FLEET INTEL]
+          [SHIPINTEL]
         </h3>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-black/0 p-1" style={{ borderRadius: 0 }}>
-            <div
-              className="text-xs font-bold tracking-wider mb-3"
-              style={{
-                fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-                color: "var(--color-cyan)",
-              }}
-            >
-              [ALLIED]
-            </div>
             <HeroShipShowcase seedOffset={0} align="start" side="allied" />
           </div>
           <div className="bg-black/0 p-1" style={{ borderRadius: 0 }}>
-            <div
-              className="text-xs font-bold tracking-wider mb-3"
-              style={{
-                fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-                color: "var(--color-warning-red)",
-              }}
-            >
-              [ENEMY]
-            </div>
             <HeroShipShowcase
               seedOffset={3}
               align="start"
@@ -371,8 +367,8 @@ const Info: React.FC = () => {
           }}
         >
           Level up your ships by destroying enemy ships in battle. For every
-          enemy you kill, collect part of the salvage reward and make your
-          fleet stronger over time.
+          enemy you kill, collect part of the salvage reward and make your fleet
+          stronger over time.
         </p>
         <ul
           className="text-sm space-y-1 opacity-90"

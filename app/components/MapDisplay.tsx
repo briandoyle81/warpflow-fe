@@ -448,7 +448,7 @@ export function MapDisplay({
                             }`}
                           />
                         ) : (
-                          <div className="w-full h-full bg-gray-600 rounded flex items-center justify-center text-white text-xs">
+                          <div className="w-full h-full bg-gray-600 rounded-none flex items-center justify-center text-white text-xs">
                             {ship.name}
                           </div>
                         )}

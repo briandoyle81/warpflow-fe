@@ -1073,7 +1073,7 @@ export function SimulatedGameDisplay({
 
   return (
     <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen p-4">
-      <div className="mb-4 bg-black/40 border border-cyan-400 rounded-lg p-4">
+      <div className="mb-4 bg-black/40 border border-cyan-400 rounded-none p-4">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-cyan-300 font-mono">
@@ -1100,7 +1100,7 @@ export function SimulatedGameDisplay({
       </div>
 
       <div
-        className="bg-gray-900 rounded-lg p-2 w-full"
+        className="bg-gray-900 rounded-none p-2 w-full"
         style={{
           outline: `2px solid #60a5fa`, // Always blue for tutorial player
           outlineOffset: 0,
@@ -1150,7 +1150,7 @@ export function SimulatedGameDisplay({
       </div>
 
       {selectedShipId && (
-        <div className="mt-4 bg-black/40 border border-cyan-400 rounded-lg p-4">
+        <div className="mt-4 bg-black/40 border border-cyan-400 rounded-none p-4">
           <p className="text-cyan-300 font-mono">
             Selected Ship:{" "}
             {shipMap.get(selectedShipId)?.name || selectedShipId.toString()}

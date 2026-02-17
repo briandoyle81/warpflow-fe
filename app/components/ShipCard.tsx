@@ -332,7 +332,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
               e.stopPropagation();
               onToggleStar();
             }}
-            className="p-1 hover:bg-yellow-400/10 rounded transition-all duration-200"
+            className="p-1 hover:bg-yellow-400/10 rounded-none transition-all duration-200"
           >
             <svg
               className={`w-4 h-4 ${
@@ -366,7 +366,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                 onRecycleClick();
               }}
               disabled={ship.shipData.inFleet}
-              className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               title={
                 ship.shipData.inFleet
                   ? "Cannot recycle ship in fleet"

@@ -28,7 +28,7 @@ export function TutorialStepOverlay({ onSkip }: TutorialStepOverlayProps) {
   return (
     <div className="fixed inset-0 z-[9999] pointer-events-none">
       <div className="absolute top-4 left-4 right-4 max-w-2xl mx-auto pointer-events-auto z-10">
-        <div className="bg-gray-900/95 border-2 border-cyan-400 rounded-lg p-6 shadow-lg shadow-cyan-400/20">
+        <div className="bg-gray-900/95 border-2 border-cyan-400 rounded-none p-6 shadow-lg shadow-cyan-400/20">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -43,7 +43,7 @@ export function TutorialStepOverlay({ onSkip }: TutorialStepOverlayProps) {
               <button
                 type="button"
                 onClick={() => resetTutorial()}
-                className="px-3 py-1 text-xs bg-yellow-700 text-yellow-200 rounded font-mono hover:bg-yellow-600 transition-colors cursor-pointer"
+                className="px-3 py-1 text-xs bg-yellow-700 text-yellow-200 rounded-none font-mono hover:bg-yellow-600 transition-colors cursor-pointer"
               >
                 Reset Tutorial
               </button>
@@ -51,7 +51,7 @@ export function TutorialStepOverlay({ onSkip }: TutorialStepOverlayProps) {
                 <button
                   type="button"
                   onClick={onSkip}
-                  className="px-3 py-1 text-xs bg-gray-700 text-gray-300 rounded font-mono hover:bg-gray-600 transition-colors"
+                  className="px-3 py-1 text-xs bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 transition-colors"
                 >
                   Skip Tutorial
                 </button>
@@ -84,7 +84,7 @@ export function TutorialStepOverlay({ onSkip }: TutorialStepOverlayProps) {
               type="button"
               onClick={() => previousStep()}
               disabled={currentStepIndex === 0}
-              className="px-4 py-2 bg-gray-700 text-white rounded font-mono hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-gray-700 text-white rounded-none font-mono hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ← Previous
             </button>
@@ -92,7 +92,7 @@ export function TutorialStepOverlay({ onSkip }: TutorialStepOverlayProps) {
               type="button"
               onClick={() => nextStep()}
               disabled={!canAdvance}
-              className="px-4 py-2 bg-cyan-600 text-white rounded font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+              className="px-4 py-2 bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
             >
               {currentStepIndex === totalSteps - 1 ? "Finish" : "Next →"}
             </button>

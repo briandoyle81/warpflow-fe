@@ -55,8 +55,10 @@ export default function Home() {
     };
 
     window.addEventListener("warpflow-navigate-to-games", handleNavigateToGames);
+    document.addEventListener("warpflow-navigate-to-games", handleNavigateToGames);
     return () => {
       window.removeEventListener("warpflow-navigate-to-games", handleNavigateToGames);
+      document.removeEventListener("warpflow-navigate-to-games", handleNavigateToGames);
     };
   }, []);
 
@@ -74,6 +76,24 @@ export default function Home() {
       window.removeEventListener(
         "warpflow-navigate-to-lobbies",
         handleNavigateToLobbies,
+      );
+    };
+  }, []);
+
+  // Listen for navigation to Manage Navy (fleet) tab
+  useEffect(() => {
+    const handleNavigateToManageNavy = () => {
+      setActiveTab("Manage Navy");
+    };
+
+    window.addEventListener(
+      "warpflow-navigate-to-manage-navy",
+      handleNavigateToManageNavy,
+    );
+    return () => {
+      window.removeEventListener(
+        "warpflow-navigate-to-manage-navy",
+        handleNavigateToManageNavy,
       );
     };
   }, []);

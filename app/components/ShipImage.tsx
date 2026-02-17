@@ -85,7 +85,7 @@ export function ShipImage({
   if (isLoading && showLoadingState && !dataUrl) {
     return (
       <div
-        className={`flex items-center justify-center bg-gray-800/50 border border-gray-600 rounded ${className}`}
+        className={`flex items-center justify-center bg-gray-800/50 border border-gray-600 rounded-none ${className}`}
       >
         <div className="text-gray-400 text-xs text-center p-2">
           <div className="animate-spin text-lg mb-1">⏳</div>
@@ -101,7 +101,7 @@ export function ShipImage({
   if ((error || !dataUrl) && !dataUrl) {
     return (
       <div
-        className={`flex items-center justify-center bg-gray-800/50 border border-gray-600 rounded ${className}`}
+        className={`flex items-center justify-center bg-gray-800/50 border border-gray-600 rounded-none ${className}`}
       >
         <div className="text-gray-400 text-xs text-center p-2">
           <div className="animate-spin text-lg mb-1">⏳</div>

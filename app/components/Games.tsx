@@ -244,14 +244,14 @@ const Games: React.FC = () => {
             {games.map((game) => (
               <div
                 key={game.metadata.gameId.toString()}
-                className="bg-gray-800 rounded-lg p-4 border border-gray-700"
+                className="bg-gray-800 rounded-none p-4 border border-gray-700"
               >
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-mono text-white">
                     Game #{game.metadata.gameId.toString()}
                   </h3>
                   <span
-                    className={`text-xs px-2 py-1 rounded ${
+                    className={`text-xs px-2 py-1 rounded-none ${
                       game.metadata.winner ===
                       "0x0000000000000000000000000000000000000000"
                         ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
@@ -341,7 +341,7 @@ const Games: React.FC = () => {
                 {/* Game Actions */}
                 <div className="mt-4 pt-3 border-t border-gray-700">
                   <button
-                    className="w-full px-6 py-3 rounded-lg border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200"
+                    className="w-full px-6 py-3 rounded-none border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200"
                     onClick={() => setSelectedGame(game)}
                   >
                     {game.metadata.winner ===

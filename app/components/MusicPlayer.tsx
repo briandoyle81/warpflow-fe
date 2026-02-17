@@ -126,7 +126,7 @@ const MusicPlayer: React.FC = () => {
       <div className="flex items-center gap-1">
         <button
           onClick={prevTrack}
-          className="p-1.5 rounded border border-purple-400 bg-black/60 hover:bg-purple-400/20 transition-all duration-200 hover:shadow-lg hover:shadow-purple-400/30"
+          className="p-1.5 rounded-none border border-purple-400 bg-black/60 hover:bg-purple-400/20 transition-all duration-200 hover:shadow-lg hover:shadow-purple-400/30"
           aria-label="Previous track"
         >
           <svg
@@ -140,7 +140,7 @@ const MusicPlayer: React.FC = () => {
 
         <button
           onClick={handlePlayPause}
-          className="p-1.5 rounded border border-cyan-400 bg-black/60 hover:bg-cyan-400/20 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-400/30"
+          className="p-1.5 rounded-none border border-cyan-400 bg-black/60 hover:bg-cyan-400/20 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-400/30"
           aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? (
@@ -172,7 +172,7 @@ const MusicPlayer: React.FC = () => {
 
         <button
           onClick={nextTrack}
-          className="p-1.5 rounded border border-purple-400 bg-black/60 hover:bg-purple-400/20 transition-all duration-200 hover:shadow-lg hover:shadow-purple-400/30"
+          className="p-1.5 rounded-none border border-purple-400 bg-black/60 hover:bg-purple-400/20 transition-all duration-200 hover:shadow-lg hover:shadow-purple-400/30"
           aria-label="Next track"
         >
           <svg
@@ -193,7 +193,7 @@ const MusicPlayer: React.FC = () => {
           step="0.1"
           value={volume}
           onChange={handleVolumeChange}
-          className="w-full h-1.5 bg-black/60 rounded-lg appearance-none cursor-pointer slider"
+          className="w-full h-1.5 bg-black/60 rounded-none appearance-none cursor-pointer slider"
           style={{
             background: `linear-gradient(to right, #22d3ee 0%, #22d3ee ${
               volume * 100

@@ -530,7 +530,7 @@ const ManageNavy: React.FC = () => {
             shipIds={shipsByStatus.unconstructed
               .slice(0, 150)
               .map((ship: Ship) => ship.id)}
-            className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={fleetStats.unconstructedShips === 0}
             onSuccess={() => {
               // Show success toast
@@ -548,7 +548,7 @@ const ManageNavy: React.FC = () => {
         ) : (
           <ShipActionButton
             action="constructAll"
-            className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={fleetStats.unconstructedShips === 0}
             onSuccess={() => {
               // Show success toast
@@ -584,7 +584,7 @@ const ManageNavy: React.FC = () => {
                 const cleared = clearBrokenImageCache();
                 toast.success(`Cleared ${cleared} broken images from cache`);
               }}
-              className="px-4 py-2 rounded-lg border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm transition-all duration-200"
+              className="px-4 py-2 rounded-none border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm transition-all duration-200"
             >
               [CLEAR BROKEN CACHE]
             </button>
@@ -600,7 +600,7 @@ const ManageNavy: React.FC = () => {
                 // Force refresh by reloading the page
                 window.location.reload();
               }}
-              className="px-4 py-2 rounded-lg border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
+              className="px-4 py-2 rounded-none border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
             >
               [CLEAR ALL CACHE]
             </button>
@@ -612,7 +612,7 @@ const ManageNavy: React.FC = () => {
                   `Reset all request states - try loading images again`,
                 );
               }}
-              className="px-4 py-2 rounded-lg border border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold text-sm transition-all duration-200"
+              className="px-4 py-2 rounded-none border border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold text-sm transition-all duration-200"
             >
               [RESET REQUEST STATES]
             </button>
@@ -622,7 +622,7 @@ const ManageNavy: React.FC = () => {
                 restartQueueProcessing();
                 toast.success(`Restarted queue processing`);
               }}
-              className="px-4 py-2 rounded-lg border border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm transition-all duration-200"
+              className="px-4 py-2 rounded-none border border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm transition-all duration-200"
             >
               [RESTART QUEUE]
             </button>
@@ -634,7 +634,7 @@ const ManageNavy: React.FC = () => {
                   `Queue: ${status.queueLength} pending, ${status.activeRequests} active`,
                 );
               }}
-              className="px-4 py-2 rounded-lg border border-purple-400 text-purple-400 hover:border-purple-300 hover:text-purple-300 hover:bg-purple-400/10 font-mono font-bold text-sm transition-all duration-200"
+              className="px-4 py-2 rounded-none border border-purple-400 text-purple-400 hover:border-purple-300 hover:text-purple-300 hover:bg-purple-400/10 font-mono font-bold text-sm transition-all duration-200"
             >
               [QUEUE STATUS]
             </button>
@@ -644,7 +644,7 @@ const ManageNavy: React.FC = () => {
                 clearCacheOnLogout();
                 toast.success(`Cleared cache and stopped queue processing`);
               }}
-              className="px-4 py-2 rounded-lg border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
+              className="px-4 py-2 rounded-none border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
             >
               [CLEAR ON LOGOUT]
             </button>
@@ -655,7 +655,7 @@ const ManageNavy: React.FC = () => {
         {isLoadingClaimStatus && (
           <button
             disabled
-            className="px-6 py-3 rounded-lg border-2 border-gray-400 text-gray-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
+            className="px-6 py-3 rounded-none border-2 border-gray-400 text-gray-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
           >
             [CHECKING ELIGIBILITY...]
           </button>
@@ -663,7 +663,7 @@ const ManageNavy: React.FC = () => {
         {!isLoadingClaimStatus && freeShipError && (
           <button
             disabled
-            className="px-6 py-3 rounded-lg border-2 border-red-400 text-red-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
+            className="px-6 py-3 rounded-none border-2 border-red-400 text-red-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
           >
             [ERROR CLAIMING]
           </button>
@@ -671,7 +671,7 @@ const ManageNavy: React.FC = () => {
         {!isLoadingClaimStatus && !freeShipError && claimStatusError && (
           <FreeShipClaimButton
             isEligible={true} // Allow trying even with read errors
-            className="px-6 py-3 rounded-lg border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 rounded-none border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             onSuccess={() => {
               // Refetch ships data after successful claim (toast is shown by hook on confirmation)
               refetch();
@@ -686,7 +686,7 @@ const ManageNavy: React.FC = () => {
           isEligible && (
             <FreeShipClaimButton
               isEligible={isEligible}
-              className="px-6 py-3 rounded-lg border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onSuccess={() => {
                 refetch();
               }}
@@ -719,7 +719,7 @@ const ManageNavy: React.FC = () => {
               <ShipActionButton
                 action="recycle"
                 shipIds={recyclableShips.map((id) => BigInt(id))}
-                className="px-6 py-3 rounded-lg border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-200 disabled:cursor-not-allowed"
+                className="px-6 py-3 rounded-none border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-200 disabled:cursor-not-allowed"
                 onSuccess={() => {
                   // Show success toast
                   toast.success("Ships recycled successfully!");
@@ -731,7 +731,7 @@ const ManageNavy: React.FC = () => {
                 {`[RECYCLE ${recyclableShips.length} SHIPS]`}
               </ShipActionButton>
             ) : (
-              <div className="px-6 py-3 rounded-lg border-2 border-orange-400 text-orange-400 font-mono font-bold tracking-wider opacity-50">
+              <div className="px-6 py-3 rounded-none border-2 border-orange-400 text-orange-400 font-mono font-bold tracking-wider opacity-50">
                 [SELECTED SHIPS ARE IN FLEETS - CANNOT RECYCLE]
               </div>
             );
@@ -740,7 +740,7 @@ const ManageNavy: React.FC = () => {
 
       {/* Ship Purchase Interface */}
       {showShipPurchase && (
-        <div className="bg-black/40 border border-blue-400 rounded-lg p-6 mb-8">
+        <div className="bg-black/40 border border-blue-400 rounded-none p-6 mb-8">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-6">
               <h4 className="text-xl font-bold text-blue-400">
@@ -1017,7 +1017,7 @@ const ManageNavy: React.FC = () => {
       {/* Recycle Confirmation Modal */}
       {showRecycleModal && shipToRecycle && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-red-400 rounded-lg p-6 max-w-md mx-4">
+          <div className="bg-gray-900 border border-red-400 rounded-none p-6 max-w-md mx-4">
             <div className="text-center">
               <div className="text-red-400 text-4xl mb-4">☠️</div>
               {canRecycle ? (
@@ -1081,7 +1081,7 @@ const ManageNavy: React.FC = () => {
               <div className="flex gap-4 justify-center">
                 <button
                   onClick={handleRecycleCancel}
-                  className="px-6 py-2 border border-gray-400 text-gray-400 hover:border-gray-300 hover:text-gray-300 hover:bg-gray-400/10 rounded font-mono font-bold transition-all duration-200"
+                  className="px-6 py-2 border border-gray-400 text-gray-400 hover:border-gray-300 hover:text-gray-300 hover:bg-gray-400/10 rounded-none font-mono font-bold transition-all duration-200"
                 >
                   CANCEL
                 </button>
@@ -1106,7 +1106,7 @@ const ManageNavy: React.FC = () => {
                     ]}
                     functionName="shipBreaker"
                     args={[[shipToRecycle.id]]}
-                    className="px-6 py-2 border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 rounded font-mono font-bold transition-all duration-200"
+                    className="px-6 py-2 border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 rounded-none font-mono font-bold transition-all duration-200"
                     onSuccess={() => {
                       // Show success toast
                       toast.success("Ship recycled successfully!");

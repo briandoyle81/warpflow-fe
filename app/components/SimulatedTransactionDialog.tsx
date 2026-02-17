@@ -43,13 +43,13 @@ export function SimulatedTransactionDialog({
 
   return (
     <div className="fixed top-4 right-4 z-[200] pointer-events-auto">
-      <div className="bg-gray-900 border-2 border-cyan-400 rounded-lg p-6 max-w-md w-full shadow-lg shadow-cyan-400/20">
+      <div className="bg-gray-900 border-2 border-cyan-400 rounded-none p-6 max-w-md w-full shadow-lg shadow-cyan-400/20">
         <h3 className="text-xl font-bold text-cyan-300 mb-4 font-mono">
           [SIMULATED] Transaction Approval
         </h3>
 
         <div className="space-y-3 mb-6">
-          <div className="bg-yellow-400/10 border border-yellow-400/50 rounded p-3">
+          <div className="bg-yellow-400/10 border border-yellow-400/50 rounded-none p-3">
             <p className="text-yellow-300 text-sm font-mono">
               ⚠️ This is a tutorial simulation. No real transaction will be sent.
             </p>
@@ -90,13 +90,13 @@ export function SimulatedTransactionDialog({
         <div className="flex gap-3">
           <button
             onClick={onReject}
-            className="flex-1 px-4 py-2 bg-gray-700 text-white rounded font-mono hover:bg-gray-600 transition-colors"
+            className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-none font-mono hover:bg-gray-600 transition-colors"
           >
             Reject
           </button>
           <button
             onClick={onApprove}
-            className="flex-1 px-4 py-2 bg-green-600 text-white rounded font-mono hover:bg-green-700 transition-colors"
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-none font-mono hover:bg-green-700 transition-colors"
           >
             Approve
           </button>

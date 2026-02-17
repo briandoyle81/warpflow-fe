@@ -9,6 +9,8 @@ interface LobbyLeaveButtonProps {
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  /** When true, button stays enabled when another transaction is pending (e.g. Create Fleet). */
+  allowWhenOtherPending?: boolean;
   onSuccess?: () => void;
   onError?: (error: Error) => void;
 }
@@ -34,6 +36,7 @@ export function LobbyLeaveButton({
   children,
   className = "",
   disabled = false,
+  allowWhenOtherPending = false,
   onSuccess,
   onError,
 }: LobbyLeaveButtonProps) {
@@ -46,6 +49,7 @@ export function LobbyLeaveButton({
       args={[lobbyId]}
       className={className}
       disabled={disabled}
+      allowWhenOtherPending={allowWhenOtherPending}
       onSuccess={onSuccess}
       onError={onError}
     >

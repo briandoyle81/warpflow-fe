@@ -76,7 +76,7 @@ export default function Maps() {
         <div className="flex items-center gap-4">
           <button
             onClick={handleEditorCancel}
-            className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700"
+            className="px-4 py-2 bg-gray-600 text-white rounded-none font-mono hover:bg-gray-700"
           >
             ← Back to Maps
           </button>
@@ -101,12 +101,12 @@ export default function Maps() {
         {canCreateMaps ? (
           <button
             onClick={handleCreateMap}
-            className="px-4 py-2 bg-green-600 text-white rounded font-mono hover:bg-green-700"
+            className="px-4 py-2 bg-green-600 text-white rounded-none font-mono hover:bg-green-700"
           >
             Create New Map
           </button>
         ) : (
-          <div className="px-4 py-2 bg-gray-600 text-gray-400 rounded font-mono cursor-not-allowed">
+          <div className="px-4 py-2 bg-gray-600 text-gray-400 rounded-none font-mono cursor-not-allowed">
             Create New Map (Restricted)
           </div>
         )}
@@ -130,14 +130,14 @@ export default function Maps() {
           {maps.map((map) => (
             <div
               key={map.id}
-              className="bg-gray-800 rounded-lg p-4 border border-gray-700"
+              className="bg-gray-800 rounded-none p-4 border border-gray-700"
             >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-mono text-white">Map #{map.id}</h3>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEditMap(map.id)}
-                    className="px-3 py-1 bg-blue-600 text-white rounded text-sm font-mono hover:bg-blue-700"
+                    className="px-3 py-1 bg-blue-600 text-white rounded-none text-sm font-mono hover:bg-blue-700"
                   >
                     Edit
                   </button>
@@ -163,7 +163,7 @@ export default function Maps() {
               </div>
 
               {/* Mini preview */}
-              <div className="mt-3 p-2 bg-gray-900 rounded">
+              <div className="mt-3 p-2 bg-gray-900 rounded-none">
                 <div className="text-xs text-gray-400 mb-1">
                   Preview ({GRID_DIMENSIONS.WIDTH}x{GRID_DIMENSIONS.HEIGHT}):
                 </div>

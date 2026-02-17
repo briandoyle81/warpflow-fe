@@ -626,7 +626,7 @@ export function MapEditor({
     <div className="w-full space-y-4">
       {/* Authorization Notice */}
       {!canEdit && (
-        <div className="p-4 bg-yellow-900/20 border border-yellow-400/30 rounded-lg">
+        <div className="p-4 bg-yellow-900/20 border border-yellow-400/30 rounded-none-lg">
           <div className="flex items-center gap-2 text-yellow-400">
             <span className="text-lg">⚠️</span>
             <span className="font-mono text-sm">
@@ -638,14 +638,14 @@ export function MapEditor({
       )}
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-4 p-4 bg-gray-800 rounded-lg">
+      <div className="flex flex-wrap gap-4 p-4 bg-gray-800 rounded-none-lg">
         <div className="flex gap-2">
           <button
             onClick={() =>
               setEditorState((prev) => ({ ...prev, selectedTool: "score" }))
             }
             disabled={!canEdit}
-            className={`px-3 py-2 rounded text-sm font-mono ${
+            className={`px-3 py-2 rounded-none text-sm font-mono ${
               !canEdit
                 ? "bg-gray-500 text-gray-400 cursor-not-allowed"
                 : editorState.selectedTool === "score"
@@ -660,7 +660,7 @@ export function MapEditor({
               setEditorState((prev) => ({ ...prev, selectedTool: "block" }))
             }
             disabled={!canEdit}
-            className={`px-3 py-2 rounded text-sm font-mono ${
+            className={`px-3 py-2 rounded-none text-sm font-mono ${
               !canEdit
                 ? "bg-gray-500 text-gray-400 cursor-not-allowed"
                 : editorState.selectedTool === "block"
@@ -675,7 +675,7 @@ export function MapEditor({
               setEditorState((prev) => ({ ...prev, selectedTool: "erase" }))
             }
             disabled={!canEdit}
-            className={`px-3 py-2 rounded text-sm font-mono ${
+            className={`px-3 py-2 rounded-none text-sm font-mono ${
               !canEdit
                 ? "bg-gray-500 text-gray-400 cursor-not-allowed"
                 : editorState.selectedTool === "erase"
@@ -698,7 +698,7 @@ export function MapEditor({
               }))
             }
             disabled={!canEdit}
-            className={`px-3 py-2 rounded text-sm font-mono ${
+            className={`px-3 py-2 rounded-none text-sm font-mono ${
               !canEdit
                 ? "bg-gray-500 text-gray-400 cursor-not-allowed"
                 : editorState.symmetryMode === "radial"
@@ -727,7 +727,7 @@ export function MapEditor({
               }))
             }
             disabled={!canEdit}
-            className={`w-16 px-2 py-1 rounded text-sm ${
+            className={`w-16 px-2 py-1 rounded-none text-sm ${
               !canEdit
                 ? "bg-gray-500 text-gray-400 cursor-not-allowed"
                 : "bg-gray-700 text-white"
@@ -744,7 +744,7 @@ export function MapEditor({
                 }))
               }
               disabled={!canEdit}
-              className={`rounded ${!canEdit ? "cursor-not-allowed" : ""}`}
+              className={`rounded-none ${!canEdit ? "cursor-not-allowed" : ""}`}
             />
             Once only
           </label>
@@ -753,7 +753,7 @@ export function MapEditor({
         <button
           onClick={clearAll}
           disabled={!canEdit}
-          className={`px-3 py-2 rounded text-sm font-mono ${
+          className={`px-3 py-2 rounded-none text-sm font-mono ${
             !canEdit
               ? "bg-gray-500 text-gray-400 cursor-not-allowed"
               : "bg-red-600 text-white hover:bg-red-700"
@@ -847,7 +847,7 @@ export function MapEditor({
       </div>
 
       {/* Grid */}
-      <div className="bg-gray-900 rounded-lg w-full relative flex justify-center p-1">
+      <div className="bg-gray-900 rounded-none-lg w-full relative flex justify-center p-1">
         <div
           key={`grid-${editorState.blockedTiles.length}-${editorState.scoringTiles.length}`}
           className="grid relative gap-0 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full"
@@ -1015,17 +1015,17 @@ export function MapEditor({
       <div className="flex flex-wrap gap-2">
         <button
           onClick={clearSavedState}
-          className="px-4 py-2 bg-yellow-600 text-white rounded font-mono hover:bg-yellow-700"
+          className="px-4 py-2 bg-yellow-600 text-white rounded-none font-mono hover:bg-yellow-700"
         >
           Clear Saved
         </button>
         <button
           onClick={downloadMap}
-          className="px-4 py-2 bg-blue-600 text-white rounded font-mono hover:bg-blue-700"
+          className="px-4 py-2 bg-blue-600 text-white rounded-none font-mono hover:bg-blue-700"
         >
           Download Map
         </button>
-        <label className="px-4 py-2 bg-purple-600 text-white rounded font-mono hover:bg-purple-700 cursor-pointer">
+        <label className="px-4 py-2 bg-purple-600 text-white rounded-none font-mono hover:bg-purple-700 cursor-pointer">
           Upload Map
           <input
             type="file"
@@ -1036,7 +1036,7 @@ export function MapEditor({
         </label>
         <button
           onClick={clearAll}
-          className="px-4 py-2 bg-red-600 text-white rounded font-mono hover:bg-red-700"
+          className="px-4 py-2 bg-red-600 text-white rounded-none font-mono hover:bg-red-700"
         >
           Clear All
         </button>
@@ -1051,7 +1051,7 @@ export function MapEditor({
           onSuccess={handleTransactionSuccess}
           validateBeforeTransaction={validateBeforeTransaction}
           disabled={!canEdit}
-          className={`px-4 py-2 rounded font-mono ${
+          className={`px-4 py-2 rounded-none font-mono ${
             !canEdit
               ? "bg-gray-500 text-gray-400 cursor-not-allowed"
               : "bg-green-600 text-white hover:bg-green-700"
@@ -1061,7 +1061,7 @@ export function MapEditor({
         </TransactionButton>
         <button
           onClick={onCancel}
-          className="px-4 py-2 bg-gray-600 text-white rounded font-mono hover:bg-gray-700"
+          className="px-4 py-2 bg-gray-600 text-white rounded-none font-mono hover:bg-gray-700"
         >
           Cancel
         </button>

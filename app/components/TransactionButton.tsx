@@ -21,6 +21,8 @@ interface TransactionButtonProps {
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  /** When true, button stays enabled when another transaction is pending (only this button's own pending state disables it). */
+  allowWhenOtherPending?: boolean;
   loadingText?: string;
   errorText?: string;
 
@@ -44,6 +46,7 @@ export function TransactionButton({
   children,
   className = "",
   disabled = false,
+  allowWhenOtherPending = false,
   loadingText = "Loading...",
   errorText = "Error",
   onSuccess,
@@ -272,7 +275,9 @@ export function TransactionButton({
   const isDisabled =
     disabled ||
     isTransactionPending ||
-    (transactionState.isPending && !isActiveTransaction);
+    (!allowWhenOtherPending &&
+      transactionState.isPending &&
+      !isActiveTransaction);
 
   let buttonContent = children;
   if (isTransactionPending) {

@@ -39,12 +39,12 @@ export function FleeSafetySwitch({ gameId, onFlee }: FleeSafetySwitchProps) {
   };
 
   return (
-    <div className="flex items-center space-x-4 p-3 bg-gray-900 rounded-lg border border-red-600">
+    <div className="flex items-center space-x-4 p-3 bg-gray-900 rounded-none-lg border border-red-600">
       {/* Safety Lever */}
       <div className="flex flex-col items-center space-y-1">
         <button
           onClick={handleLeverToggle}
-          className={`w-12 h-6 rounded-full border-2 transition-all duration-300 ${
+          className={`w-12 h-6 rounded-none-full border-2 transition-all duration-300 ${
             isLeverOpen
               ? "bg-red-600 border-red-400 shadow-lg shadow-red-600/50"
               : "bg-gray-700 border-gray-500 hover:border-gray-400"
@@ -52,7 +52,7 @@ export function FleeSafetySwitch({ gameId, onFlee }: FleeSafetySwitchProps) {
           title={isLeverOpen ? "Close safety lever" : "Open safety lever"}
         >
           <div
-            className={`w-4 h-4 rounded-full transition-all duration-300 ${
+            className={`w-4 h-4 rounded-none-full transition-all duration-300 ${
               isLeverOpen
                 ? "bg-red-200 translate-x-6"
                 : "bg-gray-400 translate-x-1"
@@ -68,7 +68,7 @@ export function FleeSafetySwitch({ gameId, onFlee }: FleeSafetySwitchProps) {
       <button
         onClick={isLeverOpen ? handleFleeClick : undefined}
         disabled={!isLeverOpen}
-        className={`px-4 py-2 font-mono font-bold rounded border-2 transition-all duration-200 ${
+        className={`px-4 py-2 font-mono font-bold rounded-none border-2 transition-all duration-200 ${
           isLeverOpen
             ? "bg-red-700 hover:bg-red-600 text-white border-red-500 hover:shadow-lg hover:shadow-red-600/50 cursor-pointer"
             : "bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed"
@@ -80,7 +80,7 @@ export function FleeSafetySwitch({ gameId, onFlee }: FleeSafetySwitchProps) {
       {/* Confirmation Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border-2 border-red-600 rounded-lg p-6 max-w-md mx-4">
+          <div className="bg-gray-900 border-2 border-red-600 rounded-none-lg p-6 max-w-md mx-4">
             <h2 className="text-red-400 font-mono text-xl font-bold mb-4 text-center">
               CONFIRM FLEE
             </h2>
@@ -92,7 +92,7 @@ export function FleeSafetySwitch({ gameId, onFlee }: FleeSafetySwitchProps) {
             <div className="flex space-x-4">
               <button
                 onClick={handleCancelFlee}
-                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-mono rounded border border-gray-500 transition-colors"
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-mono rounded-none border border-gray-500 transition-colors"
               >
                 CANCEL
               </button>
@@ -119,7 +119,7 @@ export function FleeSafetySwitch({ gameId, onFlee }: FleeSafetySwitchProps) {
                     toast.error("Failed to flee battle: " + errorMessage);
                   }
                 }}
-                className="flex-1 px-4 py-2 bg-red-700 hover:bg-red-600 text-white font-mono font-bold rounded border border-red-500 transition-colors"
+                className="flex-1 px-4 py-2 bg-red-700 hover:bg-red-600 text-white font-mono font-bold rounded-none border border-red-500 transition-colors"
                 loadingText="FLEEING..."
                 errorText="ERROR"
               >

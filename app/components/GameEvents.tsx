@@ -91,7 +91,7 @@ export function GameEvents({
         Last Move
       </h3>
       <div
-        className={`p-2 rounded text-sm ${
+        className={`p-2 rounded-none text-sm ${
           isMyShip
             ? "border-l-2 border-l-green-400 bg-gray-800/30"
             : "border-l-2 border-l-red-400 bg-gray-800/30"

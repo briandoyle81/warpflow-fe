@@ -1818,7 +1818,7 @@ export function GameGrid({
                       return (
                         <div
                           key={target.shipId.toString()}
-                          className={`absolute rounded px-2 py-1 text-xs font-mono text-white whitespace-nowrap ${
+                          className={`absolute rounded-none px-2 py-1 text-xs font-mono text-white whitespace-nowrap ${
                             selectedWeaponType === "special"
                               ? specialType === 3 // Flak
                                 ? "bg-orange-900 border border-orange-500" // Orange for flak
