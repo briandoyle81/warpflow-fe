@@ -8,7 +8,7 @@ import { useFreeShipClaiming } from "../hooks/useFreeShipClaiming";
 import { useOwnedShips } from "../hooks/useOwnedShips";
 import { FreeShipClaimButton } from "./FreeShipClaimButton";
 
-const TUTORIAL_STEP_STORAGE_KEY = "warpflow-tutorial-step-index";
+const TUTORIAL_STEP_STORAGE_KEY = "void-tactics-tutorial-step-index";
 
 const Info: React.FC = () => {
   const { isConnected } = useAccount();
@@ -73,7 +73,7 @@ const Info: React.FC = () => {
                 textShadow: "0 0 20px rgba(86, 214, 255, 0.5)",
               }}
             >
-              WARPFLOW
+              VOID TACTICS
             </h1>
             <p
               className="text-xl md:text-2xl mb-3 opacity-90"
@@ -152,7 +152,7 @@ const Info: React.FC = () => {
                         type="button"
                         onClick={() =>
                           window.dispatchEvent(
-                            new CustomEvent("warpflow-navigate-to-manage-navy"),
+                            new CustomEvent("void-tactics-navigate-to-manage-navy"),
                           )
                         }
                         className="px-8 py-4 border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 w-full md:w-auto rounded-none"

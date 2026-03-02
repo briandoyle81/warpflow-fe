@@ -118,7 +118,7 @@ const ManageNavy: React.FC = () => {
 
   // Load starred ships from localStorage on mount
   React.useEffect(() => {
-    const saved = localStorage.getItem("warpflow-starred-ships");
+    const saved = localStorage.getItem("void-tactics-starred-ships");
     if (saved) {
       try {
         const starredArray = JSON.parse(saved);
@@ -132,7 +132,7 @@ const ManageNavy: React.FC = () => {
   // Save starred ships to localStorage when it changes
   React.useEffect(() => {
     localStorage.setItem(
-      "warpflow-starred-ships",
+      "void-tactics-starred-ships",
       JSON.stringify(Array.from(starredShips)),
     );
   }, [starredShips]);

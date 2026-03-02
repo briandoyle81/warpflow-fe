@@ -3,7 +3,7 @@ import { Ship } from "../types/types";
 // Cache configuration
 const CACHE_EXPIRY_TIME = 7 * 24 * 60 * 60 * 1000; // 7 days
 const MAX_CACHE_SIZE = 1000; // Can cache many more ships since data is smaller
-const CACHE_KEY_PREFIX = "warpflow-ship-data-";
+const CACHE_KEY_PREFIX = "void-tactics-ship-data-";
 const MAX_CACHE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB limit (larger since data is smaller)
 
 // Debug flag

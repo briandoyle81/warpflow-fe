@@ -17,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Warpflow",
+  title: "Void Tactics",
   description: "Don't play to earn, play to win",
 };
 

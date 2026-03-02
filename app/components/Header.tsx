@@ -142,7 +142,7 @@ const Header: React.FC = () => {
                     color: "var(--color-text-primary)",
                   }}
                 >
-                  WARPFLOW
+                  VOID TACTICS
                 </h1>
                 <div
                   className="absolute -bottom-1 left-0 right-0 h-0.5"

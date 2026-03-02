@@ -3,7 +3,7 @@ import { TutorialStep, TutorialAction, TutorialContextValue } from "../types/onb
 import { TUTORIAL_STEPS } from "../data/tutorialSteps";
 import { useSimulatedGameState } from "./useSimulatedGameState";
 
-const TUTORIAL_STEP_STORAGE_KEY = "warpflow-tutorial-step-index";
+const TUTORIAL_STEP_STORAGE_KEY = "void-tactics-tutorial-step-index";
 
 export function useOnboardingTutorial() {
   // Load saved step index from localStorage, default to 0

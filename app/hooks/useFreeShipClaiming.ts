@@ -40,7 +40,7 @@ export function useFreeShipClaiming() {
   }>(() => {
     if (typeof window !== "undefined") {
       try {
-        const stored = localStorage.getItem("warpflow-eligibility-cache");
+        const stored = localStorage.getItem("void-tactics-eligibility-cache");
         return stored ? JSON.parse(stored) : {};
       } catch (error) {
         console.error(
@@ -124,7 +124,7 @@ export function useFreeShipClaiming() {
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem(
-          "warpflow-eligibility-cache",
+          "void-tactics-eligibility-cache",
           JSON.stringify(cache)
         );
       } catch (error) {

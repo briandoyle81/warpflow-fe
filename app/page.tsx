@@ -24,7 +24,7 @@ export default function Home() {
   // Load saved tab after hydration
   useEffect(() => {
     setIsHydrated(true);
-    const savedTab = localStorage.getItem("warpflow-active-tab");
+    const savedTab = localStorage.getItem("void-tactics-active-tab");
     const savedGameId = localStorage.getItem("selectedGameId");
 
     const validTabs = [
@@ -54,11 +54,11 @@ export default function Home() {
       setActiveTab("Games");
     };
 
-    window.addEventListener("warpflow-navigate-to-games", handleNavigateToGames);
-    document.addEventListener("warpflow-navigate-to-games", handleNavigateToGames);
+    window.addEventListener("void-tactics-navigate-to-games", handleNavigateToGames);
+    document.addEventListener("void-tactics-navigate-to-games", handleNavigateToGames);
     return () => {
-      window.removeEventListener("warpflow-navigate-to-games", handleNavigateToGames);
-      document.removeEventListener("warpflow-navigate-to-games", handleNavigateToGames);
+      window.removeEventListener("void-tactics-navigate-to-games", handleNavigateToGames);
+      document.removeEventListener("void-tactics-navigate-to-games", handleNavigateToGames);
     };
   }, []);
 
@@ -69,12 +69,12 @@ export default function Home() {
     };
 
     window.addEventListener(
-      "warpflow-navigate-to-lobbies",
+      "void-tactics-navigate-to-lobbies",
       handleNavigateToLobbies,
     );
     return () => {
       window.removeEventListener(
-        "warpflow-navigate-to-lobbies",
+        "void-tactics-navigate-to-lobbies",
         handleNavigateToLobbies,
       );
     };
@@ -87,12 +87,12 @@ export default function Home() {
     };
 
     window.addEventListener(
-      "warpflow-navigate-to-manage-navy",
+      "void-tactics-navigate-to-manage-navy",
       handleNavigateToManageNavy,
     );
     return () => {
       window.removeEventListener(
-        "warpflow-navigate-to-manage-navy",
+        "void-tactics-navigate-to-manage-navy",
         handleNavigateToManageNavy,
       );
     };
@@ -101,7 +101,7 @@ export default function Home() {
   // Save tab to localStorage whenever it changes (only after hydration)
   useEffect(() => {
     if (isHydrated) {
-      localStorage.setItem("warpflow-active-tab", activeTab);
+      localStorage.setItem("void-tactics-active-tab", activeTab);
     }
   }, [activeTab, isHydrated]);
 
@@ -130,7 +130,7 @@ export default function Home() {
                 color: "var(--color-cyan)",
               }}
             >
-              <div className="text-2xl mb-4 font-bold tracking-wider">WARPFLOW</div>
+              <div className="text-2xl mb-4 font-bold tracking-wider">VOID TACTICS</div>
               <div className="text-lg">Connecting to wallet...</div>
             </div>
           </div>
@@ -142,7 +142,7 @@ export default function Home() {
             color: "var(--color-text-muted)",
           }}
         >
-          <span>WARPFLOW ALPHA</span>
+          <span>VOID TACTICS ALPHA</span>
         </footer>
       </div>
     );
@@ -283,7 +283,7 @@ export default function Home() {
           color: "var(--color-text-muted)",
         }}
       >
-        <span>WARPFLOW ALPHA</span>
+        <span>VOID TACTICS ALPHA</span>
       </footer>
     </div>
   );

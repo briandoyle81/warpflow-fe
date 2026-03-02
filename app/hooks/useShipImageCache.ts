@@ -8,9 +8,9 @@ import { renderShip } from "../utils/shipRenderer";
 // Cache configuration
 const CACHE_EXPIRY_TIME = 7 * 24 * 60 * 60 * 1000; // 7 days
 const MAX_CACHE_SIZE = 50; // Reduced from 1000 to prevent quota issues
-const CACHE_KEY_PREFIX = "warpflow-ship-image-";
+const CACHE_KEY_PREFIX = "void-tactics-ship-image-";
 const MAX_CACHE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB limit
-const SHIPS_ADDRESS_STORAGE_KEY = "warpflow-ships-contract-address";
+const SHIPS_ADDRESS_STORAGE_KEY = "void-tactics-ships-contract-address";
 
 // Rate limiting configuration
 const REQUEST_DELAY = 100; // 100ms between requests
@@ -20,7 +20,7 @@ const MAX_CONCURRENT_REQUESTS = 3; // Maximum concurrent requests
 const DEBUG_CACHE = false;
 
 // Local storage key for rendering mode
-const USE_LOCAL_RENDERING_KEY = "warpflow-use-local-rendering";
+const USE_LOCAL_RENDERING_KEY = "void-tactics-use-local-rendering";
 
 // Get rendering mode from localStorage
 export function getUseLocalRendering(): boolean {

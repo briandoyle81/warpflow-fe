@@ -553,8 +553,8 @@ const Lobbies: React.FC = () => {
 
   // Navigate to Games tab (used by Go to Games button)
   const navigateToGamesTab = useCallback(() => {
-    localStorage.setItem("warpflow-active-tab", "Games");
-    const event = new CustomEvent("warpflow-navigate-to-games", {
+    localStorage.setItem("void-tactics-active-tab", "Games");
+    const event = new CustomEvent("void-tactics-navigate-to-games", {
       bubbles: true,
     });
     window.dispatchEvent(event);

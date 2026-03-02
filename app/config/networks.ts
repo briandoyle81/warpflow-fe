@@ -6,7 +6,7 @@ export type SupportedChain = (typeof SUPPORTED_CHAINS)[number];
 
 export const DEFAULT_CHAIN_ID: number = flowTestnet.id;
 
-const STORAGE_KEY = "warpflow.selectedChainId";
+const STORAGE_KEY = "void-tactics.selectedChainId";
 
 export function isSupportedChainId(chainId: number | undefined | null): boolean {
   if (chainId == null) return false;

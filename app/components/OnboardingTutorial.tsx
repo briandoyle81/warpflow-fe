@@ -43,9 +43,9 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingTutorialPro
       const completionTimer = setTimeout(() => {
         // Store completion in localStorage
         if (typeof window !== "undefined") {
-          localStorage.setItem("warpflow-tutorial-completed", "true");
+          localStorage.setItem("void-tactics-tutorial-completed", "true");
           // Clear the step index since tutorial is complete
-          localStorage.removeItem("warpflow-tutorial-step-index");
+          localStorage.removeItem("void-tactics-tutorial-step-index");
         }
         onComplete?.();
       }, 5000); // Wait 5 seconds on completion screen
@@ -58,7 +58,7 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingTutorialPro
     if (window.confirm("Are you sure you want to skip the tutorial? You can always access it again from the Info tab.")) {
       // Clear saved step index when skipping
       if (typeof window !== "undefined") {
-        localStorage.removeItem("warpflow-tutorial-step-index");
+        localStorage.removeItem("void-tactics-tutorial-step-index");
       }
       onSkip?.();
     }

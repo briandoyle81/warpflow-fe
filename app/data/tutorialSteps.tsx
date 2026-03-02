@@ -7,11 +7,11 @@ import { Position } from "../types/types";
 export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: "welcome",
-    title: "Welcome to Warpflow",
+    title: "Welcome to Void Tactics",
     description: "Learn the basics of strategic spaceship combat",
     instructions: (
       <div className="space-y-3">
-        <p className="text-lg font-bold text-cyan-300">Welcome to Warpflow!</p>
+        <p className="text-lg font-bold text-cyan-300">Welcome to Void Tactics!</p>
         <p>This tutorial will teach you the core mechanics of the game.</p>
         <p className="text-yellow-300">Look at the game map below:</p>
         <ul className="list-disc list-inside space-y-1 text-sm">
