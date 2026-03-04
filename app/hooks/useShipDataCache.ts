@@ -31,11 +31,16 @@ function calculateShipDataHash(ship: Ship): string {
   // Hash the relevant ship properties that affect rendering
   const data = {
     equipment: ship.equipment,
-    traits: ship.traits,
+    traits: {
+      ...ship.traits,
+      // Convert BigInt to string so JSON.stringify works under SES
+      serialNumber: ship.traits.serialNumber.toString(),
+    },
     shipData: {
       shiny: ship.shipData.shiny,
       constructed: ship.shipData.constructed,
-      timestampDestroyed: ship.shipData.timestampDestroyed,
+      // Convert BigInt to string for JSON serialization
+      timestampDestroyed: ship.shipData.timestampDestroyed.toString(),
     },
   };
   // Simple hash using base64 encoding

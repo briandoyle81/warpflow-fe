@@ -1,6 +1,26 @@
 import type { ReactNode } from "react";
 import { Address } from "viem";
-import { Position, ShipPosition, Attributes, GameDataView, ActionType } from "./types";
+import { Position, Attributes, ActionType } from "./types";
+
+/**
+ * IMPORTANT:
+ *
+ * These types are for the SIMULATED TUTORIAL ONLY.
+ *
+ * They intentionally avoid using bigint so that tutorial state and
+ * steps remain JSON-serializable and safe under React dev tools,
+ * analytics SDKs, and SES. Do NOT reuse these types for on-chain
+ * game data or lobby state; use the bigint-based types in
+ * `types.ts` for that.
+ *
+ * Boundary rule:
+ * - Inside the tutorial (OnboardingTutorial + its children), use
+ *   these string/number IDs.
+ * - When you need to call real contract or game code that expects
+ *   bigint IDs, convert at the boundary with BigInt(idString).
+ */
+
+export type TutorialShipId = string;
 
 export interface TutorialStep {
   id: string;
@@ -8,60 +28,89 @@ export interface TutorialStep {
   description: string;
   instructions: string | ReactNode;
   allowedActions: {
-    selectShip?: bigint[]; // Specific ship IDs that can be selected
-    moveShip?: { shipId: bigint; allowedPositions: Position[] };
-    shoot?: { shipId: bigint; allowedTargets: bigint[] };
-    useSpecial?: { shipId: bigint; allowedTargets: bigint[]; specialType?: number };
-    assist?: { shipId: bigint; allowedTargets: bigint[] };
+    selectShip?: TutorialShipId[]; // Specific ship IDs that can be selected
+    moveShip?: { shipId: TutorialShipId; allowedPositions: Position[] };
+    shoot?: { shipId: TutorialShipId; allowedTargets: TutorialShipId[] };
+    useSpecial?: {
+      shipId: TutorialShipId;
+      allowedTargets: TutorialShipId[];
+      specialType?: number;
+    };
+    assist?: { shipId: TutorialShipId; allowedTargets: TutorialShipId[] };
     claimPoints?: boolean;
   };
   highlightElements?: {
-    ships?: bigint[];
+    ships?: TutorialShipId[];
     mapPositions?: Position[];
     uiElements?: string[];
   };
-      requiresTransaction?: boolean;
-      showTransactionAfter?: boolean; // Show transaction dialog after executing action (instead of before)
-      onStepComplete?: (actionData: TutorialAction | null) => boolean; // Return true if step should progress
-      nextStepCondition?: (gameState: SimulatedGameState) => boolean;
-      autoAdvance?: boolean; // Automatically advance after action
+  requiresTransaction?: boolean;
+  showTransactionAfter?: boolean; // Show transaction dialog after executing action (instead of before)
+  onStepComplete?: (actionData: TutorialAction | null) => boolean; // Return true if step should progress
+  nextStepCondition?: (gameState: SimulatedGameState) => boolean;
+  autoAdvance?: boolean; // Automatically advance after action
+}
+
+export interface TutorialShipPosition {
+  shipId: TutorialShipId;
+  position: Position;
+  isCreator: boolean;
+  isPreview?: boolean;
+}
+
+/** Last move for tutorial UI (ghost + pulse), same shape as in-game last move but with string IDs. */
+export interface TutorialLastMove {
+  shipId: TutorialShipId;
+  oldRow: number;
+  oldCol: number;
+  newRow: number;
+  newCol: number;
+  actionType: ActionType;
+  targetShipId?: TutorialShipId;
 }
 
 export interface SimulatedGameState {
-  gameId: bigint;
+  gameId: string;
   metadata: {
-    gameId: bigint;
+    gameId: string;
     creator: Address;
     joiner: Address;
-    creatorFleetId: bigint;
-    joinerFleetId: bigint;
+    creatorFleetId: number;
+    joinerFleetId: number;
     creatorGoesFirst: boolean;
-    startedAt: bigint;
+    startedAt: number; // unix seconds
     winner: Address;
   };
   turnState: {
     currentTurn: Address;
-    turnTime: bigint;
-    turnStartTime: bigint;
-    currentRound: bigint;
+    turnTime: number; // seconds
+    turnStartTime: number; // unix seconds
+    currentRound: number;
   };
   gridDimensions: { gridWidth: number; gridHeight: number };
-  maxScore: bigint;
-  creatorScore: bigint;
-  joinerScore: bigint;
-  shipIds: bigint[];
+  maxScore: number;
+  creatorScore: number;
+  joinerScore: number;
+  shipIds: TutorialShipId[];
   shipAttributes: Attributes[];
-  shipPositions: ShipPosition[];
-  creatorActiveShipIds: bigint[];
-  joinerActiveShipIds: bigint[];
-  creatorMovedShipIds: bigint[];
-  joinerMovedShipIds: bigint[];
+  shipPositions: TutorialShipPosition[];
+  creatorActiveShipIds: TutorialShipId[];
+  joinerActiveShipIds: TutorialShipId[];
+  creatorMovedShipIds: TutorialShipId[];
+  joinerMovedShipIds: TutorialShipId[];
+  lastMove?: TutorialLastMove;
 }
 
 export interface TutorialAction {
-  type: "selectShip" | "moveShip" | "shoot" | "useSpecial" | "assist" | "claimPoints";
-  shipId?: bigint;
-  targetShipId?: bigint;
+  type:
+    | "selectShip"
+    | "moveShip"
+    | "shoot"
+    | "useSpecial"
+    | "assist"
+    | "claimPoints";
+  shipId?: TutorialShipId;
+  targetShipId?: TutorialShipId;
   position?: Position;
   actionType?: ActionType;
   specialType?: number;
@@ -74,8 +123,12 @@ export interface TutorialContextValue {
   isTransactionDialogOpen: boolean;
   pendingAction: TutorialAction | null;
   isStepComplete: boolean;
-  updateGameState: (updater: (state: SimulatedGameState) => SimulatedGameState) => void;
-  validateAction: (action: TutorialAction) => { valid: boolean; message?: string };
+  updateGameState: (
+    updater: (state: SimulatedGameState) => SimulatedGameState,
+  ) => void;
+  validateAction: (
+    action: TutorialAction,
+  ) => { valid: boolean; message?: string };
   executeAction: (action: TutorialAction) => void;
   nextStep: () => void;
   previousStep: () => void;
@@ -85,3 +138,4 @@ export interface TutorialContextValue {
   rejectTransaction: () => void;
   resetTutorial: () => void;
 }
+

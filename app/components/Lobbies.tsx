@@ -1107,11 +1107,42 @@ const Lobbies: React.FC = () => {
       ) {
         try {
           const parsed = JSON.parse(cached);
-          if (parsed?.positions && parsed?.ships) {
+          if (
+            parsed?.positions &&
+            Array.isArray(parsed.positions) &&
+            parsed?.ships &&
+            Array.isArray(parsed.ships)
+          ) {
             setOpponentGridPositions(parsed.positions);
-            setOpponentGridShips(parsed.ships);
+            // Convert cached ship fields back from string to BigInt
+            const shipsFromCache: Ship[] = (parsed.ships as unknown[]).map(
+              (raw) => {
+                const s = raw as {
+                  id: string;
+                  traits: { serialNumber: string } & Ship["traits"];
+                  shipData: { timestampDestroyed: string } & Ship["shipData"];
+                };
+                return {
+                  ...(s as unknown as Ship),
+                  id: BigInt(s.id),
+                  traits: {
+                    ...s.traits,
+                    serialNumber: BigInt(s.traits.serialNumber),
+                  },
+                  shipData: {
+                    ...s.shipData,
+                    timestampDestroyed: BigInt(
+                      s.shipData.timestampDestroyed,
+                    ),
+                  },
+                };
+              },
+            );
+            setOpponentGridShips(shipsFromCache);
           }
-        } catch {}
+        } catch {
+          // Ignore cache errors and fall back to fresh data
+        }
       }
     }
   }, [
@@ -1136,14 +1167,29 @@ const Lobbies: React.FC = () => {
       typeof window !== "undefined"
     ) {
       try {
+        const shipsForCache = (opponentGridShipsData as Ship[]).map((ship) => ({
+          ...ship,
+          id: ship.id.toString(),
+          traits: {
+            ...ship.traits,
+            serialNumber: ship.traits.serialNumber.toString(),
+          },
+          shipData: {
+            ...ship.shipData,
+            timestampDestroyed: ship.shipData.timestampDestroyed.toString(),
+          },
+        }));
+
         window.localStorage.setItem(
           opponentCacheKey,
           JSON.stringify({
             positions: opponentGridPositionsFromHook,
-            ships: opponentGridShipsData,
+            ships: shipsForCache,
           }),
         );
-      } catch {}
+      } catch {
+        // Ignore cache write errors in UI flow
+      }
     }
   }, [opponentCacheKey, opponentGridPositionsFromHook, opponentGridShipsData]);
 

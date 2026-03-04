@@ -408,28 +408,26 @@ export function GameGrid({
                       }
                     }
 
-                    // If clicking on the same ship: on own turn with owned unmoved ship, toggle stay-in-place ↔ move+threat; otherwise deselect
+                    // If clicking on the same ship: cycle selection states for any ship
+                    // 1st click: movement + threat (no previewPosition)
+                    // 2nd click: guns only from current position (previewPosition at this cell)
+                    // 3rd click: deselect (clear selection and preview)
+                    // 4th click: back to movement + threat, and so on.
                     if (selectedShipId === cell.shipId) {
+                      // If already showing gun-only preview from this cell, third click deselects.
                       if (
-                        isCurrentPlayerTurn &&
-                        isShipOwnedByCurrentPlayer(cell.shipId) &&
-                        !movedShipIdsSet.has(cell.shipId)
+                        previewPosition &&
+                        previewPosition.row === rowIndex &&
+                        previewPosition.col === colIndex
                       ) {
-                        // Toggle: if already showing gun range only (preview at this cell), clear to show movement + threat; else set stay in place
-                        if (
-                          previewPosition &&
-                          previewPosition.row === rowIndex &&
-                          previewPosition.col === colIndex
-                        ) {
-                          setPreviewPosition(null);
-                          setTargetShipId(null);
-                        } else {
-                          setPreviewPosition({ row: rowIndex, col: colIndex });
-                          setTargetShipId(null);
-                        }
-                      } else {
                         setSelectedShipId(null);
                         setPreviewPosition(null);
+                        setTargetShipId(null);
+                      } else {
+                        // Second (or subsequent) click: set guns-only preview from this cell.
+                        // Movement tiles will hide because previewPosition is set; threat tiles
+                        // are computed from this origin by the range helpers.
+                        setPreviewPosition({ row: rowIndex, col: colIndex });
                         setTargetShipId(null);
                       }
                     } else {

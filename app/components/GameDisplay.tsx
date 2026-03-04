@@ -31,6 +31,7 @@ import {
 import { FleeSafetySwitch } from "./FleeSafetySwitch";
 import { GameEvents } from "./GameEvents";
 import { GameGrid } from "./GameGrid";
+import { computeMovementRange } from "../utils/gameGridRanges";
 import { buildMapGridsFromContractMap } from "../utils/mapGridUtils";
 
 interface GameDisplayProps {
@@ -715,69 +716,29 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     shipMap,
   ]);
 
-  // Calculate movement range for selected ship (any ship, for viewing)
-  const movementRange = React.useMemo(() => {
-    if (!selectedShipId || !gameShips) return [];
-
-    const ship = shipMap.get(selectedShipId);
-    if (!ship) return [];
-
-    const attributes = getShipAttributes(selectedShipId);
-    // Disabled ships (0 HP) cannot move; only retreat is available
-    if (attributes && attributes.hullPoints === 0) return [];
-
-    const movementRange = attributes?.movement || 1;
-
-    const currentPosition = game.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId,
-    );
-
-    if (!currentPosition) return [];
-
-    // If ship has a preview position (including "stay in place"), don't show movement range so only weapon range is shown
-    if (previewPosition) {
-      return [];
-    }
-
-    const validMoves: { row: number; col: number }[] = [];
-    const startRow = currentPosition.position.row;
-    const startCol = currentPosition.position.col;
-
-    // Check all positions within movement range
-    for (
-      let row = Math.max(0, startRow - movementRange);
-      row <= Math.min(GRID_HEIGHT - 1, startRow + movementRange);
-      row++
-    ) {
-      for (
-        let col = Math.max(0, startCol - movementRange);
-        col <= Math.min(GRID_WIDTH - 1, startCol + movementRange);
-        col++
-      ) {
-        const distance = Math.abs(row - startRow) + Math.abs(col - startCol);
-        if (distance <= movementRange && distance > 0) {
-          // Check if position is not occupied by another ship
-          // Blocked tiles only block line of sight, not movement
-          const isOccupied = game.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col,
-          );
-
-          if (!isOccupied) {
-            validMoves.push({ row, col });
-          }
-        }
-      }
-    }
-
-    return validMoves;
-  }, [
-    selectedShipId,
-    gameShips,
-    shipMap,
-    game.shipPositions,
-    getShipAttributes,
-    previewPosition,
-  ]);
+  // Calculate movement range for selected ship (any ship, for viewing).
+  // Logic is shared with the tutorial via computeMovementRange.
+  const movementRange = React.useMemo(
+    () =>
+      computeMovementRange({
+        gridWidth: GRID_WIDTH,
+        gridHeight: GRID_HEIGHT,
+        selectedShipId,
+        hasShips: !!gameShips,
+        shipMap,
+        getShipAttributes,
+        shipPositions: game.shipPositions,
+        previewPosition,
+      }),
+    [
+      selectedShipId,
+      gameShips,
+      shipMap,
+      game.shipPositions,
+      getShipAttributes,
+      previewPosition,
+    ],
+  );
 
   // Calculate damage for a target ship (shooterShipIdOverride used for last-move display when no ship selected)
   const calculateDamage = React.useCallback(

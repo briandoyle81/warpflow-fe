@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import defaultMap from "../../public/default_map.json";
-import { TutorialContextValue } from "../types/onboarding";
+import { TutorialContextValue, TutorialShipId } from "../types/onboarding";
 import {
   ALL_TUTORIAL_SHIPS,
   TUTORIAL_PLAYER_ADDRESS,
@@ -14,11 +14,16 @@ import {
 import { toast } from "react-hot-toast";
 import { ActionType, ShipPosition, Attributes, Ship } from "../types/types";
 import { GameGrid } from "./GameGrid";
+import { TutorialStepOverlay } from "./TutorialStepOverlay";
 import { useSpecialRange } from "../hooks/useSpecialRange";
 import {
   useSpecialData,
   SpecialData,
 } from "../hooks/useShipAttributesContract";
+import {
+  computeMovementRange,
+  computeShootingRange,
+} from "../utils/gameGridRanges";
 
 interface SimulatedGameDisplayProps {
   tutorialContext: TutorialContextValue;
@@ -38,6 +43,9 @@ export function SimulatedGameDisplay({
     executeAction,
   } = tutorialContext;
 
+  // For display we follow the main game and keep the selected ship ID as bigint
+  // (so GameGrid behavior and animations are identical). When we need to talk
+  // to tutorial state, we convert to/from TutorialShipId (string) at the edges.
   const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
   const [previewPosition, setPreviewPosition] = useState<{
     row: number;
@@ -69,7 +77,8 @@ export function SimulatedGameDisplay({
     col: number;
   } | null>(null);
 
-  // Map of shipId to ship object
+  // Map of on-chain ship ID (bigint) to ship object. Tutorial IDs are strings;
+  // when we need a ship we convert TutorialShipId -> bigint for this map only.
   const shipMap = useMemo(() => {
     return new Map<bigint, Ship>(
       ALL_TUTORIAL_SHIPS.map((ship) => [ship.id, ship]),
@@ -87,10 +96,12 @@ export function SimulatedGameDisplay({
     [],
   );
 
-  // Get ship attributes by ship ID from game state
+  // Get ship attributes by ship ID from game state (tutorial IDs are strings)
   const getShipAttributes = useCallback(
-    (shipId: bigint): Attributes | null => {
-      const shipIndex = gameState.shipIds?.findIndex((id) => id === shipId);
+    (shipId: TutorialShipId | bigint): Attributes | null => {
+      const idString =
+        typeof shipId === "bigint" ? shipId.toString() : shipId;
+      const shipIndex = gameState.shipIds?.findIndex((id) => id === idString);
       if (
         shipIndex === -1 ||
         !gameState.shipAttributes ||
@@ -111,16 +122,16 @@ export function SimulatedGameDisplay({
 
   // Check if a ship belongs to the tutorial player
   const isShipOwnedByCurrentPlayer = useCallback(
-    (shipId: bigint): boolean => {
-      const ship = shipMap.get(shipId);
+    (shipId: TutorialShipId): boolean => {
+      const ship = shipMap.get(BigInt(shipId));
       return ship ? ship.owner === TUTORIAL_PLAYER_ADDRESS : false;
     },
     [shipMap],
   );
 
-  // Build a set of shipIds that have already moved this round
+  // Build a set of shipIds that have already moved this round (string IDs)
   const movedShipIdsSet = useMemo(() => {
-    const set = new Set<bigint>();
+    const set = new Set<TutorialShipId>();
     if (gameState.creatorMovedShipIds) {
       gameState.creatorMovedShipIds.forEach((id) => set.add(id));
     }
@@ -189,21 +200,30 @@ export function SimulatedGameDisplay({
       .fill(null)
       .map(() => Array(GRID_WIDTH).fill(null));
 
-    // Place ships on the grid
+    // Place ships on the grid. Convert tutorial string IDs into the
+    // bigint-based ShipPosition shape expected by GameGrid, but keep
+    // the original tutorial IDs in gameState.
     gameState.shipPositions.forEach((shipPosition) => {
       const { position } = shipPosition;
+      const shipIdBigInt = BigInt(shipPosition.shipId);
       if (
         position.row >= 0 &&
         position.row < GRID_HEIGHT &&
         position.col >= 0 &&
         position.col < GRID_WIDTH
       ) {
-        newGrid[position.row][position.col] = shipPosition;
+        const basePosition: ShipPosition = {
+          shipId: shipIdBigInt,
+          position,
+          isCreator: shipPosition.isCreator,
+          isPreview: shipPosition.isPreview,
+        };
+        newGrid[position.row][position.col] = basePosition;
 
         // If this ship is selected and has a preview position, also place a preview copy
         if (selectedShipId === shipPosition.shipId && previewPosition) {
           newGrid[previewPosition.row][previewPosition.col] = {
-            ...shipPosition,
+            ...basePosition,
             position: { row: previewPosition.row, col: previewPosition.col },
             isPreview: true,
           };
@@ -211,99 +231,127 @@ export function SimulatedGameDisplay({
       }
     });
 
-    return newGrid;
-  }, [gameState.shipPositions, selectedShipId, previewPosition]);
+    // Last move UI: show ghost at old position when no ship is selected (same as in-game)
+    const canShowLastMove =
+      selectedShipId === null &&
+      gameState.lastMove &&
+      gameState.lastMove.shipId !== undefined;
+    if (canShowLastMove && gameState.lastMove) {
+      const lm = gameState.lastMove;
+      const oldPos = { row: lm.oldRow, col: lm.oldCol };
+      const newPos = { row: lm.newRow, col: lm.newCol };
+      if (
+        (oldPos.row !== newPos.row || oldPos.col !== newPos.col) &&
+        oldPos.row >= 0 &&
+        oldPos.row < GRID_HEIGHT &&
+        oldPos.col >= 0 &&
+        oldPos.col < GRID_WIDTH &&
+        !newGrid[oldPos.row][oldPos.col]
+      ) {
+        const lastMoveShipPosition = gameState.shipPositions.find(
+          (pos) => pos.shipId === lm.shipId,
+        );
+        if (lastMoveShipPosition) {
+          newGrid[oldPos.row][oldPos.col] = {
+            shipId: BigInt(lm.shipId),
+            position: oldPos,
+            isCreator: lastMoveShipPosition.isCreator,
+            isPreview: true,
+          };
+        }
+      }
+    }
 
-  // Calculate movement range for selected ship
-  // Show full range for viewing, but filter by tutorial constraints if step requires specific moves
+    return newGrid;
+  }, [gameState.shipPositions, gameState.lastMove, selectedShipId, previewPosition]);
+
+  // Calculate movement range for selected ship.
+  // Mirrors the main GameDisplay logic, then applies tutorial step constraints.
   const movementRange = useMemo(() => {
     if (!selectedShipId) return [];
 
+    const ship = shipMap.get(selectedShipId);
+    if (!ship) return [];
+
     const attributes = getShipAttributes(selectedShipId);
-    const movementRange = attributes?.movement || 1;
+    // Disabled ships (0 HP) cannot move; only retreat is available
+    if (attributes && attributes.hullPoints === 0) return [];
+
+    const movementRangeValue = attributes?.movement || 1;
 
     const currentPosition = gameState.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId,
+      (pos) => pos.shipId === selectedShipId.toString(),
     );
 
     if (!currentPosition) return [];
 
-    // If ship is already moved to a different preview position, don't show movement range
-    if (
-      previewPosition &&
-      (previewPosition.row !== currentPosition.position.row ||
-        previewPosition.col !== currentPosition.position.col)
-    ) {
+    // If ship has a preview position (including "stay in place"), don't show movement
+    // range so only weapon range is shown (same behavior as main game UI).
+    if (previewPosition) {
       return [];
     }
 
-    // Check if this step has specific move constraints
-    const allowedMoveAction = currentStep?.allowedActions.moveShip;
-    const hasMoveConstraints =
-      allowedMoveAction && allowedMoveAction.shipId === selectedShipId;
-
-    const allowedPositionsSet = hasMoveConstraints
-      ? new Set(
-          (allowedMoveAction?.allowedPositions || []).map(
-            (pos) => `${pos.row}-${pos.col}`,
-          ),
-        )
-      : null;
-
-    const validMoves: { row: number; col: number }[] = [];
+    const baseMoves: { row: number; col: number }[] = [];
     const startRow = currentPosition.position.row;
     const startCol = currentPosition.position.col;
 
     // Check all positions within movement range
     for (
-      let row = Math.max(0, startRow - movementRange);
-      row <= Math.min(GRID_HEIGHT - 1, startRow + movementRange);
+      let row = Math.max(0, startRow - movementRangeValue);
+      row <= Math.min(GRID_HEIGHT - 1, startRow + movementRangeValue);
       row++
     ) {
       for (
-        let col = Math.max(0, startCol - movementRange);
-        col <= Math.min(GRID_WIDTH - 1, startCol + movementRange);
+        let col = Math.max(0, startCol - movementRangeValue);
+        col <= Math.min(GRID_WIDTH - 1, startCol + movementRangeValue);
         col++
       ) {
         const distance = Math.abs(row - startRow) + Math.abs(col - startCol);
-        if (distance <= movementRange && distance > 0) {
+        if (distance <= movementRangeValue && distance > 0) {
           const isOccupied = gameState.shipPositions.some(
             (pos) => pos.position.row === row && pos.position.col === col,
           );
 
           if (!isOccupied) {
-            // For step 5 (move-ship), show all valid moves for viewing
-            // But only allow moving to the specific allowed position
-            // For other steps with constraints, only show allowed positions
-            if (!hasMoveConstraints) {
-              validMoves.push({ row, col });
-            } else if (currentStep?.id === "move-ship") {
-              // Step 5: Show all valid moves
-              validMoves.push({ row, col });
-            } else if (allowedPositionsSet?.has(`${row}-${col}`)) {
-              // Other steps: Only show allowed positions
-              validMoves.push({ row, col });
-            }
+            baseMoves.push({ row, col });
           }
         }
       }
     }
 
-    return validMoves;
+    // For display purposes, always show the full movement range (like the main game).
+    // Tutorial constraints are enforced separately via validateAction/executeAction.
+    return baseMoves;
   }, [
     selectedShipId,
-    currentStep,
     gameState.shipPositions,
+    shipMap,
     getShipAttributes,
     previewPosition,
   ]);
 
-  // Get the highlighted/allowed position for step 5
+  // Highlighted cell: last move new position (when showing last move) or step 5 allowed move target
   const highlightedMovePosition = useMemo(() => {
+    // When showing last move (no ship selected), highlight the new position (same as in-game)
+    if (
+      selectedShipId === null &&
+      gameState.lastMove &&
+      gameState.lastMove.actionType !== ActionType.Retreat &&
+      gameState.lastMove.newRow >= 0 &&
+      gameState.lastMove.newCol >= 0
+    ) {
+      return {
+        row: gameState.lastMove.newRow,
+        col: gameState.lastMove.newCol,
+      };
+    }
+    // Step 5: highlight the allowed move target
     if (
       currentStep?.id === "move-ship" &&
       currentStep?.allowedActions.moveShip &&
-      selectedShipId === currentStep.allowedActions.moveShip.shipId
+      selectedShipId &&
+      selectedShipId.toString() ===
+        currentStep.allowedActions.moveShip.shipId
     ) {
       const allowedPositions =
         currentStep.allowedActions.moveShip.allowedPositions;
@@ -312,7 +360,34 @@ export function SimulatedGameDisplay({
       }
     }
     return null;
-  }, [currentStep, selectedShipId]);
+  }, [currentStep, selectedShipId, gameState.lastMove]);
+
+  // Last move UI props for GameGrid (same as in-game: ghost at old position, pulse at new)
+  const lastMoveProps = useMemo(() => {
+    if (selectedShipId !== null || !gameState.lastMove) {
+      return {
+        lastMoveShipId: null as bigint | null,
+        lastMoveOldPosition: null as { row: number; col: number } | null,
+        lastMoveActionType: null as ActionType | null,
+        lastMoveTargetShipId: null as bigint | null,
+        lastMoveIsCurrentPlayer: undefined as boolean | undefined,
+      };
+    }
+    const lm = gameState.lastMove;
+    const ship = shipMap.get(BigInt(lm.shipId));
+    return {
+      lastMoveShipId: BigInt(lm.shipId),
+      lastMoveOldPosition: { row: lm.oldRow, col: lm.oldCol },
+      lastMoveActionType: lm.actionType,
+      lastMoveTargetShipId:
+        lm.actionType === ActionType.Special && lm.targetShipId
+          ? BigInt(lm.targetShipId)
+          : null,
+      lastMoveIsCurrentPlayer: ship
+        ? ship.owner === TUTORIAL_PLAYER_ADDRESS
+        : undefined,
+    };
+  }, [gameState.lastMove, selectedShipId, shipMap]);
 
   // Calculate damage for a target ship
   const calculateDamage = useCallback(
@@ -382,7 +457,7 @@ export function SimulatedGameDisplay({
     if (!selectedShipId) return [];
 
     // Get allowed targets from tutorial step (if step has specific constraints)
-    let allowedTargets: bigint[] | null = null;
+    let allowedTargets: TutorialShipId[] | null = null;
     if (
       currentStep?.allowedActions.shoot &&
       currentStep.allowedActions.shoot.shipId === selectedShipId
@@ -409,7 +484,7 @@ export function SimulatedGameDisplay({
         : attributes?.range || 1;
 
     const currentPosition = gameState.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId,
+      (pos) => pos.shipId === selectedShipId.toString(),
     );
 
     if (!currentPosition) return [];
@@ -422,7 +497,7 @@ export function SimulatedGameDisplay({
       : currentPosition.position.col;
 
     const targets: {
-      shipId: bigint;
+      shipId: TutorialShipId;
       position: { row: number; col: number };
     }[] = [];
 
@@ -433,7 +508,7 @@ export function SimulatedGameDisplay({
         return;
       }
 
-      const ship = shipMap.get(shipPosition.shipId);
+      const ship = shipMap.get(BigInt(shipPosition.shipId));
       if (!ship) return;
 
       // Filter targets based on weapon type
@@ -494,7 +569,7 @@ export function SimulatedGameDisplay({
     if (!selectedShipId) return [];
 
     const currentPosition = gameState.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId,
+      (pos) => pos.shipId === selectedShipId.toString(),
     );
 
     if (!currentPosition) return [];
@@ -507,12 +582,12 @@ export function SimulatedGameDisplay({
       : currentPosition.position.col;
 
     const assistableShips: {
-      shipId: bigint;
+      shipId: TutorialShipId;
       position: { row: number; col: number };
     }[] = [];
 
     gameState.shipPositions.forEach((shipPosition) => {
-      const ship = shipMap.get(shipPosition.shipId);
+      const ship = shipMap.get(BigInt(shipPosition.shipId));
       if (!ship) return;
 
       if (ship.owner !== TUTORIAL_PLAYER_ADDRESS) return;
@@ -547,7 +622,7 @@ export function SimulatedGameDisplay({
     if (!selectedShipId) return [];
 
     const currentPosition = gameState.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId,
+      (pos) => pos.shipId === selectedShipId.toString(),
     );
 
     if (!currentPosition) return [];
@@ -556,12 +631,12 @@ export function SimulatedGameDisplay({
     const startCol = currentPosition.position.col;
 
     const assistableShips: {
-      shipId: bigint;
+      shipId: TutorialShipId;
       position: { row: number; col: number };
     }[] = [];
 
     gameState.shipPositions.forEach((shipPosition) => {
-      const ship = shipMap.get(shipPosition.shipId);
+      const ship = shipMap.get(BigInt(shipPosition.shipId));
       if (!ship) return;
 
       if (ship.owner !== TUTORIAL_PLAYER_ADDRESS) return;
@@ -591,6 +666,9 @@ export function SimulatedGameDisplay({
     if (!selectedShipId) return [];
 
     const attributes = getShipAttributes(selectedShipId);
+    // Disabled ships (0 HP) have no move or threat range; only retreat/assist are relevant
+    if (attributes && attributes.hullPoints === 0) return [];
+
     const movementRange = attributes?.movement || 1;
     const shootingRange =
       selectedWeaponType === "special" && specialRange !== undefined
@@ -598,19 +676,15 @@ export function SimulatedGameDisplay({
         : attributes?.range || 1;
 
     const currentPosition = gameState.shipPositions.find(
-      (pos) => pos.shipId === selectedShipId,
+      (pos) => pos.shipId === selectedShipId.toString(),
     );
 
     if (!currentPosition) return [];
-
     const validShootingPositions: { row: number; col: number }[] = [];
 
-    if (
-      previewPosition &&
-      (previewPosition.row !== currentPosition.position.row ||
-        previewPosition.col !== currentPosition.position.col)
-    ) {
-      // If ship is moved to a different preview position, only show shooting range from that position
+    if (previewPosition) {
+      // When a move is entered (including \"stay in place\"), show gun range
+      // from that single origin only (same as main game behavior).
       const startRow = previewPosition.row;
       const startCol = previewPosition.col;
 
@@ -890,15 +964,20 @@ export function SimulatedGameDisplay({
         return;
       }
 
+      const idString = shipId.toString() as TutorialShipId;
+
       // Validate ship selection
-      const validation = validateAction({ type: "selectShip", shipId });
+      const validation = validateAction({ type: "selectShip", shipId: idString });
       if (!validation.valid) {
         toast.error(validation.message || "Action not allowed");
         return;
       }
 
+      // When changing selection to a different ship, clear any existing preview so
+      // the new selection starts in the movement + threat state (same as main game).
       setSelectedShipId(shipId);
-      executeAction({ type: "selectShip", shipId });
+      setPreviewPosition(null);
+      executeAction({ type: "selectShip", shipId: idString });
       setTargetShipId(null);
       setSelectedWeaponType("weapon");
     },
@@ -916,7 +995,8 @@ export function SimulatedGameDisplay({
       if (
         selectedShipId &&
         currentStep?.allowedActions.moveShip &&
-        selectedShipId === currentStep.allowedActions.moveShip.shipId
+        selectedShipId.toString() ===
+          currentStep.allowedActions.moveShip.shipId
       ) {
         const allowedPositions =
           currentStep.allowedActions.moveShip.allowedPositions;
@@ -931,7 +1011,7 @@ export function SimulatedGameDisplay({
 
         const moveValidation = validateAction({
           type: "moveShip",
-          shipId: selectedShipId,
+          shipId: selectedShipId.toString() as TutorialShipId,
           position,
         });
         if (!moveValidation.valid) {
@@ -939,26 +1019,14 @@ export function SimulatedGameDisplay({
           return;
         }
 
-        // If step shows transaction after, execute move directly without preview
-        if (currentStep?.showTransactionAfter) {
-          executeAction({
-            type: "moveShip",
-            shipId: selectedShipId,
-            position,
-            actionType: ActionType.Pass,
-          });
-          // Clear preview since we're executing the move directly
-          setPreviewPosition(null);
-        } else {
-          // Otherwise, show preview first
-          setPreviewPosition(position);
-          executeAction({
-            type: "moveShip",
-            shipId: selectedShipId,
-            position,
-            actionType: ActionType.Pass,
-          });
-        }
+        // Always show the preview (same as main game), then execute the action.
+        setPreviewPosition(position);
+        executeAction({
+          type: "moveShip",
+          shipId: selectedShipId.toString() as TutorialShipId,
+          position,
+          actionType: ActionType.Pass,
+        });
       } else {
         setPreviewPosition(position);
       }
@@ -978,22 +1046,25 @@ export function SimulatedGameDisplay({
         return;
       }
 
+      const idString = shipId.toString() as TutorialShipId;
+
       // Check for shoot action
       if (
         currentStep?.allowedActions.shoot &&
-        selectedShipId === currentStep.allowedActions.shoot.shipId &&
-        currentStep.allowedActions.shoot.allowedTargets.includes(shipId)
+        selectedShipId.toString() ===
+          currentStep.allowedActions.shoot.shipId &&
+        currentStep.allowedActions.shoot.allowedTargets.includes(idString)
       ) {
         const shootValidation = validateAction({
           type: "shoot",
-          shipId: selectedShipId,
-          targetShipId: shipId,
+          shipId: selectedShipId.toString() as TutorialShipId,
+          targetShipId: idString,
         });
         if (shootValidation.valid) {
           executeAction({
             type: "shoot",
-            shipId: selectedShipId,
-            targetShipId: shipId,
+            shipId: selectedShipId.toString() as TutorialShipId,
+            targetShipId: idString,
             actionType: ActionType.Shoot,
           });
           setSelectedShipId(null);
@@ -1009,20 +1080,21 @@ export function SimulatedGameDisplay({
       // Check for useSpecial action
       if (
         currentStep?.allowedActions.useSpecial &&
-        selectedShipId === currentStep.allowedActions.useSpecial.shipId &&
-        currentStep.allowedActions.useSpecial.allowedTargets.includes(shipId)
+        selectedShipId.toString() ===
+          currentStep.allowedActions.useSpecial.shipId &&
+        currentStep.allowedActions.useSpecial.allowedTargets.includes(idString)
       ) {
         const specialValidation = validateAction({
           type: "useSpecial",
-          shipId: selectedShipId,
-          targetShipId: shipId,
+          shipId: selectedShipId.toString() as TutorialShipId,
+          targetShipId: idString,
           specialType: currentStep.allowedActions.useSpecial.specialType,
         });
         if (specialValidation.valid) {
           executeAction({
             type: "useSpecial",
-            shipId: selectedShipId,
-            targetShipId: shipId,
+            shipId: selectedShipId.toString() as TutorialShipId,
+            targetShipId: idString,
             actionType: ActionType.Special,
           });
           setSelectedShipId(null);
@@ -1040,19 +1112,20 @@ export function SimulatedGameDisplay({
       // Check for assist action
       if (
         currentStep?.allowedActions.assist &&
-        selectedShipId === currentStep.allowedActions.assist.shipId &&
-        currentStep.allowedActions.assist.allowedTargets.includes(shipId)
+        selectedShipId.toString() ===
+          currentStep.allowedActions.assist.shipId &&
+        currentStep.allowedActions.assist.allowedTargets.includes(idString)
       ) {
         const assistValidation = validateAction({
           type: "assist",
-          shipId: selectedShipId,
-          targetShipId: shipId,
+          shipId: selectedShipId.toString() as TutorialShipId,
+          targetShipId: idString,
         });
         if (assistValidation.valid) {
           executeAction({
             type: "assist",
-            shipId: selectedShipId,
-            targetShipId: shipId,
+            shipId: selectedShipId.toString() as TutorialShipId,
+            targetShipId: idString,
             actionType: ActionType.Assist,
           });
           setSelectedShipId(null);
@@ -1072,109 +1145,177 @@ export function SimulatedGameDisplay({
   );
 
   return (
-    <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen p-4">
-      <div className="mb-4 bg-black/40 border border-cyan-400 rounded-none p-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-cyan-300 font-mono">
-              Tutorial Game
-            </h1>
-            <p className="text-sm text-gray-400">Simulated game for learning</p>
+    <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen p-4 space-y-4">
+      {/* Game-style header (mirrors main GameDisplay layout, simplified for tutorial) */}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col">
+          <h1 className="text-2xl font-mono text-white flex items-center gap-3">
+            <span>Tutorial Game {gameState.gameId}</span>
+            <span className="text-gray-400 text-base">
+              Round {gameState.turnState.currentRound.toString()}
+            </span>
+          </h1>
+          <div className="text-sm text-gray-400 mt-1">
+            Your turn is always active in this simulated game.
           </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-400">Score</div>
-            <div className="text-lg font-bold">
-              <span className="text-green-300">
-                You: {gameState.creatorScore.toString()}
-              </span>{" "}
-              /{" "}
-              <span className="text-red-300">
-                Enemy: {gameState.joinerScore.toString()}
+        </div>
+        {/* Score box styled like the live game */}
+        <div
+          className="ml-6 p-2 border border-solid w-48 text-lg"
+          style={{
+            backgroundColor: "var(--color-slate)",
+            borderColor: "var(--color-gunmetal)",
+            borderTopColor: "var(--color-steel)",
+            borderLeftColor: "var(--color-steel)",
+            borderRadius: 0,
+          }}
+        >
+          <div className="space-y-0.5">
+            <div className="flex justify-between">
+              <span
+                style={{
+                  fontFamily:
+                    "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  color: "var(--color-text-secondary)",
+                  fontSize: "14px",
+                }}
+              >
+                My Score:
+              </span>
+              <span
+                title="Scores update at end of round."
+                style={{
+                  fontFamily:
+                    "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  color: "var(--color-text-primary)",
+                  fontWeight: 600,
+                }}
+              >
+                {gameState.creatorScore.toString()}/{gameState.maxScore.toString()}
               </span>
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Max Score: {gameState.maxScore.toString()}
+            <div className="flex justify-between">
+              <span
+                style={{
+                  fontFamily:
+                    "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  color: "var(--color-text-secondary)",
+                  fontSize: "14px",
+                }}
+              >
+                Opponent:
+              </span>
+              <span
+                title="Scores update at end of round."
+                style={{
+                  fontFamily:
+                    "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  color: "var(--color-text-primary)",
+                  fontWeight: 600,
+                }}
+              >
+                {gameState.joinerScore.toString()}/{gameState.maxScore.toString()}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      <div
-        className="bg-gray-900 rounded-none p-2 w-full"
-        style={{
-          outline: `2px solid #60a5fa`, // Always blue for tutorial player
-          outlineOffset: 0,
-          borderColor: "#374151",
-          borderWidth: 1,
-          borderStyle: "solid",
-        }}
-      >
-        <GameGrid
-          grid={grid}
-          shipMap={shipMap}
-          selectedShipId={selectedShipId}
-          previewPosition={previewPosition}
-          targetShipId={targetShipId}
-          selectedWeaponType={selectedWeaponType}
-          hoveredCell={hoveredCell}
-          draggedShipId={draggedShipId}
-          dragOverCell={dragOverCell}
-          movementRange={movementRange}
-          shootingRange={shootingRange}
-          validTargets={validTargets}
-          assistableTargets={assistableTargets}
-          assistableTargetsFromStart={assistableTargetsFromStart}
-          dragShootingRange={dragShootingRange}
-          dragValidTargets={dragValidTargets}
-          isCurrentPlayerTurn={true}
-          isShipOwnedByCurrentPlayer={isShipOwnedByCurrentPlayer}
-          movedShipIdsSet={movedShipIdsSet}
-          specialType={specialType}
-          blockedGrid={blockedGrid}
-          scoringGrid={scoringGrid}
-          onlyOnceGrid={onlyOnceGrid}
-          calculateDamage={calculateDamage}
-          getShipAttributes={getShipAttributes}
-          disableTooltips={false}
-          address={TUTORIAL_PLAYER_ADDRESS}
-          currentTurn={gameState.turnState.currentTurn}
-          highlightedMovePosition={highlightedMovePosition}
-          setSelectedShipId={wrappedSetSelectedShipId}
-          setPreviewPosition={wrappedSetPreviewPosition}
-          setTargetShipId={wrappedSetTargetShipId}
-          setSelectedWeaponType={setSelectedWeaponType}
-          setHoveredCell={setHoveredCell}
-          setDraggedShipId={setDraggedShipId}
-          setDragOverCell={setDragOverCell}
-        />
+      <div className="relative w-full">
+        <div
+          className="bg-gray-900 rounded-none p-2 w-full"
+          style={{
+            outline: `2px solid #60a5fa`, // Always blue for tutorial player
+            outlineOffset: 0,
+            borderColor: "#374151",
+            borderWidth: 1,
+            borderStyle: "solid",
+          }}
+        >
+          <GameGrid
+            grid={grid}
+            shipMap={shipMap}
+            selectedShipId={selectedShipId}
+            previewPosition={previewPosition}
+            targetShipId={targetShipId}
+            selectedWeaponType={selectedWeaponType}
+            hoveredCell={hoveredCell}
+            draggedShipId={draggedShipId}
+            dragOverCell={dragOverCell}
+            movementRange={movementRange}
+            shootingRange={shootingRange}
+            validTargets={validTargets}
+            assistableTargets={assistableTargets}
+            assistableTargetsFromStart={assistableTargetsFromStart}
+            dragShootingRange={dragShootingRange}
+            dragValidTargets={dragValidTargets}
+            isCurrentPlayerTurn={true}
+            isShipOwnedByCurrentPlayer={isShipOwnedByCurrentPlayer}
+            movedShipIdsSet={movedShipIdsSet}
+            specialType={specialType}
+            blockedGrid={blockedGrid}
+            scoringGrid={scoringGrid}
+            onlyOnceGrid={onlyOnceGrid}
+            calculateDamage={calculateDamage}
+            getShipAttributes={getShipAttributes}
+            disableTooltips={false}
+            address={TUTORIAL_PLAYER_ADDRESS}
+            currentTurn={gameState.turnState.currentTurn}
+            highlightedMovePosition={highlightedMovePosition}
+            lastMoveShipId={lastMoveProps.lastMoveShipId}
+            lastMoveOldPosition={lastMoveProps.lastMoveOldPosition}
+            lastMoveActionType={lastMoveProps.lastMoveActionType}
+            lastMoveTargetShipId={lastMoveProps.lastMoveTargetShipId}
+            lastMoveIsCurrentPlayer={lastMoveProps.lastMoveIsCurrentPlayer}
+            setSelectedShipId={wrappedSetSelectedShipId}
+            setPreviewPosition={wrappedSetPreviewPosition}
+            setTargetShipId={wrappedSetTargetShipId}
+            setSelectedWeaponType={setSelectedWeaponType}
+            setHoveredCell={setHoveredCell}
+            setDraggedShipId={setDraggedShipId}
+            setDragOverCell={setDragOverCell}
+          />
+        </div>
+
+        {/* Instructions: overlap grid bottom by ~50%, aligned to left */}
+        <div className="pointer-events-none absolute inset-x-0 top-full flex justify-start">
+          <div className="pointer-events-auto max-w-2xl w-full transform -translate-y-1/2">
+            <TutorialStepOverlay />
+          </div>
+        </div>
       </div>
 
       {selectedShipId && (
         <div className="mt-4 bg-black/40 border border-cyan-400 rounded-none p-4">
           <p className="text-cyan-300 font-mono">
             Selected Ship:{" "}
-            {shipMap.get(selectedShipId)?.name || selectedShipId.toString()}
+            {shipMap.get(selectedShipId)?.name ||
+              selectedShipId.toString()}
           </p>
           {currentStep?.allowedActions.moveShip &&
-            currentStep.allowedActions.moveShip.shipId === selectedShipId && (
+            selectedShipId.toString() ===
+              currentStep.allowedActions.moveShip.shipId && (
               <p className="text-yellow-300 text-sm mt-2">
                 Click a highlighted grid cell to move.
               </p>
             )}
           {currentStep?.allowedActions.shoot &&
-            currentStep.allowedActions.shoot.shipId === selectedShipId && (
+            selectedShipId.toString() ===
+              currentStep.allowedActions.shoot.shipId && (
               <p className="text-yellow-300 text-sm mt-2">
                 Click a highlighted enemy ship to shoot.
               </p>
             )}
           {currentStep?.allowedActions.useSpecial &&
-            currentStep.allowedActions.useSpecial.shipId === selectedShipId && (
+            selectedShipId.toString() ===
+              currentStep.allowedActions.useSpecial.shipId && (
               <p className="text-yellow-300 text-sm mt-2">
                 Click a highlighted ship to use your special ability.
               </p>
             )}
           {currentStep?.allowedActions.assist &&
-            currentStep.allowedActions.assist.shipId === selectedShipId && (
+            selectedShipId.toString() ===
+              currentStep.allowedActions.assist.shipId && (
               <p className="text-yellow-300 text-sm mt-2">
                 Click the highlighted friendly ship to assist it.
               </p>

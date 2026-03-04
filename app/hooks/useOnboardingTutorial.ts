@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { TutorialStep, TutorialAction, TutorialContextValue } from "../types/onboarding";
+import { TutorialAction, TutorialContextValue, TutorialShipId } from "../types/onboarding";
+import { ActionType } from "../types/types";
 import { TUTORIAL_STEPS } from "../data/tutorialSteps";
 import { useSimulatedGameState } from "./useSimulatedGameState";
 
@@ -253,7 +254,7 @@ export function useOnboardingTutorial() {
         }
       };
 
-      const updateShipAttributes = (shipId: bigint, updater: (attrs: typeof state.shipAttributes[number]) => void) => {
+      const updateShipAttributes = (shipId: TutorialShipId, updater: (attrs: typeof state.shipAttributes[number]) => void) => {
         const index = state.shipIds.findIndex((id) => id === shipId);
         if (index === -1) return;
         ensureStateClone();
@@ -266,26 +267,26 @@ export function useOnboardingTutorial() {
 
       switch (currentStep.id) {
         case "special-repair": {
-          updateShipAttributes(1001n, (attrs) => {
+          updateShipAttributes("1001", (attrs) => {
             attrs.hullPoints = Math.max(30, Math.floor(attrs.maxHullPoints * 0.4));
           });
           break;
         }
         case "rescue": {
-          updateShipAttributes(1001n, (attrs) => {
+          updateShipAttributes("1001", (attrs) => {
             attrs.hullPoints = 0;
             attrs.reactorCriticalTimer = 2;
           });
 
           ensureStateClone();
           updatedState.shipPositions = updatedState.shipPositions.map((pos) => {
-            if (pos.shipId === 1003n) {
+            if (pos.shipId === "1003") {
               return {
                 ...pos,
                 position: { row: 6, col: 11 },
               };
             }
-            if (pos.shipId === 1001n) {
+            if (pos.shipId === "1001") {
               return {
                 ...pos,
                 position: { row: 6, col: 12 },
@@ -298,34 +299,45 @@ export function useOnboardingTutorial() {
           break;
         }
         case "destroy-disabled": {
-          updateShipAttributes(2002n, (attrs) => {
+          updateShipAttributes("2002", (attrs) => {
             attrs.hullPoints = 0;
             attrs.reactorCriticalTimer = 2;
           });
           break;
         }
         case "score-points": {
-          // Move opponent ship 2003 (Enemy Destroyer) to the scoring tile at (5, 13) and update opponent score
+          // Move opponent ship 2003 (Enemy Destroyer) to the scoring tile at (9, 13) and update opponent score
           // Note: This preserves all other ship positions (e.g., Tutorial Scout from step 5)
           ensureStateClone();
+          const pos2003 = state.shipPositions.find((p) => p.shipId === "2003");
           updatedState.shipPositions = updatedState.shipPositions.map((pos) => {
-            if (pos.shipId === 2003n) {
+            if (pos.shipId === "2003") {
               return {
                 ...pos,
-                position: { row: 5, col: 13 },
+                position: { row: 9, col: 13 },
               };
             }
             // Preserve all other ship positions unchanged
             return pos;
           });
-          // Mark ship as moved
-          if (!updatedState.joinerMovedShipIds.includes(2003n)) {
-            updatedState.joinerMovedShipIds = [...updatedState.joinerMovedShipIds, 2003n];
+          if (pos2003) {
+            updatedState.lastMove = {
+              shipId: "2003",
+              oldRow: pos2003.position.row,
+              oldCol: pos2003.position.col,
+              newRow: 9,
+              newCol: 13,
+              actionType: ActionType.Pass,
+            };
           }
-          // Increment opponent score
-          updatedState.joinerScore = updatedState.joinerScore + 1n;
+          // Mark ship as moved
+          if (!updatedState.joinerMovedShipIds.includes("2003")) {
+            updatedState.joinerMovedShipIds = [...updatedState.joinerMovedShipIds, "2003"];
+          }
+          // Increment opponent score (tutorial state uses number, not bigint)
+          updatedState.joinerScore = updatedState.joinerScore + 1;
           // Allow the Tutorial Scout to move again on the next step
-          updatedState.creatorMovedShipIds = updatedState.creatorMovedShipIds.filter((id) => id !== 1001n);
+          updatedState.creatorMovedShipIds = updatedState.creatorMovedShipIds.filter((id) => id !== "1001");
           break;
         }
         default:

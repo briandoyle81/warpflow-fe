@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useEffect } from "react";
 import { useOnboardingTutorial } from "../hooks/useOnboardingTutorial";
 import { TutorialContextValue } from "../types/onboarding";
-import { TutorialStepOverlay } from "./TutorialStepOverlay";
 import { SimulatedTransactionDialog } from "./SimulatedTransactionDialog";
 import { TUTORIAL_STEPS } from "../data/tutorialSteps";
 import { SimulatedGameDisplay } from "./SimulatedGameDisplay";
@@ -76,8 +75,6 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingTutorialPro
     <TutorialContext.Provider value={tutorialContext}>
       <div className="relative w-full h-full min-h-screen">
         <SimulatedGameDisplay tutorialContext={tutorialContext} />
-
-        <TutorialStepOverlay onSkip={handleSkip} />
 
         <SimulatedTransactionDialog
           isOpen={isTransactionDialogOpen}
