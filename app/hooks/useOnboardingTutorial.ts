@@ -1,10 +1,15 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { TutorialAction, TutorialContextValue, TutorialShipId } from "../types/onboarding";
-import { ActionType } from "../types/types";
+import {
+  TutorialAction,
+  TutorialContextValue,
+  SimulatedGameState,
+} from "../types/onboarding";
 import { TUTORIAL_STEPS } from "../data/tutorialSteps";
+import { getScriptedStateForStepIndex } from "../data/tutorialScriptedStates";
 import { useSimulatedGameState } from "./useSimulatedGameState";
 
 const TUTORIAL_STEP_STORAGE_KEY = "void-tactics-tutorial-step-index";
+const TUTORIAL_STEP_SNAPSHOTS_KEY = "void-tactics-tutorial-step-snapshots";
 
 export function useOnboardingTutorial() {
   // Load saved step index from localStorage, default to 0
@@ -23,8 +28,33 @@ export function useOnboardingTutorial() {
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<TutorialAction | null>(null);
   const [lastAction, setLastAction] = useState<TutorialAction | null>(null);
+  const [isStepHydrated, setIsStepHydrated] = useState(false);
+  // The step index whose state is currently hydrated and visible on screen.
+  // This lets us persist snapshots for the correct step even when
+  // currentStepIndex has already advanced to the next step.
+  const [hydratedStepIndex, setHydratedStepIndex] = useState<number | null>(null);
 
   const { gameState, updateGameState, applyAction, resetState } = useSimulatedGameState();
+
+  // Per-step cached snapshots of game state and last action, so moving between
+  // steps (or reloading) preserves positions and damage unless the user resets.
+  const [stepSnapshots, setStepSnapshots] = useState<
+    ({ gameState: SimulatedGameState; lastAction: TutorialAction | null } | null)[]
+  >(() => {
+    const empty = TUTORIAL_STEPS.map(() => null);
+    if (typeof window === "undefined") return empty;
+    try {
+      const raw = window.localStorage.getItem(TUTORIAL_STEP_SNAPSHOTS_KEY);
+      if (!raw) return empty;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length === TUTORIAL_STEPS.length) {
+        return parsed as ({ gameState: SimulatedGameState; lastAction: TutorialAction | null } | null)[];
+      }
+    } catch {
+      // Ignore parse errors and fall back to empty snapshots
+    }
+    return empty;
+  });
 
   // Save step index to localStorage whenever it changes
   useEffect(() => {
@@ -33,8 +63,53 @@ export function useOnboardingTutorial() {
     }
   }, [currentStepIndex]);
 
+  // Persist a snapshot for the current step only after that step's state is
+  // hydrated. Otherwise when we advance (e.g. 5 → 6), we'd save step 5's
+  // gameState as step 6's snapshot, then the step effect would "restore" it
+  // and never run the step 6 script, causing flicker between the two states.
+  useEffect(() => {
+    if (!isStepHydrated || hydratedStepIndex === null) return;
+
+    // Do not persist snapshots for scripted steps that have a pre-step enemy
+    // move/attack, so we always show that when entering (no stale snapshot).
+    const hydratedStep = TUTORIAL_STEPS[hydratedStepIndex];
+    if (
+      hydratedStep &&
+      (hydratedStep.id === "score-points" ||
+        hydratedStep.id === "shoot" ||
+        hydratedStep.id === "special-emp")
+    ) {
+      return;
+    }
+
+    setStepSnapshots((prev) => {
+      const next = [...prev];
+      next[hydratedStepIndex] = { gameState, lastAction };
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(
+            TUTORIAL_STEP_SNAPSHOTS_KEY,
+            JSON.stringify(next),
+          );
+        } catch {
+          // Ignore storage quota errors
+        }
+      }
+      return next;
+    });
+  }, [gameState, lastAction, hydratedStepIndex, isStepHydrated]);
+
   const currentStep = useMemo(() => {
     return TUTORIAL_STEPS[currentStepIndex] || null;
+  }, [currentStepIndex]);
+
+  // Whenever the current step index changes, mark the step as not yet
+  // hydrated so the UI can avoid briefly showing the previous step's
+  // board before the new step's snapshot/scripted state is applied.
+  useEffect(() => {
+    setIsStepHydrated(false);
+    // We intentionally do NOT reset hydratedStepIndex here; it will be updated
+    // when the new step finishes hydrating.
   }, [currentStepIndex]);
 
   const validateAction = useCallback((action: TutorialAction): { valid: boolean; message?: string } => {
@@ -144,6 +219,24 @@ export function useOnboardingTutorial() {
       return { success: true, pending: true };
     }
 
+    // For the "shoot" step, follow the desired sequence:
+    // 1) select ship, 2) propose move (staged in UI), 3) select target,
+    // 4) click Submit to execute the composite action (move + shoot) in a
+    // single simulated transaction. The move is applied immediately with no
+    // transaction; only the shoot opens the simulated tx.
+    if (currentStep?.id === "shoot") {
+      if (action.type === "moveShip") {
+        // Apply the move immediately without any transaction dialog.
+        applyAction(action);
+        return { success: true };
+      }
+      if (action.type === "shoot") {
+        setPendingAction(action);
+        setIsTransactionDialogOpen(true);
+        return { success: true, pending: true };
+      }
+    }
+
     // If step requires transaction, show dialog first
     // Only show transaction dialog for actions that require it (not selectShip)
     if (
@@ -165,17 +258,35 @@ export function useOnboardingTutorial() {
   const approveTransaction = useCallback(() => {
     if (!pendingAction) return;
 
+    const action = pendingAction;
+
     setIsTransactionDialogOpen(false);
 
-    // If action was already executed (showTransactionAfter), just close the dialog
-    // Otherwise, execute the action now
+    // If action was already executed (showTransactionAfter), just close the dialog.
+    // Otherwise, execute the action now.
     if (!currentStep?.showTransactionAfter) {
-      applyAction(pendingAction);
-      setLastAction(pendingAction); // Track the last action for step completion checking
+      applyAction(action);
+      setLastAction(action); // Track the last action for step completion checking
     }
-    // Note: If showTransactionAfter is true, action was already executed and lastAction was already set
+    // Note: If showTransactionAfter is true, action was already executed and lastAction was already set.
 
     setPendingAction(null);
+
+    // After a simulated transaction is approved, automatically advance to the
+    // next tutorial step when this step's completion condition is satisfied.
+    if (
+      currentStep?.requiresTransaction &&
+      typeof currentStep.onStepComplete === "function" &&
+      currentStep.onStepComplete(action)
+    ) {
+      setCurrentStepIndex((prev) => {
+        const nextIndex = Math.min(prev + 1, TUTORIAL_STEPS.length - 1);
+        if (nextIndex !== prev) {
+          setLastAction(null);
+        }
+        return nextIndex;
+      });
+    }
   }, [pendingAction, currentStep, applyAction]);
 
   const rejectTransaction = useCallback(() => {
@@ -196,10 +307,6 @@ export function useOnboardingTutorial() {
   const nextStep = useCallback(() => {
     setCurrentStepIndex((prev) => {
       const nextIndex = Math.min(prev + 1, TUTORIAL_STEPS.length - 1);
-      // Reset last action when moving to next step
-      if (nextIndex !== prev) {
-        setLastAction(null);
-      }
       return nextIndex;
     });
   }, []);
@@ -207,25 +314,20 @@ export function useOnboardingTutorial() {
   const previousStep = useCallback(() => {
     setCurrentStepIndex((prev) => {
       const prevIndex = Math.max(prev - 1, 0);
-      // Reset last action when moving to previous step
-      if (prevIndex !== prev) {
-        setLastAction(null);
-        // Reset game state to initial when going back
-        // The step-specific useEffect will then apply the correct state for the previous step
-        resetState();
-      }
       return prevIndex;
     });
-  }, [resetState]);
+  }, []);
 
   const resetTutorial = useCallback(() => {
     setIsTransactionDialogOpen(false);
     setPendingAction(null);
     setLastAction(null);
     resetState();
+    setStepSnapshots(TUTORIAL_STEPS.map(() => null));
     setCurrentStepIndex(0);
     if (typeof window !== "undefined") {
       localStorage.setItem(TUTORIAL_STEP_STORAGE_KEY, "0");
+      window.localStorage.removeItem(TUTORIAL_STEP_SNAPSHOTS_KEY);
     }
   }, [resetState]);
 
@@ -237,155 +339,95 @@ export function useOnboardingTutorial() {
     return currentStep.onStepComplete(lastAction);
   }, [currentStep, lastAction]);
 
-  // Step-specific simulated state adjustments
+  // Step-specific simulated state adjustments. When a snapshot exists for the
+  // current step, restore it instead of re-running scripted changes so ship
+  // positions and damage persist across navigation and refresh.
   useEffect(() => {
     if (!currentStep) return;
 
-    updateGameState((state) => {
-      let updatedState = state;
-
-      const ensureStateClone = () => {
-        if (updatedState === state) {
-          updatedState = {
-            ...state,
-            shipAttributes: [...state.shipAttributes],
-            shipPositions: [...state.shipPositions],
-          };
-        }
-      };
-
-      const updateShipAttributes = (shipId: TutorialShipId, updater: (attrs: typeof state.shipAttributes[number]) => void) => {
-        const index = state.shipIds.findIndex((id) => id === shipId);
-        if (index === -1) return;
-        ensureStateClone();
-        const attrsCopy = [...updatedState.shipAttributes];
-        const attr = { ...attrsCopy[index] };
-        updater(attr);
-        attrsCopy[index] = attr;
-        updatedState.shipAttributes = attrsCopy;
-      };
-
-      switch (currentStep.id) {
-        case "special-repair": {
-          updateShipAttributes("1001", (attrs) => {
-            attrs.hullPoints = Math.max(30, Math.floor(attrs.maxHullPoints * 0.4));
-          });
-          break;
-        }
-        case "rescue": {
-          updateShipAttributes("1001", (attrs) => {
-            attrs.hullPoints = 0;
-            attrs.reactorCriticalTimer = 2;
-          });
-
-          ensureStateClone();
-          updatedState.shipPositions = updatedState.shipPositions.map((pos) => {
-            if (pos.shipId === "1003") {
-              return {
-                ...pos,
-                position: { row: 6, col: 11 },
-              };
-            }
-            if (pos.shipId === "1001") {
-              return {
-                ...pos,
-                position: { row: 6, col: 12 },
-              };
-            }
-            return pos;
-          });
-
-          updatedState.creatorMovedShipIds = [];
-          break;
-        }
-        case "destroy-disabled": {
-          updateShipAttributes("2002", (attrs) => {
-            attrs.hullPoints = 0;
-            attrs.reactorCriticalTimer = 2;
-          });
-          break;
-        }
-        case "score-points": {
-          // Move opponent ship 2003 (Enemy Destroyer) to the scoring tile at (9, 13) and update opponent score
-          // Note: This preserves all other ship positions (e.g., Tutorial Scout from step 5)
-          ensureStateClone();
-          const pos2003 = state.shipPositions.find((p) => p.shipId === "2003");
-          updatedState.shipPositions = updatedState.shipPositions.map((pos) => {
-            if (pos.shipId === "2003") {
-              return {
-                ...pos,
-                position: { row: 9, col: 13 },
-              };
-            }
-            // Preserve all other ship positions unchanged
-            return pos;
-          });
-          if (pos2003) {
-            updatedState.lastMove = {
-              shipId: "2003",
-              oldRow: pos2003.position.row,
-              oldCol: pos2003.position.col,
-              newRow: 9,
-              newCol: 13,
-              actionType: ActionType.Pass,
-            };
-          }
-          // Mark ship as moved
-          if (!updatedState.joinerMovedShipIds.includes("2003")) {
-            updatedState.joinerMovedShipIds = [...updatedState.joinerMovedShipIds, "2003"];
-          }
-          // Increment opponent score (tutorial state uses number, not bigint)
-          updatedState.joinerScore = updatedState.joinerScore + 1;
-          // Allow the Tutorial Scout to move again on the next step
-          updatedState.creatorMovedShipIds = updatedState.creatorMovedShipIds.filter((id) => id !== "1001");
-          break;
-        }
-        default:
-          // For steps without specific state adjustments, preserve all current state
-          // This ensures ship positions from previous steps are maintained
-          return state;
+    const snapshot = stepSnapshots[currentStepIndex];
+    // For most steps, restore from snapshot if it exists. For scripted steps
+    // (score-points, shoot, special-emp), only restore when the player has
+    // already taken their action (snapshot.lastAction != null). Otherwise use
+    // scripted state so the pre-step enemy move/attack is shown from the start.
+    if (snapshot) {
+      if (
+        (currentStep.id === "score-points" ||
+          currentStep.id === "shoot" ||
+          currentStep.id === "special-emp") &&
+        snapshot.lastAction === null
+      ) {
+        // Ignore this snapshot and fall through to scripted state.
+      } else {
+        updateGameState(() => snapshot.gameState);
+        setLastAction(snapshot.lastAction);
+        // Defer hydration so the board is not shown until the restored state
+        // is committed, and record which step index is hydrated.
+        const indexForHydration = currentStepIndex;
+        queueMicrotask(() => {
+          setHydratedStepIndex(indexForHydration);
+          setIsStepHydrated(true);
+        });
+        return;
       }
+    }
 
-      // Return updated state (which may be the same as original state if no modifications were made)
-      return updatedState;
+    // Use canonical scripted state for this step so refresh and step navigation
+    // always show the correct cumulative board (all prior moves preserved).
+    const scriptedState = getScriptedStateForStepIndex(currentStepIndex);
+    updateGameState(() => scriptedState);
+
+    // Defer hydration until after the game state update is committed, and
+    // record which step index is hydrated.
+    const indexForHydration = currentStepIndex;
+    queueMicrotask(() => {
+      setHydratedStepIndex(indexForHydration);
+      setIsStepHydrated(true);
     });
-  }, [currentStep, updateGameState]);
+  }, [currentStep, currentStepIndex, stepSnapshots, updateGameState]);
 
-  const contextValue: TutorialContextValue = useMemo(() => ({
-    currentStepIndex,
-    currentStep,
-    gameState,
-    isTransactionDialogOpen,
-    pendingAction,
-    isStepComplete,
-    updateGameState,
-    validateAction,
-    executeAction,
-    nextStep,
-    previousStep,
-    openTransactionDialog,
-    closeTransactionDialog,
-    approveTransaction,
-    rejectTransaction,
-    resetTutorial,
-  }), [
-    currentStepIndex,
-    currentStep,
-    gameState,
-    isTransactionDialogOpen,
-    pendingAction,
-    isStepComplete,
-    updateGameState,
-    validateAction,
-    executeAction,
-    nextStep,
-    previousStep,
-    openTransactionDialog,
-    closeTransactionDialog,
-    approveTransaction,
-    rejectTransaction,
-    resetTutorial,
-  ]);
+  const contextValue: TutorialContextValue = useMemo(
+    () => ({
+      currentStepIndex,
+      currentStep,
+      gameState,
+      isTransactionDialogOpen,
+      pendingAction,
+      isStepComplete,
+      updateGameState,
+      validateAction,
+      executeAction,
+      nextStep,
+      previousStep,
+      openTransactionDialog,
+      closeTransactionDialog,
+      approveTransaction,
+      rejectTransaction,
+      resetTutorial,
+      // Expose whether the current step state has been fully hydrated
+      // so the UI can avoid flickering when switching steps.
+      isStepHydrated,
+    }),
+    [
+      currentStepIndex,
+      currentStep,
+      gameState,
+      isTransactionDialogOpen,
+      pendingAction,
+      isStepComplete,
+      updateGameState,
+      validateAction,
+      executeAction,
+      nextStep,
+      previousStep,
+      openTransactionDialog,
+      closeTransactionDialog,
+      approveTransaction,
+      rejectTransaction,
+      resetTutorial,
+      isStepHydrated,
+    ],
+  );
 
   return contextValue;
 }

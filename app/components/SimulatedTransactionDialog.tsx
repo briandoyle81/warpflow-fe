@@ -35,9 +35,17 @@ export function SimulatedTransactionDialog({
   };
 
   const getActionTypeName = () => {
+    // For moveShip tutorial steps, show a clear "Move" label in the
+    // simulated transaction dialog to mirror the main game UX, even
+    // though the underlying contract action type may be Pass.
+    if (action.type === "moveShip") {
+      return "Move";
+    }
+
     if (action.actionType !== undefined) {
       return ActionType[action.actionType] || "Action";
     }
+
     return action.type.charAt(0).toUpperCase() + action.type.slice(1);
   };
 

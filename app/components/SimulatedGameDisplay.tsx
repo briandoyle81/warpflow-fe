@@ -1,8 +1,18 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+} from "react";
 import defaultMap from "../../public/default_map.json";
-import { TutorialContextValue, TutorialShipId } from "../types/onboarding";
+import {
+  TutorialContextValue,
+  TutorialShipId,
+  TutorialAction,
+} from "../types/onboarding";
 import {
   ALL_TUTORIAL_SHIPS,
   TUTORIAL_PLAYER_ADDRESS,
@@ -12,9 +22,21 @@ import {
   type DefaultMapShape,
 } from "../utils/mapGridUtils";
 import { toast } from "react-hot-toast";
-import { ActionType, ShipPosition, Attributes, Ship } from "../types/types";
+import {
+  ActionType,
+  ShipPosition,
+  Attributes,
+  Ship,
+  LastMove,
+  getMainWeaponName,
+  getSpecialName,
+} from "../types/types";
 import { GameGrid } from "./GameGrid";
 import { TutorialStepOverlay } from "./TutorialStepOverlay";
+import { GameBoardLayout } from "./GameBoardLayout";
+import { GameEvents } from "./GameEvents";
+import { FleeSafetySwitch } from "./FleeSafetySwitch";
+import ShipCard from "./ShipCard";
 import { useSpecialRange } from "../hooks/useSpecialRange";
 import {
   useSpecialData,
@@ -27,6 +49,8 @@ import {
 
 interface SimulatedGameDisplayProps {
   tutorialContext: TutorialContextValue;
+  /** Called when user clicks back; exits tutorial and returns to Info tab. */
+  onBack?: () => void;
 }
 
 const GRID_WIDTH = 17;
@@ -34,6 +58,7 @@ const GRID_HEIGHT = 11;
 
 export function SimulatedGameDisplay({
   tutorialContext,
+  onBack,
 }: SimulatedGameDisplayProps) {
   const {
     gameState,
@@ -56,8 +81,10 @@ export function SimulatedGameDisplay({
     "weapon" | "special"
   >("weapon");
 
-  // Deselect all ships when moving between steps
-  useEffect(() => {
+  // Deselect all ships when moving between steps. Use layout effect so that
+  // selection and previews are cleared before the new step is painted, which
+  // avoids a single-frame flicker of the previous step's selection state.
+  useLayoutEffect(() => {
     setSelectedShipId(null);
     setPreviewPosition(null);
     setTargetShipId(null);
@@ -76,6 +103,11 @@ export function SimulatedGameDisplay({
     row: number;
     col: number;
   } | null>(null);
+
+  // In the tutorial, we always treat it as the player's turn for UI purposes:
+  // whenever an owned ship is selected and eligible to act, we show the same
+  // top action bar / proposed move UI as the main game.
+  const isMyTurn = true;
 
   // Map of on-chain ship ID (bigint) to ship object. Tutorial IDs are strings;
   // when we need a ship we convert TutorialShipId -> bigint for this map only.
@@ -99,8 +131,7 @@ export function SimulatedGameDisplay({
   // Get ship attributes by ship ID from game state (tutorial IDs are strings)
   const getShipAttributes = useCallback(
     (shipId: TutorialShipId | bigint): Attributes | null => {
-      const idString =
-        typeof shipId === "bigint" ? shipId.toString() : shipId;
+      const idString = typeof shipId === "bigint" ? shipId.toString() : shipId;
       const shipIndex = gameState.shipIds?.findIndex((id) => id === idString);
       if (
         shipIndex === -1 ||
@@ -120,10 +151,11 @@ export function SimulatedGameDisplay({
   const { specialRange } = useSpecialRange(specialType);
   const { data: specialData } = useSpecialData(specialType);
 
-  // Check if a ship belongs to the tutorial player
+  // Check if a ship belongs to the tutorial player. GameGrid passes bigint IDs,
+  // so this matches the main game's signature and uses the bigint-based map.
   const isShipOwnedByCurrentPlayer = useCallback(
-    (shipId: TutorialShipId): boolean => {
-      const ship = shipMap.get(BigInt(shipId));
+    (shipId: bigint): boolean => {
+      const ship = shipMap.get(shipId);
       return ship ? ship.owner === TUTORIAL_PLAYER_ADDRESS : false;
     },
     [shipMap],
@@ -140,6 +172,29 @@ export function SimulatedGameDisplay({
     }
     return set;
   }, [gameState.creatorMovedShipIds, gameState.joinerMovedShipIds]);
+
+  // Track when we should show the proposed move / top action UI, mirroring the
+  // main game's behavior: it appears as soon as you select one of your ships
+  // that can act this round, even before choosing a destination.
+  const isShowingProposedMove = useMemo(() => {
+    if (selectedShipId === null || !isMyTurn) {
+      return false;
+    }
+    const idString = selectedShipId.toString() as TutorialShipId;
+    if (!isShipOwnedByCurrentPlayer(selectedShipId)) return false;
+    if (movedShipIdsSet.has(idString)) {
+      const attrs = getShipAttributes(idString);
+      const isDisabled = attrs && attrs.hullPoints === 0;
+      if (!isDisabled) return false;
+    }
+    return true;
+  }, [
+    selectedShipId,
+    isMyTurn,
+    isShipOwnedByCurrentPlayer,
+    movedShipIdsSet,
+    getShipAttributes,
+  ]);
 
   // Check line of sight between two positions
   const hasLineOfSight = useCallback(
@@ -221,7 +276,7 @@ export function SimulatedGameDisplay({
         newGrid[position.row][position.col] = basePosition;
 
         // If this ship is selected and has a preview position, also place a preview copy
-        if (selectedShipId === shipPosition.shipId && previewPosition) {
+        if (selectedShipId === shipIdBigInt && previewPosition) {
           newGrid[previewPosition.row][previewPosition.col] = {
             ...basePosition,
             position: { row: previewPosition.row, col: previewPosition.col },
@@ -263,7 +318,12 @@ export function SimulatedGameDisplay({
     }
 
     return newGrid;
-  }, [gameState.shipPositions, gameState.lastMove, selectedShipId, previewPosition]);
+  }, [
+    gameState.shipPositions,
+    gameState.lastMove,
+    selectedShipId,
+    previewPosition,
+  ]);
 
   // Calculate movement range for selected ship.
   // Mirrors the main GameDisplay logic, then applies tutorial step constraints.
@@ -350,8 +410,7 @@ export function SimulatedGameDisplay({
       currentStep?.id === "move-ship" &&
       currentStep?.allowedActions.moveShip &&
       selectedShipId &&
-      selectedShipId.toString() ===
-        currentStep.allowedActions.moveShip.shipId
+      selectedShipId.toString() === currentStep.allowedActions.moveShip.shipId
     ) {
       const allowedPositions =
         currentStep.allowedActions.moveShip.allowedPositions;
@@ -364,10 +423,11 @@ export function SimulatedGameDisplay({
 
   // Last move UI props for GameGrid (same as in-game: ghost at old position, pulse at new)
   const lastMoveProps = useMemo(() => {
-    if (selectedShipId !== null || !gameState.lastMove) {
+    if (!gameState.lastMove) {
       return {
         lastMoveShipId: null as bigint | null,
         lastMoveOldPosition: null as { row: number; col: number } | null,
+        lastMoveNewPosition: null as { row: number; col: number } | null,
         lastMoveActionType: null as ActionType | null,
         lastMoveTargetShipId: null as bigint | null,
         lastMoveIsCurrentPlayer: undefined as boolean | undefined,
@@ -378,9 +438,10 @@ export function SimulatedGameDisplay({
     return {
       lastMoveShipId: BigInt(lm.shipId),
       lastMoveOldPosition: { row: lm.oldRow, col: lm.oldCol },
+      lastMoveNewPosition: { row: lm.newRow, col: lm.newCol },
       lastMoveActionType: lm.actionType,
       lastMoveTargetShipId:
-        lm.actionType === ActionType.Special && lm.targetShipId
+        lm.targetShipId && lm.targetShipId !== "0"
           ? BigInt(lm.targetShipId)
           : null,
       lastMoveIsCurrentPlayer: ship
@@ -388,6 +449,55 @@ export function SimulatedGameDisplay({
         : undefined,
     };
   }, [gameState.lastMove, selectedShipId, shipMap]);
+
+  // Last move object for GameEvents panel (adapt tutorial lastMove to on-chain LastMove shape).
+  // When a move is staged (selected ship + preview position), we synthesize a
+  // pending LastMove so the UI shows from/to immediately after selecting the move,
+  // before the simulated transaction is submitted.
+  const lastMoveForEvents: LastMove | undefined = useMemo(() => {
+    if (
+      selectedShipId &&
+      previewPosition &&
+      currentStep?.allowedActions.moveShip &&
+      selectedShipId.toString() === currentStep.allowedActions.moveShip.shipId
+    ) {
+      const currentPos = gameState.shipPositions.find(
+        (pos) => pos.shipId === selectedShipId.toString(),
+      );
+
+      if (currentPos) {
+        return {
+          shipId: selectedShipId,
+          oldRow: currentPos.position.row,
+          oldCol: currentPos.position.col,
+          newRow: previewPosition.row,
+          newCol: previewPosition.col,
+          actionType: ActionType.Pass,
+          targetShipId: 0n,
+          timestamp: 0n,
+        };
+      }
+    }
+
+    if (!gameState.lastMove) return undefined;
+    const lm = gameState.lastMove;
+    return {
+      shipId: BigInt(lm.shipId),
+      oldRow: lm.oldRow,
+      oldCol: lm.oldCol,
+      newRow: lm.newRow,
+      newCol: lm.newCol,
+      actionType: lm.actionType,
+      targetShipId: lm.targetShipId ? BigInt(lm.targetShipId) : 0n,
+      timestamp: 0n,
+    };
+  }, [
+    selectedShipId,
+    previewPosition,
+    currentStep,
+    gameState.lastMove,
+    gameState.shipPositions,
+  ]);
 
   // Calculate damage for a target ship
   const calculateDamage = useCallback(
@@ -460,17 +570,20 @@ export function SimulatedGameDisplay({
     let allowedTargets: TutorialShipId[] | null = null;
     if (
       currentStep?.allowedActions.shoot &&
-      currentStep.allowedActions.shoot.shipId === selectedShipId
+      currentStep.allowedActions.shoot.shipId ===
+        selectedShipId.toString()
     ) {
       allowedTargets = currentStep.allowedActions.shoot.allowedTargets;
     } else if (
       currentStep?.allowedActions.useSpecial &&
-      currentStep.allowedActions.useSpecial.shipId === selectedShipId
+      currentStep.allowedActions.useSpecial.shipId ===
+        selectedShipId.toString()
     ) {
       allowedTargets = currentStep.allowedActions.useSpecial.allowedTargets;
     } else if (
       currentStep?.allowedActions.assist &&
-      currentStep.allowedActions.assist.shipId === selectedShipId
+      currentStep.allowedActions.assist.shipId ===
+        selectedShipId.toString()
     ) {
       allowedTargets = currentStep.allowedActions.assist.allowedTargets;
     }
@@ -514,7 +627,7 @@ export function SimulatedGameDisplay({
       // Filter targets based on weapon type
       if (selectedWeaponType === "special") {
         if (specialType === 3) {
-          if (shipPosition.shipId === selectedShipId) return;
+          if (shipPosition.shipId === selectedShipId.toString()) return;
         } else if (specialType === 1) {
           if (ship.owner === TUTORIAL_PLAYER_ADDRESS) return;
         } else {
@@ -531,13 +644,22 @@ export function SimulatedGameDisplay({
 
       const canShoot = distance === 1 || distance <= shootingRange;
 
-      if (canShoot && distance > 0) {
+      // In the shoot step, always include allowed targets so clicking the enemy
+      // adds them as target (grid uses validTargets and only then calls
+      // setTargetShipId; otherwise it would select the ship and clear the proposed move).
+      const isShootStepAllowedTarget =
+        currentStep?.id === "shoot" &&
+        allowedTargetsSet?.has(shipPosition.shipId) &&
+        distance > 0;
+
+      if ((canShoot && distance > 0) || isShootStepAllowedTarget) {
         const shouldCheckLineOfSight =
           distance > 1 &&
           (selectedWeaponType !== "special" ||
             (specialType !== 1 && specialType !== 2 && specialType !== 3));
 
         if (
+          isShootStepAllowedTarget ||
           !shouldCheckLineOfSight ||
           hasLineOfSight(startRow, startCol, targetRow, targetCol, blockedGrid)
         ) {
@@ -591,7 +713,7 @@ export function SimulatedGameDisplay({
       if (!ship) return;
 
       if (ship.owner !== TUTORIAL_PLAYER_ADDRESS) return;
-      if (shipPosition.shipId === selectedShipId) return;
+      if (shipPosition.shipId === selectedShipId.toString()) return;
 
       const targetRow = shipPosition.position.row;
       const targetCol = shipPosition.position.col;
@@ -640,7 +762,7 @@ export function SimulatedGameDisplay({
       if (!ship) return;
 
       if (ship.owner !== TUTORIAL_PLAYER_ADDRESS) return;
-      if (shipPosition.shipId === selectedShipId) return;
+      if (shipPosition.shipId === selectedShipId.toString()) return;
 
       const targetRow = shipPosition.position.row;
       const targetCol = shipPosition.position.col;
@@ -954,7 +1076,46 @@ export function SimulatedGameDisplay({
     return [];
   }, [draggedShipId, dragOverCell]);
 
-  // Wrap setters to intercept and validate actions
+  // Convert tutorial string ids to bigint ids for GameGrid targeting logic.
+  const gridValidTargets = useMemo(
+    () =>
+      validTargets.map((t) => ({
+        shipId: BigInt(t.shipId),
+        position: t.position,
+      })),
+    [validTargets],
+  );
+
+  const gridAssistableTargets = useMemo(
+    () =>
+      assistableTargets.map((t) => ({
+        shipId: BigInt(t.shipId),
+        position: t.position,
+      })),
+    [assistableTargets],
+  );
+
+  const gridAssistableTargetsFromStart = useMemo(
+    () =>
+      assistableTargetsFromStart.map((t) => ({
+        shipId: BigInt(t.shipId),
+        position: t.position,
+      })),
+    [assistableTargetsFromStart],
+  );
+
+  // GameGrid expects Set<bigint> for movedShipIdsSet; tutorial state uses string IDs.
+  const gridMovedShipIdsSet = useMemo(() => {
+    const set = new Set<bigint>();
+    if (gameState.creatorMovedShipIds) {
+      gameState.creatorMovedShipIds.forEach((id) => set.add(BigInt(id)));
+    }
+    if (gameState.joinerMovedShipIds) {
+      gameState.joinerMovedShipIds.forEach((id) => set.add(BigInt(id)));
+    }
+    return set;
+  }, [gameState.creatorMovedShipIds, gameState.joinerMovedShipIds]);
+
   const wrappedSetSelectedShipId = useCallback(
     (shipId: bigint | null) => {
       if (shipId === null) {
@@ -964,10 +1125,32 @@ export function SimulatedGameDisplay({
         return;
       }
 
+      // In the shooting tutorial step, if the Tutorial Sniper is already selected
+      // and the user clicks the enemy fighter, always treat that click as
+      // targeting the enemy for the staged move+shoot, not as a selection
+      // change. This prevents the proposed move from being cleared.
+      if (
+        currentStep?.id === "shoot" &&
+        selectedShipId !== null &&
+        shipId !== selectedShipId
+      ) {
+        const idString = shipId.toString() as TutorialShipId;
+        if (
+          currentStep.allowedActions.shoot &&
+          currentStep.allowedActions.shoot.allowedTargets.includes(idString)
+        ) {
+          setTargetShipId(shipId);
+          return;
+        }
+      }
+
       const idString = shipId.toString() as TutorialShipId;
 
       // Validate ship selection
-      const validation = validateAction({ type: "selectShip", shipId: idString });
+      const validation = validateAction({
+        type: "selectShip",
+        shipId: idString,
+      });
       if (!validation.valid) {
         toast.error(validation.message || "Action not allowed");
         return;
@@ -981,7 +1164,13 @@ export function SimulatedGameDisplay({
       setTargetShipId(null);
       setSelectedWeaponType("weapon");
     },
-    [validateAction, executeAction],
+    [
+      currentStep,
+      selectedShipId,
+      previewPosition,
+      validateAction,
+      executeAction,
+    ],
   );
 
   const wrappedSetPreviewPosition = useCallback(
@@ -995,8 +1184,7 @@ export function SimulatedGameDisplay({
       if (
         selectedShipId &&
         currentStep?.allowedActions.moveShip &&
-        selectedShipId.toString() ===
-          currentStep.allowedActions.moveShip.shipId
+        selectedShipId.toString() === currentStep.allowedActions.moveShip.shipId
       ) {
         const allowedPositions =
           currentStep.allowedActions.moveShip.allowedPositions;
@@ -1019,14 +1207,9 @@ export function SimulatedGameDisplay({
           return;
         }
 
-        // Always show the preview (same as main game), then execute the action.
+        // Stage the preview only. The actual move is submitted via the
+        // top action UI (Submit button), matching the live game flow.
         setPreviewPosition(position);
-        executeAction({
-          type: "moveShip",
-          shipId: selectedShipId.toString() as TutorialShipId,
-          position,
-          actionType: ActionType.Pass,
-        });
       } else {
         setPreviewPosition(position);
       }
@@ -1051,10 +1234,32 @@ export function SimulatedGameDisplay({
       // Check for shoot action
       if (
         currentStep?.allowedActions.shoot &&
-        selectedShipId.toString() ===
-          currentStep.allowedActions.shoot.shipId &&
+        selectedShipId.toString() === currentStep.allowedActions.shoot.shipId &&
         currentStep.allowedActions.shoot.allowedTargets.includes(idString)
       ) {
+        // In the shooting tutorial step, clicking an enemy in range should
+        // only stage the target for the composite move+shoot action. The
+        // actual shoot is executed when the user clicks Submit, just like
+        // in the main game.
+        if (currentStep.id === "shoot") {
+          // Require a proposed move to (1, 3) before allowing the shot.
+          if (
+            !previewPosition ||
+            previewPosition.row !== 1 ||
+            previewPosition.col !== 3
+          ) {
+            toast.error(
+              "Move the Tutorial Sniper to (1, 3) before firing on the enemy.",
+            );
+            return;
+          }
+
+          // Stage the target only; Submit will call executeAction for the
+          // actual shoot.
+          setTargetShipId(shipId);
+          return;
+        }
+
         const shootValidation = validateAction({
           type: "shoot",
           shipId: selectedShipId.toString() as TutorialShipId,
@@ -1091,15 +1296,9 @@ export function SimulatedGameDisplay({
           specialType: currentStep.allowedActions.useSpecial.specialType,
         });
         if (specialValidation.valid) {
-          executeAction({
-            type: "useSpecial",
-            shipId: selectedShipId.toString() as TutorialShipId,
-            targetShipId: idString,
-            actionType: ActionType.Special,
-          });
-          setSelectedShipId(null);
-          setTargetShipId(null);
-          setPreviewPosition(null);
+          // Stage the target only; Submit will call executeAction for the
+          // actual special use.
+          setTargetShipId(shipId);
           return;
         } else {
           toast.error(
@@ -1141,97 +1340,469 @@ export function SimulatedGameDisplay({
       // If no matching action, just set the target (for display purposes)
       setTargetShipId(shipId);
     },
-    [selectedShipId, currentStep, validateAction, executeAction],
+    [
+      selectedShipId,
+      currentStep,
+      previewPosition,
+      validateAction,
+      executeAction,
+    ],
   );
 
+  // Submit handler for staged move (selected ship + preview position). This mirrors
+  // the live game flow where the player first stages a move on the grid, then
+  // confirms it via the action panel, which may trigger a (simulated) transaction.
+  const handleSubmitMove = useCallback(() => {
+    if (!selectedShipId) {
+      return;
+    }
+
+    // For the shooting tutorial step, Submit should execute the composite
+    // move+shoot action in one go: apply the staged move, then open the
+    // simulated transaction for the shot.
+    if (currentStep?.id === "shoot") {
+      if (!previewPosition) {
+        return;
+      }
+      if (!currentStep.allowedActions.moveShip) {
+        toast.error("Move not allowed in this tutorial step");
+        return;
+      }
+
+      if (!targetShipId) {
+        toast.error("Select an enemy ship to target before submitting.");
+        return;
+      }
+
+      const moveAction: TutorialAction = {
+        type: "moveShip",
+        shipId: selectedShipId.toString() as TutorialShipId,
+        position: previewPosition,
+        actionType: ActionType.Pass,
+      };
+
+      // Apply the move immediately (no tx). Validation has already run earlier.
+      executeAction(moveAction);
+
+      const shootAction: TutorialAction = {
+        type: "shoot",
+        shipId: selectedShipId.toString() as TutorialShipId,
+        targetShipId: targetShipId.toString() as TutorialShipId,
+        actionType: ActionType.Shoot,
+      };
+
+      executeAction(shootAction);
+      // For the shooting step, keep selection and preview/target state while
+      // the simulated transaction dialog is open so the player continues to
+      // see the staged move+shoot in the UI. State will be cleared when the
+      // step advances after tx approval.
+      return;
+    }
+
+    // Special EMP step: no movement, just fire the special at the staged target.
+    if (currentStep?.id === "special-emp") {
+      if (selectedWeaponType !== "special") {
+        toast.error("Switch to Special mode before using EMP.");
+        return;
+      }
+      if (!targetShipId) {
+        toast.error("Select an enemy ship to target before submitting.");
+        return;
+      }
+
+      const action: TutorialAction = {
+        type: "useSpecial",
+        shipId: selectedShipId.toString() as TutorialShipId,
+        targetShipId: targetShipId.toString() as TutorialShipId,
+        actionType: ActionType.Special,
+      };
+
+      executeAction(action);
+    } else {
+      if (!previewPosition) {
+        return;
+      }
+      if (
+        !currentStep?.allowedActions.moveShip ||
+        selectedShipId.toString() !== currentStep.allowedActions.moveShip.shipId
+      ) {
+        toast.error("Move not allowed in this tutorial step");
+        return;
+      }
+
+      const action: TutorialAction = {
+        type: "moveShip",
+        shipId: selectedShipId.toString() as TutorialShipId,
+        position: previewPosition,
+        actionType: ActionType.Pass,
+      };
+
+      executeAction(action);
+    }
+
+    // For non-shoot steps, clear local staging after submitting; tutorial
+    // state + simulated transaction dialog are handled inside executeAction /
+    // approveTransaction.
+    if (currentStep?.id !== "shoot") {
+      setPreviewPosition(null);
+      setTargetShipId(null);
+      setSelectedShipId(null);
+    }
+  }, [
+    selectedShipId,
+    previewPosition,
+    targetShipId,
+    currentStep,
+    executeAction,
+  ]);
+
   return (
-    <div className="relative w-full h-full bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen p-4 space-y-4">
-      {/* Game-style header (mirrors main GameDisplay layout, simplified for tutorial) */}
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col">
-          <h1 className="text-2xl font-mono text-white flex items-center gap-3">
-            <span>Tutorial Game {gameState.gameId}</span>
-            <span className="text-gray-400 text-base">
-              Round {gameState.turnState.currentRound.toString()}
-            </span>
-          </h1>
-          <div className="text-sm text-gray-400 mt-1">
-            Your turn is always active in this simulated game.
+    <div className="w-full max-w-none space-y-6">
+      {/* Header: back + game/round/turn + score + (optional) proposed move + Flee locked */}
+      <div className="flex items-start justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderColor: "var(--color-gunmetal)",
+              color: "var(--color-text-secondary)",
+              backgroundColor: "var(--color-steel)",
+              borderRadius: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-slate)";
+              e.currentTarget.style.borderColor = "var(--color-cyan)";
+              e.currentTarget.style.color = "var(--color-cyan)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-steel)";
+              e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+          >
+            ←
+          </button>
+          <div className="flex items-start gap-6">
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-mono text-white flex items-center gap-3">
+                <span>Game 0</span>
+                <span className="text-gray-400 text-base">
+                  Round {gameState.turnState.currentRound.toString()}
+                </span>
+              </h1>
+              {/* YOUR TURN · 99:99 and static bar (no countdown in tutorial) */}
+              <div className="flex flex-col gap-1.5">
+                <div
+                  className="text-sm flex items-center gap-2 uppercase font-semibold tracking-wider"
+                  style={{
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    color: "var(--color-text-secondary)",
+                  }}
+                >
+                  <span style={{ color: "var(--color-cyan)" }}>YOUR TURN</span>
+                  <span style={{ color: "var(--color-text-muted)" }}>•</span>
+                  <span
+                    className="font-mono"
+                    style={{
+                      fontFamily:
+                        "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      color: "var(--color-cyan)",
+                    }}
+                  >
+                    99:99
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex-1 h-1.5 overflow-hidden"
+                    style={{
+                      backgroundColor: "var(--color-gunmetal)",
+                      borderRadius: 0,
+                    }}
+                  >
+                    <div
+                      className="h-full"
+                      style={{
+                        width: "100%",
+                        backgroundColor: "var(--color-cyan)",
+                        borderRadius: 0,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Score grouped with game/round (same conceptual row as in reference) */}
+            <div
+              className="p-2 border border-solid w-48 text-lg shrink-0"
+              style={{
+                backgroundColor: "var(--color-slate)",
+                borderColor: "var(--color-gunmetal)",
+                borderTopColor: "var(--color-steel)",
+                borderLeftColor: "var(--color-steel)",
+                borderRadius: 0,
+              }}
+            >
+              <div className="space-y-0.5">
+                <div className="flex justify-between">
+                  <span
+                    style={{
+                      fontFamily:
+                        "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      color: "var(--color-text-secondary)",
+                      fontSize: "14px",
+                    }}
+                  >
+                    My Score:
+                  </span>
+                  <span
+                    title="Scores update at end of round."
+                    style={{
+                      fontFamily:
+                        "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      color: "var(--color-text-primary)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {gameState.creatorScore.toString()}/
+                    {gameState.maxScore.toString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span
+                    style={{
+                      fontFamily:
+                        "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      color: "var(--color-text-secondary)",
+                      fontSize: "14px",
+                    }}
+                  >
+                    Opponent:
+                  </span>
+                  <span
+                    title="Scores update at end of round."
+                    style={{
+                      fontFamily:
+                        "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      color: "var(--color-text-primary)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {gameState.joinerScore.toString()}/
+                    {gameState.maxScore.toString()}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        {/* Score box styled like the live game */}
-        <div
-          className="ml-6 p-2 border border-solid w-48 text-lg"
-          style={{
-            backgroundColor: "var(--color-slate)",
-            borderColor: "var(--color-gunmetal)",
-            borderTopColor: "var(--color-steel)",
-            borderLeftColor: "var(--color-steel)",
-            borderRadius: 0,
-          }}
-        >
-          <div className="space-y-0.5">
-            <div className="flex justify-between">
-              <span
-                style={{
-                  fontFamily:
-                    "var(--font-jetbrains-mono), 'Courier New', monospace",
-                  color: "var(--color-text-secondary)",
-                  fontSize: "14px",
-                }}
-              >
-                My Score:
-              </span>
-              <span
-                title="Scores update at end of round."
-                style={{
-                  fontFamily:
-                    "var(--font-jetbrains-mono), 'Courier New', monospace",
-                  color: "var(--color-text-primary)",
-                  fontWeight: 600,
-                }}
-              >
-                {gameState.creatorScore.toString()}/{gameState.maxScore.toString()}
-              </span>
+
+        {/* Proposed Move panel: inline between score and Flee Battle when active.
+            Mirrors main game behavior: appears whenever an owned ship is selected
+            and eligible to act this round, even before a move is proposed. */}
+        {isShowingProposedMove && (
+            <div
+              className="flex-1 border border-solid p-3"
+              style={{
+                backgroundColor: "var(--color-near-black)",
+                borderColor: "var(--color-gunmetal)",
+                borderTopColor: "var(--color-steel)",
+                borderLeftColor: "var(--color-steel)",
+                borderRadius: 0,
+              }}
+            >
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col gap-1 min-w-0 flex-shrink-0">
+                  <div
+                    className="text-xs uppercase tracking-wide"
+                    style={{
+                      fontFamily:
+                        "var(--font-jetbrains-mono), 'Courier New', monospace",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    Proposed Move
+                  </div>
+                  <div className="text-sm text-white font-mono">
+                    {(() => {
+                      const ship = shipMap.get(selectedShipId!);
+                      const name =
+                        ship?.name || `Ship #${selectedShipId?.toString()}`;
+                      const currentPos = gameState.shipPositions.find(
+                        (pos) => pos.shipId === selectedShipId?.toString(),
+                      );
+                      const fromRow = currentPos?.position.row ?? 0;
+                      const fromCol = currentPos?.position.col ?? 0;
+                      const toRow = previewPosition
+                        ? previewPosition.row
+                        : fromRow;
+                      const toCol = previewPosition
+                        ? previewPosition.col
+                        : fromCol;
+                      return `${name} (${fromRow}, ${fromCol}) → (${toRow}, ${toCol})`;
+                    })()}
+                  </div>
+                  {/* Weapon / Special selector, mirroring main game UI */}
+                  {(() => {
+                    if (!selectedShipId) return null;
+                    const ship = shipMap.get(selectedShipId);
+                    if (!ship || ship.equipment.special <= 0) return null;
+                    return (
+                      <select
+                        value={selectedWeaponType}
+                        onChange={(e) => {
+                          const newWeaponType = e.target.value as
+                            | "weapon"
+                            | "special";
+                          setSelectedWeaponType(newWeaponType);
+                          // In tutorial we do not have a boarding special; keep target as-is.
+                        }}
+                        className="mt-1 px-2 py-1 text-xs uppercase font-semibold tracking-wider"
+                        style={{
+                          fontFamily:
+                            "var(--font-jetbrains-mono), 'Courier New', monospace",
+                          borderRadius: 0,
+                          backgroundColor: "var(--color-slate)",
+                          color: "var(--color-text-primary)",
+                        }}
+                      >
+                        <option value="weapon">
+                          {getMainWeaponName(ship.equipment.mainWeapon)}
+                        </option>
+                        <option value="special">
+                          {getSpecialName(ship.equipment.special)}
+                        </option>
+                      </select>
+                    );
+                  })()}
+                </div>
+
+                {/* Center: Target selection, mirroring main game UI */}
+                {validTargets.length > 0 && (
+                  <div className="flex-1">
+                    <div
+                      className="border border-solid p-3 min-h-[7.5rem]"
+                      style={{
+                        backgroundColor: "var(--color-near-black)",
+                        borderColor: "var(--color-gunmetal)",
+                        borderTopColor: "var(--color-steel)",
+                        borderLeftColor: "var(--color-steel)",
+                        borderRadius: 0,
+                      }}
+                    >
+                      <div
+                        className="text-xs mb-2 uppercase tracking-wide"
+                        style={{
+                          fontFamily:
+                            "var(--font-jetbrains-mono), 'Courier New', monospace",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        Select Target (Optional)
+                      </div>
+                      <div className="flex flex-wrap gap-2 min-h-[5rem]">
+                        {validTargets.map((target) => {
+                          const targetShip = shipMap.get(BigInt(target.shipId));
+                          const isSelectedTarget =
+                            targetShipId !== null &&
+                            targetShipId === BigInt(target.shipId);
+                          return (
+                            <button
+                              key={target.shipId}
+                              onClick={() =>
+                                setTargetShipId(BigInt(target.shipId))
+                              }
+                              className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
+                              style={{
+                                fontFamily:
+                                  "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                borderColor: isSelectedTarget
+                                  ? "var(--color-warning-red)"
+                                  : "var(--color-gunmetal)",
+                                borderTopColor: isSelectedTarget
+                                  ? "var(--color-warning-red)"
+                                  : "var(--color-steel)",
+                                borderLeftColor: isSelectedTarget
+                                  ? "var(--color-warning-red)"
+                                  : "var(--color-steel)",
+                                color: isSelectedTarget
+                                  ? "var(--color-warning-red)"
+                                  : "var(--color-warning-red)",
+                                backgroundColor: isSelectedTarget
+                                  ? "var(--color-steel)"
+                                  : "var(--color-slate)",
+                                borderWidth: "2px",
+                                borderStyle: "solid",
+                                borderRadius: 0,
+                              }}
+                            >
+                              🎯{" "}
+                              {targetShip?.name ||
+                                `#${BigInt(target.shipId).toString()}`}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSubmitMove}
+                    className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                    style={{
+                      fontFamily:
+                        "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      borderColor: "var(--color-phosphor-green)",
+                      borderTopColor: "var(--color-phosphor-green)",
+                      borderLeftColor: "var(--color-phosphor-green)",
+                      color: "var(--color-phosphor-green)",
+                      backgroundColor: "var(--color-steel)",
+                      borderWidth: "2px",
+                      borderStyle: "solid",
+                      borderRadius: 0,
+                    }}
+                  >
+                    Submit Move
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPreviewPosition(null);
+                      setTargetShipId(null);
+                    }}
+                    className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                    style={{
+                      fontFamily:
+                        "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      borderColor: "var(--color-gunmetal)",
+                      borderTopColor: "var(--color-steel)",
+                      borderLeftColor: "var(--color-steel)",
+                      color: "var(--color-text-secondary)",
+                      backgroundColor: "var(--color-slate)",
+                      borderWidth: "2px",
+                      borderStyle: "solid",
+                      borderRadius: 0,
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span
-                style={{
-                  fontFamily:
-                    "var(--font-jetbrains-mono), 'Courier New', monospace",
-                  color: "var(--color-text-secondary)",
-                  fontSize: "14px",
-                }}
-              >
-                Opponent:
-              </span>
-              <span
-                title="Scores update at end of round."
-                style={{
-                  fontFamily:
-                    "var(--font-jetbrains-mono), 'Courier New', monospace",
-                  color: "var(--color-text-primary)",
-                  fontWeight: 600,
-                }}
-              >
-                {gameState.joinerScore.toString()}/{gameState.maxScore.toString()}
-              </span>
-            </div>
-          </div>
+          )}
+
+        <div className="flex-shrink-0">
+          {/* Flee Battle: locked in tutorial */}
+          <FleeSafetySwitch gameId={0n} locked />
         </div>
       </div>
 
       <div className="relative w-full">
-        <div
-          className="bg-gray-900 rounded-none p-2 w-full"
-          style={{
-            outline: `2px solid #60a5fa`, // Always blue for tutorial player
-            outlineOffset: 0,
-            borderColor: "#374151",
-            borderWidth: 1,
-            borderStyle: "solid",
-          }}
-        >
+        <GameBoardLayout isCurrentPlayerTurn={true}>
           <GameGrid
             grid={grid}
             shipMap={shipMap}
@@ -1244,14 +1815,14 @@ export function SimulatedGameDisplay({
             dragOverCell={dragOverCell}
             movementRange={movementRange}
             shootingRange={shootingRange}
-            validTargets={validTargets}
-            assistableTargets={assistableTargets}
-            assistableTargetsFromStart={assistableTargetsFromStart}
+            validTargets={gridValidTargets}
+            assistableTargets={gridAssistableTargets}
+            assistableTargetsFromStart={gridAssistableTargetsFromStart}
             dragShootingRange={dragShootingRange}
             dragValidTargets={dragValidTargets}
             isCurrentPlayerTurn={true}
             isShipOwnedByCurrentPlayer={isShipOwnedByCurrentPlayer}
-            movedShipIdsSet={movedShipIdsSet}
+            movedShipIdsSet={gridMovedShipIdsSet}
             specialType={specialType}
             blockedGrid={blockedGrid}
             scoringGrid={scoringGrid}
@@ -1264,6 +1835,7 @@ export function SimulatedGameDisplay({
             highlightedMovePosition={highlightedMovePosition}
             lastMoveShipId={lastMoveProps.lastMoveShipId}
             lastMoveOldPosition={lastMoveProps.lastMoveOldPosition}
+            lastMoveNewPosition={lastMoveProps.lastMoveNewPosition}
             lastMoveActionType={lastMoveProps.lastMoveActionType}
             lastMoveTargetShipId={lastMoveProps.lastMoveTargetShipId}
             lastMoveIsCurrentPlayer={lastMoveProps.lastMoveIsCurrentPlayer}
@@ -1275,7 +1847,7 @@ export function SimulatedGameDisplay({
             setDraggedShipId={setDraggedShipId}
             setDragOverCell={setDragOverCell}
           />
-        </div>
+        </GameBoardLayout>
 
         {/* Instructions: overlap grid bottom by ~50%, aligned to left */}
         <div className="pointer-events-none absolute inset-x-0 top-full flex justify-start">
@@ -1285,12 +1857,172 @@ export function SimulatedGameDisplay({
         </div>
       </div>
 
+      {/* Last Move panel - reuse GameEvents from live game */}
+      <GameEvents
+        lastMove={lastMoveForEvents}
+        shipMap={shipMap}
+        address={TUTORIAL_PLAYER_ADDRESS}
+      />
+
+      {/* Ship Details panel - mirror live game fleet layout using tutorial data */}
+      <div
+        className="p-4 border border-solid w-full"
+        style={{
+          backgroundColor: "var(--color-slate)",
+          borderColor: "var(--color-gunmetal)",
+          borderTopColor: "var(--color-steel)",
+          borderLeftColor: "var(--color-steel)",
+          borderRadius: 0,
+        }}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* My Fleet - Left (tutorial player) */}
+          <div>
+            <h4
+              className="mb-3 uppercase font-bold tracking-wider"
+              style={{
+                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                color: "var(--color-cyan)",
+                fontSize: "18px",
+              }}
+            >
+              My Fleet
+              <span
+                className="ml-2"
+                style={{
+                  fontFamily:
+                    "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  color: "var(--color-text-secondary)",
+                  fontSize: "14px",
+                  fontWeight: 400,
+                }}
+              >
+                ({gameState.metadata.creator})
+              </span>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {gameState.creatorActiveShipIds.map((shipId) => {
+                const shipPosition = gameState.shipPositions.find(
+                  (sp) => sp.shipId === shipId,
+                );
+                const attributes = getShipAttributes(shipId);
+                const ship = shipMap.get(BigInt(shipId));
+
+                if (!shipPosition || !attributes || !ship) return null;
+
+                const reactorCriticalStatus =
+                  attributes.reactorCriticalTimer > 0 &&
+                  attributes.hullPoints === 0
+                    ? "critical"
+                    : attributes.reactorCriticalTimer > 0
+                      ? "warning"
+                      : "none";
+
+                const hasMoved = movedShipIdsSet.has(shipId);
+
+                return (
+                  <div key={shipId}>
+                    <ShipCard
+                      ship={ship}
+                      isStarred={false}
+                      onToggleStar={() => {}}
+                      isSelected={false}
+                      onToggleSelection={() => {}}
+                      onRecycleClick={() => {}}
+                      showInGameProperties={true}
+                      inGameAttributes={attributes}
+                      attributesLoading={false}
+                      hideRecycle={true}
+                      hideCheckbox={true}
+                      isCurrentPlayerShip={true}
+                      flipShip={true}
+                      reactorCriticalStatus={reactorCriticalStatus}
+                      hasMoved={hasMoved}
+                      gameViewMode={true}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Opponent's Fleet - Right */}
+          <div>
+            <h4
+              className="mb-3 uppercase font-bold tracking-wider"
+              style={{
+                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                color: "var(--color-warning-red)",
+                fontSize: "18px",
+              }}
+            >
+              Opponent&apos;s Fleet
+              <span
+                className="ml-2"
+                style={{
+                  fontFamily:
+                    "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  color: "var(--color-text-secondary)",
+                  fontSize: "14px",
+                  fontWeight: 400,
+                }}
+              >
+                ({gameState.metadata.joiner})
+              </span>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {gameState.joinerActiveShipIds.map((shipId) => {
+                const shipPosition = gameState.shipPositions.find(
+                  (sp) => sp.shipId === shipId,
+                );
+                const attributes = getShipAttributes(shipId);
+                const ship = shipMap.get(BigInt(shipId));
+
+                if (!shipPosition || !attributes || !ship) return null;
+
+                const reactorCriticalStatus =
+                  attributes.reactorCriticalTimer > 0 &&
+                  attributes.hullPoints === 0
+                    ? "critical"
+                    : attributes.reactorCriticalTimer > 0
+                      ? "warning"
+                      : "none";
+
+                const hasMoved = movedShipIdsSet.has(shipId);
+
+                return (
+                  <div key={shipId}>
+                    <ShipCard
+                      ship={ship}
+                      isStarred={false}
+                      onToggleStar={() => {}}
+                      isSelected={false}
+                      onToggleSelection={() => {}}
+                      onRecycleClick={() => {}}
+                      showInGameProperties={true}
+                      inGameAttributes={attributes}
+                      attributesLoading={false}
+                      hideRecycle={true}
+                      hideCheckbox={true}
+                      isCurrentPlayerShip={false}
+                      flipShip={false}
+                      reactorCriticalStatus={reactorCriticalStatus}
+                      hasMoved={hasMoved}
+                      gameViewMode={true}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {selectedShipId && (
         <div className="mt-4 bg-black/40 border border-cyan-400 rounded-none p-4">
           <p className="text-cyan-300 font-mono">
             Selected Ship:{" "}
-            {shipMap.get(selectedShipId)?.name ||
-              selectedShipId.toString()}
+            {shipMap.get(selectedShipId)?.name || selectedShipId.toString()}
           </p>
           {currentStep?.allowedActions.moveShip &&
             selectedShipId.toString() ===

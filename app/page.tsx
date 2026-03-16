@@ -20,6 +20,7 @@ export default function Home() {
   // Initialize with default tab to prevent hydration mismatch
   const [activeTab, setActiveTab] = useState("Info");
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isInfoTutorialActive, setIsInfoTutorialActive] = useState(false);
 
   // Load saved tab after hydration
   useEffect(() => {
@@ -54,11 +55,23 @@ export default function Home() {
       setActiveTab("Games");
     };
 
-    window.addEventListener("void-tactics-navigate-to-games", handleNavigateToGames);
-    document.addEventListener("void-tactics-navigate-to-games", handleNavigateToGames);
+    window.addEventListener(
+      "void-tactics-navigate-to-games",
+      handleNavigateToGames,
+    );
+    document.addEventListener(
+      "void-tactics-navigate-to-games",
+      handleNavigateToGames,
+    );
     return () => {
-      window.removeEventListener("void-tactics-navigate-to-games", handleNavigateToGames);
-      document.removeEventListener("void-tactics-navigate-to-games", handleNavigateToGames);
+      window.removeEventListener(
+        "void-tactics-navigate-to-games",
+        handleNavigateToGames,
+      );
+      document.removeEventListener(
+        "void-tactics-navigate-to-games",
+        handleNavigateToGames,
+      );
     };
   }, []);
 
@@ -98,6 +111,26 @@ export default function Home() {
     };
   }, []);
 
+  // Listen for Info tab tutorial activation so we can mirror the full-width
+  // game layout when the tutorial is showing.
+  useEffect(() => {
+    const handleInfoTutorialActive = (event: Event) => {
+      const custom = event as CustomEvent<{ active?: boolean }>;
+      setIsInfoTutorialActive(Boolean(custom.detail?.active));
+    };
+
+    window.addEventListener(
+      "void-tactics-info-tutorial-active",
+      handleInfoTutorialActive as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "void-tactics-info-tutorial-active",
+        handleInfoTutorialActive as EventListener,
+      );
+    };
+  }, []);
+
   // Save tab to localStorage whenever it changes (only after hydration)
   useEffect(() => {
     if (isHydrated) {
@@ -126,11 +159,14 @@ export default function Home() {
             <div
               className="text-center uppercase"
               style={{
-                fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                fontFamily:
+                  "var(--font-jetbrains-mono), 'Courier New', monospace",
                 color: "var(--color-cyan)",
               }}
             >
-              <div className="text-2xl mb-4 font-bold tracking-wider">VOID TACTICS</div>
+              <div className="text-2xl mb-4 font-bold tracking-wider">
+                VOID TACTICS
+              </div>
               <div className="text-lg">Connecting to wallet...</div>
             </div>
           </div>
@@ -155,13 +191,18 @@ export default function Home() {
       <Header />
       <main
         className={`flex flex-col gap-8 row-start-2 pt-4 pb-20 w-full ${
-          activeTab === "Games" ? "px-0" : "px-8 sm:px-20"
+          activeTab === "Games" ||
+          (activeTab === "Info" && isInfoTutorialActive)
+            ? "px-0"
+            : "px-8 sm:px-20"
         }`}
       >
         {/* Game Tabs */}
         <div
           className={`w-full ${
-            activeTab === "Maps" || activeTab === "Games"
+            activeTab === "Maps" ||
+            activeTab === "Games" ||
+            (activeTab === "Info" && isInfoTutorialActive)
               ? ""
               : "max-w-7xl mx-auto"
           }`}
@@ -189,7 +230,8 @@ export default function Home() {
                   onClick={() => setActiveTab(tab)}
                   className="px-6 py-3 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
                   style={{
-                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
                     borderColor: isActive
                       ? "var(--color-cyan)"
                       : "var(--color-gunmetal)",
@@ -210,14 +252,18 @@ export default function Home() {
                     if (!isActive) {
                       e.currentTarget.style.borderColor = "var(--color-cyan)";
                       e.currentTarget.style.color = "var(--color-cyan)";
-                      e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                      e.currentTarget.style.backgroundColor =
+                        "var(--color-steel)";
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-                      e.currentTarget.style.color = "var(--color-text-secondary)";
-                      e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                      e.currentTarget.style.borderColor =
+                        "var(--color-gunmetal)";
+                      e.currentTarget.style.color =
+                        "var(--color-text-secondary)";
+                      e.currentTarget.style.backgroundColor =
+                        "var(--color-slate)";
                     }
                   }}
                 >

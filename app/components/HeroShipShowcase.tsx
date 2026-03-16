@@ -67,145 +67,7 @@ const SHIP_NAMES = [
 
 const SHIP_ART_SIZE = 320;
 
-// ---- ShipAttributes v1 constants (mirroring on-chain data) -----------------
-
-const ATTR_BASE_HULL = 100;
-const ATTR_BASE_SPEED = 3;
-
-// Fore accuracy bonuses (%)
-const ATTR_FORE_ACCURACY: number[] = [0, 25, 50];
-
-// Hull bonuses (flat hull points)
-const ATTR_HULL_BONUS: number[] = [0, 10, 20];
-
-// Engine speed bonuses (movement modifier)
-const ATTR_ENGINE_SPEEDS: number[] = [0, 1, 2];
-
-// Gun data: [range, damage, movement]
-const ATTR_GUNS: Array<{ range: number; damage: number; movement: number }> = [
-  { range: 3, damage: 50, movement: 0 }, // Laser
-  { range: 6, damage: 40, movement: 0 }, // Railgun
-  { range: 4, damage: 60, movement: -1 }, // MissileLauncher
-  { range: 2, damage: 80, movement: 0 }, // PlasmaCannon
-];
-
-// Armor data: [damageReduction, movement]
-const ATTR_ARMORS: Array<{ damageReduction: number; movement: number }> = [
-  { damageReduction: 0, movement: 1 }, // None
-  { damageReduction: 15, movement: 0 }, // Light
-  { damageReduction: 30, movement: -1 }, // Medium
-  { damageReduction: 45, movement: -2 }, // Heavy
-];
-
-// Shield data: [damageReduction, movement]
-const ATTR_SHIELDS: Array<{ damageReduction: number; movement: number }> = [
-  { damageReduction: 0, movement: 1 }, // None
-  { damageReduction: 15, movement: 1 }, // Light
-  { damageReduction: 30, movement: 0 }, // Medium
-  { damageReduction: 45, movement: -1 }, // Heavy
-];
-
-// Rank thresholds and multipliers (% bonuses)
-function getRankFromKills(shipsDestroyed: number): number {
-  if (shipsDestroyed >= 1000) return 6;
-  if (shipsDestroyed >= 300) return 5;
-  if (shipsDestroyed >= 100) return 4;
-  if (shipsDestroyed >= 30) return 3;
-  if (shipsDestroyed >= 10) return 2;
-  return 1;
-}
-
-function getRankMultiplier(rank: number): number {
-  if (rank >= 6) return 50;
-  if (rank === 5) return 40;
-  if (rank === 4) return 30;
-  if (rank === 3) return 20;
-  if (rank === 2) return 10;
-  return 0; // rank 1
-}
-
-// Pure helpers mirroring _calculateHullPoints / _calculateMovement / _calculateDamageReduction
-function calcBaseHullPoints(ship: Ship): number {
-  const traitIdx = Math.max(0, Math.min(ATTR_HULL_BONUS.length - 1, ship.traits.hull));
-  const traitBonus = ATTR_HULL_BONUS[traitIdx] ?? 0;
-  return ATTR_BASE_HULL + traitBonus;
-}
-
-function calcBaseMovement(ship: Ship): number {
-  const speedIdx = Math.max(0, Math.min(ATTR_ENGINE_SPEEDS.length - 1, ship.traits.speed));
-
-  const gun = ATTR_GUNS[ship.equipment.mainWeapon] ?? ATTR_GUNS[0];
-  const armor = ATTR_ARMORS[ship.equipment.armor] ?? ATTR_ARMORS[0];
-  const shield = ATTR_SHIELDS[ship.equipment.shields] ?? ATTR_SHIELDS[0];
-
-  let baseMovement = ATTR_BASE_SPEED;
-  baseMovement += ATTR_ENGINE_SPEEDS[speedIdx] ?? 0;
-
-  baseMovement += gun.movement;
-  baseMovement += armor.movement;
-  baseMovement += shield.movement;
-
-  // Specials can also modify movement on-chain; current v1 specials all have 0 movement.
-  return Math.max(0, baseMovement);
-}
-
-function calcBaseDamageReduction(ship: Ship): number {
-  const armor = ATTR_ARMORS[ship.equipment.armor] ?? ATTR_ARMORS[0];
-  const shield = ATTR_SHIELDS[ship.equipment.shields] ?? ATTR_SHIELDS[0];
-  return armor.damageReduction + shield.damageReduction;
-}
-
-// Full on-chain-style attribute calculation for a mock Ship
-function calculateAttributes(ship: Ship): Attributes {
-  const kills = Number(ship.shipData.shipsDestroyed ?? 0);
-  const rank = getRankFromKills(kills);
-  const rankMult = getRankMultiplier(rank); // percentage
-
-  const gun = ATTR_GUNS[ship.equipment.mainWeapon] ?? ATTR_GUNS[0];
-
-  // RANGE: base gun range → rank bonus → fore accuracy bonus
-  let range = gun.range;
-  let bonus = Math.floor((range * rankMult) / 100);
-  range += bonus;
-
-  const accIdx = Math.max(0, Math.min(ATTR_FORE_ACCURACY.length - 1, ship.traits.accuracy));
-  const foreAccBonus = ATTR_FORE_ACCURACY[accIdx] ?? 0;
-  bonus = Math.floor((range * foreAccBonus) / 100);
-  range += bonus;
-
-  // DAMAGE: base gun damage → rank bonus
-  let gunDamage = gun.damage;
-  bonus = Math.floor((gunDamage * rankMult) / 100);
-  gunDamage += bonus;
-
-  // HULL: base hull points → rank bonus
-  let hullPoints = calcBaseHullPoints(ship);
-  bonus = Math.floor((hullPoints * rankMult) / 100);
-  hullPoints += bonus;
-  const maxHullPoints = hullPoints;
-
-  // MOVEMENT: base movement → rank bonus
-  let movement = calcBaseMovement(ship);
-  bonus = Math.floor((movement * rankMult) / 100);
-  movement += bonus;
-
-  // DAMAGE REDUCTION: base from armor + shields → rank bonus
-  let damageReduction = calcBaseDamageReduction(ship);
-  bonus = Math.floor((damageReduction * rankMult) / 100);
-  damageReduction += bonus;
-
-  return {
-    version: 1,
-    range,
-    gunDamage,
-    hullPoints,
-    maxHullPoints,
-    movement,
-    damageReduction,
-    reactorCriticalTimer: 0,
-    statusEffects: [],
-  };
-}
+import { calculateAttributesFromContracts } from "../utils/shipAttributesCalculator";
 
 // Generate a random ship
 function generateRandomShip(index: number): Ship {
@@ -320,7 +182,7 @@ export const HeroShipShowcase: React.FC<{
 
   // Calculate attributes for the ship
   const shipAttributes = useMemo<Attributes>(
-    () => calculateAttributes(heroShip),
+    () => calculateAttributesFromContracts(heroShip),
     [heroShip],
   );
 

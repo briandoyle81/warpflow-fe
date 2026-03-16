@@ -13,7 +13,9 @@ const TutorialContext = createContext<TutorialContextValue | null>(null);
 export function useTutorialContext() {
   const context = useContext(TutorialContext);
   if (!context) {
-    throw new Error("useTutorialContext must be used within OnboardingTutorial");
+    throw new Error(
+      "useTutorialContext must be used within OnboardingTutorial",
+    );
   }
   return context;
 }
@@ -23,12 +25,16 @@ interface OnboardingTutorialProps {
   onSkip?: () => void;
 }
 
-export function OnboardingTutorial({ onComplete, onSkip }: OnboardingTutorialProps) {
+export function OnboardingTutorial({
+  onComplete,
+  onSkip,
+}: OnboardingTutorialProps) {
   const tutorialContext = useOnboardingTutorial();
 
   const {
     currentStep,
     currentStepIndex,
+    isStepHydrated,
     isTransactionDialogOpen,
     pendingAction,
     approveTransaction,
@@ -37,7 +43,10 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingTutorialPro
 
   // Handle completion
   useEffect(() => {
-    if (currentStepIndex === TUTORIAL_STEPS.length - 1 && currentStep?.id === "completion") {
+    if (
+      currentStepIndex === TUTORIAL_STEPS.length - 1 &&
+      currentStep?.id === "completion"
+    ) {
       // Tutorial is complete
       const completionTimer = setTimeout(() => {
         // Store completion in localStorage
@@ -54,7 +63,11 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingTutorialPro
   }, [currentStepIndex, currentStep, onComplete]);
 
   const handleSkip = () => {
-    if (window.confirm("Are you sure you want to skip the tutorial? You can always access it again from the Info tab.")) {
+    if (
+      window.confirm(
+        "Are you sure you want to skip the tutorial? You can always access it again from the Info tab.",
+      )
+    ) {
       // Clear saved step index when skipping
       if (typeof window !== "undefined") {
         localStorage.removeItem("void-tactics-tutorial-step-index");
@@ -71,10 +84,24 @@ export function OnboardingTutorial({ onComplete, onSkip }: OnboardingTutorialPro
     );
   }
 
+  // Avoid rendering the board for a new step until its state has been
+  // fully hydrated from either a cached snapshot or the scripted setup,
+  // so we don't momentarily show the previous step's positions.
+  if (!isStepHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-cyan-300 font-mono">Preparing tutorial step...</div>
+      </div>
+    );
+  }
+
   return (
     <TutorialContext.Provider value={tutorialContext}>
       <div className="relative w-full h-full min-h-screen">
-        <SimulatedGameDisplay tutorialContext={tutorialContext} />
+        <SimulatedGameDisplay
+          tutorialContext={tutorialContext}
+          onBack={onSkip}
+        />
 
         <SimulatedTransactionDialog
           isOpen={isTransactionDialogOpen}

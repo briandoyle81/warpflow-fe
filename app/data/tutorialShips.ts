@@ -25,15 +25,15 @@ function createShipData(cost: number, inFleet: boolean = true): ShipData {
 
 // Player ships for tutorial
 export const TUTORIAL_PLAYER_SHIPS: Ship[] = [
-  // Ship 1: Basic ship with Laser, for movement and shooting
+  // Ship 1: Tutorial EMP ship with Plasma main weapon
   {
-    name: "Tutorial Scout",
+    name: "Tutorial EMP",
     id: 1001n,
     equipment: {
-      mainWeapon: 0, // Laser
+      mainWeapon: 3, // Plasma
       armor: 1, // Light
       shields: 1, // Basic
-      special: 0, // None
+      special: 1, // EMP
     },
     traits: {
       serialNumber: 1001n,
@@ -46,15 +46,15 @@ export const TUTORIAL_PLAYER_SHIPS: Ship[] = [
     shipData: createShipData(10),
     owner: TUTORIAL_PLAYER_ADDRESS,
   },
-  // Ship 2: Ship with EMP special
+  // Ship 2: Tutorial Sniper with Repair drones
   {
-    name: "Tutorial EMP Vessel",
+    name: "Tutorial Sniper",
     id: 1002n,
     equipment: {
       mainWeapon: 1, // Railgun
       armor: 2, // Medium
       shields: 2, // Enhanced
-      special: 1, // EMP
+      special: 2, // Repair
     },
     traits: {
       serialNumber: 1002n,
@@ -67,15 +67,15 @@ export const TUTORIAL_PLAYER_SHIPS: Ship[] = [
     shipData: createShipData(15),
     owner: TUTORIAL_PLAYER_ADDRESS,
   },
-  // Ship 3: Ship with Repair special
+  // Ship 3: Tutorial Fighter (no special)
   {
-    name: "Tutorial Support Ship",
+    name: "Tutorial Fighter",
     id: 1003n,
     equipment: {
       mainWeapon: 0, // Laser
       armor: 1, // Light
       shields: 1, // Basic
-      special: 2, // Repair
+      special: 0, // None
     },
     traits: {
       serialNumber: 1003n,
@@ -97,7 +97,7 @@ export const TUTORIAL_OPPONENT_SHIPS: Ship[] = [
     name: "Enemy Fighter",
     id: 2001n,
     equipment: {
-      mainWeapon: 0, // Laser
+      mainWeapon: 3, // Plasma
       armor: 1, // Light
       shields: 1, // Basic
       special: 0, // None
@@ -108,17 +108,17 @@ export const TUTORIAL_OPPONENT_SHIPS: Ship[] = [
       variant: 1,
       accuracy: 70,
       hull: 100,
-      speed: 3,
+      speed: 5,
     },
     shipData: createShipData(10),
     owner: TUTORIAL_OPPONENT_ADDRESS,
   },
-  // Enemy ship 2: Will be disabled for rescue tutorial
+  // Enemy ship 2: Heavy enemy used in later steps
   {
-    name: "Disabled Enemy",
+    name: "Heavy Enemy",
     id: 2002n,
     equipment: {
-      mainWeapon: 1, // Railgun
+      mainWeapon: 3, // Plasma
       armor: 2, // Medium
       shields: 0, // None
       special: 0, // None
@@ -128,18 +128,18 @@ export const TUTORIAL_OPPONENT_SHIPS: Ship[] = [
       colors: createColors(10, 70, 35, 30, 60, 25),
       variant: 2,
       accuracy: 75,
-      hull: 0, // Disabled (0 HP)
-      speed: 2,
+      hull: 100,
+      speed: 0, // Level 0 engines
     },
     shipData: createShipData(15),
     owner: TUTORIAL_OPPONENT_ADDRESS,
   },
-  // Enemy ship 3: Another enemy
+  // Enemy ship 3: Long-range sniper
   {
-    name: "Enemy Destroyer",
+    name: "Enemy Sniper",
     id: 2003n,
     equipment: {
-      mainWeapon: 2, // Missile
+      mainWeapon: 1, // Railgun
       armor: 2, // Medium
       shields: 2, // Enhanced
       special: 0, // None

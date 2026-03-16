@@ -1,0 +1,24 @@
+---
+description: Coordinate order conventions (row, col)
+alwaysApply: true
+---
+
+# Coordinate Order (row, col)
+
+- **Always express board coordinates as `row, col`.**
+- **Never** flip the order to `col, row` in:
+  - Variable names
+  - Function parameters
+  - Comments, docs, and tutorial copy
+  - Debug logs and error messages
+- When you see coordinates in the game (grid, tutorial, contracts), interpret and describe them as `row, col` consistently.
+
+## Examples
+
+- **Correct**: `position: { row: 5, col: 8 }`
+- **Correct**: `"Move the scout to (5, 8)"`
+- **Incorrect**: `position: { x: 8, y: 5 }` (or any implicit `x, y` without clearly mapping to `row, col`)
+- **Incorrect**: `"Move to (col 8, row 5)"`
+
+If external APIs or contracts use a different order, convert them at the boundary and still expose them internally as `row, col`.
+

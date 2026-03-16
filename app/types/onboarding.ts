@@ -123,6 +123,7 @@ export interface TutorialContextValue {
   isTransactionDialogOpen: boolean;
   pendingAction: TutorialAction | null;
   isStepComplete: boolean;
+  isStepHydrated: boolean;
   updateGameState: (
     updater: (state: SimulatedGameState) => SimulatedGameState,
   ) => void;

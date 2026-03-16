@@ -8,13 +8,20 @@ import { toast } from "react-hot-toast";
 interface FleeSafetySwitchProps {
   gameId: bigint;
   onFlee?: () => void;
+  /** When true, lever cannot be toggled (e.g. tutorial). */
+  locked?: boolean;
 }
 
-export function FleeSafetySwitch({ gameId, onFlee }: FleeSafetySwitchProps) {
+export function FleeSafetySwitch({
+  gameId,
+  onFlee,
+  locked = false,
+}: FleeSafetySwitchProps) {
   const [isLeverOpen, setIsLeverOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const handleLeverToggle = () => {
+    if (locked) return;
     setIsLeverOpen(!isLeverOpen);
     if (!isLeverOpen) {
       // Lever opened, show flee button
@@ -44,12 +51,21 @@ export function FleeSafetySwitch({ gameId, onFlee }: FleeSafetySwitchProps) {
       <div className="flex flex-col items-center space-y-1">
         <button
           onClick={handleLeverToggle}
+          disabled={locked}
           className={`w-12 h-6 rounded-none-full border-2 transition-all duration-300 ${
-            isLeverOpen
-              ? "bg-red-600 border-red-400 shadow-lg shadow-red-600/50"
-              : "bg-gray-700 border-gray-500 hover:border-gray-400"
+            locked
+              ? "bg-gray-700 border-gray-500 cursor-not-allowed opacity-80"
+              : isLeverOpen
+                ? "bg-red-600 border-red-400 shadow-lg shadow-red-600/50"
+                : "bg-gray-700 border-gray-500 hover:border-gray-400"
           }`}
-          title={isLeverOpen ? "Close safety lever" : "Open safety lever"}
+          title={
+            locked
+              ? "Flee is disabled in tutorial"
+              : isLeverOpen
+                ? "Close safety lever"
+                : "Open safety lever"
+          }
         >
           <div
             className={`w-4 h-4 rounded-none-full transition-all duration-300 ${

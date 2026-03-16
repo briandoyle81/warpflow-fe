@@ -1,10 +1,15 @@
-import { SimulatedGameState, TutorialShipId, TutorialShipPosition } from "../types/onboarding";
+import {
+  SimulatedGameState,
+  TutorialShipId,
+  TutorialShipPosition,
+} from "../types/onboarding";
 import { Attributes, GRID_DIMENSIONS } from "../types/types";
 import {
   TUTORIAL_PLAYER_ADDRESS,
   TUTORIAL_OPPONENT_ADDRESS,
   ALL_TUTORIAL_SHIPS,
 } from "./tutorialShips";
+import { calculateAttributesFromContracts } from "../utils/shipAttributesCalculator";
 
 // Initial ship positions for tutorial (string IDs for JSON safety).
 // Both fleets start 3 squares toward center from the edges for quicker engagement.
@@ -28,27 +33,17 @@ function createInitialAttributes(shipId: TutorialShipId): Attributes {
     throw new Error(`Ship ${shipId} not found`);
   }
 
-  return {
-    version: 1,
-    range:
-      ship.equipment.mainWeapon === 0
-        ? 3
-        : ship.equipment.mainWeapon === 1
-          ? 4
-          : 5, // Weapon range
-    gunDamage:
-      ship.equipment.mainWeapon === 0
-        ? 25
-        : ship.equipment.mainWeapon === 1
-          ? 30
-          : 35,
-    hullPoints: ship.traits.hull,
-    maxHullPoints: ship.traits.hull,
-    movement: ship.traits.speed,
-    damageReduction: ship.equipment.armor * 5, // 5% per armor level
-    reactorCriticalTimer: ship.id === 2002n ? 2 : 0, // Enemy ship 2002 starts disabled
-    statusEffects: [],
-  };
+  const baseAttrs = calculateAttributesFromContracts(ship);
+
+  // Heavy Enemy (2002) starts with reactor overload but full hull.
+  if (ship.id === 2002n) {
+    return {
+      ...baseAttrs,
+      reactorCriticalTimer: 2,
+    };
+  }
+
+  return baseAttrs;
 }
 
 export function createInitialTutorialGameState(): SimulatedGameState {

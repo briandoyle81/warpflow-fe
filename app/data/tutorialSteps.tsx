@@ -179,7 +179,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
           In a nebula, ships can only shoot or be shot from 1 square away.
         </p>
         <p className="text-yellow-300 font-bold">
-          Select the Tutorial Support Ship and move it to the highlighted tile
+          Select the Tutorial Fighter and move it to the highlighted tile
           at (6, 7)!
         </p>
       </div>
@@ -202,14 +202,44 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     },
   },
   {
+    id: "wait-for-opponent",
+    title: "Waiting for Your Opponent",
+    description: "See your last move and wait for the enemy response",
+    instructions: (
+      <div className="space-y-3">
+        <p className="text-lg font-bold text-cyan-300">Previous Position</p>
+        <p>
+          After you move, both you and your opponent can still see the{" "}
+          <span className="text-yellow-300 font-bold">previous position</span>{" "}
+          of your ship on the map and in the Last Move display.
+        </p>
+        <p className="text-sm">
+          This helps you track how ships moved during the turn so you can
+          understand what changed.
+        </p>
+        <p className="text-yellow-300 font-bold">
+          You have finished your move for this step. Now you must wait for your
+          opponent to move.
+        </p>
+        <p>
+          Click <strong>Next</strong> to see your opponent&apos;s response.
+        </p>
+      </div>
+    ),
+    // No actions required in this step, it is informational only.
+    allowedActions: {},
+    highlightElements: {},
+  },
+  {
     id: "score-points",
     title: "Scoring Points",
     description: "Learn how points are scored at end of round",
     instructions: (
       <div className="space-y-3">
-        <p className="text-lg font-bold text-cyan-300">Scoring Points</p>
+        <p className="text-lg font-bold text-cyan-300">Move Your Ship in Response</p>
         <p className="text-red-300 font-bold">
-          ⚠️ The Enemy Destroyer moved to a scoring position (9, 13)!
+          The Enemy Destroyer moved to a scoring position (9, 13) and scored a
+          point.
         </p>
         <p>
           Race to the middle of the map and get your ships onto scoring zones
@@ -220,7 +250,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
           scoring zones.
         </p>
         <p className="text-yellow-300 font-bold">
-          Move the Tutorial Scout onto the central scoring tile at (5, 8)!
+          Move the Tutorial EMP onto the central scoring tile at (5, 8)!
         </p>
       </div>
     ),
@@ -238,6 +268,9 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       mapPositions: [{ row: 5, col: 8 }],
     },
     requiresTransaction: true,
+    // Apply the move immediately, then show the simulated transaction dialog,
+    // so the grid and Last Move UI reflect the new position before approval.
+    showTransactionAfter: true,
     onStepComplete: (actionData) => {
       return (
         actionData?.type === "moveShip" &&
@@ -254,40 +287,46 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       <div className="space-y-3">
         <p className="text-lg font-bold text-cyan-300">Shoot at Enemy</p>
         <p>
-          With a ship selected, click on an enemy ship within range to shoot it.
+          Before this step, the Enemy Fighter advanced to (4, 8) and fired on
+          your Tutorial EMP in the center, dealing damage based on its weapon
+          damage and your armor.
         </p>
         <p className="text-sm">
+          With a ship selected, click on an enemy ship within range to shoot it.
           The highlighted area shows your weapon range. Ships can always shoot
           adjacent enemies (1 tile away).
         </p>
         <p className="text-yellow-300 font-bold">
-          First, hop onto the single-use scoring crystal at (6, 12), then light
-          up the Enemy Fighter!
+          Select the Tutorial Sniper, move it to the highlighted tile at (1,
+          3), then fire on the Enemy Fighter that just attacked you.
         </p>
       </div>
     ),
     allowedActions: {
-      selectShip: ["1001"],
+      selectShip: ["1002"],
       moveShip: {
-        shipId: "1001",
+        shipId: "1002",
         allowedPositions: [
-          { row: 6, col: 12 }, // Single-use scoring tile
+          { row: 1, col: 3 },
         ],
       },
       shoot: {
-        shipId: "1001",
+        shipId: "1002",
         allowedTargets: ["2001"],
       },
     },
     highlightElements: {
-      ships: ["1001", "2001"],
-      mapPositions: [{ row: 6, col: 12 }],
+      ships: ["1002", "2001"],
+      mapPositions: [
+        { row: 1, col: 3 },
+        { row: 4, col: 8 },
+      ],
     },
     requiresTransaction: true,
     onStepComplete: (actionData) => {
       return (
         actionData?.type === "shoot" &&
-        actionData?.shipId === "1001" &&
+        actionData?.shipId === "1002" &&
         actionData?.targetShipId === "2001"
       );
     },
@@ -295,36 +334,65 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: "special-emp",
     title: "Special Ability: EMP",
-    description: "Learn to use EMP to disable enemies",
+    description: "Learn to use EMP to overload enemy reactors",
     instructions: (
       <div className="space-y-3">
         <p className="text-lg font-bold text-cyan-300">Use EMP</p>
-        <p>EMP disables enemy ships, preventing them from acting.</p>
-        <p className="text-sm">
-          Select the Tutorial EMP Vessel (has EMP), switch to Special mode, then
-          target an enemy.
+        <p>
+          Before this step, the Heavy Enemy moved to (5, 9) and fired on your
+          Tutorial EMP, dealing damage.
         </p>
+        <p>
+          EMP bypasses armor, shields, and hull points and damages the{" "}
+          <span className="font-semibold text-purple-300">reactor directly</span>.
+        </p>
+        <p className="text-sm">
+          When an enemy ship already has{" "}
+          <span className="font-semibold text-yellow-300">2 points of reactor damage</span>,
+          hitting it with EMP will push its reactor over the limit and{" "}
+          <span className="font-semibold text-red-300">destroy the ship instantly</span>.
+        </p>
+        <ol className="list-decimal list-inside space-y-1 text-sm">
+          <li>
+            Select the <span className="font-semibold text-cyan-300">Tutorial EMP</span>.
+          </li>
+          <li>
+            In the top action bar, change the dropdown from{" "}
+            <span className="font-semibold">Weapons</span> to{" "}
+            <span className="font-semibold">Special</span>, exactly the same way
+            you would in a normal game.
+          </li>
+          <li>
+            Choose the <span className="font-semibold">Heavy Enemy</span> as your target
+            by either clicking its ship on the map or selecting it in the top UI.
+          </li>
+          <li>
+            Click the <span className="font-semibold">Submit</span> button to propose the EMP attack.
+          </li>
+          <li>Approve the simulated transaction to fire the EMP.</li>
+        </ol>
         <p className="text-yellow-300 font-bold">
-          Use EMP on the Enemy Fighter!
+          Use EMP on the Heavy Enemy that already has 2 points of reactor damage to
+          destroy it with a reactor overload!
         </p>
       </div>
     ),
     allowedActions: {
-      selectShip: ["1002"],
+      selectShip: ["1001"],
       useSpecial: {
-        shipId: "1002",
-        allowedTargets: ["2001"],
+        shipId: "1001",
+        allowedTargets: ["2002"],
         specialType: 1, // EMP
       },
     },
     highlightElements: {
-      ships: ["1002", "2001"],
+      ships: ["1001", "2002"],
     },
     requiresTransaction: true,
     onStepComplete: (actionData) => {
       return (
         actionData?.type === "useSpecial" &&
-        actionData?.shipId === "1002" &&
+        actionData?.shipId === "1001" &&
         actionData?.targetShipId === "2001"
       );
     },
@@ -338,28 +406,28 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
         <p className="text-lg font-bold text-cyan-300">Repair Friendly Ship</p>
         <p>Repair restores hull points to friendly ships.</p>
         <p className="text-sm">
-          Select the Tutorial Support Ship (has Repair), switch to Special mode,
-          then target the Tutorial Scout.
+          Select the Tutorial Sniper (has Repair), switch to Special mode,
+          then target the Tutorial EMP.
         </p>
-        <p className="text-yellow-300 font-bold">Repair the Tutorial Scout!</p>
+        <p className="text-yellow-300 font-bold">Repair the Tutorial EMP!</p>
       </div>
     ),
     allowedActions: {
-      selectShip: ["1003"],
+      selectShip: ["1002"],
       useSpecial: {
-        shipId: "1003",
+        shipId: "1002",
         allowedTargets: ["1001"],
         specialType: 2, // Repair
       },
     },
     highlightElements: {
-      ships: ["1003", "1001"],
+      ships: ["1002", "1001"],
     },
     requiresTransaction: true,
     onStepComplete: (actionData) => {
       return (
         actionData?.type === "useSpecial" &&
-        actionData?.shipId === "1003" &&
+        actionData?.shipId === "1002" &&
         actionData?.targetShipId === "1001"
       );
     },
@@ -377,26 +445,26 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
           destruction.
         </p>
         <p className="text-yellow-300 font-bold">
-          First, we&apos;ll disable the Tutorial Scout, then assist it with the
-          Tutorial Support Ship!
+          First, we&apos;ll disable the Tutorial EMP, then assist it with the
+          Tutorial Sniper!
         </p>
       </div>
     ),
     allowedActions: {
-      selectShip: ["1003"],
+      selectShip: ["1002"],
       assist: {
-        shipId: "1003",
+        shipId: "1002",
         allowedTargets: ["1001"], // Will be disabled first
       },
     },
     highlightElements: {
-      ships: ["1003", "1001"],
+      ships: ["1002", "1001"],
     },
     requiresTransaction: true,
     onStepComplete: (actionData) => {
       return (
         actionData?.type === "assist" &&
-        actionData?.shipId === "1003" &&
+        actionData?.shipId === "1002" &&
         actionData?.targetShipId === "1001"
       );
     },
@@ -415,10 +483,10 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
           reactor overload.
         </p>
         <p className="text-sm">
-          The Disabled Enemy is already disabled. Shoot it to destroy it!
+          The Heavy Enemy is already disabled. Shoot it to destroy it!
         </p>
         <p className="text-yellow-300 font-bold">
-          Select the Tutorial Scout and shoot the Disabled Enemy!
+          Select the Tutorial EMP and shoot the Heavy Enemy!
         </p>
       </div>
     ),

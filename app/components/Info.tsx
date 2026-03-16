@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { OnboardingTutorial } from "./OnboardingTutorial";
 import { useAccount } from "wagmi";
 import { HeroShipShowcase } from "./HeroShipShowcase";
@@ -29,6 +29,17 @@ const Info: React.FC = () => {
     }
     return false;
   });
+
+  // Notify the top-level layout when tutorial is active so it can mirror
+  // the full-width game view layout (no extra padding/max-width).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("void-tactics-info-tutorial-active", {
+        detail: { active: showTutorial },
+      }),
+    );
+  }, [showTutorial]);
 
   if (showTutorial) {
     return (
@@ -152,7 +163,9 @@ const Info: React.FC = () => {
                         type="button"
                         onClick={() =>
                           window.dispatchEvent(
-                            new CustomEvent("void-tactics-navigate-to-manage-navy"),
+                            new CustomEvent(
+                              "void-tactics-navigate-to-manage-navy",
+                            ),
                           )
                         }
                         className="px-8 py-4 border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 w-full md:w-auto rounded-none"
@@ -206,7 +219,7 @@ const Info: React.FC = () => {
             color: "var(--color-phosphor-green)",
           }}
         >
-          [SHIPINTEL]
+          [INTEL]
         </h3>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-black/0 p-1" style={{ borderRadius: 0 }}>

@@ -79,6 +79,10 @@ interface GameGridProps {
   highlightedMovePosition?: { row: number; col: number } | null;
   lastMoveShipId?: bigint | null; // Ship ID for the last move (to show pulse effect)
   lastMoveOldPosition?: { row: number; col: number } | null; // Old position for last move preview
+  // New position for the last move (to position). When playing back weapon
+  // effects for the last move, the beam should originate from this "to"
+  // position rather than the old position.
+  lastMoveNewPosition?: { row: number; col: number } | null;
   lastMoveActionType?: ActionType | null; // When Retreat, show warp collapse at old position
   lastMoveTargetShipId?: bigint | null; // When last move was Special (e.g. repair), target ship for animation
   lastMoveIsCurrentPlayer?: boolean | undefined; // true = blue outline, false = red outline
@@ -135,6 +139,7 @@ export function GameGrid({
   highlightedMovePosition,
   lastMoveShipId,
   lastMoveOldPosition,
+  lastMoveNewPosition,
   lastMoveActionType,
   lastMoveTargetShipId,
   lastMoveIsCurrentPlayer,
@@ -1246,7 +1251,7 @@ export function GameGrid({
 
             {/* Laser Shooting Animation */}
             {(selectedShipId || lastMoveShipId) &&
-              targetShipId &&
+              (targetShipId || lastMoveTargetShipId) &&
               selectedWeaponType === "weapon" &&
               (() => {
                 // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
@@ -1259,9 +1264,11 @@ export function GameGrid({
                   return null;
                 }
 
-                // Find positions of attacking and target ships
-                // Use previewPosition or dragOverCell (to position) - no fallback
-                // For last move, use previewPosition which is set to the new position
+                // Find positions of attacking and target ships.
+                // - When a move is being previewed or dragged, use that "to" position.
+                // - When replaying the last move, weapon effects should always
+                //   originate from the "to" position of the last move, not the
+                //   old position, so prefer lastMoveNewPosition when available.
                 let attackerRow = -1;
                 let attackerCol = -1;
 
@@ -1272,27 +1279,38 @@ export function GameGrid({
                   attackerRow = dragOverCell.row;
                   attackerCol = dragOverCell.col;
                 } else if (lastMoveShipId && shipId === lastMoveShipId) {
-                  // For last move display, use the new position from lastMoveOldPosition context
-                  // previewPosition should already be set, but if not, find from grid
-                  grid.forEach((row, r) => {
-                    row.forEach((cell, c) => {
-                      if (cell?.shipId === shipId) {
-                        attackerRow = r;
-                        attackerCol = c;
-                      }
+                  // For last move display, use the explicit "to" position
+                  // when provided; this ensures the beam originates from
+                  // the correct tile even if the grid or selection state
+                  // has changed since the move.
+                  if (lastMoveNewPosition) {
+                    attackerRow = lastMoveNewPosition.row;
+                    attackerCol = lastMoveNewPosition.col;
+                  } else {
+                    // Fallback: derive from current grid position
+                    grid.forEach((row, r) => {
+                      row.forEach((cell, c) => {
+                        if (cell?.shipId === shipId) {
+                          attackerRow = r;
+                          attackerCol = c;
+                        }
+                      });
                     });
-                  });
+                  }
                   if (attackerRow === -1 || attackerCol === -1) return null;
                 } else {
                   // No preview or drag position - don't show animation
                   return null;
                 }
 
+                const effectiveTargetId = targetShipId || lastMoveTargetShipId;
+                if (!effectiveTargetId) return null;
+
                 let targetRow = -1;
                 let targetCol = -1;
                 grid.forEach((row, r) => {
                   row.forEach((cell, c) => {
-                    if (cell?.shipId === targetShipId) {
+                    if (cell?.shipId === effectiveTargetId) {
                       targetRow = r;
                       targetCol = c;
                     }
@@ -1328,9 +1346,8 @@ export function GameGrid({
                   return null;
                 }
 
-                // Find positions of attacking and target ships
-                // Use previewPosition or dragOverCell (to position) - no fallback
-                // For last move, use previewPosition which is set to the new position
+                // Find positions of attacking and target ships.
+                // See Laser block above for details - same origin rules.
                 let attackerRow = -1;
                 let attackerCol = -1;
 
@@ -1341,16 +1358,19 @@ export function GameGrid({
                   attackerRow = dragOverCell.row;
                   attackerCol = dragOverCell.col;
                 } else if (lastMoveShipId && shipId === lastMoveShipId) {
-                  // For last move display, use the new position from lastMoveOldPosition context
-                  // previewPosition should already be set, but if not, find from grid
-                  grid.forEach((row, r) => {
-                    row.forEach((cell, c) => {
-                      if (cell?.shipId === shipId) {
-                        attackerRow = r;
-                        attackerCol = c;
-                      }
+                  if (lastMoveNewPosition) {
+                    attackerRow = lastMoveNewPosition.row;
+                    attackerCol = lastMoveNewPosition.col;
+                  } else {
+                    grid.forEach((row, r) => {
+                      row.forEach((cell, c) => {
+                        if (cell?.shipId === shipId) {
+                          attackerRow = r;
+                          attackerCol = c;
+                        }
+                      });
                     });
-                  });
+                  }
                   if (attackerRow === -1 || attackerCol === -1) return null;
                 } else {
                   // No preview or drag position - don't show animation
@@ -1384,7 +1404,7 @@ export function GameGrid({
 
             {/* Plasma Shooting Animation */}
             {(selectedShipId || lastMoveShipId) &&
-              targetShipId &&
+              (targetShipId || lastMoveTargetShipId) &&
               selectedWeaponType === "weapon" &&
               (() => {
                 // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
@@ -1397,9 +1417,8 @@ export function GameGrid({
                   return null;
                 }
 
-                // Find positions of attacking and target ships
-                // Use previewPosition or dragOverCell (to position) - no fallback
-                // For last move, use previewPosition which is set to the new position
+                // Find positions of attacking and target ships.
+                // See Laser block above for details - same origin rules.
                 let attackerRow = -1;
                 let attackerCol = -1;
 
@@ -1410,27 +1429,33 @@ export function GameGrid({
                   attackerRow = dragOverCell.row;
                   attackerCol = dragOverCell.col;
                 } else if (lastMoveShipId && shipId === lastMoveShipId) {
-                  // For last move display, use the new position from lastMoveOldPosition context
-                  // previewPosition should already be set, but if not, find from grid
-                  grid.forEach((row, r) => {
-                    row.forEach((cell, c) => {
-                      if (cell?.shipId === shipId) {
-                        attackerRow = r;
-                        attackerCol = c;
-                      }
+                  if (lastMoveNewPosition) {
+                    attackerRow = lastMoveNewPosition.row;
+                    attackerCol = lastMoveNewPosition.col;
+                  } else {
+                    grid.forEach((row, r) => {
+                      row.forEach((cell, c) => {
+                        if (cell?.shipId === shipId) {
+                          attackerRow = r;
+                          attackerCol = c;
+                        }
+                      });
                     });
-                  });
+                  }
                   if (attackerRow === -1 || attackerCol === -1) return null;
                 } else {
                   // No preview or drag position - don't show animation
                   return null;
                 }
 
+                const effectiveTargetId = targetShipId || lastMoveTargetShipId;
+                if (!effectiveTargetId) return null;
+
                 let targetRow = -1;
                 let targetCol = -1;
                 grid.forEach((row, r) => {
                   row.forEach((cell, c) => {
-                    if (cell?.shipId === targetShipId) {
+                    if (cell?.shipId === effectiveTargetId) {
                       targetRow = r;
                       targetCol = c;
                     }
@@ -1466,9 +1491,8 @@ export function GameGrid({
                   return null;
                 }
 
-                // Find positions of attacking and target ships
-                // Use previewPosition or dragOverCell (to position) - no fallback
-                // For last move, use previewPosition which is set to the new position
+                // Find positions of attacking and target ships.
+                // See Laser block above for details - same origin rules.
                 let attackerRow = -1;
                 let attackerCol = -1;
 
@@ -1479,16 +1503,19 @@ export function GameGrid({
                   attackerRow = dragOverCell.row;
                   attackerCol = dragOverCell.col;
                 } else if (lastMoveShipId && shipId === lastMoveShipId) {
-                  // For last move display, use the new position from lastMoveOldPosition context
-                  // previewPosition should already be set, but if not, find from grid
-                  grid.forEach((row, r) => {
-                    row.forEach((cell, c) => {
-                      if (cell?.shipId === shipId) {
-                        attackerRow = r;
-                        attackerCol = c;
-                      }
+                  if (lastMoveNewPosition) {
+                    attackerRow = lastMoveNewPosition.row;
+                    attackerCol = lastMoveNewPosition.col;
+                  } else {
+                    grid.forEach((row, r) => {
+                      row.forEach((cell, c) => {
+                        if (cell?.shipId === shipId) {
+                          attackerRow = r;
+                          attackerCol = c;
+                        }
+                      });
                     });
-                  });
+                  }
                   if (attackerRow === -1 || attackerCol === -1) return null;
                 } else {
                   // No preview or drag position - don't show animation
