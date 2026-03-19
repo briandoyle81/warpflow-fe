@@ -1863,7 +1863,7 @@ export function SimulatedGameDisplay({
         </GameBoardLayout>
 
         {/* Instructions: overlap grid bottom by ~50%, aligned to left */}
-        <div className="pointer-events-none absolute inset-x-0 top-full flex justify-start">
+        <div className="pointer-events-none absolute inset-x-0 top-full flex justify-start z-[180]">
           <div className="pointer-events-auto max-w-2xl w-full transform -translate-y-1/2">
             <TutorialStepOverlay onQuit={onBack} />
           </div>

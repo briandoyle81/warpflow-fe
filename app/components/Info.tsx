@@ -87,7 +87,7 @@ const Info: React.FC = () => {
               VOID TACTICS
             </h1>
             <p
-              className="text-xl md:text-2xl mb-3 opacity-90"
+              className="text-xl md:text-2xl mb-3 opacity-100"
               style={{
                 fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                 color: "var(--color-text-primary)",
@@ -96,19 +96,19 @@ const Info: React.FC = () => {
               STRATEGIC PvP STARSHIP COMMAND
             </p>
             <p
-              className="text-lg mb-4 opacity-80"
+              className="text-lg mb-4 opacity-100"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
-                color: "var(--color-text-secondary)",
+                color: "var(--color-text-primary)",
               }}
             >
               Admiral, your fleet is dropping out of warp under fire.
             </p>
             <p
-              className="text-base mb-6 opacity-80"
+              className="text-base mb-6 opacity-100"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
-                color: "var(--color-text-secondary)",
+                color: "var(--color-text-primary)",
               }}
             >
               Deploy your ships. Outmaneuver real opponents with positioning,
@@ -195,6 +195,7 @@ const Info: React.FC = () => {
                 borderRadius: 0,
               }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/img/missile-clip.gif"
                 alt="Missiles firing at target ships with damage numbers and health bars"
@@ -254,10 +255,10 @@ const Info: React.FC = () => {
           [BUILD YOUR NAVY]
         </h3>
         <p
-          className="text-base mb-4 opacity-80"
+          className="text-base mb-4 opacity-100"
           style={{
             fontFamily: "var(--font-rajdhani), sans-serif",
-            color: "var(--color-text-secondary)",
+            color: "var(--color-text-primary)",
           }}
         >
           Acquire ships through buying, selling, and trading on a global open
@@ -265,10 +266,10 @@ const Info: React.FC = () => {
           need. Think TCG economy with real ownership.
         </p>
         <ul
-          className="text-sm space-y-1 opacity-90"
+          className="text-sm space-y-1 opacity-100"
           style={{
             fontFamily: "var(--font-mono), monospace",
-            color: "var(--color-text-secondary)",
+            color: "var(--color-text-primary)",
           }}
         >
           <li>• Global open market: buy, sell, trade</li>
@@ -294,20 +295,20 @@ const Info: React.FC = () => {
           [ASSEMBLE A FLEET]
         </h3>
         <p
-          className="text-base mb-4 opacity-80"
+          className="text-base mb-4 opacity-100"
           style={{
             fontFamily: "var(--font-rajdhani), sans-serif",
-            color: "var(--color-text-secondary)",
+            color: "var(--color-text-primary)",
           }}
         >
           Assemble your fleet around mission objectives and the strategy you
           want to run. Choose the composition that fits your plan.
         </p>
         <ul
-          className="text-sm space-y-1 opacity-90"
+          className="text-sm space-y-1 opacity-100"
           style={{
             fontFamily: "var(--font-mono), monospace",
-            color: "var(--color-text-secondary)",
+            color: "var(--color-text-primary)",
           }}
         >
           <li>• Small fleet of well-armored tanks</li>
@@ -334,20 +335,20 @@ const Info: React.FC = () => {
           [ENGAGE THE ENEMY]
         </h3>
         <p
-          className="text-base mb-4 opacity-80"
+          className="text-base mb-4 opacity-100"
           style={{
             fontFamily: "var(--font-rajdhani), sans-serif",
-            color: "var(--color-text-secondary)",
+            color: "var(--color-text-primary)",
           }}
         >
           Fight in turn-based strategic battles where positioning, range, and
           weapon selection determine the outcome. Plan your moves carefully.
         </p>
         <ul
-          className="text-sm space-y-1 opacity-90"
+          className="text-sm space-y-1 opacity-100"
           style={{
             fontFamily: "var(--font-mono), monospace",
-            color: "var(--color-text-secondary)",
+            color: "var(--color-text-primary)",
           }}
         >
           <li>• Turn-based PvP battles</li>
@@ -373,10 +374,10 @@ const Info: React.FC = () => {
           [COLLECT THE REWARDS]
         </h3>
         <p
-          className="text-base mb-4 opacity-80"
+          className="text-base mb-4 opacity-100"
           style={{
             fontFamily: "var(--font-rajdhani), sans-serif",
-            color: "var(--color-text-secondary)",
+            color: "var(--color-text-primary)",
           }}
         >
           Level up your ships by destroying enemy ships in battle. For every
@@ -384,10 +385,10 @@ const Info: React.FC = () => {
           stronger over time.
         </p>
         <ul
-          className="text-sm space-y-1 opacity-90"
+          className="text-sm space-y-1 opacity-100"
           style={{
             fontFamily: "var(--font-mono), monospace",
-            color: "var(--color-text-secondary)",
+            color: "var(--color-text-primary)",
           }}
         >
           <li>• Ships level up from destroying enemies</li>
@@ -433,10 +434,10 @@ const Info: React.FC = () => {
               CONNECT WALLET
             </h3>
             <p
-              className="text-base opacity-70"
+              className="text-base opacity-100"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
-                color: "var(--color-text-secondary)",
+                color: "var(--color-text-primary)",
               }}
             >
               Connect your Flow wallet to access the game
@@ -462,10 +463,10 @@ const Info: React.FC = () => {
               CLAIM FREE SHIPS
             </h3>
             <p
-              className="text-base opacity-70"
+              className="text-base opacity-100"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
-                color: "var(--color-text-secondary)",
+                color: "var(--color-text-primary)",
               }}
             >
               Purchase or claim ships and customize a fleet to your strategy
@@ -491,10 +492,10 @@ const Info: React.FC = () => {
               BATTLE
             </h3>
             <p
-              className="text-base opacity-70"
+              className="text-base opacity-100"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
-                color: "var(--color-text-secondary)",
+                color: "var(--color-text-primary)",
               }}
             >
               Join a lobby and engage in tactical combat against other players
@@ -520,10 +521,10 @@ const Info: React.FC = () => {
           [AUDIO CREDITS]
         </h4>
         <div
-          className="text-sm space-y-2 opacity-70"
+          className="text-sm space-y-2 opacity-100"
           style={{
             fontFamily: "var(--font-rajdhani), sans-serif",
-            color: "var(--color-text-muted)",
+            color: "var(--color-text-primary)",
           }}
         >
           <div>
@@ -535,7 +536,7 @@ const Info: React.FC = () => {
               alert(63osc,chrs,cmpr).wav&rdquo;
             </p>
             <p className="ml-4">
-              <span className="opacity-60">Source:</span>{" "}
+              <span className="opacity-80">Source:</span>{" "}
               <a
                 href="https://freesound.org/s/563864/"
                 target="_blank"
@@ -546,7 +547,7 @@ const Info: React.FC = () => {
               </a>
             </p>
             <p className="ml-4">
-              <span className="opacity-60">License:</span> Attribution 4.0
+              <span className="opacity-80">License:</span> Attribution 4.0
             </p>
           </div>
           <div className="mt-3 pt-3 border-t border-purple-500/20">
@@ -556,7 +557,7 @@ const Info: React.FC = () => {
             <p className="ml-4">
               &ldquo;synthwave-80s-robot-swarm-218092.mp3&rdquo;
             </p>
-            <p className="ml-4 opacity-60">Additional credits to be added</p>
+            <p className="ml-4 opacity-80">Additional credits to be added</p>
           </div>
         </div>
       </div>

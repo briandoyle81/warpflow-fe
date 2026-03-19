@@ -184,11 +184,12 @@ const Lobbies: React.FC = () => {
   // Determine the player's existing fleet ID when fleet selection modal is open
   const playerFleetId = React.useMemo(() => {
     if (!selectedLobby || !address) return null;
+    const normalizedAddress = address.toLowerCase();
     const lobby =
       selectedLobbyLive ??
       lobbyList.lobbies.find((l) => l.basic.id === selectedLobby);
     if (!lobby) return null;
-    const isCreator = lobby.basic.creator === address;
+    const isCreator = lobby.basic.creator.toLowerCase() === normalizedAddress;
     return isCreator
       ? lobby.players.creatorFleetId > 0n
         ? lobby.players.creatorFleetId
@@ -2086,13 +2087,16 @@ const Lobbies: React.FC = () => {
           const currentLobby =
             selectedLobbyLive ??
             lobbyList.lobbies.find((lobby) => lobby.basic.id === selectedLobby);
+          const normalizedAddress = address ? address.toLowerCase() : null;
           const isCreator = currentLobby
-            ? currentLobby.basic.creator === address
+            ? normalizedAddress != null &&
+              currentLobby.basic.creator.toLowerCase() === normalizedAddress
             : false;
           const isParticipant =
             currentLobby != null
-              ? currentLobby.basic.creator === address ||
-                currentLobby.players.joiner === address
+              ? normalizedAddress != null &&
+                (currentLobby.basic.creator.toLowerCase() === normalizedAddress ||
+                  currentLobby.players.joiner.toLowerCase() === normalizedAddress)
               : false;
           const opponentHasFleet =
             currentLobby != null

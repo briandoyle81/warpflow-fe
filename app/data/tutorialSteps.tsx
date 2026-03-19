@@ -2,7 +2,12 @@
 
 import React from "react";
 import { TutorialStep } from "../types/onboarding";
-import { Position } from "../types/types";
+
+const TUTORIAL_INCOMPLETE_SUBHEADING = (
+  <h4 className="text-base font-bold text-red-500">
+    Tutorial experience is incomplete.  This is a partial placeholder.
+  </h4>
+);
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
   {
@@ -11,6 +16,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "Learn the basics of strategic spaceship combat",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">
           Welcome to Void Tactics!
         </p>
@@ -53,6 +59,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "Learn how to win the game",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">How to Win</p>
         <p>There are two ways to win:</p>
         <ol className="list-decimal list-inside space-y-2 text-sm">
@@ -87,6 +94,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "Learn to view ship information",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">Select a Ship</p>
         <p>
           Click on one of your ships (on the left side) to view its details.
@@ -121,6 +129,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "Learn to inspect enemy ships",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">Inspect Enemy Ships</p>
         <p>
           Click on an enemy ship (on the right side) to view their capabilities.
@@ -170,6 +179,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "Learn to move your ships",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">Move Your Ship</p>
         <p>With a ship selected, click on a highlighted tile to move it.</p>
         <p className="text-sm">
@@ -207,6 +217,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "See your last move and wait for the enemy response",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">Previous Position</p>
         <p>
           After you move, both you and your opponent can still see the{" "}
@@ -236,6 +247,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "Learn how points are scored at end of round",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">Move Your Ship in Response</p>
         <p className="text-red-300 font-bold">
           The Enemy Destroyer moved to a scoring position (9, 13) and scored a
@@ -285,6 +297,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "Learn to shoot at enemy ships",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">Shoot at Enemy</p>
         <p>
           Before this step, the Enemy Fighter advanced to (4, 8) and fired on
@@ -337,6 +350,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "Learn to use EMP to overload enemy reactors",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">Use EMP</p>
         <p>
           Before this step, the Heavy Enemy moved to (5, 9) and fired on your
@@ -404,6 +418,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       "Learn what happens when a ship is destroyed by reactor overload, then repair your own",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">
           Aftermath of Reactor Overload
         </p>
@@ -464,6 +479,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "Learn to assist disabled friendly ships",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">Assist Disabled Ship</p>
         <p>Disabled ships (0 HP) will be destroyed unless assisted.</p>
         <p className="text-sm">
@@ -501,6 +517,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "Learn to finish off disabled enemy ships",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-lg font-bold text-cyan-300">
           Destroy Disabled Enemy
         </p>
@@ -541,6 +558,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     description: "You've learned the basics",
     instructions: (
       <div className="space-y-3">
+        {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-2xl font-bold text-green-300">
           🎉 Congratulations! 🎉
         </p>
