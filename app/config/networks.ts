@@ -1,6 +1,27 @@
-import { flowTestnet, saigon } from "viem/chains";
+import { baseSepolia, flowTestnet, saigon } from "viem/chains";
+import type { Chain } from "viem";
 
-export const SUPPORTED_CHAINS = [flowTestnet, saigon] as const;
+// Custom chain definition (not included in `viem/chains`)
+// Source: https://xai-foundation.gitbook.io/xai-network/kn/build-on-xai/xai-chains-and-parameters/connect-to-xai-testnet-sepolia
+export const xaiTestnet = {
+  id: 37714555429,
+  name: "Xai Testnet v2",
+  nativeCurrency: { name: "Xai", symbol: "sXAI", decimals: 18 },
+  rpcUrls: {
+    default: {
+      http: ["https://testnet-v2.xai-chain.net/rpc"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Xai Testnet Explorer",
+      url: "https://testnet-explorer-v2.xai-chain.net",
+    },
+  },
+  testnet: true,
+} as const satisfies Chain;
+
+export const SUPPORTED_CHAINS = [flowTestnet, saigon, baseSepolia, xaiTestnet] as const;
 
 export type SupportedChain = (typeof SUPPORTED_CHAINS)[number];
 

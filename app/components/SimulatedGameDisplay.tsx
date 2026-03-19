@@ -1401,12 +1401,23 @@ export function SimulatedGameDisplay({
 
     // Special EMP step: no movement, just fire the special at the staged target.
     if (currentStep?.id === "special-emp") {
-      if (selectedWeaponType !== "special") {
-        toast.error("Switch to Special mode before using EMP.");
-        return;
-      }
-      if (!targetShipId) {
-        toast.error("Select an enemy ship to target before submitting.");
+      const isEmpSelected = selectedWeaponType === "special";
+      const hasTarget = !!targetShipId;
+      const allowedTargets =
+        currentStep.allowedActions.useSpecial?.allowedTargets ?? [];
+      const isAllowedTarget =
+        hasTarget &&
+        allowedTargets.includes(
+          targetShipId!.toString() as TutorialShipId,
+        );
+
+      // Only requirement for submit in this step:
+      // - EMP is selected in the dropdown
+      // - Target is one of the allowed useSpecial targets (Heavy Enemy)
+      if (!isEmpSelected || !isAllowedTarget) {
+        toast.error(
+          "Select the Heavy Enemy as your target and switch to EMP before submitting.",
+        );
         return;
       }
 
@@ -1442,8 +1453,9 @@ export function SimulatedGameDisplay({
 
     // For non-shoot steps, clear local staging after submitting; tutorial
     // state + simulated transaction dialog are handled inside executeAction /
-    // approveTransaction.
-    if (currentStep?.id !== "shoot") {
+    // approveTransaction. For the special-emp step we KEEP local staging so the
+    // proposed move and target remain visible while the simulated tx dialog is open.
+    if (currentStep?.id !== "shoot" && currentStep?.id !== "special-emp") {
       setPreviewPosition(null);
       setTargetShipId(null);
       setSelectedShipId(null);
@@ -1453,6 +1465,7 @@ export function SimulatedGameDisplay({
     previewPosition,
     targetShipId,
     currentStep,
+    selectedWeaponType,
     executeAction,
   ]);
 
@@ -1852,7 +1865,7 @@ export function SimulatedGameDisplay({
         {/* Instructions: overlap grid bottom by ~50%, aligned to left */}
         <div className="pointer-events-none absolute inset-x-0 top-full flex justify-start">
           <div className="pointer-events-auto max-w-2xl w-full transform -translate-y-1/2">
-            <TutorialStepOverlay />
+            <TutorialStepOverlay onQuit={onBack} />
           </div>
         </div>
       </div>

@@ -6,10 +6,12 @@ import UniversalCreditsContract from "../contracts/DeployModule#UniversalCredits
 import MapsContract from "../contracts/DeployModule#Maps.json";
 import ShipAttributesContract from "../contracts/DeployModule#ShipAttributes.json";
 import DroneYardContract from "../contracts/DeployModule#DroneYard.json";
-import { flowTestnet, saigon } from "viem/chains";
-import { getSelectedChainId } from "./networks";
+import { baseSepolia, flowTestnet, saigon } from "viem/chains";
+import { getSelectedChainId, xaiTestnet } from "./networks";
 import flowTestnetDeployedAddresses from "../contracts/flow-testnet/deployed_addresses.json";
+import baseSepoliaDeployedAddresses from "../contracts/base-sepolia/deployed_addresses.json";
 import roninSaigonDeployedAddresses from "../contracts/ronin-saigon/deployed_addresses.json";
+import xaiTestnetDeployedAddresses from "../contracts/xai-testnet/deployed_addresses.json";
 
 type DeployedAddresses = Record<string, `0x${string}`>;
 
@@ -19,11 +21,17 @@ const FLOW_TESTNET_DEPLOYED_ADDRESSES =
   flowTestnetDeployedAddresses as unknown as DeployedAddresses;
 const RONIN_SAIGON_DEPLOYED_ADDRESSES =
   roninSaigonDeployedAddresses as unknown as DeployedAddresses;
+const BASE_SEPOLIA_DEPLOYED_ADDRESSES =
+  baseSepoliaDeployedAddresses as unknown as DeployedAddresses;
+const XAI_TESTNET_DEPLOYED_ADDRESSES =
+  xaiTestnetDeployedAddresses as unknown as DeployedAddresses;
 
 // Per-network deployed address registries
 export const DEPLOYED_ADDRESSES_BY_CHAIN_ID = {
   [flowTestnet.id]: FLOW_TESTNET_DEPLOYED_ADDRESSES,
   [saigon.id]: RONIN_SAIGON_DEPLOYED_ADDRESSES,
+  [baseSepolia.id]: BASE_SEPOLIA_DEPLOYED_ADDRESSES,
+  [xaiTestnet.id]: XAI_TESTNET_DEPLOYED_ADDRESSES,
 } as const;
 
 // Stable, per-network contract address sets
@@ -60,14 +68,58 @@ const RONIN_SAIGON_CONTRACT_ADDRESSES = {
     RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#DroneYard"] ?? ZERO_ADDRESS,
 } as const;
 
+const BASE_SEPOLIA_CONTRACT_ADDRESSES = {
+  SHIPS: BASE_SEPOLIA_DEPLOYED_ADDRESSES["DeployModule#Ships"] ?? ZERO_ADDRESS,
+  FLEETS:
+    BASE_SEPOLIA_DEPLOYED_ADDRESSES["DeployModule#Fleets"] ?? ZERO_ADDRESS,
+  LOBBIES:
+    BASE_SEPOLIA_DEPLOYED_ADDRESSES["DeployModule#Lobbies"] ?? ZERO_ADDRESS,
+  GAME: BASE_SEPOLIA_DEPLOYED_ADDRESSES["DeployModule#Game"] ?? ZERO_ADDRESS,
+  UNIVERSAL_CREDITS:
+    BASE_SEPOLIA_DEPLOYED_ADDRESSES["DeployModule#UniversalCredits"] ??
+    ZERO_ADDRESS,
+  MAPS: BASE_SEPOLIA_DEPLOYED_ADDRESSES["DeployModule#Maps"] ?? ZERO_ADDRESS,
+  SHIP_ATTRIBUTES:
+    BASE_SEPOLIA_DEPLOYED_ADDRESSES["DeployModule#ShipAttributes"] ??
+    ZERO_ADDRESS,
+  SHIP_PURCHASER:
+    BASE_SEPOLIA_DEPLOYED_ADDRESSES["DeployModule#ShipPurchaser"] ??
+    ZERO_ADDRESS,
+  DRONE_YARD:
+    BASE_SEPOLIA_DEPLOYED_ADDRESSES["DeployModule#DroneYard"] ?? ZERO_ADDRESS,
+} as const;
+
+const XAI_TESTNET_CONTRACT_ADDRESSES = {
+  SHIPS: XAI_TESTNET_DEPLOYED_ADDRESSES["DeployModule#Ships"] ?? ZERO_ADDRESS,
+  FLEETS:
+    XAI_TESTNET_DEPLOYED_ADDRESSES["DeployModule#Fleets"] ?? ZERO_ADDRESS,
+  LOBBIES:
+    XAI_TESTNET_DEPLOYED_ADDRESSES["DeployModule#Lobbies"] ?? ZERO_ADDRESS,
+  GAME: XAI_TESTNET_DEPLOYED_ADDRESSES["DeployModule#Game"] ?? ZERO_ADDRESS,
+  UNIVERSAL_CREDITS:
+    XAI_TESTNET_DEPLOYED_ADDRESSES["DeployModule#UniversalCredits"] ??
+    ZERO_ADDRESS,
+  MAPS: XAI_TESTNET_DEPLOYED_ADDRESSES["DeployModule#Maps"] ?? ZERO_ADDRESS,
+  SHIP_ATTRIBUTES:
+    XAI_TESTNET_DEPLOYED_ADDRESSES["DeployModule#ShipAttributes"] ??
+    ZERO_ADDRESS,
+  SHIP_PURCHASER:
+    XAI_TESTNET_DEPLOYED_ADDRESSES["DeployModule#ShipPurchaser"] ??
+    ZERO_ADDRESS,
+  DRONE_YARD:
+    XAI_TESTNET_DEPLOYED_ADDRESSES["DeployModule#DroneYard"] ?? ZERO_ADDRESS,
+} as const;
+
 export const CONTRACT_ADDRESSES_BY_CHAIN_ID = {
   [flowTestnet.id]: FLOW_TESTNET_CONTRACT_ADDRESSES,
   [saigon.id]: RONIN_SAIGON_CONTRACT_ADDRESSES,
+  [baseSepolia.id]: BASE_SEPOLIA_CONTRACT_ADDRESSES,
+  [xaiTestnet.id]: XAI_TESTNET_CONTRACT_ADDRESSES,
 } as const;
 
 /**
- * Returns contract addresses for the active chain. For now, we fall back to
- * Flow Testnet until additional networks are added.
+ * Returns contract addresses for the active chain. Falls back to Flow
+ * Testnet for unknown chainIds.
  */
 export function getContractAddresses(chainId?: number) {
   if (chainId && chainId in CONTRACT_ADDRESSES_BY_CHAIN_ID) {

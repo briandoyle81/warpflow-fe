@@ -1,9 +1,15 @@
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import type { Abi } from "viem";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { getSelectedChainId } from "../config/networks";
 
 // Cache expiration time (24 hours) - only for unclaimed addresses
 const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -31,8 +37,13 @@ function formatTimeUntil(secondsRemaining: number): string {
 }
 
 export function useFreeShipClaiming() {
-  const { address } = useAccount();
+  const { address, chainId: walletChainId } = useAccount();
   const { refetch } = useOwnedShips();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+
+  // `claimFreeShips` takes a `_variant` parameter required by the contract.
+  // We default to `1`, which is accepted on Ronin and Flow deployments.
+  const freeShipVariant = 1;
 
   // Cache for eligibility status and countdown (lastClaim + cooldown for "next claim in")
   const [eligibilityCache, setEligibilityCache] = useState<{
@@ -57,24 +68,38 @@ export function useFreeShipClaiming() {
   const [secondsUntilNextClaim, setSecondsUntilNextClaim] = useState<number | null>(null);
 
   // Check if user can claim free ships (using lastClaimTimestamp)
+  const lastClaimTimestampConfig = useMemo(
+    () => ({
+      address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+      abi: CONTRACT_ABIS.SHIPS as Abi,
+      functionName: "lastClaimTimestamp" as const,
+      args: address ? [address] : undefined,
+      chainId: activeChainId,
+    }),
+    [address, activeChainId],
+  );
+
   const {
     data: lastClaimTimestamp,
     isLoading: isLoadingClaimStatus,
     error: claimStatusError,
     refetch: refetchClaimStatus,
-  } = useReadContract({
-    address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
-    abi: CONTRACT_ABIS.SHIPS as Abi,
-    functionName: "lastClaimTimestamp",
-    args: address ? [address] : undefined,
-  });
+  } = useReadContract(lastClaimTimestampConfig);
 
   // Cooldown period from contract (seconds)
-  const { data: claimCooldownPeriod } = useReadContract({
-    address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
-    abi: CONTRACT_ABIS.SHIPS as Abi,
-    functionName: "claimCooldownPeriod",
-  });
+  const claimCooldownPeriodConfig = useMemo(
+    () => ({
+      address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+      abi: CONTRACT_ABIS.SHIPS as Abi,
+      functionName: "claimCooldownPeriod" as const,
+      chainId: activeChainId,
+    }),
+    [activeChainId],
+  );
+
+  const { data: claimCooldownPeriod } = useReadContract(
+    claimCooldownPeriodConfig,
+  );
   const cooldownSeconds =
     claimCooldownPeriod !== undefined && claimCooldownPeriod !== null
       ? Number(claimCooldownPeriod)
@@ -336,7 +361,8 @@ export function useFreeShipClaiming() {
         address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: CONTRACT_ABIS.SHIPS as Abi,
         functionName: "claimFreeShips",
-        args: [1], // Default variant (uint16)
+        args: [freeShipVariant], // `_variant` expects a chain expectation
+        chainId: activeChainId,
       });
 
       // Toast will be shown when receipt is received (in useEffect below)

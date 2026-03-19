@@ -9,11 +9,7 @@ import { TUTORIAL_STEPS } from "./tutorialSteps";
  * that step's action). Built by chaining scripted changes and canonical user
  * actions so that refresh or step navigation always shows the correct board.
  */
-let _cached: SimulatedGameState[] | null = null;
-
 function buildScriptedStates(): SimulatedGameState[] {
-  if (_cached) return _cached;
-
   const steps = TUTORIAL_STEPS;
   const states: SimulatedGameState[] = [];
 
@@ -63,8 +59,8 @@ function buildScriptedStates(): SimulatedGameState[] {
   s = applyTutorialStepScript("special-emp", s);
   states.push(s); // index 8 = state when entering step 9 (special-emp)
 
-  // Step 10 special-repair: script only (repair 1001)
-  s = applyTutorialStepScript("special-repair", s);
+  // Step 10 ship-destruction: script only (repair 1001 after destruction info)
+  s = applyTutorialStepScript("ship-destruction", s);
   states.push(s); // index 10
 
   // Step 11 rescue: script (1001 disabled, positions for 1003/1001)
@@ -78,7 +74,6 @@ function buildScriptedStates(): SimulatedGameState[] {
   // Step 13 completion: same
   states.push(s); // index 13
 
-  _cached = states;
   return states;
 }
 

@@ -5,10 +5,11 @@ import { TUTORIAL_STEPS } from "../data/tutorialSteps";
 import { useTutorialContext } from "./OnboardingTutorial";
 
 interface TutorialStepOverlayProps {
-  onSkip?: () => void;
+  // Called to close the tutorial and return to the Info tab.
+  onQuit?: () => void;
 }
 
-export function TutorialStepOverlay({ onSkip }: TutorialStepOverlayProps) {
+export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
   const {
     currentStepIndex,
     currentStep,
@@ -45,13 +46,13 @@ export function TutorialStepOverlay({ onSkip }: TutorialStepOverlayProps) {
             >
               Reset Tutorial
             </button>
-            {onSkip && (
+            {onQuit && (
               <button
                 type="button"
-                onClick={onSkip}
+                onClick={onQuit}
                 className="px-3 py-1 text-xs bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 transition-colors"
               >
-                Skip Tutorial
+                Quit Tutorial
               </button>
             )}
           </div>

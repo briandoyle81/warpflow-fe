@@ -63,17 +63,11 @@ export function OnboardingTutorial({
   }, [currentStepIndex, currentStep, onComplete]);
 
   const handleSkip = () => {
-    if (
-      window.confirm(
-        "Are you sure you want to skip the tutorial? You can always access it again from the Info tab.",
-      )
-    ) {
-      // Clear saved step index when skipping
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("void-tactics-tutorial-step-index");
-      }
-      onSkip?.();
+    // Clear saved step index when quitting the tutorial.
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("void-tactics-tutorial-step-index");
     }
+    onSkip?.();
   };
 
   if (!currentStep) {
@@ -100,7 +94,7 @@ export function OnboardingTutorial({
       <div className="relative w-full h-full min-h-screen">
         <SimulatedGameDisplay
           tutorialContext={tutorialContext}
-          onBack={onSkip}
+          onBack={handleSkip}
         />
 
         <SimulatedTransactionDialog

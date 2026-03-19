@@ -180,13 +180,37 @@ export function applyTutorialStepScript(
       break;
     }
 
-    case "special-repair": {
-      updateShipAttributes("1001", (attrs) => {
-        attrs.hullPoints = Math.max(
-          30,
-          Math.floor(attrs.maxHullPoints * 0.4),
-        );
+    case "ship-destruction": {
+      // After the EMP attack, the Heavy Enemy has been destroyed by reactor overload
+      // and the last move should show the Tutorial EMP firing on it. The EMP ship
+      // should retain whatever damage it had "before" step 9 (from the Heavy
+      // Enemy's pre-step shot), so we do NOT modify its hull here.
+      updateShipAttributes("2002", (attrs) => {
+        attrs.hullPoints = 0;
+        // Reactor overload of 3 represents permanent destruction.
+        attrs.reactorCriticalTimer = 3;
       });
+
+      ensureStateClone();
+      const empPos = updatedState.shipPositions.find(
+        (p) => p.shipId === "1001",
+      );
+      const heavyPos = updatedState.shipPositions.find(
+        (p) => p.shipId === "2002",
+      );
+
+      if (empPos && heavyPos) {
+        updatedState.lastMove = {
+          shipId: "1001",
+          oldRow: empPos.position.row,
+          oldCol: empPos.position.col,
+          newRow: empPos.position.row,
+          newCol: empPos.position.col,
+          actionType: ActionType.Special,
+          targetShipId: "2002",
+        };
+      }
+
       break;
     }
 

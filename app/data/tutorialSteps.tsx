@@ -393,18 +393,44 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
       return (
         actionData?.type === "useSpecial" &&
         actionData?.shipId === "1001" &&
-        actionData?.targetShipId === "2001"
+        actionData?.targetShipId === "2002"
       );
     },
   },
   {
-    id: "special-repair",
-    title: "Special Ability: Repair",
-    description: "Learn to repair friendly ships",
+    id: "ship-destruction",
+    title: "Ship Destruction & Repair",
+    description:
+      "Learn what happens when a ship is destroyed by reactor overload, then repair your own",
     instructions: (
       <div className="space-y-3">
+        <p className="text-lg font-bold text-cyan-300">
+          Aftermath of Reactor Overload
+        </p>
+        <p>
+          Your EMP attack pushed the Heavy Enemy&apos;s reactor to{" "}
+          <span className="font-semibold text-yellow-300">
+            3 overload points
+          </span>
+          , instantly and permanently destroying the ship.
+        </p>
+        <p className="text-sm">
+          When a ship reaches{" "}
+          <span className="font-semibold text-yellow-300">
+            3 points of reactor overload
+          </span>
+          , it is destroyed. The **owner** can recycle the NFT and receive{" "}
+          <span className="font-semibold text-green-300">
+            half of the normal UTC recycle value
+          </span>
+          , and the **destroyer** also receives{" "}
+          <span className="font-semibold text-green-300">
+            half of the normal UTC recycle value
+          </span>
+          as a payout.
+        </p>
         <p className="text-lg font-bold text-cyan-300">Repair Friendly Ship</p>
-        <p>Repair restores hull points to friendly ships.</p>
+        <p>Repair restores hull points to your own damaged ships.</p>
         <p className="text-sm">
           Select the Tutorial Sniper (has Repair), switch to Special mode,
           then target the Tutorial EMP.

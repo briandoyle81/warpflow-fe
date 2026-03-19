@@ -71,13 +71,15 @@ export function useOnboardingTutorial() {
     if (!isStepHydrated || hydratedStepIndex === null) return;
 
     // Do not persist snapshots for scripted steps that have a pre-step enemy
-    // move/attack, so we always show that when entering (no stale snapshot).
+    // move/attack or a hardcoded cinematic setup, so we always show that when
+    // entering (no stale snapshot).
     const hydratedStep = TUTORIAL_STEPS[hydratedStepIndex];
     if (
       hydratedStep &&
       (hydratedStep.id === "score-points" ||
         hydratedStep.id === "shoot" ||
-        hydratedStep.id === "special-emp")
+        hydratedStep.id === "special-emp" ||
+        hydratedStep.id === "ship-destruction")
     ) {
       return;
     }
@@ -347,14 +349,16 @@ export function useOnboardingTutorial() {
 
     const snapshot = stepSnapshots[currentStepIndex];
     // For most steps, restore from snapshot if it exists. For scripted steps
-    // (score-points, shoot, special-emp), only restore when the player has
-    // already taken their action (snapshot.lastAction != null). Otherwise use
-    // scripted state so the pre-step enemy move/attack is shown from the start.
+    // (score-points, shoot, special-emp, ship-destruction), only restore when
+    // the player has already taken their action (snapshot.lastAction != null).
+    // Otherwise use scripted state so the pre-step enemy move/attack or
+    // cinematic setup is shown from the start.
     if (snapshot) {
       if (
         (currentStep.id === "score-points" ||
           currentStep.id === "shoot" ||
-          currentStep.id === "special-emp") &&
+          currentStep.id === "special-emp" ||
+          currentStep.id === "ship-destruction") &&
         snapshot.lastAction === null
       ) {
         // Ignore this snapshot and fall through to scripted state.

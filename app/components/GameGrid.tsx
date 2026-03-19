@@ -244,6 +244,27 @@ export function GameGrid({
     calculateDamage,
   ]);
 
+  // Position where a ship was just destroyed (for visual marker). When the last
+  // move targeted a ship that now has 0 hull points, show the ship-destroyed
+  // art on that cell.
+  const destroyedTargetPosition = React.useMemo(() => {
+    if (!lastMoveTargetShipId) return null;
+    const attrs = getShipAttributes(lastMoveTargetShipId);
+    if (!attrs || attrs.hullPoints > 0) return null;
+
+    // Find the grid cell where this ship currently is (or last was).
+    for (let r = 0; r < grid.length; r++) {
+      const row = grid[r];
+      for (let c = 0; c < row.length; c++) {
+        const cell = row[c];
+        if (cell && cell.shipId === lastMoveTargetShipId) {
+          return { row: r, col: c };
+        }
+      }
+    }
+    return null;
+  }, [grid, lastMoveTargetShipId, getShipAttributes]);
+
   return (
     <>
       {/* Map Grid */}
@@ -737,13 +758,33 @@ export function GameGrid({
                       </>
                     )}
 
-                    {/* Critical hull glow effect */}
+                    {/* Critical hull glow effect for 0 HP ships */}
                     {cell &&
                       (() => {
                         const attributes = getShipAttributes(cell.shipId);
                         return attributes && attributes.hullPoints === 0;
                       })() && (
                         <div className="absolute inset-0 z-1 border-2 border-red-400 bg-red-500/10 pointer-events-none animate-pulse" />
+                      )}
+
+                    {/* Destroyed ship marker: show ship-destroyed art in the cell where
+                        the last-move target ship was destroyed. Uses full width and is
+                        vertically centered. */}
+                    {destroyedTargetPosition &&
+                      destroyedTargetPosition.row === rowIndex &&
+                      destroyedTargetPosition.col === colIndex && (
+                        <div className="absolute inset-0 z-2 flex items-center justify-center pointer-events-none">
+                          <div className="w-full max-w-full">
+                            <Image
+                              src="/img/ship-destroyed.png"
+                              alt="Destroyed ship"
+                              width={256}
+                              height={64}
+                              className="w-full h-auto object-contain"
+                              priority={false}
+                            />
+                          </div>
+                        </div>
                       )}
 
                     {/* Retreat last move: outline on the cell (blue = current player, red = opponent) */}
@@ -1258,6 +1299,12 @@ export function GameGrid({
                 const shipId = selectedShipId || lastMoveShipId;
                 if (!shipId) return null;
 
+                // When replaying a last move that was a Special (e.g. EMP),
+                // do not show any weapon beam animation.
+                if (!selectedShipId && lastMoveActionType === ActionType.Special) {
+                  return null;
+                }
+
                 // Check if the ship has a Laser weapon (mainWeapon === 0)
                 const ship = shipMap.get(shipId);
                 if (!ship || ship.equipment.mainWeapon !== 0) {
@@ -1340,6 +1387,10 @@ export function GameGrid({
                 const shipId = selectedShipId || lastMoveShipId;
                 if (!shipId) return null;
 
+                if (!selectedShipId && lastMoveActionType === ActionType.Special) {
+                  return null;
+                }
+
                 // Check if the ship has a Missile weapon (mainWeapon === 2)
                 const ship = shipMap.get(shipId);
                 if (!ship || ship.equipment.mainWeapon !== 2) {
@@ -1410,6 +1461,10 @@ export function GameGrid({
                 // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
                 const shipId = selectedShipId || lastMoveShipId;
                 if (!shipId) return null;
+
+                if (!selectedShipId && lastMoveActionType === ActionType.Special) {
+                  return null;
+                }
 
                 // Check if the ship has a Plasma weapon (mainWeapon === 3)
                 const ship = shipMap.get(shipId);
@@ -1590,6 +1645,61 @@ export function GameGrid({
                 grid.forEach((row, r) => {
                   row.forEach((cell, c) => {
                     if (cell?.shipId === targetShipId) {
+                      targetRow = r;
+                      targetCol = c;
+                    }
+                  });
+                });
+
+                if (
+                  attackerRow === -1 ||
+                  attackerCol === -1 ||
+                  targetRow === -1 ||
+                  targetCol === -1
+                ) {
+                  return null;
+                }
+
+                return (
+                  <EmpWaveAnimation
+                    gridContainerRef={gridContainerRef}
+                    attackerRow={attackerRow}
+                    attackerCol={attackerCol}
+                    targetRow={targetRow}
+                    targetCol={targetCol}
+                  />
+                );
+              })()}
+
+            {/* EMP wave animation for last move (no ship currently selected) */}
+            {!selectedShipId &&
+              lastMoveActionType === ActionType.Special &&
+              lastMoveShipId != null &&
+              lastMoveTargetShipId != null &&
+              (() => {
+                // Use the explicit "to" position for the last move when available.
+                // Fallback to current grid position if needed.
+                let attackerRow = -1;
+                let attackerCol = -1;
+                if (lastMoveNewPosition) {
+                  attackerRow = lastMoveNewPosition.row;
+                  attackerCol = lastMoveNewPosition.col;
+                } else {
+                  grid.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                      if (cell?.shipId === lastMoveShipId && !cell.isPreview) {
+                        attackerRow = r;
+                        attackerCol = c;
+                      }
+                    });
+                  });
+                }
+
+                let targetRow = -1;
+                let targetCol = -1;
+                grid.forEach((row, r) => {
+                  row.forEach((cell, c) => {
+                    if (cell?.shipId === lastMoveTargetShipId) {
                       targetRow = r;
                       targetCol = c;
                     }
