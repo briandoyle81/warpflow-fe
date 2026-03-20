@@ -9,6 +9,7 @@ import {
   getMainWeaponName,
   getSpecialName,
   ActionType,
+  LastMove,
 } from "../types/types";
 import { useShipsByIds } from "../hooks/useShipsByIds";
 import ShipCard from "./ShipCard";
@@ -98,6 +99,16 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Use the fetched game data if available, otherwise fall back to initial game
   const game = (gameData as GameDataView) || initialGame;
 
+  // Optimistic last-move handling:
+  // When a tx is confirmed, there can be a short delay before the
+  // blockchain/refetch updates `game.lastMove`. During that gap we want
+  // to keep the submitted move rendered as the "last move".
+  const [optimisticLastMove, setOptimisticLastMove] = React.useState<
+    LastMove | null
+  >(null);
+  const displayedLastMove: LastMove | undefined =
+    optimisticLastMove ?? game.lastMove;
+
   // Enable real-time event listening for game updates
   useContractEvents();
 
@@ -117,6 +128,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Track page visibility and window focus for polling intervals
   const [isPageVisible, setIsPageVisible] = React.useState(true);
   const [isWindowFocused, setIsWindowFocused] = React.useState(true);
+  const isWindowFocusedRef = React.useRef(true);
   const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const pollingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const playerMoveTimeRef = React.useRef<number | null>(null);
@@ -166,10 +178,16 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     };
 
     const handleFocus = () => {
+      // If we were previously blurred/inactive, refresh immediately once.
+      if (!isWindowFocusedRef.current) {
+        refetchGame();
+      }
+      isWindowFocusedRef.current = true;
       setIsWindowFocused(true);
     };
 
     const handleBlur = () => {
+      isWindowFocusedRef.current = false;
       setIsWindowFocused(false);
     };
 
@@ -177,7 +195,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     window.addEventListener("focus", handleFocus);
     window.addEventListener("blur", handleBlur);
     setIsPageVisible(!document.hidden);
-    setIsWindowFocused(document.hasFocus());
+    const initialHasFocus = document.hasFocus();
+    isWindowFocusedRef.current = initialHasFocus;
+    setIsWindowFocused(initialHasFocus);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -631,6 +651,40 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     // Place ships on the grid
     game.shipPositions.forEach((shipPosition) => {
       const { position } = shipPosition;
+
+      // Optimistic last move:
+      // If we've confirmed a tx but the contract state hasn't been refetched
+      // yet, render the ship at the submitted destination (or remove it for
+      // retreat). This prevents the board from snapping back to the old
+      // state between tx receipt and the next blockchain update.
+      if (optimisticLastMove && shipPosition.shipId === optimisticLastMove.shipId) {
+        if (optimisticLastMove.actionType === ActionType.Retreat) {
+          // Ship left the board: don't render it at its old position.
+          return;
+        }
+
+        if (
+          optimisticLastMove.newRow >= 0 &&
+          optimisticLastMove.newRow < GRID_HEIGHT &&
+          optimisticLastMove.newCol >= 0 &&
+          optimisticLastMove.newCol < GRID_WIDTH
+        ) {
+          // Only place if the target cell is empty in our grid snapshot.
+          if (!newGrid[optimisticLastMove.newRow][optimisticLastMove.newCol]) {
+            newGrid[optimisticLastMove.newRow][optimisticLastMove.newCol] = {
+              ...shipPosition,
+              position: {
+                row: optimisticLastMove.newRow,
+                col: optimisticLastMove.newCol,
+              },
+            };
+          }
+        }
+
+        // Skip the original placement (we rendered the optimistic position).
+        return;
+      }
+
       if (
         position.row >= 0 &&
         position.row < GRID_HEIGHT &&
@@ -656,8 +710,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     const isMyTurnNow = game.turnState.currentTurn === address;
     const shouldShowLastMoveNow =
       game.metadata.winner === "0x0000000000000000000000000000000000000000" &&
-      game.lastMove &&
-      game.lastMove.shipId !== 0n &&
+      displayedLastMove &&
+      displayedLastMove.shipId !== 0n &&
       selectedShipId === null;
 
     const isShowingProposedMoveNow = (() => {
@@ -671,16 +725,22 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     // Only show last move if not showing a proposed move
     const canShowLastMove = shouldShowLastMoveNow && !isShowingProposedMoveNow;
 
-    if (canShowLastMove && game.lastMove) {
+    if (canShowLastMove && displayedLastMove) {
       const lastMoveShipPosition = game.shipPositions.find(
-        (pos) => pos.shipId === game.lastMove!.shipId,
+        (pos) => pos.shipId === displayedLastMove.shipId,
       );
 
       if (lastMoveShipPosition) {
         // The ship is currently at its new position
         // Show a preview copy at the old position (ghosted/flashing)
-        const oldPos = { row: game.lastMove.oldRow, col: game.lastMove.oldCol };
-        const newPos = { row: game.lastMove.newRow, col: game.lastMove.newCol };
+        const oldPos = {
+          row: displayedLastMove.oldRow,
+          col: displayedLastMove.oldCol,
+        };
+        const newPos = {
+          row: displayedLastMove.newRow,
+          col: displayedLastMove.newCol,
+        };
 
         // If the ship moved (old position != new position), show preview at old position
         if (oldPos.row !== newPos.row || oldPos.col !== newPos.col) {
@@ -709,7 +769,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     game.shipPositions,
     selectedShipId,
     previewPosition,
-    game.lastMove,
+    displayedLastMove,
+    optimisticLastMove,
     game.metadata.winner,
     game.turnState.currentTurn,
     address,
@@ -1593,7 +1654,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     }
 
     // Don't show if no last move exists
-    if (!game.lastMove || game.lastMove.shipId === 0n) {
+    if (!displayedLastMove || displayedLastMove.shipId === 0n) {
       return false;
     }
 
@@ -1603,24 +1664,32 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     }
 
     // For Retreat, the ship has left the board. Use only last move data (oldRow, oldCol); do not require ship in shipMap or shipPositions.
-    if ((game.lastMove.actionType as ActionType) === ActionType.Retreat) {
+    if (
+      (displayedLastMove.actionType as ActionType) === ActionType.Retreat
+    ) {
       return true;
     }
 
     // For other actions, the last move ship must exist in cache
-    const lastMoveShip = shipMap.get(game.lastMove.shipId);
+    const lastMoveShip = shipMap.get(displayedLastMove.shipId);
     if (!lastMoveShip) {
       return false;
     }
 
+    // If we are optimistically displaying the last move, don't require the
+    // contract state to have caught up yet (shipPositions will lag).
+    if (optimisticLastMove) {
+      return true;
+    }
+
     // Verify the ship is actually at the new position in the current game state
     const currentPosition = game.shipPositions.find(
-      (pos) => pos.shipId === game.lastMove!.shipId,
+      (pos) => pos.shipId === displayedLastMove.shipId,
     );
     if (
       currentPosition &&
-      currentPosition.position.row === game.lastMove.newRow &&
-      currentPosition.position.col === game.lastMove.newCol
+      currentPosition.position.row === displayedLastMove.newRow &&
+      currentPosition.position.col === displayedLastMove.newCol
     ) {
       return true;
     }
@@ -1628,7 +1697,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     return false;
   }, [
     game.metadata.winner,
-    game.lastMove,
+    displayedLastMove,
+    optimisticLastMove,
     game.shipPositions,
     selectedShipId,
     shipMap,
@@ -1697,38 +1767,38 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     // Check if last move has changed
     const lastMoveChanged =
       !lastDisplayedMoveRef.current ||
-      !game.lastMove ||
-      lastDisplayedMoveRef.current.shipId !== game.lastMove.shipId ||
-      lastDisplayedMoveRef.current.newRow !== game.lastMove.newRow ||
-      lastDisplayedMoveRef.current.newCol !== game.lastMove.newCol;
+      !displayedLastMove ||
+      lastDisplayedMoveRef.current.shipId !== displayedLastMove.shipId ||
+      lastDisplayedMoveRef.current.newRow !== displayedLastMove.newRow ||
+      lastDisplayedMoveRef.current.newCol !== displayedLastMove.newCol;
 
     // Only set up last move preview if conditions are met
-    if (shouldShowLastMove && game.lastMove && lastMoveChanged) {
-      const lastMoveShip = shipMap.get(game.lastMove.shipId);
+    if (shouldShowLastMove && displayedLastMove && lastMoveChanged) {
+      const lastMoveShip = shipMap.get(displayedLastMove.shipId);
       if (lastMoveShip) {
         // Mark that we're displaying the last move
         isDisplayingLastMoveRef.current = true;
         lastDisplayedMoveRef.current = {
-          shipId: game.lastMove.shipId,
-          newRow: game.lastMove.newRow,
-          newCol: game.lastMove.newCol,
+          shipId: displayedLastMove.shipId,
+          newRow: displayedLastMove.newRow,
+          newCol: displayedLastMove.newCol,
         };
 
         // Set preview position for last move
         setPreviewPosition({
-          row: game.lastMove.newRow,
-          col: game.lastMove.newCol,
+          row: displayedLastMove.newRow,
+          col: displayedLastMove.newCol,
         });
         // Set target if there is one
-        if (game.lastMove.targetShipId !== 0n) {
-          setTargetShipId(game.lastMove.targetShipId);
+        if (displayedLastMove.targetShipId !== 0n) {
+          setTargetShipId(displayedLastMove.targetShipId);
         } else {
           setTargetShipId(null);
         }
         // Set weapon type based on action
-        if (game.lastMove.actionType === ActionType.Shoot) {
+        if (displayedLastMove.actionType === ActionType.Shoot) {
           setSelectedWeaponType("weapon");
-        } else if (game.lastMove.actionType === ActionType.Special) {
+        } else if (displayedLastMove.actionType === ActionType.Special) {
           setSelectedWeaponType("special");
         }
       }
@@ -1741,52 +1811,81 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     }
   }, [
     shouldShowLastMove,
-    game.lastMove,
+    displayedLastMove,
     isShowingProposedMove,
     shipMap,
     selectedShipId,
   ]);
 
+  // Clear optimistic last move once the contract state catches up.
+  React.useEffect(() => {
+    if (!optimisticLastMove) return;
+    if (!game.lastMove) return;
+
+    const matches =
+      game.lastMove.shipId === optimisticLastMove.shipId &&
+      game.lastMove.actionType === optimisticLastMove.actionType &&
+      game.lastMove.targetShipId === optimisticLastMove.targetShipId &&
+      game.lastMove.oldRow === optimisticLastMove.oldRow &&
+      game.lastMove.oldCol === optimisticLastMove.oldCol &&
+      game.lastMove.newRow === optimisticLastMove.newRow &&
+      game.lastMove.newCol === optimisticLastMove.newCol;
+
+    if (matches) {
+      setOptimisticLastMove(null);
+    }
+  }, [
+    optimisticLastMove,
+    game.lastMove,
+    optimisticLastMove?.shipId,
+    optimisticLastMove?.actionType,
+    optimisticLastMove?.targetShipId,
+    optimisticLastMove?.oldRow,
+    optimisticLastMove?.oldCol,
+    optimisticLastMove?.newRow,
+    optimisticLastMove?.newCol,
+  ]);
+
   // For Retreat, newRow/newCol are -1 (fled); don't highlight a cell
   const highlightedMovePosition =
     shouldShowLastMove &&
-    game.lastMove &&
+    displayedLastMove &&
     !isShowingProposedMove &&
-    (game.lastMove.actionType as ActionType) !== ActionType.Retreat &&
-    game.lastMove.newRow >= 0 &&
-    game.lastMove.newCol >= 0
-      ? { row: game.lastMove.newRow, col: game.lastMove.newCol }
+    (displayedLastMove.actionType as ActionType) !== ActionType.Retreat &&
+    displayedLastMove.newRow >= 0 &&
+    displayedLastMove.newCol >= 0
+      ? { row: displayedLastMove.newRow, col: displayedLastMove.newCol }
       : null;
 
   // Last move props for GameGrid
   const lastMoveShipId =
-    shouldShowLastMove && game.lastMove && !isShowingProposedMove
-      ? game.lastMove.shipId
+    shouldShowLastMove && displayedLastMove && !isShowingProposedMove
+      ? displayedLastMove.shipId
       : null;
   const lastMoveOldPosition =
-    shouldShowLastMove && game.lastMove && !isShowingProposedMove
-      ? { row: game.lastMove.oldRow, col: game.lastMove.oldCol }
+    shouldShowLastMove && displayedLastMove && !isShowingProposedMove
+      ? { row: displayedLastMove.oldRow, col: displayedLastMove.oldCol }
       : null;
 
   const lastMoveActionType =
-    shouldShowLastMove && game.lastMove && !isShowingProposedMove
-      ? game.lastMove.actionType
+    shouldShowLastMove && displayedLastMove && !isShowingProposedMove
+      ? displayedLastMove.actionType
       : null;
 
   const lastMoveTargetShipId =
     shouldShowLastMove &&
-    game.lastMove &&
+    displayedLastMove &&
     !isShowingProposedMove &&
-    (game.lastMove.actionType as ActionType) === ActionType.Special &&
-    game.lastMove.targetShipId !== 0n
-      ? game.lastMove.targetShipId
+    (displayedLastMove.actionType as ActionType) === ActionType.Special &&
+    displayedLastMove.targetShipId !== 0n
+      ? displayedLastMove.targetShipId
       : null;
 
   // Who made the last move: use ship owner when ship is in map; otherwise derive from turn (after a move, turn switches to the other player)
   const lastMoveIsCurrentPlayer =
-    shouldShowLastMove && game.lastMove && !isShowingProposedMove
+    shouldShowLastMove && displayedLastMove && !isShowingProposedMove
       ? (() => {
-          const ship = shipMap.get(game.lastMove!.shipId);
+          const ship = shipMap.get(displayedLastMove!.shipId);
           if (ship) return ship.owner === address;
           return game.turnState.currentTurn !== address;
         })()
@@ -3034,6 +3133,41 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             loadingText="Submitting..."
                             errorText="Error"
                             onSuccess={() => {
+                              // Keep the submitted move rendered as the "last move"
+                              // until the next blockchain refetch updates `game.lastMove`.
+                              const currentPosition = game.shipPositions.find(
+                                (pos) =>
+                                  pos.shipId === selectedShipId,
+                              );
+                              const oldRow = currentPosition
+                                ? currentPosition.position.row
+                                : computedRow;
+                              const oldCol = currentPosition
+                                ? currentPosition.position.col
+                                : computedCol;
+
+                              const submittedTargetShipId =
+                                targetShipId ?? 0n;
+
+                              setOptimisticLastMove({
+                                shipId: selectedShipId!,
+                                oldRow,
+                                oldCol,
+                                newRow:
+                                  computedActionType ===
+                                  ActionType.Retreat
+                                    ? -1
+                                    : computedRow,
+                                newCol:
+                                  computedActionType ===
+                                  ActionType.Retreat
+                                    ? -1
+                                    : computedCol,
+                                actionType: computedActionType,
+                                targetShipId: submittedTargetShipId,
+                                timestamp: BigInt(Date.now()),
+                              });
+
                               // Deselect ship after transaction receipt is received
                               setPreviewPosition(null);
                               setSelectedShipId(null);
@@ -3493,7 +3627,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
       {/* Last Move */}
       <GameEvents
-        lastMove={game.lastMove}
+        lastMove={displayedLastMove}
         shipMap={shipMap}
         address={address}
       />
