@@ -129,6 +129,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   const [isPageVisible, setIsPageVisible] = React.useState(true);
   const [isWindowFocused, setIsWindowFocused] = React.useState(true);
   const isWindowFocusedRef = React.useRef(true);
+  const wasHiddenRef = React.useRef(false);
+  const lastRefetchOnFocusAtRef = React.useRef(0);
   const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const pollingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const playerMoveTimeRef = React.useRef<number | null>(null);
@@ -164,26 +166,51 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     };
   }, [refetchGame, game.metadata.gameId, setTargetShipId]);
 
-  // Track page visibility and window focus, refetch immediately when tab regains focus
+  // Track page visibility and window focus.
+  // If the tab was inactive and then comes into focus, refetch immediately once.
   React.useEffect(() => {
-    const handleVisibilityChange = () => {
-      const wasHidden = !isPageVisible;
-      const isNowVisible = !document.hidden;
-      setIsPageVisible(isNowVisible);
+    wasHiddenRef.current = !!document.hidden;
+    isWindowFocusedRef.current = document.hasFocus();
+    setIsPageVisible(!document.hidden);
+    setIsWindowFocused(document.hasFocus());
 
-      // If tab was hidden and now has focus, refetch immediately
-      if (wasHidden && isNowVisible) {
+    const maybeRefetchOnFocus = () => {
+      const now = Date.now();
+      const pageVisible = !document.hidden;
+      const hasFocus = document.hasFocus();
+      if (!pageVisible || !hasFocus) return;
+
+      // Prevent bursts from multiple focus-related events.
+      if (now - lastRefetchOnFocusAtRef.current < 5000) return;
+
+      // Only do the "immediate once" when coming back from hidden/blur.
+      if (wasHiddenRef.current || !isWindowFocusedRef.current) {
+        lastRefetchOnFocusAtRef.current = now;
         refetchGame();
       }
     };
 
-    const handleFocus = () => {
-      // If we were previously blurred/inactive, refresh immediately once.
-      if (!isWindowFocusedRef.current) {
-        refetchGame();
+    const handleVisibilityChange = () => {
+      const nowHidden = !!document.hidden;
+      wasHiddenRef.current = nowHidden;
+
+      setIsPageVisible(!nowHidden);
+
+      if (nowHidden) {
+        // Treat hidden as inactive so focus regain triggers a refresh.
+        isWindowFocusedRef.current = false;
+        setIsWindowFocused(false);
+      } else {
+        // Becoming visible: only refetch if we're also focused.
+        maybeRefetchOnFocus();
       }
+    };
+
+    const handleFocus = () => {
+      // Update focus state first so the refetch condition is accurate.
       isWindowFocusedRef.current = true;
       setIsWindowFocused(true);
+      maybeRefetchOnFocus();
     };
 
     const handleBlur = () => {
@@ -193,18 +220,18 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleFocus);
+    window.addEventListener("focusin", handleFocus);
     window.addEventListener("blur", handleBlur);
-    setIsPageVisible(!document.hidden);
-    const initialHasFocus = document.hasFocus();
-    isWindowFocusedRef.current = initialHasFocus;
-    setIsWindowFocused(initialHasFocus);
+    window.addEventListener("focusout", handleBlur);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("focusin", handleFocus);
       window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focusout", handleBlur);
     };
-  }, [isPageVisible, refetchGame]);
+  }, [refetchGame]);
 
   // Set up polling based on page visibility and player moves
   React.useEffect(() => {
