@@ -39,12 +39,14 @@ interface GameDisplayProps {
   game: GameDataView;
   onBack: () => void;
   refetch?: () => void;
+  readOnly?: boolean;
 }
 
 const GameDisplay: React.FC<GameDisplayProps> = ({
   game: initialGame,
   onBack,
   refetch,
+  readOnly = false,
 }) => {
   // Debug mode toggle
   const [showDebug, setShowDebug] = React.useState(false);
@@ -1661,6 +1663,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Check if it's the current player's turn
   const isMyTurn = game.turnState.currentTurn === address;
+  const canActInGame = !readOnly && isMyTurn;
 
   // Track if we're currently displaying the last move (to avoid infinite loops)
   const isDisplayingLastMoveRef = React.useRef(false);
@@ -1745,7 +1748,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     // Show move submission UI whenever it's your turn and you have one of your
     // ships selected that hasn't moved yet, OR a disabled (0 HP) ship selected
     // that can only Retreat.
-    if (selectedShipId === null || !isMyTurn) {
+    if (selectedShipId === null || !canActInGame) {
       return false;
     }
     if (!isShipOwnedByCurrentPlayer(selectedShipId)) return false;
@@ -1757,7 +1760,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     return true;
   }, [
     selectedShipId,
-    isMyTurn,
+    canActInGame,
     isShipOwnedByCurrentPlayer,
     movedShipIdsSet,
     getShipAttributes,
@@ -1936,7 +1939,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Play alert sound when it becomes the player's turn
   React.useEffect(() => {
-    if (isMyTurn && address && prevTurnRef.current === false) {
+    if (!readOnly && isMyTurn && address && prevTurnRef.current === false) {
       // Only play sound when turn changes from opponent to player
       const audio = new Audio("/sound/alert.mp3");
       audio.volume = 0.5; // Set volume to 50%
@@ -1946,12 +1949,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     }
     // Update the previous turn state
     prevTurnRef.current = isMyTurn;
-  }, [isMyTurn, address]);
+  }, [isMyTurn, address, readOnly]);
 
   // Clear any pending transaction state when turn changes
   React.useEffect(() => {
     // Clear any stale transaction state when it becomes the player's turn
-    if (isMyTurn && address) {
+    if (!readOnly && isMyTurn && address) {
       // Always clear transaction state when it's the player's turn
       // This ensures the submit button is enabled even if there was a pending transaction
       clearAllTransactions();
@@ -1966,7 +1969,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         // Keep selectedWeaponType so it only changes when player uses the dropdown
       }
     }
-  }, [isMyTurn, address, clearAllTransactions]);
+  }, [isMyTurn, address, clearAllTransactions, readOnly]);
 
   // Handle move submission - now handled by TransactionButton
 
@@ -2199,9 +2202,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   game.metadata.creator === address ||
                   game.metadata.joiner === address;
                 const canSeizeTurn =
-                  !isMyTurn && isParticipant && turnSecondsLeft <= 0;
+                  !readOnly && !isMyTurn && isParticipant && turnSecondsLeft <= 0;
                 const hasExceededTime =
-                  isMyTurn && isParticipant && turnSecondsLeft <= 0;
+                  !readOnly && isMyTurn && isParticipant && turnSecondsLeft <= 0;
 
                 if (hasExceededTime) {
                   return (
@@ -3487,7 +3490,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           assistableTargetsFromStart={assistableTargetsFromStart}
           dragShootingRange={dragShootingRange}
           dragValidTargets={dragValidTargets}
-          isCurrentPlayerTurn={game.turnState.currentTurn === address}
+          isCurrentPlayerTurn={!readOnly && game.turnState.currentTurn === address}
           isShipOwnedByCurrentPlayer={isShipOwnedByCurrentPlayer}
           movedShipIdsSet={movedShipIdsSet}
           specialType={specialType}
@@ -3685,7 +3688,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     fontSize: "18px",
                   }}
                 >
-                  My Fleet
+                  {readOnly ? "Creator Fleet" : "My Fleet"}
                   <span
                     className="ml-2"
                     style={{
@@ -3754,7 +3757,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     fontSize: "18px",
                   }}
                 >
-                  Opponent&apos;s Fleet
+                  {readOnly ? "Joiner Fleet" : "Opponent&apos;s Fleet"}
                   <span
                     className="ml-2"
                     style={{
@@ -3826,7 +3829,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     fontSize: "18px",
                   }}
                 >
-                  Opponent&apos;s Fleet
+                  {readOnly ? "Creator Fleet" : "Opponent&apos;s Fleet"}
                   <span
                     className="ml-2"
                     style={{
@@ -3895,7 +3898,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     fontSize: "18px",
                   }}
                 >
-                  My Fleet
+                  {readOnly ? "Joiner Fleet" : "My Fleet"}
                   <span
                     className="ml-2"
                     style={{
