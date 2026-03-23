@@ -306,11 +306,19 @@ const ShipCard: React.FC<ShipCardProps> = ({
               <div
                 className={`absolute ${
                   flipShip ? "bottom-0 left-0" : "bottom-0 right-0"
-                } m-1 text-[10px] font-mono`}
+                } m-1 flex items-center gap-0.5`}
               >
-                {"💀".repeat(
-                  Math.min(inGameAttributes.reactorCriticalTimer, 3)
-                )}
+                {Array.from(
+                  { length: Math.min(inGameAttributes.reactorCriticalTimer, 3) },
+                  (_, index) => index,
+                ).map((level) => (
+                  <div
+                    key={level}
+                    className="w-4 h-4 rounded-full bg-red-500/90 flex items-center justify-center"
+                  >
+                    <span className="text-[8px] leading-none font-mono">💀</span>
+                  </div>
+                ))}
               </div>
             )}
 

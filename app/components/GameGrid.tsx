@@ -804,6 +804,31 @@ export function GameGrid({
                         />
                       )}
 
+                    {cell &&
+                      ship &&
+                      (() => {
+                        const targetAttributes = getShipAttributes(cell.shipId);
+                        const shouldPreviewDestroyedTarget =
+                          targetShipId != null &&
+                          targetShipId !== 0n &&
+                          cell.shipId === targetShipId &&
+                          !!targetAttributes &&
+                          targetAttributes.reactorCriticalTimer >= 2;
+                        if (!shouldPreviewDestroyedTarget) return null;
+
+                        // Layer above scoring/zone art, but below selection overlays.
+                        return (
+                          <div className="absolute inset-0 z-1 flex items-center justify-center pointer-events-none">
+                            <img
+                              src="/img/ship-destroyed.png"
+                              alt="Predicted destroyed target ship"
+                              className={`w-full h-full object-contain opacity-75 ${
+                                cell.isCreator ? "scale-x-[-1]" : ""
+                              }`}
+                            />
+                          </div>
+                        );
+                      })()}
                     {cell && ship ? (
                       <div
                         className="w-full h-full relative z-10"
@@ -1017,9 +1042,16 @@ export function GameGrid({
                               }
                             />
                           )}
-                        <ShipImage
-                          ship={ship}
-                          className={`w-full h-full relative z-10 ${
+                        {(() => {
+                          const targetAttributes = getShipAttributes(cell.shipId);
+                          const shouldPreviewDestroyedTarget =
+                            targetShipId != null &&
+                            targetShipId !== 0n &&
+                            cell.shipId === targetShipId &&
+                            !!targetAttributes &&
+                            targetAttributes.reactorCriticalTimer >= 2;
+
+                          const imageClassName = `w-full h-full relative z-10 ${
                             retreatPrepShipId === cell.shipId
                               ? "opacity-0 pointer-events-none"
                               : cell.isCreator
@@ -1087,9 +1119,21 @@ export function GameGrid({
                             }
 
                             return "";
-                          })()}`}
-                          showLoadingState={true}
-                        />
+                          })()}`;
+                          const shouldHideShipArt = shouldPreviewDestroyedTarget;
+
+                          return (
+                            <ShipImage
+                              ship={ship}
+                              className={`${imageClassName} ${
+                                shouldHideShipArt
+                                  ? "opacity-0 pointer-events-none"
+                                  : ""
+                              }`}
+                              showLoadingState={true}
+                            />
+                          );
+                        })()}
                         {/* Moved badge */}
                         {movedShipIdsSet.has(cell.shipId) && (
                           <div
@@ -1119,7 +1163,10 @@ export function GameGrid({
                             attributes.reactorCriticalTimer,
                             3,
                           );
-                          const skulls = "💀".repeat(skullCount);
+                          const skullLevels = Array.from(
+                            { length: skullCount },
+                            (_, index) => index,
+                          );
 
                           return (
                             <div
@@ -1127,13 +1174,18 @@ export function GameGrid({
                                 cell.isCreator
                                   ? "bottom-0 left-0"
                                   : "bottom-0 right-0"
-                              } m-0.5 flex items-center justify-center`}
+                              } m-0.5 flex items-center gap-0.5`}
                             >
-                              <div className="w-4 h-4 rounded-full bg-red-500/90 flex items-center justify-center">
-                                <span className="text-[8px] font-mono">
-                                  {skulls}
-                                </span>
-                              </div>
+                              {skullLevels.map((level) => (
+                                <div
+                                  key={level}
+                                  className="w-4 h-4 rounded-full bg-red-500/90 flex items-center justify-center"
+                                >
+                                  <span className="text-[8px] leading-none font-mono">
+                                    💀
+                                  </span>
+                                </div>
+                              ))}
                             </div>
                           );
                         })()}
@@ -1868,7 +1920,12 @@ export function GameGrid({
                 // - When labelTargets provided (GameDisplay): move+gun = threat range, only gun = from preview.
                 // - When not provided (e.g. SimulatedGameDisplay): use validTargets.
                 const targetsForLabels = labelTargets ?? validTargets;
-                if (selectedShipId) {
+                const hasSingleSelectedTarget =
+                  targetShipId != null && targetShipId !== 0n;
+
+                // If a specific target is selected, only keep that target's label.
+                // Otherwise (no target or AOE target 0n), show labels for all valid targets.
+                if (selectedShipId && !hasSingleSelectedTarget) {
                   targetsForLabels.forEach((target) => {
                     if (
                       !targetsToShow.some((t) => t.shipId === target.shipId)

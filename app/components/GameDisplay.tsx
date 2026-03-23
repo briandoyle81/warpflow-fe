@@ -1663,7 +1663,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Check if it's the current player's turn
   const isMyTurn = game.turnState.currentTurn === address;
-  const canActInGame = !readOnly && isMyTurn;
+  const [awaitingTurnSyncAfterSubmit, setAwaitingTurnSyncAfterSubmit] =
+    React.useState(false);
+  const isMyTurnEffective = isMyTurn && !awaitingTurnSyncAfterSubmit;
+  const canActInGame = !readOnly && isMyTurnEffective;
 
   // Track if we're currently displaying the last move (to avoid infinite loops)
   const isDisplayingLastMoveRef = React.useRef(false);
@@ -1863,6 +1866,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
     if (matches) {
       setOptimisticLastMove(null);
+      setAwaitingTurnSyncAfterSubmit(false);
     }
   }, [
     optimisticLastMove,
@@ -1875,6 +1879,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     optimisticLastMove?.newRow,
     optimisticLastMove?.newCol,
   ]);
+
+  // If chain state already says it is no longer our turn, allow local UI to
+  // resume normal turn derivation immediately.
+  React.useEffect(() => {
+    if (!awaitingTurnSyncAfterSubmit) return;
+    if (!isMyTurn) {
+      setAwaitingTurnSyncAfterSubmit(false);
+    }
+  }, [awaitingTurnSyncAfterSubmit, isMyTurn]);
 
   // For Retreat, newRow/newCol are -1 (fled); don't highlight a cell
   const highlightedMovePosition =
@@ -1939,7 +1952,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Play alert sound when it becomes the player's turn
   React.useEffect(() => {
-    if (!readOnly && isMyTurn && address && prevTurnRef.current === false) {
+    if (
+      !readOnly &&
+      isMyTurnEffective &&
+      address &&
+      prevTurnRef.current === false
+    ) {
       // Only play sound when turn changes from opponent to player
       const audio = new Audio("/sound/alert.mp3");
       audio.volume = 0.5; // Set volume to 50%
@@ -1948,13 +1966,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       });
     }
     // Update the previous turn state
-    prevTurnRef.current = isMyTurn;
-  }, [isMyTurn, address, readOnly]);
+    prevTurnRef.current = isMyTurnEffective;
+  }, [isMyTurnEffective, address, readOnly]);
 
   // Clear any pending transaction state when turn changes
   React.useEffect(() => {
     // Clear any stale transaction state when it becomes the player's turn
-    if (!readOnly && isMyTurn && address) {
+    if (!readOnly && isMyTurnEffective && address) {
       // Always clear transaction state when it's the player's turn
       // This ensures the submit button is enabled even if there was a pending transaction
       clearAllTransactions();
@@ -1969,7 +1987,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         // Keep selectedWeaponType so it only changes when player uses the dropdown
       }
     }
-  }, [isMyTurn, address, clearAllTransactions, readOnly]);
+  }, [isMyTurnEffective, address, clearAllTransactions, readOnly]);
 
   // Handle move submission - now handled by TransactionButton
 
@@ -2202,9 +2220,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   game.metadata.creator === address ||
                   game.metadata.joiner === address;
                 const canSeizeTurn =
-                  !readOnly && !isMyTurn && isParticipant && turnSecondsLeft <= 0;
+                  !readOnly &&
+                  !isMyTurnEffective &&
+                  isParticipant &&
+                  turnSecondsLeft <= 0;
                 const hasExceededTime =
-                  !readOnly && isMyTurn && isParticipant && turnSecondsLeft <= 0;
+                  !readOnly &&
+                  isMyTurnEffective &&
+                  isParticipant &&
+                  turnSecondsLeft <= 0;
 
                 if (hasExceededTime) {
                   return (
@@ -2374,12 +2398,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     >
                       <span
                         style={{
-                          color: isMyTurn
+                          color: isMyTurnEffective
                             ? "var(--color-cyan)"
                             : "var(--color-warning-red)",
                         }}
                       >
-                        {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
+                        {isMyTurnEffective ? "YOUR TURN" : "OPPONENT'S TURN"}
                       </span>
                       <span style={{ color: "var(--color-text-muted)" }}>
                         •
@@ -3162,6 +3186,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 w-full h-full"
                             loadingText="Submitting..."
                             errorText="Error"
+                            onTransactionSent={() => {
+                              // Prevent double-actioning while waiting for the next
+                              // on-chain game-state update to arrive.
+                              setAwaitingTurnSyncAfterSubmit(true);
+                            }}
                             onSuccess={() => {
                               // Keep the submitted move rendered as the "last move"
                               // until the next blockchain refetch updates `game.lastMove`.
@@ -3213,6 +3242,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               refetch?.();
                             }}
                             onError={(error) => {
+                              setAwaitingTurnSyncAfterSubmit(false);
                               console.error("Error submitting move:", error);
                               const errorMessage =
                                 (error as Error)?.message ||
@@ -3490,7 +3520,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           assistableTargetsFromStart={assistableTargetsFromStart}
           dragShootingRange={dragShootingRange}
           dragValidTargets={dragValidTargets}
-          isCurrentPlayerTurn={!readOnly && game.turnState.currentTurn === address}
+          isCurrentPlayerTurn={!readOnly && isMyTurnEffective}
           isShipOwnedByCurrentPlayer={isShipOwnedByCurrentPlayer}
           movedShipIdsSet={movedShipIdsSet}
           specialType={specialType}
