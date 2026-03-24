@@ -324,9 +324,23 @@ const ShipCard: React.FC<ShipCardProps> = ({
 
             {/* Zero HP indicator */}
             {inGameAttributes.hullPoints === 0 && (
-              <div className="absolute top-0 right-0 m-1 w-5 h-5 rounded-full bg-red-500/90 text-white flex items-center justify-center animate-pulse">
-                <span className="text-xs">💀</span>
-              </div>
+              tooltipMode ? (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 mt-1 z-20 pointer-events-none">
+                  <div className="w-5 h-5 flex items-center justify-center animate-pulse">
+                    <span className="text-xs">🆘</span>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className={`absolute w-5 h-5 flex items-center justify-center animate-pulse ${
+                    gameViewMode
+                      ? "top-0 left-1/2 -translate-x-1/2 mt-1"
+                      : "top-0 right-0 m-1"
+                  }`}
+                >
+                  <span className="text-xs">🆘</span>
+                </div>
+              )
             )}
           </>
         )}

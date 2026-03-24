@@ -100,6 +100,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Use the fetched game data if available, otherwise fall back to initial game
   const game = (gameData as GameDataView) || initialGame;
+  const aliveShipPositions = React.useMemo(
+    () => game.shipPositions.filter((shipPosition) => (shipPosition.status ?? 0) === 0),
+    [game.shipPositions],
+  );
 
   // Optimistic last-move handling:
   // When a tx is confirmed, there can be a short delay before the
@@ -132,6 +136,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   const [isWindowFocused, setIsWindowFocused] = React.useState(true);
   const isWindowFocusedRef = React.useRef(true);
   const wasHiddenRef = React.useRef(false);
+  const wasInactiveRef = React.useRef(false);
   const lastRefetchOnFocusAtRef = React.useRef(0);
   const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const pollingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -171,12 +176,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Track page visibility and window focus.
   // If the tab was inactive and then comes into focus, refetch immediately once.
   React.useEffect(() => {
-    wasHiddenRef.current = !!document.hidden;
-    isWindowFocusedRef.current = document.hasFocus();
-    setIsPageVisible(!document.hidden);
-    setIsWindowFocused(document.hasFocus());
+    const initialHidden = !!document.hidden;
+    const initialFocused = document.hasFocus();
+    wasHiddenRef.current = initialHidden;
+    isWindowFocusedRef.current = initialFocused;
+    wasInactiveRef.current = initialHidden || !initialFocused;
+    setIsPageVisible(!initialHidden);
+    setIsWindowFocused(initialFocused);
 
-    const maybeRefetchOnFocus = () => {
+    const maybeRefetchOnActive = (wasInactive: boolean) => {
       const now = Date.now();
       const pageVisible = !document.hidden;
       const hasFocus = document.hasFocus();
@@ -185,39 +193,38 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       // Prevent bursts from multiple focus-related events.
       if (now - lastRefetchOnFocusAtRef.current < 5000) return;
 
-      // Only do the "immediate once" when coming back from hidden/blur.
-      if (wasHiddenRef.current || !isWindowFocusedRef.current) {
+      // Only do the immediate refetch when transitioning inactive -> active.
+      if (wasInactive) {
         lastRefetchOnFocusAtRef.current = now;
         refetchGame();
       }
     };
 
-    const handleVisibilityChange = () => {
+    const syncActivityState = () => {
       const nowHidden = !!document.hidden;
+      const nowFocused = document.hasFocus();
+      const wasInactive = wasInactiveRef.current;
+      const nowInactive = nowHidden || !nowFocused;
+
       wasHiddenRef.current = nowHidden;
+      isWindowFocusedRef.current = nowFocused;
+      wasInactiveRef.current = nowInactive;
 
       setIsPageVisible(!nowHidden);
+      setIsWindowFocused(nowFocused);
+      maybeRefetchOnActive(wasInactive);
+    };
 
-      if (nowHidden) {
-        // Treat hidden as inactive so focus regain triggers a refresh.
-        isWindowFocusedRef.current = false;
-        setIsWindowFocused(false);
-      } else {
-        // Becoming visible: only refetch if we're also focused.
-        maybeRefetchOnFocus();
-      }
+    const handleVisibilityChange = () => {
+      syncActivityState();
     };
 
     const handleFocus = () => {
-      // Update focus state first so the refetch condition is accurate.
-      isWindowFocusedRef.current = true;
-      setIsWindowFocused(true);
-      maybeRefetchOnFocus();
+      syncActivityState();
     };
 
     const handleBlur = () => {
-      isWindowFocusedRef.current = false;
-      setIsWindowFocused(false);
+      syncActivityState();
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -516,11 +523,16 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     );
   }, [gameMapState]);
 
-  // Get all ship IDs from the game
-  const allShipIds = [
-    ...game.creatorActiveShipIds,
-    ...game.joinerActiveShipIds,
-  ];
+  // Get all ship IDs that may need rendering in this view.
+  // Include active IDs plus any IDs present in shipPositions (destroyed/fled can
+  // now be present there and still need metadata for tooltip/render path).
+  const allShipIds = React.useMemo(() => {
+    const ids = new Set<bigint>();
+    game.creatorActiveShipIds.forEach((id) => ids.add(id));
+    game.joinerActiveShipIds.forEach((id) => ids.add(id));
+    game.shipPositions.forEach((shipPosition) => ids.add(shipPosition.shipId));
+    return Array.from(ids);
+  }, [game.creatorActiveShipIds, game.joinerActiveShipIds, game.shipPositions]);
 
   // Fetch ship details for all ships in the game
   const { ships: gameShips, isLoading: shipsLoading } =
@@ -678,7 +690,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       .map(() => Array(GRID_WIDTH).fill(null));
 
     // Place ships on the grid
-    game.shipPositions.forEach((shipPosition) => {
+    aliveShipPositions.forEach((shipPosition) => {
       const { position } = shipPosition;
 
       // Optimistic last move:
@@ -755,7 +767,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     const canShowLastMove = shouldShowLastMoveNow && !isShowingProposedMoveNow;
 
     if (canShowLastMove && displayedLastMove) {
-      const lastMoveShipPosition = game.shipPositions.find(
+      const lastMoveShipPosition = aliveShipPositions.find(
         (pos) => pos.shipId === displayedLastMove.shipId,
       );
 
@@ -791,15 +803,42 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         }
         // The ship at new position will show pulse effect via lastMoveShipId prop in GameGrid
       }
+
+      // For destroyed-target last-move UI, render the target ship at its
+      // reported position with status=destroyed so GameGrid can replace normal
+      // art with destroyed art in the regular ship rendering path.
+      const isTargetingLastMove =
+        displayedLastMove.actionType === ActionType.Shoot ||
+        displayedLastMove.actionType === ActionType.Special;
+      if (isTargetingLastMove && displayedLastMove.targetShipId !== 0n) {
+        const destroyedTargetShipPosition = game.shipPositions.find(
+          (shipPosition) =>
+            shipPosition.shipId === displayedLastMove.targetShipId &&
+            shipPosition.status === 1,
+        );
+        if (destroyedTargetShipPosition) {
+          const { row, col } = destroyedTargetShipPosition.position;
+          if (
+            row >= 0 &&
+            row < GRID_HEIGHT &&
+            col >= 0 &&
+            col < GRID_WIDTH &&
+            !newGrid[row][col]
+          ) {
+            newGrid[row][col] = destroyedTargetShipPosition;
+          }
+        }
+      }
     }
 
     return newGrid;
   }, [
-    game.shipPositions,
+    aliveShipPositions,
     selectedShipId,
     previewPosition,
     displayedLastMove,
     optimisticLastMove,
+    game.shipPositions,
     game.metadata.winner,
     game.turnState.currentTurn,
     address,
@@ -817,14 +856,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         hasShips: !!gameShips,
         shipMap,
         getShipAttributes,
-        shipPositions: game.shipPositions,
+        shipPositions: aliveShipPositions,
         previewPosition,
       }),
     [
       selectedShipId,
       gameShips,
       shipMap,
-      game.shipPositions,
+      aliveShipPositions,
       getShipAttributes,
       previewPosition,
     ],
@@ -1867,6 +1906,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     if (matches) {
       setOptimisticLastMove(null);
       setAwaitingTurnSyncAfterSubmit(false);
+      // The blockchain state has caught up to the submitted preview.
+      // Clear local proposal UI now (not immediately on submit) so the
+      // previewed board state remains visible during the sync gap.
+      setPreviewPosition(null);
+      setSelectedShipId(null);
+      setTargetShipId(null);
     }
   }, [
     optimisticLastMove,
@@ -1886,6 +1931,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     if (!awaitingTurnSyncAfterSubmit) return;
     if (!isMyTurn) {
       setAwaitingTurnSyncAfterSubmit(false);
+      // Turn advanced on-chain; clear any locally held proposal state.
+      setPreviewPosition(null);
+      setSelectedShipId(null);
+      setTargetShipId(null);
     }
   }, [awaitingTurnSyncAfterSubmit, isMyTurn]);
 
@@ -1919,7 +1968,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     shouldShowLastMove &&
     displayedLastMove &&
     !isShowingProposedMove &&
-    (displayedLastMove.actionType as ActionType) === ActionType.Special &&
+    ((displayedLastMove.actionType as ActionType) === ActionType.Special ||
+      (displayedLastMove.actionType as ActionType) === ActionType.Shoot) &&
     displayedLastMove.targetShipId !== 0n
       ? displayedLastMove.targetShipId
       : null;
@@ -1933,6 +1983,67 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           return game.turnState.currentTurn !== address;
         })()
       : undefined;
+
+  const appendDestroyedTextToLastMove = React.useMemo(() => {
+    if (!displayedLastMove) return false;
+    if (displayedLastMove.targetShipId === 0n) return false;
+
+    const isTargetingAction =
+      displayedLastMove.actionType === ActionType.Shoot ||
+      displayedLastMove.actionType === ActionType.Special;
+    if (!isTargetingAction) return false;
+
+    return !game.shipPositions.some(
+      (sp) => sp.shipId === displayedLastMove.targetShipId,
+    );
+  }, [displayedLastMove, game.shipPositions]);
+
+  const lastMoveTargetPositionDebugSuffix = React.useMemo(() => {
+    if (!displayedLastMove) return "";
+    if (displayedLastMove.targetShipId === 0n) return "";
+
+    const targetPos = game.shipPositions.find(
+      (sp) => sp.shipId === displayedLastMove.targetShipId,
+    );
+
+    if (!targetPos) {
+      return "[target shipPositions row,col: missing]";
+    }
+
+    return `[target shipPositions row,col: ${targetPos.position.row},${targetPos.position.col}]`;
+  }, [displayedLastMove, game.shipPositions]);
+
+  React.useEffect(() => {
+    if (!displayedLastMove) return;
+    if (displayedLastMove.targetShipId === 0n) return;
+
+    const targetExists = game.shipPositions.some(
+      (sp) => sp.shipId === displayedLastMove.targetShipId,
+    );
+    if (targetExists) return;
+
+    console.log(
+      "[GameDisplay debug] lastMove target missing in game.shipPositions",
+      {
+        gameId: game.metadata.gameId.toString(),
+        lastMove: {
+          shipId: displayedLastMove.shipId.toString(),
+          targetShipId: displayedLastMove.targetShipId.toString(),
+          actionType: displayedLastMove.actionType,
+          oldRow: displayedLastMove.oldRow,
+          oldCol: displayedLastMove.oldCol,
+          newRow: displayedLastMove.newRow,
+          newCol: displayedLastMove.newCol,
+        },
+        shipPositions: game.shipPositions.map((sp) => ({
+          shipId: sp.shipId.toString(),
+          row: sp.position.row,
+          col: sp.position.col,
+          isCreator: sp.isCreator,
+        })),
+      },
+    );
+  }, [displayedLastMove, game.metadata.gameId, game.shipPositions]);
 
   const retreatPrepShipId =
     selectedShipId != null && actionOverride === ActionType.Retreat
@@ -3227,10 +3338,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                                 timestamp: BigInt(Date.now()),
                               });
 
-                              // Deselect ship after transaction receipt is received
-                              setPreviewPosition(null);
-                              setSelectedShipId(null);
-                              setTargetShipId(null);
+                              // Keep proposal state visible until chain sync.
                               // Keep selectedWeaponType so it only changes when player uses the dropdown
                               toast.success("Move submitted successfully!");
                               // Track when player moved to trigger polling schedule
@@ -3504,6 +3612,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       >
         <GameGrid
           grid={grid}
+          allShipPositions={game.shipPositions}
           shipMap={shipMap}
           selectedShipId={selectedShipId}
           previewPosition={previewPosition}
@@ -3690,6 +3799,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         lastMove={displayedLastMove}
         shipMap={shipMap}
         address={address}
+        appendDestroyedText={appendDestroyedTextToLastMove}
+        debugSuffix={lastMoveTargetPositionDebugSuffix}
       />
 
       {/* Ship Details */}

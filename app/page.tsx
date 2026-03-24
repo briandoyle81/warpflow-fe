@@ -27,6 +27,8 @@ export default function Home() {
     setIsHydrated(true);
     const savedTab = localStorage.getItem("void-tactics-active-tab");
     const savedGameId = localStorage.getItem("selectedGameId");
+    const forceGamesTab =
+      localStorage.getItem("void-tactics-force-games-tab") === "true";
 
     const validTabs = [
       "Info",
@@ -41,8 +43,13 @@ export default function Home() {
       validTabs.push("Ship Attributes");
     }
 
+    // Explicit navigation intent from Lobbies has highest priority.
+    if (forceGamesTab) {
+      setActiveTab("Games");
+      localStorage.removeItem("void-tactics-force-games-tab");
+    }
     // If there's a saved game, prioritize switching to Games tab
-    if (savedGameId) {
+    else if (savedGameId) {
       setActiveTab("Games");
     } else if (savedTab && validTabs.includes(savedTab)) {
       setActiveTab(savedTab);

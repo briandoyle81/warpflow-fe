@@ -555,11 +555,21 @@ const Lobbies: React.FC = () => {
   // Navigate to Games tab (used by Go to Games button)
   const navigateToGamesTab = useCallback(() => {
     localStorage.setItem("void-tactics-active-tab", "Games");
-    const event = new CustomEvent("void-tactics-navigate-to-games", {
-      bubbles: true,
-    });
-    window.dispatchEvent(event);
-    document.dispatchEvent(event);
+    // Fallback marker so Home can detect explicit Games navigation intent.
+    localStorage.setItem("void-tactics-force-games-tab", "true");
+
+    // Use fresh event objects per target (re-dispatching the same Event object
+    // is unreliable across environments).
+    window.dispatchEvent(
+      new CustomEvent("void-tactics-navigate-to-games", {
+        bubbles: true,
+      }),
+    );
+    document.dispatchEvent(
+      new CustomEvent("void-tactics-navigate-to-games", {
+        bubbles: true,
+      }),
+    );
   }, []);
 
   // Close fleet selection modal (if open) and switch to Games tab

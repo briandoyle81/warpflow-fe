@@ -8,7 +8,7 @@ import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import type { Abi } from "viem";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getSelectedChainId } from "../config/networks";
 
 // Cache expiration time (24 hours) - only for unclaimed addresses
@@ -112,6 +112,7 @@ export function useFreeShipClaiming() {
   const { isLoading: isConfirming, isSuccess: isConfirmed, error: receiptError } = useWaitForTransactionReceipt({
     hash,
   });
+  const processedReceiptHashRef = useRef<`0x${string}` | null>(null);
 
   // Track if we should show the error (clear it after some time or on new attempts)
   const [showError, setShowError] = useState(false);
@@ -277,40 +278,42 @@ export function useFreeShipClaiming() {
 
   // Show toast and update cache when receipt is received
   useEffect(() => {
-    if (isConfirmed && hash) {
-      // Transaction receipt received - show success toast
-      toast.success("Free ships claimed successfully!");
+    if (!isConfirmed || !hash || !address) return;
+    if (processedReceiptHashRef.current === hash) return;
+    processedReceiptHashRef.current = hash;
 
-      // Check if this address was previously eligible
-      const wasEligible = eligibilityCache[address || ""]?.eligible;
+    // Transaction receipt received - show success toast
+    toast.success("Free ships claimed successfully!");
 
-      if (wasEligible) {
-        // Transaction was successful, update cache and refetch data
-        setEligibilityCache((prev) => {
-          const newCache = {
-            ...prev,
-            [address || ""]: {
-              eligible: false, // Now permanently ineligible
-              timestamp: Date.now(),
-              checked: true,
-            },
-          };
-          saveCacheToStorage(newCache);
-          return newCache;
-        });
+    // Transaction was successful, update cache and refetch data
+    setEligibilityCache((prev) => {
+      const newCache = {
+        ...prev,
+        [address]: {
+          eligible: false, // Now permanently ineligible
+          timestamp: Date.now(),
+          checked: true,
+        },
+      };
+      saveCacheToStorage(newCache);
+      return newCache;
+    });
 
-        // Refetch data after a short delay
-        const timer = setTimeout(() => {
-          // Refetch the ships data to show the newly claimed ships
-          refetch();
-          // Refetch the claim status to update the contract data
-          refetchClaimStatus();
-        }, 2000);
+    // Refetch data after a short delay
+    const timer = setTimeout(() => {
+      // Refetch the ships data to show the newly claimed ships
+      refetch();
+      // Refetch the claim status to update the contract data
+      refetchClaimStatus();
+      // One extra delayed pass to cover eventual consistency on some RPCs.
+      setTimeout(() => {
+        refetch();
+        refetchClaimStatus();
+      }, 2000);
+    }, 2000);
 
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [isConfirmed, hash, address, refetch, refetchClaimStatus, saveCacheToStorage, eligibilityCache]);
+    return () => clearTimeout(timer);
+  }, [isConfirmed, hash, address, refetch, refetchClaimStatus, saveCacheToStorage]);
 
   // Handle receipt errors
   useEffect(() => {

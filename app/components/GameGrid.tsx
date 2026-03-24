@@ -17,6 +17,7 @@ import { WarpFieldCollapseAnimation } from "./weapon-animations/WarpFieldCollaps
 
 interface GameGridProps {
   grid: (ShipPosition | null)[][];
+  allShipPositions?: readonly ShipPosition[];
   shipMap: Map<bigint, Ship>;
   selectedShipId: bigint | null;
   previewPosition: { row: number; col: number } | null;
@@ -108,6 +109,7 @@ interface GameGridProps {
 
 export function GameGrid({
   grid,
+  allShipPositions,
   shipMap,
   selectedShipId,
   previewPosition,
@@ -244,26 +246,79 @@ export function GameGrid({
     calculateDamage,
   ]);
 
-  // Position where a ship was just destroyed (for visual marker). When the last
-  // move targeted a ship that now has 0 hull points, show the ship-destroyed
-  // art on that cell.
-  const destroyedTargetPosition = React.useMemo(() => {
-    if (!lastMoveTargetShipId) return null;
-    const attrs = getShipAttributes(lastMoveTargetShipId);
-    if (!attrs || attrs.hullPoints > 0) return null;
+  const destroyPreviewShipIds = React.useMemo(() => {
+    const ids = new Set<bigint>();
 
-    // Find the grid cell where this ship currently is (or last was).
-    for (let r = 0; r < grid.length; r++) {
-      const row = grid[r];
-      for (let c = 0; c < row.length; c++) {
-        const cell = row[c];
-        if (cell && cell.shipId === lastMoveTargetShipId) {
-          return { row: r, col: c };
+    if (
+      selectedShipId == null ||
+      !isCurrentPlayerTurn ||
+      !isShipOwnedByCurrentPlayer(selectedShipId)
+    ) {
+      return ids;
+    }
+
+    const hasSingleSelectedTarget =
+      targetShipId != null && targetShipId !== 0n;
+    const previewTargets = hasSingleSelectedTarget
+      ? validTargets.filter((target) => target.shipId === targetShipId)
+      : (labelTargets ?? validTargets);
+
+    previewTargets.forEach((target) => {
+      const targetAttributes = getShipAttributes(target.shipId);
+      if (!targetAttributes) return;
+
+      const damage = calculateDamage(target.shipId, selectedWeaponType);
+      const willDestroyByReactor =
+        damage.reactorCritical && targetAttributes.reactorCriticalTimer + 1 >= 3;
+
+      if (willDestroyByReactor) {
+        ids.add(target.shipId);
+      }
+    });
+
+    return ids;
+  }, [
+    selectedShipId,
+    isCurrentPlayerTurn,
+    isShipOwnedByCurrentPlayer,
+    targetShipId,
+    validTargets,
+    labelTargets,
+    getShipAttributes,
+    calculateDamage,
+    selectedWeaponType,
+  ]);
+
+  const findShipPositionById = React.useCallback(
+    (shipId: bigint | null | undefined): { row: number; col: number } | null => {
+      if (shipId == null) return null;
+
+      // Primary: find in currently rendered grid.
+      for (let r = 0; r < grid.length; r++) {
+        const row = grid[r];
+        for (let c = 0; c < row.length; c++) {
+          const cell = row[c];
+          if (cell?.shipId === shipId) {
+            return { row: r, col: c };
+          }
         }
       }
-    }
-    return null;
-  }, [grid, lastMoveTargetShipId, getShipAttributes]);
+
+      // Fallback: use authoritative game shipPositions from GameDataView.
+      if (allShipPositions && allShipPositions.length > 0) {
+        const fallbackPos = allShipPositions.find((sp) => sp.shipId === shipId);
+        if (fallbackPos) {
+          return {
+            row: fallbackPos.position.row,
+            col: fallbackPos.position.col,
+          };
+        }
+      }
+
+      return null;
+    },
+    [grid, allShipPositions],
+  );
 
   return (
     <>
@@ -274,6 +329,16 @@ export function GameGrid({
             {grid.map((row, rowIndex) =>
               row.map((cell, colIndex) => {
                 const ship = cell ? shipMap.get(cell.shipId) : null;
+                const cellStatus = cell?.status ?? 0;
+                const isCellDestroyed = cellStatus === 1;
+                const isCellFled = cellStatus === 2;
+                const isLastMoveDestroyedTargetCell =
+                  !!cell &&
+                  isCellDestroyed &&
+                  lastMoveTargetShipId != null &&
+                  cell.shipId === lastMoveTargetShipId;
+                const shouldRenderShipContent =
+                  !!cell && !isCellFled && (!isCellDestroyed || isLastMoveDestroyedTargetCell);
                 const isSelected = selectedShipId === cell?.shipId;
                 const isMovementTile = movementRange.some(
                   (pos) => pos.row === rowIndex && pos.col === colIndex,
@@ -292,7 +357,7 @@ export function GameGrid({
                 // Check if this cell contains a valid target
                 // When dragging, use dragValidTargets; otherwise use validTargets
                 const isValidTarget =
-                  cell &&
+                  shouldRenderShipContent &&
                   selectedShipId &&
                   isCurrentPlayerTurn &&
                   isShipOwnedByCurrentPlayer(selectedShipId) &&
@@ -318,7 +383,7 @@ export function GameGrid({
 
                 // Check if this cell contains an assistable target (friendly ship with 0 HP)
                 const isAssistableTarget =
-                  cell &&
+                  shouldRenderShipContent &&
                   selectedShipId &&
                   isCurrentPlayerTurn &&
                   isShipOwnedByCurrentPlayer(selectedShipId) &&
@@ -331,7 +396,12 @@ export function GameGrid({
                 const isSelectedTarget = cell && targetShipId === cell.shipId;
 
                 const handleCellClick = () => {
+                  if (cell && !shouldRenderShipContent) return;
                   if (cell) {
+                    // Destroyed ships are display-only and cannot be selected.
+                    if (isCellDestroyed) {
+                      return;
+                    }
                     // Check for repair drone auto-switch FIRST (before any other logic)
                     if (
                       selectedShipId &&
@@ -611,7 +681,7 @@ export function GameGrid({
                     })()}`}
                     onClick={handleCellClick}
                     onMouseEnter={
-                      cell
+                      shouldRenderShipContent
                         ? (e) => {
                             const ship = shipMap.get(cell.shipId);
                             if (ship) {
@@ -628,7 +698,7 @@ export function GameGrid({
                         : undefined
                     }
                     onMouseMove={
-                      cell
+                      shouldRenderShipContent
                         ? (e) => {
                             if (
                               hoveredCell &&
@@ -643,7 +713,9 @@ export function GameGrid({
                           }
                         : undefined
                     }
-                    onMouseLeave={cell ? () => setHoveredCell(null) : undefined}
+                    onMouseLeave={
+                      shouldRenderShipContent ? () => setHoveredCell(null) : undefined
+                    }
                     onDragOver={(e) => {
                       if (draggedShipId) {
                         e.preventDefault();
@@ -767,26 +839,6 @@ export function GameGrid({
                         <div className="absolute inset-0 z-1 border-2 border-red-400 bg-red-500/10 pointer-events-none animate-pulse" />
                       )}
 
-                    {/* Destroyed ship marker: show ship-destroyed art in the cell where
-                        the last-move target ship was destroyed. Uses full width and is
-                        vertically centered. */}
-                    {destroyedTargetPosition &&
-                      destroyedTargetPosition.row === rowIndex &&
-                      destroyedTargetPosition.col === colIndex && (
-                        <div className="absolute inset-0 z-2 flex items-center justify-center pointer-events-none">
-                          <div className="w-full max-w-full">
-                            <Image
-                              src="/img/ship-destroyed.png"
-                              alt="Destroyed ship"
-                              width={256}
-                              height={64}
-                              className="w-full h-auto object-contain"
-                              priority={false}
-                            />
-                          </div>
-                        </div>
-                      )}
-
                     {/* Retreat last move: outline on the cell (blue = current player, red = opponent) */}
                     {(lastMoveActionType as ActionType) ===
                       ActionType.Retreat &&
@@ -805,16 +857,12 @@ export function GameGrid({
                       )}
 
                     {cell &&
-                      ship &&
                       (() => {
-                        const targetAttributes = getShipAttributes(cell.shipId);
                         const shouldPreviewDestroyedTarget =
-                          targetShipId != null &&
-                          targetShipId !== 0n &&
-                          cell.shipId === targetShipId &&
-                          !!targetAttributes &&
-                          targetAttributes.reactorCriticalTimer >= 2;
-                        if (!shouldPreviewDestroyedTarget) return null;
+                          destroyPreviewShipIds.has(cell.shipId);
+                        const shouldShowDestroyedArt =
+                          isLastMoveDestroyedTargetCell || shouldPreviewDestroyedTarget;
+                        if (!shouldShowDestroyedArt) return null;
 
                         // Layer above scoring/zone art, but below selection overlays.
                         return (
@@ -822,14 +870,14 @@ export function GameGrid({
                             <img
                               src="/img/ship-destroyed.png"
                               alt="Predicted destroyed target ship"
-                              className={`w-full h-full object-contain opacity-75 ${
-                                cell.isCreator ? "scale-x-[-1]" : ""
+                              className={`w-[98%] h-[98%] object-contain opacity-75 ${
+                                cell.isCreator ? "" : "scale-x-[-1]"
                               }`}
                             />
                           </div>
                         );
                       })()}
-                    {cell && ship ? (
+                    {shouldRenderShipContent && ship ? (
                       <div
                         className="w-full h-full relative z-10"
                         draggable={
@@ -940,8 +988,8 @@ export function GameGrid({
                               className="absolute top-0 left-1/2 -translate-x-1/2 mt-0.5 z-10 flex items-center justify-center pointer-events-none"
                               title="Disabled (0 HP)"
                             >
-                              <div className="w-5 h-5 rounded-full bg-red-600/90 flex items-center justify-center border border-red-400/80">
-                                <span className="text-xs leading-none">💀</span>
+                              <div className="w-5 h-5 flex items-center justify-center">
+                                <span className="text-xs leading-none">🆘</span>
                               </div>
                             </div>
                           );
@@ -1043,14 +1091,8 @@ export function GameGrid({
                             />
                           )}
                         {(() => {
-                          const targetAttributes = getShipAttributes(cell.shipId);
                           const shouldPreviewDestroyedTarget =
-                            targetShipId != null &&
-                            targetShipId !== 0n &&
-                            cell.shipId === targetShipId &&
-                            !!targetAttributes &&
-                            targetAttributes.reactorCriticalTimer >= 2;
-
+                            destroyPreviewShipIds.has(cell.shipId);
                           const imageClassName = `w-full h-full relative z-10 ${
                             retreatPrepShipId === cell.shipId
                               ? "opacity-0 pointer-events-none"
@@ -1120,7 +1162,8 @@ export function GameGrid({
 
                             return "";
                           })()}`;
-                          const shouldHideShipArt = shouldPreviewDestroyedTarget;
+                          const shouldHideShipArt =
+                            isLastMoveDestroyedTargetCell || shouldPreviewDestroyedTarget;
 
                           return (
                             <ShipImage
@@ -1404,28 +1447,16 @@ export function GameGrid({
 
                 const effectiveTargetId = targetShipId || lastMoveTargetShipId;
                 if (!effectiveTargetId) return null;
-
-                let targetRow = -1;
-                let targetCol = -1;
-                grid.forEach((row, r) => {
-                  row.forEach((cell, c) => {
-                    if (cell?.shipId === effectiveTargetId) {
-                      targetRow = r;
-                      targetCol = c;
-                    }
-                  });
-                });
-
-                // Only show animation if target is found
-                if (targetRow === -1 || targetCol === -1) return null;
+                const targetPosition = findShipPositionById(effectiveTargetId);
+                if (!targetPosition) return null;
 
                 return (
                   <LaserShootingAnimation
                     gridContainerRef={gridContainerRef}
                     attackerRow={attackerRow}
                     attackerCol={attackerCol}
-                    targetRow={targetRow}
-                    targetCol={targetCol}
+                    targetRow={targetPosition.row}
+                    targetCol={targetPosition.col}
                   />
                 );
               })()}
@@ -1480,27 +1511,16 @@ export function GameGrid({
                   return null;
                 }
 
-                let targetRow = -1;
-                let targetCol = -1;
-                grid.forEach((row, r) => {
-                  row.forEach((cell, c) => {
-                    if (cell?.shipId === targetShipId) {
-                      targetRow = r;
-                      targetCol = c;
-                    }
-                  });
-                });
-
-                // Only show animation if target is found
-                if (targetRow === -1 || targetCol === -1) return null;
+                const targetPosition = findShipPositionById(targetShipId);
+                if (!targetPosition) return null;
 
                 return (
                   <MissileShootingAnimation
                     gridContainerRef={gridContainerRef}
                     attackerRow={attackerRow}
                     attackerCol={attackerCol}
-                    targetRow={targetRow}
-                    targetCol={targetCol}
+                    targetRow={targetPosition.row}
+                    targetCol={targetPosition.col}
                   />
                 );
               })()}
@@ -1557,28 +1577,16 @@ export function GameGrid({
 
                 const effectiveTargetId = targetShipId || lastMoveTargetShipId;
                 if (!effectiveTargetId) return null;
-
-                let targetRow = -1;
-                let targetCol = -1;
-                grid.forEach((row, r) => {
-                  row.forEach((cell, c) => {
-                    if (cell?.shipId === effectiveTargetId) {
-                      targetRow = r;
-                      targetCol = c;
-                    }
-                  });
-                });
-
-                // Only show animation if target is found
-                if (targetRow === -1 || targetCol === -1) return null;
+                const targetPosition = findShipPositionById(effectiveTargetId);
+                if (!targetPosition) return null;
 
                 return (
                   <PlasmaShootingAnimation
                     gridContainerRef={gridContainerRef}
                     attackerRow={attackerRow}
                     attackerCol={attackerCol}
-                    targetRow={targetRow}
-                    targetCol={targetCol}
+                    targetRow={targetPosition.row}
+                    targetCol={targetPosition.col}
                   />
                 );
               })()}
@@ -1629,27 +1637,16 @@ export function GameGrid({
                   return null;
                 }
 
-                let targetRow = -1;
-                let targetCol = -1;
-                grid.forEach((row, r) => {
-                  row.forEach((cell, c) => {
-                    if (cell?.shipId === targetShipId) {
-                      targetRow = r;
-                      targetCol = c;
-                    }
-                  });
-                });
-
-                // Only show animation if target is found
-                if (targetRow === -1 || targetCol === -1) return null;
+                const targetPosition = findShipPositionById(targetShipId);
+                if (!targetPosition) return null;
 
                 return (
                   <RailgunShootingAnimation
                     gridContainerRef={gridContainerRef}
                     attackerRow={attackerRow}
                     attackerCol={attackerCol}
-                    targetRow={targetRow}
-                    targetCol={targetCol}
+                    targetRow={targetPosition.row}
+                    targetCol={targetPosition.col}
                   />
                 );
               })()}
@@ -1692,22 +1689,12 @@ export function GameGrid({
                   });
                 }
 
-                let targetRow = -1;
-                let targetCol = -1;
-                grid.forEach((row, r) => {
-                  row.forEach((cell, c) => {
-                    if (cell?.shipId === targetShipId) {
-                      targetRow = r;
-                      targetCol = c;
-                    }
-                  });
-                });
+                const targetPosition = findShipPositionById(targetShipId);
 
                 if (
                   attackerRow === -1 ||
                   attackerCol === -1 ||
-                  targetRow === -1 ||
-                  targetCol === -1
+                  !targetPosition
                 ) {
                   return null;
                 }
@@ -1717,8 +1704,8 @@ export function GameGrid({
                     gridContainerRef={gridContainerRef}
                     attackerRow={attackerRow}
                     attackerCol={attackerCol}
-                    targetRow={targetRow}
-                    targetCol={targetCol}
+                    targetRow={targetPosition.row}
+                    targetCol={targetPosition.col}
                   />
                 );
               })()}
@@ -1728,6 +1715,7 @@ export function GameGrid({
               lastMoveActionType === ActionType.Special &&
               lastMoveShipId != null &&
               lastMoveTargetShipId != null &&
+              shipMap.get(lastMoveShipId)?.equipment.special === 1 &&
               (() => {
                 // Use the explicit "to" position for the last move when available.
                 // Fallback to current grid position if needed.
@@ -1747,22 +1735,12 @@ export function GameGrid({
                   });
                 }
 
-                let targetRow = -1;
-                let targetCol = -1;
-                grid.forEach((row, r) => {
-                  row.forEach((cell, c) => {
-                    if (cell?.shipId === lastMoveTargetShipId) {
-                      targetRow = r;
-                      targetCol = c;
-                    }
-                  });
-                });
+                const targetPosition = findShipPositionById(lastMoveTargetShipId);
 
                 if (
                   attackerRow === -1 ||
                   attackerCol === -1 ||
-                  targetRow === -1 ||
-                  targetCol === -1
+                  !targetPosition
                 ) {
                   return null;
                 }
@@ -1772,8 +1750,8 @@ export function GameGrid({
                     gridContainerRef={gridContainerRef}
                     attackerRow={attackerRow}
                     attackerCol={attackerCol}
-                    targetRow={targetRow}
-                    targetCol={targetCol}
+                    targetRow={targetPosition.row}
+                    targetCol={targetPosition.col}
                   />
                 );
               })()}
@@ -1805,22 +1783,12 @@ export function GameGrid({
                   });
                 }
 
-                let targetRow = -1;
-                let targetCol = -1;
-                grid.forEach((row, r) => {
-                  row.forEach((cell, c) => {
-                    if (cell?.shipId === targetShipId) {
-                      targetRow = r;
-                      targetCol = c;
-                    }
-                  });
-                });
+                const targetPosition = findShipPositionById(targetShipId);
 
                 if (
                   attackerRow === -1 ||
                   attackerCol === -1 ||
-                  targetRow === -1 ||
-                  targetCol === -1
+                  !targetPosition
                 ) {
                   return null;
                 }
@@ -1830,8 +1798,8 @@ export function GameGrid({
                     gridContainerRef={gridContainerRef}
                     attackerRow={attackerRow}
                     attackerCol={attackerCol}
-                    targetRow={targetRow}
-                    targetCol={targetCol}
+                    targetRow={targetPosition.row}
+                    targetCol={targetPosition.col}
                   />
                 );
               })()}
@@ -1845,25 +1813,22 @@ export function GameGrid({
               (() => {
                 let attackerRow = -1;
                 let attackerCol = -1;
-                let targetRow = -1;
-                let targetCol = -1;
+                let targetPosition: { row: number; col: number } | null = null;
                 grid.forEach((row, r) => {
                   row.forEach((cell, c) => {
                     if (cell?.shipId === lastMoveShipId) {
                       attackerRow = r;
                       attackerCol = c;
                     }
-                    if (cell?.shipId === lastMoveTargetShipId) {
-                      targetRow = r;
-                      targetCol = c;
-                    }
                   });
                 });
+                if (!targetPosition) {
+                  targetPosition = findShipPositionById(lastMoveTargetShipId);
+                }
                 if (
                   attackerRow === -1 ||
                   attackerCol === -1 ||
-                  targetRow === -1 ||
-                  targetCol === -1
+                  !targetPosition
                 )
                   return null;
                 return (
@@ -1871,8 +1836,8 @@ export function GameGrid({
                     gridContainerRef={gridContainerRef}
                     attackerRow={attackerRow}
                     attackerCol={attackerCol}
-                    targetRow={targetRow}
-                    targetCol={targetCol}
+                    targetRow={targetPosition.row}
+                    targetCol={targetPosition.col}
                   />
                 );
               })()}
@@ -1976,29 +1941,40 @@ export function GameGrid({
                       );
 
                       const showAsKill = damage.willKill;
+                      const targetAttributes = getShipAttributes(target.shipId);
+                      const willDestroyByReactor =
+                        damage.reactorCritical &&
+                        !!targetAttributes &&
+                        targetAttributes.reactorCriticalTimer + 1 >= 3;
                       let labelText: string;
                       if (selectedWeaponType === "special") {
                         // Flak does damage, other special abilities repair/heal
                         if (specialType === 3) {
                           // Flak special - show damage effect
-                          if (damage.reactorCritical) {
+                          if (willDestroyByReactor) {
+                            labelText = "💀 Destroy Ship";
+                          } else if (damage.reactorCritical) {
                             labelText = "⚡ Reactor Critical +1";
                           } else if (showAsKill) {
-                            labelText = `💀 ${damage.reducedDamage} DMG (KILL)`;
+                            labelText = `💀 ${damage.reducedDamage} DMG (DISABLE)`;
                           } else {
                             labelText = `⚔️ ${damage.reducedDamage} DMG`;
                           }
                         } else if (specialType === 1) {
                           // EMP: show reactor damage label (not repair)
-                          labelText = "1 Reactor 💀";
+                          labelText = willDestroyByReactor
+                            ? "💀 Destroy Ship"
+                            : "1 Reactor 💀";
                         } else {
                           // Other special abilities - show repair/heal effect
                           labelText = `🔧 Repair ${damage.reducedDamage} HP`;
                         }
+                      } else if (willDestroyByReactor) {
+                        labelText = "💀 Destroy Ship";
                       } else if (damage.reactorCritical) {
                         labelText = "⚡ Reactor Critical +1";
                       } else if (showAsKill) {
-                        labelText = `💀 ${damage.reducedDamage} DMG (KILL)`;
+                        labelText = `💀 ${damage.reducedDamage} DMG (DISABLE)`;
                       } else {
                         labelText = `⚔️ ${damage.reducedDamage} DMG`;
                       }

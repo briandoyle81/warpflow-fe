@@ -35,10 +35,25 @@ export function useOwnedShips() {
   // Combine errors
   const error = shipIdsResult.error || shipsDataResult.error;
 
-  // Refetch function that refetches both queries
-  const refetch = () => {
-    shipIdsResult.refetch();
-    shipsDataResult.refetch();
+  // Refetch IDs first, then ship data.
+  // This avoids a race where getShipsByIds refetches with stale IDs.
+  const refetch = async () => {
+    const idsResult = await shipIdsResult.refetch();
+
+    // First pass: refetch ship data immediately.
+    await shipsDataResult.refetch();
+
+    // Second pass: after React applies updated shipIds args, refetch again
+    // so newly claimed/constructed IDs are definitely included.
+    const latestIds =
+      (idsResult.data as bigint[] | undefined) ??
+      (shipIdsResult.data as bigint[] | undefined) ??
+      [];
+    if (latestIds.length > 0) {
+      setTimeout(() => {
+        shipsDataResult.refetch();
+      }, 250);
+    }
   };
 
   return {

@@ -364,6 +364,8 @@ export interface ShipPosition {
   shipId: bigint;
   position: Position;
   isCreator: boolean;
+  // 0 = alive, 1 = destroyed, 2 = fled
+  status?: 0 | 1 | 2;
   isPreview?: boolean; // Optional flag for preview ships
 }
 

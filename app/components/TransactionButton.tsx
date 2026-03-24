@@ -74,6 +74,14 @@ export function TransactionButton({
   const isActiveTransaction =
     transactionState.activeTransactionId === transactionId;
 
+  // Local state to track if we should consider the transaction as pending
+  const [isLocallyPending, setIsLocallyPending] = React.useState(false);
+
+  // Track if we've already called onTransactionSent for this hash
+  const transactionSentHashRef = React.useRef<`0x${string}` | null>(null);
+  // Track hashes we've already processed for completion callbacks
+  const completedHashRef = React.useRef<`0x${string}` | null>(null);
+
   // Wait for transaction receipt
   const {
     isLoading: isConfirming,
@@ -83,19 +91,18 @@ export function TransactionButton({
   } = useWaitForTransactionReceipt({
     hash,
     query: {
-      enabled: !!hash && isHydrated && isActiveTransaction, // Only enable when we have a hash, are hydrated, and this is the active transaction
+      enabled:
+        !!hash &&
+        isHydrated &&
+        (isActiveTransaction ||
+          isLocallyPending ||
+          transactionSentHashRef.current === hash), // Keep receipt tracking alive for this button's tx even if global active ID is cleared early
     },
   });
 
   // Fallback timeout for transaction completion
   const [fallbackTimeout, setFallbackTimeout] =
     React.useState<NodeJS.Timeout | null>(null);
-
-  // Local state to track if we should consider the transaction as pending
-  const [isLocallyPending, setIsLocallyPending] = React.useState(false);
-
-  // Track if we've already called onTransactionSent for this hash
-  const transactionSentHashRef = React.useRef<`0x${string}` | null>(null);
 
   React.useEffect(() => {
     if (
@@ -178,7 +185,15 @@ export function TransactionButton({
 
   // Handle transaction completion based on receipt confirmation
   React.useEffect(() => {
-    if (isActiveTransaction && isHydrated && isConfirmed && receipt) {
+    const isOwnSentHash =
+      !!hash && transactionSentHashRef.current === hash;
+    const canHandleSuccess = isHydrated && (isActiveTransaction || isOwnSentHash);
+
+    if (canHandleSuccess && isConfirmed && receipt && hash) {
+      // Prevent duplicate success handling for the same tx hash.
+      if (completedHashRef.current === hash) return;
+      completedHashRef.current = hash;
+
       // Transaction confirmed on blockchain
       setIsLocallyPending(false); // Reset local pending state
       // Call onReceipt callback with gas information
@@ -206,6 +221,7 @@ export function TransactionButton({
     error,
     receiptError,
     receipt,
+    hash,
     transactionId,
     completeTransaction,
     onSuccess,
@@ -243,7 +259,7 @@ export function TransactionButton({
   React.useEffect(() => {
     if (
       hash &&
-      isActiveTransaction &&
+      (isActiveTransaction || isLocallyPending) &&
       onTransactionSent &&
       !isConfirmed &&
       !isConfirming &&
@@ -257,6 +273,7 @@ export function TransactionButton({
   }, [
     hash,
     isActiveTransaction,
+    isLocallyPending,
     onTransactionSent,
     isConfirmed,
     isConfirming,
@@ -268,6 +285,7 @@ export function TransactionButton({
   React.useEffect(() => {
     if (!isActiveTransaction) {
       transactionSentHashRef.current = null;
+      completedHashRef.current = null;
     }
   }, [isActiveTransaction]);
 

@@ -7,13 +7,17 @@ interface LastMoveDisplayProps {
   lastMove: LastMove | undefined;
   shipMap: Map<bigint, { name: string; owner?: string }>;
   address?: string;
+  appendDestroyedText?: boolean;
+  debugSuffix?: string;
 }
 
 /** Format last move text. Uses only cached shipMap (no blockchain fetch) for names. */
 function formatLastMoveDescription(
   lastMove: LastMove,
   shipMap: Map<bigint, { name: string; owner?: string }>,
-  address?: string
+  address?: string,
+  appendDestroyedText?: boolean,
+  debugSuffix?: string,
 ): string {
   const ship = shipMap.get(lastMove.shipId);
   const shipName = ship?.name ?? `Ship #${lastMove.shipId}`;
@@ -62,13 +66,19 @@ function formatLastMoveDescription(
       : `${shipName} claimed points`;
   }
 
-  return description || `${shipName} (no action)`;
+  const finalDescription = description || `${shipName} (no action)`;
+  const withDestroyedText = appendDestroyedText
+    ? `${finalDescription}, destroying it!`
+    : finalDescription;
+  return debugSuffix ? `${withDestroyedText} ${debugSuffix}` : withDestroyedText;
 }
 
 export function GameEvents({
   lastMove,
   shipMap,
   address,
+  appendDestroyedText = false,
+  debugSuffix,
 }: LastMoveDisplayProps) {
   if (!lastMove || lastMove.shipId === 0n) {
     return (
@@ -81,7 +91,13 @@ export function GameEvents({
     );
   }
 
-  const description = formatLastMoveDescription(lastMove, shipMap, address);
+  const description = formatLastMoveDescription(
+    lastMove,
+    shipMap,
+    address,
+    appendDestroyedText,
+    debugSuffix,
+  );
   const ship = shipMap.get(lastMove.shipId);
   const isMyShip = address && ship?.owner === address;
 
