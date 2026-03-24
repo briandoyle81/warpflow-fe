@@ -214,71 +214,73 @@ export default function Home() {
               : "max-w-7xl mx-auto"
           }`}
         >
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {(() => {
-              const tabs = [
-                "Info",
-                "Manage Navy",
-                "Lobbies",
-                "Games",
-                "Profile",
-                "Maps",
-                "Customize Ship",
-              ];
-              if (isOwner) {
-                tabs.push("Ship Attributes");
-              }
-              return tabs;
-            })().map((tab) => {
-              const isActive = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className="px-6 py-3 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
-                  style={{
-                    fontFamily:
-                      "var(--font-rajdhani), 'Arial Black', sans-serif",
-                    borderColor: isActive
-                      ? "var(--color-cyan)"
-                      : "var(--color-gunmetal)",
-                    color: isActive
-                      ? "var(--color-cyan)"
-                      : "var(--color-text-secondary)",
-                    backgroundColor: isActive
-                      ? "var(--color-steel)"
-                      : "var(--color-slate)",
-                    borderTopColor: isActive
-                      ? "var(--color-cyan)"
-                      : "var(--color-steel)",
-                    borderLeftColor: isActive
-                      ? "var(--color-cyan)"
-                      : "var(--color-steel)",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.borderColor = "var(--color-cyan)";
-                      e.currentTarget.style.color = "var(--color-cyan)";
-                      e.currentTarget.style.backgroundColor =
-                        "var(--color-steel)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.borderColor =
-                        "var(--color-gunmetal)";
-                      e.currentTarget.style.color =
-                        "var(--color-text-secondary)";
-                      e.currentTarget.style.backgroundColor =
-                        "var(--color-slate)";
-                    }
-                  }}
-                >
-                  [{tab.toUpperCase()}]
-                </button>
-              );
-            })}
-          </div>
+          {status === "connected" && (
+            <div className="flex flex-wrap justify-center gap-2 mb-8">
+              {(() => {
+                const tabs = [
+                  "Info",
+                  "Manage Navy",
+                  "Lobbies",
+                  "Games",
+                  "Profile",
+                  "Maps",
+                  "Customize Ship",
+                ];
+                if (isOwner) {
+                  tabs.push("Ship Attributes");
+                }
+                return tabs;
+              })().map((tab) => {
+                const isActive = activeTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className="px-6 py-3 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+                    style={{
+                      fontFamily:
+                        "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      borderColor: isActive
+                        ? "var(--color-cyan)"
+                        : "var(--color-gunmetal)",
+                      color: isActive
+                        ? "var(--color-cyan)"
+                        : "var(--color-text-secondary)",
+                      backgroundColor: isActive
+                        ? "var(--color-steel)"
+                        : "var(--color-slate)",
+                      borderTopColor: isActive
+                        ? "var(--color-cyan)"
+                        : "var(--color-steel)",
+                      borderLeftColor: isActive
+                        ? "var(--color-cyan)"
+                        : "var(--color-steel)",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.borderColor = "var(--color-cyan)";
+                        e.currentTarget.style.color = "var(--color-cyan)";
+                        e.currentTarget.style.backgroundColor =
+                          "var(--color-steel)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.borderColor =
+                          "var(--color-gunmetal)";
+                        e.currentTarget.style.color =
+                          "var(--color-text-secondary)";
+                        e.currentTarget.style.backgroundColor =
+                          "var(--color-slate)";
+                      }
+                    }}
+                  >
+                    [{tab.toUpperCase()}]
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Tab Content */}
           {activeTab === "Maps" ? (

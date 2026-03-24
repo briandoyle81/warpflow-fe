@@ -10,7 +10,6 @@ import { TUTORIAL_STEPS } from "./tutorialSteps";
  * actions so that refresh or step navigation always shows the correct board.
  */
 function buildScriptedStates(): SimulatedGameState[] {
-  const steps = TUTORIAL_STEPS;
   const states: SimulatedGameState[] = [];
 
   // Step 0: initial
@@ -59,19 +58,21 @@ function buildScriptedStates(): SimulatedGameState[] {
   s = applyTutorialStepScript("special-emp", s);
   states.push(s); // index 8 = state when entering step 9 (special-emp)
 
-  // Step 10 ship-destruction: script only (repair 1001 after destruction info)
+  // Step 10 ship-destruction: script only (Heavy destroyed, last move EMP)
   s = applyTutorialStepScript("ship-destruction", s);
-  states.push(s); // index 10
+  states.push(structuredClone(s)); // index 9 = entering "ship-destruction"
 
-  // Step 11 rescue: script (1001 disabled, positions for 1003/1001)
-  s = applyTutorialStepScript("rescue", s);
-  states.push(s); // index 11
+  // Step 11 rescue: same starting SimulatedGameState as step 10 (no rescue script)
+  states.push(structuredClone(s)); // index 10
 
   // Step 12 destroy-disabled: script (2002 destroyed)
   s = applyTutorialStepScript("destroy-disabled", s);
-  states.push(s); // index 12
+  states.push(s); // index 11
 
   // Step 13 completion: same
+  states.push(s); // index 12
+
+  // Duplicate completion slot so getScriptedStateForStepIndex(lastIndex) stays valid
   states.push(s); // index 13
 
   return states;
@@ -85,6 +86,19 @@ export function getScriptedStateForStepIndex(
   stepIndex: number,
 ): SimulatedGameState {
   const states = buildScriptedStates();
-  const i = Math.max(0, Math.min(stepIndex, states.length - 1));
+  const safe = Number.isFinite(stepIndex) ? stepIndex : 0;
+  const i = Math.max(0, Math.min(safe, states.length - 1));
   return states[i];
+}
+
+/**
+ * Canonical state for a tutorial step by its `TUTORIAL_STEPS` id. Prefer this
+ * when hydrating by step so index and array layout cannot drift apart.
+ */
+export function getScriptedStateForTutorialStepId(
+  stepId: string,
+): SimulatedGameState | null {
+  const idx = TUTORIAL_STEPS.findIndex((s) => s.id === stepId);
+  if (idx === -1) return null;
+  return getScriptedStateForStepIndex(idx);
 }

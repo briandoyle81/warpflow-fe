@@ -5,7 +5,10 @@ import { ActionType, LastMove } from "../types/types";
 
 interface LastMoveDisplayProps {
   lastMove: LastMove | undefined;
-  shipMap: Map<bigint, { name: string; owner?: string }>;
+  shipMap: Map<
+    bigint,
+    { name: string; owner?: string; equipment?: { special: number } }
+  >;
   address?: string;
   appendDestroyedText?: boolean;
   debugSuffix?: string;
@@ -14,7 +17,10 @@ interface LastMoveDisplayProps {
 /** Format last move text. Uses only cached shipMap (no blockchain fetch) for names. */
 function formatLastMoveDescription(
   lastMove: LastMove,
-  shipMap: Map<bigint, { name: string; owner?: string }>,
+  shipMap: Map<
+    bigint,
+    { name: string; owner?: string; equipment?: { special: number } }
+  >,
   address?: string,
   appendDestroyedText?: boolean,
   debugSuffix?: string,
@@ -54,9 +60,16 @@ function formatLastMoveDescription(
     } else {
       const targetShip = shipMap.get(lastMove.targetShipId);
       const targetName = targetShip?.name ?? `Ship #${lastMove.targetShipId}`;
-      description += moved
-        ? ` and used special ability on ${targetName}`
-        : `${shipName} used special ability on ${targetName}`;
+      const isEmp = ship?.equipment?.special === 1;
+      if (isEmp) {
+        description += moved
+          ? ` and hit ${targetName} with EMP`
+          : `${shipName} hit ${targetName} with EMP`;
+      } else {
+        description += moved
+          ? ` and used special ability on ${targetName}`
+          : `${shipName} used special ability on ${targetName}`;
+      }
     }
   } else if (lastMove.actionType === ActionType.Pass) {
     description = moved ? `${description} and passed` : `${shipName} passed`;

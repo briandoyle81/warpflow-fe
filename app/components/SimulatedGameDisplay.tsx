@@ -35,6 +35,7 @@ import { GameGrid } from "./GameGrid";
 import { TutorialStepOverlay } from "./TutorialStepOverlay";
 import { GameBoardLayout } from "./GameBoardLayout";
 import { GameEvents } from "./GameEvents";
+import { getScriptedStateForTutorialStepId } from "../data/tutorialScriptedStates";
 import { FleeSafetySwitch } from "./FleeSafetySwitch";
 import ShipCard from "./ShipCard";
 import { useSpecialRange } from "../hooks/useSpecialRange";
@@ -144,6 +145,47 @@ export function SimulatedGameDisplay({
     },
     [gameState.shipAttributes, gameState.shipIds],
   );
+
+  const allShipPositionsForGrid = useMemo(
+    () =>
+      gameState.shipPositions.map((shipPosition) => ({
+        shipId: BigInt(shipPosition.shipId),
+        position: shipPosition.position,
+        isCreator: shipPosition.isCreator,
+        isPreview: shipPosition.isPreview,
+        status: shipPosition.status,
+      })),
+    [gameState.shipPositions],
+  );
+
+  const aliveShipPositions = useMemo(
+    () =>
+      gameState.shipPositions.filter(
+        (shipPosition) => (shipPosition.status ?? 0) === 0,
+      ),
+    [gameState.shipPositions],
+  );
+
+  // Ship-destruction and rescue (same board): canonical lastMove for EMP replay.
+  // destroy-disabled: a bad persisted snapshot can omit lastMove; fall back.
+  const tutorialDisplayLastMove = useMemo(() => {
+    if (
+      currentStep?.id === "ship-destruction" ||
+      currentStep?.id === "rescue"
+    ) {
+      return (
+        getScriptedStateForTutorialStepId("ship-destruction")?.lastMove ??
+        gameState.lastMove
+      );
+    }
+    if (currentStep?.id === "destroy-disabled" && !gameState.lastMove) {
+      return (
+        getScriptedStateForTutorialStepId("destroy-disabled")?.lastMove ??
+        gameState.lastMove
+      );
+    }
+    return gameState.lastMove;
+  }, [currentStep?.id, gameState.lastMove]);
 
   // Get special range data for the selected ship
   const selectedShip = selectedShipId ? shipMap.get(selectedShipId) : null;
@@ -258,7 +300,7 @@ export function SimulatedGameDisplay({
     // Place ships on the grid. Convert tutorial string IDs into the
     // bigint-based ShipPosition shape expected by GameGrid, but keep
     // the original tutorial IDs in gameState.
-    gameState.shipPositions.forEach((shipPosition) => {
+    aliveShipPositions.forEach((shipPosition) => {
       const { position } = shipPosition;
       const shipIdBigInt = BigInt(shipPosition.shipId);
       if (
@@ -272,6 +314,7 @@ export function SimulatedGameDisplay({
           position,
           isCreator: shipPosition.isCreator,
           isPreview: shipPosition.isPreview,
+          status: shipPosition.status,
         };
         newGrid[position.row][position.col] = basePosition;
 
@@ -289,10 +332,10 @@ export function SimulatedGameDisplay({
     // Last move UI: show ghost at old position when no ship is selected (same as in-game)
     const canShowLastMove =
       selectedShipId === null &&
-      gameState.lastMove &&
-      gameState.lastMove.shipId !== undefined;
-    if (canShowLastMove && gameState.lastMove) {
-      const lm = gameState.lastMove;
+      tutorialDisplayLastMove &&
+      tutorialDisplayLastMove.shipId !== undefined;
+    if (canShowLastMove && tutorialDisplayLastMove) {
+      const lm = tutorialDisplayLastMove;
       const oldPos = { row: lm.oldRow, col: lm.oldCol };
       const newPos = { row: lm.newRow, col: lm.newCol };
       if (
@@ -303,7 +346,7 @@ export function SimulatedGameDisplay({
         oldPos.col < GRID_WIDTH &&
         !newGrid[oldPos.row][oldPos.col]
       ) {
-        const lastMoveShipPosition = gameState.shipPositions.find(
+        const lastMoveShipPosition = aliveShipPositions.find(
           (pos) => pos.shipId === lm.shipId,
         );
         if (lastMoveShipPosition) {
@@ -312,17 +355,60 @@ export function SimulatedGameDisplay({
             position: oldPos,
             isCreator: lastMoveShipPosition.isCreator,
             isPreview: true,
+            status: lastMoveShipPosition.status,
           };
+        }
+      }
+
+      const lmAction = Number(lm.actionType);
+      const isTargetingLastMove =
+        lmAction === ActionType.Shoot || lmAction === ActionType.Special;
+      if (isTargetingLastMove && lm.targetShipId && lm.targetShipId !== "0") {
+        let destroyedTargetShipPosition = gameState.shipPositions.find(
+          (shipPosition) =>
+            shipPosition.shipId === lm.targetShipId && shipPosition.status === 1,
+        );
+        // Stale/persisted gameState can omit status on the Heavy; canonical
+        // scripted positions still place the destroyed target so EMP can resolve.
+        if (
+          !destroyedTargetShipPosition &&
+          (currentStep?.id === "ship-destruction" ||
+            currentStep?.id === "rescue")
+        ) {
+          const scripted = getScriptedStateForTutorialStepId("ship-destruction");
+          destroyedTargetShipPosition = scripted?.shipPositions.find(
+            (p) => p.shipId === lm.targetShipId,
+          );
+        }
+        if (destroyedTargetShipPosition) {
+          const { row, col } = destroyedTargetShipPosition.position;
+          if (
+            row >= 0 &&
+            row < GRID_HEIGHT &&
+            col >= 0 &&
+            col < GRID_WIDTH &&
+            !newGrid[row][col]
+          ) {
+            newGrid[row][col] = {
+              shipId: BigInt(destroyedTargetShipPosition.shipId),
+              position: destroyedTargetShipPosition.position,
+              isCreator: destroyedTargetShipPosition.isCreator,
+              isPreview: destroyedTargetShipPosition.isPreview,
+              status: destroyedTargetShipPosition.status,
+            };
+          }
         }
       }
     }
 
     return newGrid;
   }, [
+    aliveShipPositions,
     gameState.shipPositions,
-    gameState.lastMove,
+    tutorialDisplayLastMove,
     selectedShipId,
     previewPosition,
+    currentStep?.id,
   ]);
 
   // Calculate movement range for selected ship.
@@ -395,14 +481,14 @@ export function SimulatedGameDisplay({
     // When showing last move (no ship selected), highlight the new position (same as in-game)
     if (
       selectedShipId === null &&
-      gameState.lastMove &&
-      gameState.lastMove.actionType !== ActionType.Retreat &&
-      gameState.lastMove.newRow >= 0 &&
-      gameState.lastMove.newCol >= 0
+      tutorialDisplayLastMove &&
+      tutorialDisplayLastMove.actionType !== ActionType.Retreat &&
+      tutorialDisplayLastMove.newRow >= 0 &&
+      tutorialDisplayLastMove.newCol >= 0
     ) {
       return {
-        row: gameState.lastMove.newRow,
-        col: gameState.lastMove.newCol,
+        row: tutorialDisplayLastMove.newRow,
+        col: tutorialDisplayLastMove.newCol,
       };
     }
     // Step 5: highlight the allowed move target
@@ -419,11 +505,23 @@ export function SimulatedGameDisplay({
       }
     }
     return null;
-  }, [currentStep, selectedShipId, gameState.lastMove]);
+  }, [currentStep, selectedShipId, tutorialDisplayLastMove]);
 
   // Last move UI props for GameGrid (same as in-game: ghost at old position, pulse at new)
   const lastMoveProps = useMemo(() => {
-    if (!gameState.lastMove) {
+    // Match live-game behavior: while a ship is selected, prioritize proposal UI
+    // and do not feed prior last-move markers into GameGrid.
+    // Ship-destruction step must still pass last move (including target id) so
+    // GameGrid can render the destroyed-target overlay like the live game
+    // (isLastMoveDestroyedTargetCell + ship-destroyed.png).
+    // Keep last-move replay (EMP wave, outlines) visible while a ship is
+    // selected on steps that are cinematic or require selection for the next action.
+    const lastMoveVisibleWithSelection =
+      currentStep?.id === "ship-destruction" ||
+      currentStep?.id === "destroy-disabled";
+    const suppressLastMoveBecauseSelection =
+      selectedShipId !== null && !lastMoveVisibleWithSelection;
+    if (!tutorialDisplayLastMove || suppressLastMoveBecauseSelection) {
       return {
         lastMoveShipId: null as bigint | null,
         lastMoveOldPosition: null as { row: number; col: number } | null,
@@ -433,22 +531,31 @@ export function SimulatedGameDisplay({
         lastMoveIsCurrentPlayer: undefined as boolean | undefined,
       };
     }
-    const lm = gameState.lastMove;
+    const lm = tutorialDisplayLastMove;
     const ship = shipMap.get(BigInt(lm.shipId));
+    const lmAction = Number(lm.actionType);
     return {
       lastMoveShipId: BigInt(lm.shipId),
       lastMoveOldPosition: { row: lm.oldRow, col: lm.oldCol },
       lastMoveNewPosition: { row: lm.newRow, col: lm.newCol },
-      lastMoveActionType: lm.actionType,
+      // Coerce so GameGrid strict checks (e.g. EMP) match after JSON or mixed types
+      lastMoveActionType: lmAction as ActionType,
       lastMoveTargetShipId:
-        lm.targetShipId && lm.targetShipId !== "0"
+        (lmAction === ActionType.Shoot || lmAction === ActionType.Special) &&
+        lm.targetShipId &&
+        lm.targetShipId !== "0"
           ? BigInt(lm.targetShipId)
           : null,
       lastMoveIsCurrentPlayer: ship
         ? ship.owner === TUTORIAL_PLAYER_ADDRESS
         : undefined,
     };
-  }, [gameState.lastMove, selectedShipId, shipMap]);
+  }, [
+    tutorialDisplayLastMove,
+    selectedShipId,
+    shipMap,
+    currentStep?.id,
+  ]);
 
   // Last move object for GameEvents panel (adapt tutorial lastMove to on-chain LastMove shape).
   // When a move is staged (selected ship + preview position), we synthesize a
@@ -479,24 +586,24 @@ export function SimulatedGameDisplay({
       }
     }
 
-    if (!gameState.lastMove) return undefined;
-    const lm = gameState.lastMove;
+    if (!tutorialDisplayLastMove) return undefined;
+    const lm = tutorialDisplayLastMove;
     return {
       shipId: BigInt(lm.shipId),
       oldRow: lm.oldRow,
       oldCol: lm.oldCol,
       newRow: lm.newRow,
       newCol: lm.newCol,
-      actionType: lm.actionType,
+      actionType: Number(lm.actionType) as ActionType,
       targetShipId: lm.targetShipId ? BigInt(lm.targetShipId) : 0n,
       timestamp: 0n,
     };
   }, [
     selectedShipId,
     previewPosition,
-    currentStep,
-    gameState.lastMove,
+    tutorialDisplayLastMove,
     gameState.shipPositions,
+    currentStep,
   ]);
 
   // Calculate damage for a target ship
@@ -535,6 +642,15 @@ export function SimulatedGameDisplay({
       const currentWeaponType = weaponType || selectedWeaponType;
       let baseDamage: number;
 
+      // EMP special applies reactor damage (previewed as +1 reactor level).
+      if (currentWeaponType === "special" && specialType === 1) {
+        return {
+          reducedDamage: 0,
+          willKill: false,
+          reactorCritical: true,
+        };
+      }
+
       if (currentWeaponType === "special") {
         baseDamage =
           (specialData as SpecialData)?.strength || shooterAttributes.gunDamage;
@@ -558,7 +674,13 @@ export function SimulatedGameDisplay({
 
       return { reducedDamage, willKill, reactorCritical: false };
     },
-    [selectedShipId, getShipAttributes, selectedWeaponType, specialData],
+    [
+      selectedShipId,
+      getShipAttributes,
+      selectedWeaponType,
+      specialData,
+      specialType,
+    ],
   );
 
   // Get valid targets
@@ -1818,6 +1940,7 @@ export function SimulatedGameDisplay({
         <GameBoardLayout isCurrentPlayerTurn={true}>
           <GameGrid
             grid={grid}
+            allShipPositions={allShipPositionsForGrid}
             shipMap={shipMap}
             selectedShipId={selectedShipId}
             previewPosition={previewPosition}
@@ -1852,6 +1975,10 @@ export function SimulatedGameDisplay({
             lastMoveActionType={lastMoveProps.lastMoveActionType}
             lastMoveTargetShipId={lastMoveProps.lastMoveTargetShipId}
             lastMoveIsCurrentPlayer={lastMoveProps.lastMoveIsCurrentPlayer}
+            showLastMoveEmpReplayWhenSelected={
+              currentStep?.id === "ship-destruction" ||
+              currentStep?.id === "destroy-disabled"
+            }
             setSelectedShipId={wrappedSetSelectedShipId}
             setPreviewPosition={wrappedSetPreviewPosition}
             setTargetShipId={wrappedSetTargetShipId}
@@ -1875,6 +2002,10 @@ export function SimulatedGameDisplay({
         lastMove={lastMoveForEvents}
         shipMap={shipMap}
         address={TUTORIAL_PLAYER_ADDRESS}
+        appendDestroyedText={
+          currentStep?.id === "ship-destruction" ||
+          currentStep?.id === "rescue"
+        }
       />
 
       {/* Ship Details panel - mirror live game fleet layout using tutorial data */}

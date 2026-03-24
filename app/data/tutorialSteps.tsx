@@ -413,9 +413,9 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: "ship-destruction",
-    title: "Ship Destruction & Repair",
+    title: "Ship Destruction",
     description:
-      "Learn what happens when a ship is destroyed by reactor overload, then repair your own",
+      "Learn what happens when a ship is destroyed by reactor overload",
     instructions: (
       <div className="space-y-3">
         {TUTORIAL_INCOMPLETE_SUBHEADING}
@@ -444,33 +444,14 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
           </span>
           as a payout.
         </p>
-        <p className="text-lg font-bold text-cyan-300">Repair Friendly Ship</p>
-        <p>Repair restores hull points to your own damaged ships.</p>
-        <p className="text-sm">
-          Select the Tutorial Sniper (has Repair), switch to Special mode,
-          then target the Tutorial EMP.
+        <p className="text-yellow-300 font-bold">
+          When you&apos;re ready, continue to the next step.
         </p>
-        <p className="text-yellow-300 font-bold">Repair the Tutorial EMP!</p>
       </div>
     ),
-    allowedActions: {
-      selectShip: ["1002"],
-      useSpecial: {
-        shipId: "1002",
-        allowedTargets: ["1001"],
-        specialType: 2, // Repair
-      },
-    },
+    allowedActions: {},
     highlightElements: {
-      ships: ["1002", "1001"],
-    },
-    requiresTransaction: true,
-    onStepComplete: (actionData) => {
-      return (
-        actionData?.type === "useSpecial" &&
-        actionData?.shipId === "1002" &&
-        actionData?.targetShipId === "1001"
-      );
+      ships: ["1001", "2002"],
     },
   },
   {
@@ -492,23 +473,9 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
         </p>
       </div>
     ),
-    allowedActions: {
-      selectShip: ["1002"],
-      assist: {
-        shipId: "1002",
-        allowedTargets: ["1001"], // Will be disabled first
-      },
-    },
+    allowedActions: {},
     highlightElements: {
-      ships: ["1002", "1001"],
-    },
-    requiresTransaction: true,
-    onStepComplete: (actionData) => {
-      return (
-        actionData?.type === "assist" &&
-        actionData?.shipId === "1002" &&
-        actionData?.targetShipId === "1001"
-      );
+      ships: ["1001", "2002"],
     },
   },
   {

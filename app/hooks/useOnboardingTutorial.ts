@@ -5,7 +5,10 @@ import {
   SimulatedGameState,
 } from "../types/onboarding";
 import { TUTORIAL_STEPS } from "../data/tutorialSteps";
-import { getScriptedStateForStepIndex } from "../data/tutorialScriptedStates";
+import {
+  getScriptedStateForStepIndex,
+  getScriptedStateForTutorialStepId,
+} from "../data/tutorialScriptedStates";
 import { useSimulatedGameState } from "./useSimulatedGameState";
 
 const TUTORIAL_STEP_STORAGE_KEY = "void-tactics-tutorial-step-index";
@@ -79,7 +82,8 @@ export function useOnboardingTutorial() {
       (hydratedStep.id === "score-points" ||
         hydratedStep.id === "shoot" ||
         hydratedStep.id === "special-emp" ||
-        hydratedStep.id === "ship-destruction")
+        hydratedStep.id === "ship-destruction" ||
+        hydratedStep.id === "rescue")
     ) {
       return;
     }
@@ -349,18 +353,26 @@ export function useOnboardingTutorial() {
 
     const snapshot = stepSnapshots[currentStepIndex];
     // For most steps, restore from snapshot if it exists. For scripted steps
-    // (score-points, shoot, special-emp, ship-destruction), only restore when
+    // (score-points, shoot, special-emp, destroy-disabled), only restore when
     // the player has already taken their action (snapshot.lastAction != null).
-    // Otherwise use scripted state so the pre-step enemy move/attack or
-    // cinematic setup is shown from the start.
+    // Otherwise use scripted state so the pre-step setup is shown from the start.
+    //
+    // ship-destruction / rescue: always use scripted state on entry (rescue
+    // shares the same board as ship-destruction).
+    //
+    // ship-destruction: a stale snapshot could restore the wrong lastMove
+    // (Heavy shot) instead of the canonical EMP special.
     if (snapshot) {
-      if (
-        (currentStep.id === "score-points" ||
+      const useScriptedInsteadOfSnapshot =
+        currentStep.id === "ship-destruction" ||
+        currentStep.id === "rescue" ||
+        ((currentStep.id === "score-points" ||
           currentStep.id === "shoot" ||
           currentStep.id === "special-emp" ||
-          currentStep.id === "ship-destruction") &&
-        snapshot.lastAction === null
-      ) {
+          currentStep.id === "destroy-disabled") &&
+          snapshot.lastAction === null);
+
+      if (useScriptedInsteadOfSnapshot) {
         // Ignore this snapshot and fall through to scripted state.
       } else {
         updateGameState(() => snapshot.gameState);
@@ -378,7 +390,11 @@ export function useOnboardingTutorial() {
 
     // Use canonical scripted state for this step so refresh and step navigation
     // always show the correct cumulative board (all prior moves preserved).
-    const scriptedState = getScriptedStateForStepIndex(currentStepIndex);
+    // Key by step id so the board matches `currentStep` even if step index and
+    // scripted array comments ever drift.
+    const scriptedState =
+      getScriptedStateForTutorialStepId(currentStep.id) ??
+      getScriptedStateForStepIndex(currentStepIndex);
     updateGameState(() => scriptedState);
 
     // Defer hydration until after the game state update is committed, and

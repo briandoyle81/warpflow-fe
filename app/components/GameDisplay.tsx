@@ -922,6 +922,16 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         };
       }
 
+      // EMP special applies reactor damage (previewed as +1 reactor level).
+      if (currentWeaponType === "special" && specialType === 1) {
+        return {
+          baseDamage: 0,
+          reducedDamage: 0,
+          willKill: false,
+          reactorCritical: true,
+        };
+      }
+
       // Handle ships with 0 hull points - they get reactor critical timer increment instead of damage
       // (but not for repair abilities, which we handled above)
       if (targetAttributes.hullPoints === 0) {
@@ -3016,6 +3026,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             {validTargets.map((target) => {
                               const targetShip = shipMap.get(target.shipId);
                               const damage = calculateDamage(target.shipId);
+                              const targetAttributes = getShipAttributes(
+                                target.shipId,
+                              );
+                              const willDestroyByReactor =
+                                damage.reactorCritical &&
+                                !!targetAttributes &&
+                                targetAttributes.reactorCriticalTimer + 1 >= 3;
                               return (
                                 <button
                                   key={target.shipId.toString()}
@@ -3082,10 +3099,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                                 >
                                   Target #{target.shipId.toString()}
                                   {targetShip && ` (${targetShip.name})`}
-                                  {selectedWeaponType === "special" ? (
+                                  {selectedWeaponType === "special" &&
+                                  specialType === 2 ? (
                                     <span className="ml-1.5">
                                       🔧 {damage.reducedDamage}
                                     </span>
+                                  ) : willDestroyByReactor ? (
+                                    <span className="ml-1.5">💀 Destroy Ship</span>
                                   ) : damage.reactorCritical ? (
                                     <span className="ml-1.5">⚡ +1</span>
                                   ) : damage.willKill ? (

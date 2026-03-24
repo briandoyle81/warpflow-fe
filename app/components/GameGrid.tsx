@@ -87,6 +87,8 @@ interface GameGridProps {
   lastMoveActionType?: ActionType | null; // When Retreat, show warp collapse at old position
   lastMoveTargetShipId?: bigint | null; // When last move was Special (e.g. repair), target ship for animation
   lastMoveIsCurrentPlayer?: boolean | undefined; // true = blue outline, false = red outline
+  /** When set, last-move EMP replay still shows while a ship is selected (e.g. tutorial ship-destruction). */
+  showLastMoveEmpReplayWhenSelected?: boolean;
   retreatPrepShipId?: bigint | null; // When set, this ship shows flip + engine glow (Retreat selected)
   retreatPrepIsCreator?: boolean | null; // For retreat prep flip direction
   setSelectedShipId: (shipId: bigint | null) => void;
@@ -145,6 +147,7 @@ export function GameGrid({
   lastMoveActionType,
   lastMoveTargetShipId,
   lastMoveIsCurrentPlayer,
+  showLastMoveEmpReplayWhenSelected = false,
   retreatPrepShipId,
   retreatPrepIsCreator,
   setSelectedShipId,
@@ -160,6 +163,12 @@ export function GameGrid({
   const lastDragOverCellRef = useRef<{ row: number; col: number } | null>(null);
 
   const isMyTurn = currentTurn === address;
+
+  const lastMoveActionNum =
+    lastMoveActionType != null ? Number(lastMoveActionType) : NaN;
+
+  const showLastMoveEmpReplay =
+    !selectedShipId || showLastMoveEmpReplayWhenSelected;
 
   const flakEffectCells = React.useMemo(() => {
     // Flak should show explosions across all in-range tiles, including tiles
@@ -337,6 +346,12 @@ export function GameGrid({
                   isCellDestroyed &&
                   lastMoveTargetShipId != null &&
                   cell.shipId === lastMoveTargetShipId;
+                const isLastMoveAttackTargetCell =
+                  !!cell &&
+                  lastMoveTargetShipId != null &&
+                  cell.shipId === lastMoveTargetShipId &&
+                  (lastMoveActionNum === ActionType.Shoot ||
+                    lastMoveActionNum === ActionType.Special);
                 const shouldRenderShipContent =
                   !!cell && !isCellFled && (!isCellDestroyed || isLastMoveDestroyedTargetCell);
                 const isSelected = selectedShipId === cell?.shipId;
@@ -830,12 +845,13 @@ export function GameGrid({
                       </>
                     )}
 
-                    {/* Critical hull glow effect for 0 HP ships */}
+                    {/* Critical hull glow effect for 0 HP ships (not last-move attack target; that uses blue ring below) */}
                     {cell &&
                       (() => {
                         const attributes = getShipAttributes(cell.shipId);
                         return attributes && attributes.hullPoints === 0;
-                      })() && (
+                      })() &&
+                      !isLastMoveAttackTargetCell && (
                         <div className="absolute inset-0 z-1 border-2 border-red-400 bg-red-500/10 pointer-events-none animate-pulse" />
                       )}
 
@@ -974,7 +990,7 @@ export function GameGrid({
                           // If we dropped, previewPosition will be updated in onDrop handler
                         }}
                       >
-                        {/* Skull icon on cell for 0 HP (disabled) ships */}
+                        {/* SOS on cell for 0 HP disabled ships (not permanent destroy) */}
                         {(() => {
                           const attributes = getShipAttributes(cell.shipId);
                           if (
@@ -983,6 +999,8 @@ export function GameGrid({
                             attributes.hullPoints > 0
                           )
                             return null;
+                          // Destroyed ships (status 1) use destroyed art only, not the SOS label
+                          if ((cell.status ?? 0) === 1) return null;
                           return (
                             <div
                               className="absolute top-0 left-1/2 -translate-x-1/2 mt-0.5 z-10 flex items-center justify-center pointer-events-none"
@@ -1311,16 +1329,18 @@ export function GameGrid({
                             isPreviewCell ||
                             isProposedMoveOriginal ||
                             isLastMoveOldPosition ||
-                            isLastMoveNewPosition;
+                            isLastMoveNewPosition ||
+                            isLastMoveAttackTargetCell;
 
                           if (!shouldShowBorder) return null;
 
                           // For proposed moves: preview (to) is solid, original (from) is dashed
                           // For last move: old position is dashed, new position is solid
                           // Dashed for: proposed move original position, last move old position
-                          // Solid for: proposed move preview (to), last move new position
+                          // Solid for: proposed move preview (to), last move new position, last move target
                           const isDashed =
-                            isProposedMoveOriginal || isLastMoveOldPosition;
+                            (isProposedMoveOriginal || isLastMoveOldPosition) &&
+                            !isLastMoveAttackTargetCell;
                           // Don't animate "from" position, new position of last move, or last move old position
                           const shouldAnimate =
                             isPreviewCell &&
@@ -1351,13 +1371,19 @@ export function GameGrid({
                           // Last move outline: blue = current player, red = opponent; proposed move stays yellow
                           const isLastMoveCell =
                             isLastMoveOldPosition || isLastMoveNewPosition;
-                          const borderColor = isLastMoveCell
+                          const borderColor = isLastMoveAttackTargetCell
                             ? lastMoveIsCurrentPlayer === true
                               ? "border-blue-400"
                               : lastMoveIsCurrentPlayer === false
                                 ? "border-red-400"
                                 : "border-yellow-400"
-                            : "border-yellow-400";
+                            : isLastMoveCell
+                              ? lastMoveIsCurrentPlayer === true
+                                ? "border-blue-400"
+                                : lastMoveIsCurrentPlayer === false
+                                  ? "border-red-400"
+                                  : "border-yellow-400"
+                              : "border-yellow-400";
 
                           return (
                             <div
@@ -1668,6 +1694,7 @@ export function GameGrid({
               specialType === 1 &&
               targetShipId != null &&
               targetShipId !== 0n &&
+              !showLastMoveEmpReplayWhenSelected &&
               (() => {
                 // Determine attacker position: preview > drag > current
                 let attackerRow = -1;
@@ -1710,12 +1737,13 @@ export function GameGrid({
                 );
               })()}
 
-            {/* EMP wave animation for last move (no ship currently selected) */}
-            {!selectedShipId &&
-              lastMoveActionType === ActionType.Special &&
+            {/* EMP wave animation for last move (hidden while selecting unless tutorial replay) */}
+            {showLastMoveEmpReplay &&
+              lastMoveActionType != null &&
+              Number(lastMoveActionType) === ActionType.Special &&
               lastMoveShipId != null &&
               lastMoveTargetShipId != null &&
-              shipMap.get(lastMoveShipId)?.equipment.special === 1 &&
+              Number(shipMap.get(lastMoveShipId)?.equipment.special) === 1 &&
               (() => {
                 // Use the explicit "to" position for the last move when available.
                 // Fallback to current grid position if needed.
@@ -1735,7 +1763,32 @@ export function GameGrid({
                   });
                 }
 
-                const targetPosition = findShipPositionById(lastMoveTargetShipId);
+                if (
+                  (attackerRow === -1 || attackerCol === -1) &&
+                  lastMoveShipId != null &&
+                  allShipPositions?.length
+                ) {
+                  const sp = allShipPositions.find(
+                    (p) => p.shipId === lastMoveShipId,
+                  );
+                  if (sp) {
+                    attackerRow = sp.position.row;
+                    attackerCol = sp.position.col;
+                  }
+                }
+
+                let targetPosition = findShipPositionById(lastMoveTargetShipId);
+                if (!targetPosition && lastMoveTargetShipId != null && allShipPositions?.length) {
+                  const sp = allShipPositions.find(
+                    (p) => p.shipId === lastMoveTargetShipId,
+                  );
+                  if (sp) {
+                    targetPosition = {
+                      row: sp.position.row,
+                      col: sp.position.col,
+                    };
+                  }
+                }
 
                 if (
                   attackerRow === -1 ||

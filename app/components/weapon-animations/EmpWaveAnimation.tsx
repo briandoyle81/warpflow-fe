@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo } from "react";
+import React, { useLayoutEffect, useState } from "react";
 
 interface EmpWaveAnimationProps {
   gridContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -10,6 +10,61 @@ interface EmpWaveAnimationProps {
   targetCol: number;
 }
 
+type Geom = {
+  gridRect: DOMRect;
+  avgCell: number;
+  a: { x: number; y: number };
+  t: { x: number; y: number };
+  endX: number;
+  endY: number;
+};
+
+function buildGeom(
+  el: HTMLElement,
+  attackerRow: number,
+  attackerCol: number,
+  targetRow: number,
+  targetCol: number,
+): Geom | null {
+  const gridRect = el.getBoundingClientRect();
+  // After refresh the grid often reports 0×0 until fonts/layout settle; skip
+  // until we have real dimensions so paths and gradients are valid.
+  if (gridRect.width < 2 || gridRect.height < 2) {
+    return null;
+  }
+
+  const cellWidth = gridRect.width / 17;
+  const cellHeight = gridRect.height / 11;
+  const avgCell = (cellWidth + cellHeight) / 2;
+
+  const cellCenter = (row: number, col: number) => ({
+    x: col * cellWidth + cellWidth / 2,
+    y: row * cellHeight + cellHeight / 2,
+  });
+
+  const a = cellCenter(attackerRow, attackerCol);
+  const t = cellCenter(targetRow, targetCol);
+
+  const dx = t.x - a.x;
+  const dy = t.y - a.y;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+
+  const extend = avgCell * 0.08;
+  const endX = t.x + ux * extend;
+  const endY = t.y + uy * extend;
+
+  return {
+    gridRect,
+    avgCell,
+    a,
+    t,
+    endX,
+    endY,
+  };
+}
+
 export function EmpWaveAnimation({
   gridContainerRef,
   attackerRow,
@@ -17,49 +72,83 @@ export function EmpWaveAnimation({
   targetRow,
   targetCol,
 }: EmpWaveAnimationProps) {
-  const getCellCenter = useCallback(
-    (row: number, col: number) => {
-      if (!gridContainerRef.current) return { x: 0, y: 0 };
-      const gridRect = gridContainerRef.current.getBoundingClientRect();
-      const cellWidth = gridRect.width / 17;
-      const cellHeight = gridRect.height / 11;
-      return { x: col * cellWidth + cellWidth / 2, y: row * cellHeight + cellHeight / 2 };
-    },
-    [gridContainerRef]
-  );
+  const [geom, setGeom] = useState<Geom | null>(null);
+  // Unique defs ids: two instances (e.g. selected-ship EMP + last-move replay) can
+  // share the same row/col; duplicate id="..." breaks url(#...) stroke fills in SVG.
+  const defsId = React.useId().replace(/:/g, "");
 
-  const geom = useMemo(() => {
-    if (!gridContainerRef.current) return null;
+  // gridContainerRef can still be null on the first layout pass (e.g. full
+  // refresh). Returning early left no ResizeObserver and no buildGeom retries,
+  // so the wave never appeared. Wait for the ref, then observe + retry 0×0.
+  useLayoutEffect(() => {
+    let cancelled = false;
+    let ro: ResizeObserver | null = null;
+    let rafAttachAttempts = 0;
+    const maxAttachAttempts = 64;
+    let geomRetryCount = 0;
+    const maxGeomRetries = 48;
 
-    const gridRect = gridContainerRef.current.getBoundingClientRect();
-    const cellWidth = gridRect.width / 17;
-    const cellHeight = gridRect.height / 11;
-    const avgCell = (cellWidth + cellHeight) / 2;
-
-    const a = getCellCenter(attackerRow, attackerCol);
-    const t = getCellCenter(targetRow, targetCol);
-
-    const dx = t.x - a.x;
-    const dy = t.y - a.y;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    const ux = dx / len;
-    const uy = dy / len;
-
-    // Extend only slightly past the target center so it reads as "entering"
-    // without overshooting beyond the ship's middle.
-    const extend = avgCell * 0.08;
-    const endX = t.x + ux * extend;
-    const endY = t.y + uy * extend;
-
-    return {
-      gridRect,
-      avgCell,
-      a,
-      t,
-      endX,
-      endY,
+    const disconnectRo = () => {
+      ro?.disconnect();
+      ro = null;
     };
-  }, [gridContainerRef, attackerRow, attackerCol, targetRow, targetCol, getCellCenter]);
+
+    const applyGeom = (el: HTMLElement) => {
+      if (cancelled) return;
+      const next = buildGeom(
+        el,
+        attackerRow,
+        attackerCol,
+        targetRow,
+        targetCol,
+      );
+      if (next) {
+        setGeom(next);
+        return;
+      }
+      geomRetryCount += 1;
+      if (geomRetryCount < maxGeomRetries) {
+        requestAnimationFrame(() => applyGeom(el));
+      }
+    };
+
+    const start = (el: HTMLElement) => {
+      if (cancelled) return;
+      geomRetryCount = 0;
+      applyGeom(el);
+
+      disconnectRo();
+      ro = new ResizeObserver(() => {
+        if (!cancelled) {
+          geomRetryCount = 0;
+          applyGeom(el);
+        }
+      });
+      ro.observe(el);
+    };
+
+    const waitForRef = () => {
+      if (cancelled) return;
+      const el = gridContainerRef.current;
+      if (el) {
+        start(el);
+        return;
+      }
+      rafAttachAttempts += 1;
+      if (rafAttachAttempts < maxAttachAttempts) {
+        requestAnimationFrame(waitForRef);
+      } else {
+        setGeom(null);
+      }
+    };
+
+    waitForRef();
+
+    return () => {
+      cancelled = true;
+      disconnectRo();
+    };
+  }, [gridContainerRef, attackerRow, attackerCol, targetRow, targetCol]);
 
   if (!geom) return null;
 
@@ -70,12 +159,12 @@ export function EmpWaveAnimation({
   const glowWidth = baseWidth * 1.6;
   const highlightWidth = Math.max(2, baseWidth * 0.45);
 
-  const gradientId = `emp-wave-gradient-${attackerRow}-${attackerCol}-${targetRow}-${targetCol}`;
-  const impactId = `emp-impact-gradient-${attackerRow}-${attackerCol}-${targetRow}-${targetCol}`;
+  const gradientId = `emp-wave-gradient-${defsId}`;
+  const impactId = `emp-impact-gradient-${defsId}`;
 
   return (
     <svg
-      className="absolute pointer-events-none z-30"
+      className="absolute pointer-events-none z-[100]"
       style={{
         left: `0px`,
         top: `0px`,
@@ -86,7 +175,14 @@ export function EmpWaveAnimation({
       preserveAspectRatio="none"
     >
       <defs>
-        <linearGradient id={gradientId} x1={a.x} y1={a.y} x2={endX} y2={endY} gradientUnits="userSpaceOnUse">
+        <linearGradient
+          id={gradientId}
+          x1={a.x}
+          y1={a.y}
+          x2={endX}
+          y2={endY}
+          gradientUnits="userSpaceOnUse"
+        >
           <stop offset="0%" stopColor="#56d6ff" stopOpacity="0.9" />
           <stop offset="35%" stopColor="#56d6ff" stopOpacity="0.9" />
           <stop offset="55%" stopColor="#ffb84d" stopOpacity="0.95" />
@@ -100,7 +196,6 @@ export function EmpWaveAnimation({
         </radialGradient>
       </defs>
 
-      {/* Soft cyan glow underlay */}
       <path
         d={pathD}
         fill="none"
@@ -110,7 +205,6 @@ export function EmpWaveAnimation({
         strokeLinecap="round"
       />
 
-      {/* Main traveling wave (blue/yellow) */}
       <path
         d={pathD}
         fill="none"
@@ -120,7 +214,6 @@ export function EmpWaveAnimation({
         className="emp-wave emp-wave--a"
       />
 
-      {/* Yellow highlight ripples */}
       <path
         d={pathD}
         fill="none"
@@ -131,12 +224,21 @@ export function EmpWaveAnimation({
         className="emp-wave emp-wave--b"
       />
 
-      {/* Impact pulse at the target */}
       <g className="emp-impact">
-        <circle cx={t.x} cy={t.y} r={avgCell * 0.15} fill={`url(#${impactId})`} />
-        <circle cx={t.x} cy={t.y} r={avgCell * 0.06} fill="#ffb84d" opacity="0.85" />
+        <circle
+          cx={t.x}
+          cy={t.y}
+          r={avgCell * 0.15}
+          fill={`url(#${impactId})`}
+        />
+        <circle
+          cx={t.x}
+          cy={t.y}
+          r={avgCell * 0.06}
+          fill="#ffb84d"
+          opacity="0.85"
+        />
       </g>
     </svg>
   );
 }
-

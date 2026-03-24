@@ -56,6 +56,8 @@ export interface TutorialShipPosition {
   position: Position;
   isCreator: boolean;
   isPreview?: boolean;
+  /** Matches on-chain ShipPosition when present. */
+  status?: 0 | 1 | 2;
 }
 
 /** Last move for tutorial UI (ghost + pulse), same shape as in-game last move but with string IDs. */

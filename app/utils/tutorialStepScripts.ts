@@ -192,6 +192,10 @@ export function applyTutorialStepScript(
       });
 
       ensureStateClone();
+      updatedState.shipPositions = updatedState.shipPositions.map((pos) =>
+        pos.shipId === "2002" ? { ...pos, status: 1 as const } : pos,
+      );
+
       const empPos = updatedState.shipPositions.find(
         (p) => p.shipId === "1001",
       );
@@ -211,33 +215,6 @@ export function applyTutorialStepScript(
         };
       }
 
-      break;
-    }
-
-    case "rescue": {
-      updateShipAttributes("1001", (attrs) => {
-        attrs.hullPoints = 0;
-        attrs.reactorCriticalTimer = 2;
-      });
-
-      ensureStateClone();
-      updatedState.shipPositions = updatedState.shipPositions.map((pos) => {
-        if (pos.shipId === "1003") {
-          return {
-            ...pos,
-            position: { row: 6, col: 11 },
-          };
-        }
-        if (pos.shipId === "1001") {
-          return {
-            ...pos,
-            position: { row: 6, col: 12 },
-          };
-        }
-        return pos;
-      });
-
-      updatedState.creatorMovedShipIds = [];
       break;
     }
 

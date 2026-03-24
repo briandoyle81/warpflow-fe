@@ -93,7 +93,7 @@ const Info: React.FC = () => {
                 color: "var(--color-text-primary)",
               }}
             >
-              STRATEGIC PvP STARSHIP COMMAND
+              STRATEGIC PvP FLEET COMMAND
             </p>
             <p
               className="text-lg mb-4 opacity-100"
@@ -112,7 +112,8 @@ const Info: React.FC = () => {
               }}
             >
               Deploy your ships. Outmaneuver real opponents with positioning,
-              range control, and ruthless target priority.
+              range control, and ruthless target priority in tactical,
+              turn-based battles.
             </p>
             <div className="flex flex-col gap-3 items-center md:items-start">
               <div className="flex flex-wrap gap-3 items-center w-full md:w-auto">
