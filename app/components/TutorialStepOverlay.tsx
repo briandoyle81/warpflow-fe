@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useAccount } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useTutorialContext } from "./OnboardingTutorial";
 
 interface TutorialStepOverlayProps {
@@ -26,8 +27,8 @@ export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
 
   const step = currentStep;
   const canAdvance = !isVisibleLastStep && (debugEnabled || isStepComplete);
-  const lastStepCtaLabel = isConnected ? "Claim Ships" : "Log In";
-  const nextButtonDisabled = isVisibleLastStep ? !isStepComplete : !canAdvance;
+  const nextButtonDisabled = !isVisibleLastStep ? !canAdvance : false;
+  const canClaimShips = debugEnabled || isStepComplete;
 
   if (!step) return null;
 
@@ -107,20 +108,56 @@ export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
             </label>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (isVisibleLastStep) {
-                onQuit?.();
-              } else {
-                nextStep();
-              }
-            }}
-            disabled={nextButtonDisabled}
-            className="px-4 py-2 bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isVisibleLastStep ? lastStepCtaLabel : "Next →"}
-          </button>
+          {!isVisibleLastStep && (
+            <button
+              type="button"
+              onClick={() => nextStep()}
+              disabled={nextButtonDisabled}
+              className="px-4 py-2 bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next →
+            </button>
+          )}
+
+          {isVisibleLastStep && (
+            <>
+              {!isConnected ? (
+                <ConnectButton.Custom>
+                  {({
+                    openConnectModal,
+                    authenticationStatus,
+                    mounted,
+                  }) => {
+                    const ready =
+                      mounted && authenticationStatus !== "loading";
+                    if (!ready) return null;
+
+                    return (
+                      <button
+                        type="button"
+                        onClick={openConnectModal}
+                        disabled={false}
+                        className="px-4 py-2 bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                      >
+                        Log In
+                      </button>
+                    );
+                  }}
+                </ConnectButton.Custom>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    alert("Feature not implemented");
+                  }}
+                  disabled={!canClaimShips}
+                  className="px-4 py-2 bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                >
+                  Claim Ships
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
   );

@@ -84,8 +84,12 @@ function buildScriptedStates(): SimulatedGameState[] {
   );
   states.push(sniperOutcome); // index 13
 
-  // completion-retreat
-  states.push(retreatOutcome); // index 14
+  // completion-retreat (enemy captures center; now it's your turn)
+  const completionRetreat = applyTutorialStepScript(
+    "completion-retreat",
+    structuredClone(retreatOutcome),
+  );
+  states.push(completionRetreat); // index 14
 
   // completion-sniper
   states.push(sniperOutcome); // index 15

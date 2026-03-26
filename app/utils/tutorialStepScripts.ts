@@ -355,6 +355,37 @@ export function applyTutorialStepScript(
         position: empPos,
         actionType: ActionType.Retreat,
       });
+
+      // Step 13 retreat outcome begins on the opponent's turn:
+      // the EMP has fled and the enemy can seize the undefended resource.
+      updatedState = {
+        ...updatedState,
+        turnState: {
+          ...updatedState.turnState,
+          currentTurn: updatedState.metadata.joiner,
+        },
+      };
+      break;
+    }
+
+    case "completion-retreat": {
+      // Enemy seizes the center scoring tile after your retreat.
+      const fighterId: TutorialShipId = "2001";
+      updatedState = applyTutorialAction(state, {
+        type: "moveShip",
+        shipId: fighterId,
+        position: { row: 5, col: 8 },
+      });
+
+      // Now it's your turn.
+      updatedState = {
+        ...updatedState,
+        turnState: {
+          ...updatedState.turnState,
+          currentTurn: updatedState.metadata.creator,
+        },
+      };
+
       break;
     }
 

@@ -675,22 +675,25 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: "completion-retreat",
-    title: "Tutorial Complete!",
-    description: "Retreat path complete",
+    title: "Planning Ahead",
+    description: "You accepted defeat, but kept your most powerful ship",
     instructions: (
       <div className="space-y-3">
         {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-2xl font-bold text-green-300">
-          🎉 Branch Complete! 🎉
+          Planning Ahead
         </p>
         <p className="text-lg">
-          You saw the retreat line and its tradeoff.
+          Although you accepted defeat, you saved your most powerful ship.
+          That saved power should help you win many more victories in the
+          future.
         </p>
         <p className="text-sm">
-          In real matches, saving a leveled ship can still cost map control.
+          In every game, you will have to choose between short-term
+          control and long-term power.
         </p>
         <p className="text-yellow-300 font-bold">
-          Ready to play a real game? Head to the Lobbies tab!
+          Log in to claim 3 free ships and record your first loss.
         </p>
       </div>
     ),

@@ -17,7 +17,7 @@ const TUTORIAL_STEP_SNAPSHOTS_KEY = "void-tactics-tutorial-step-snapshots";
 const TUTORIAL_DATA_VERSION_KEY = "void-tactics-tutorial-data-version";
 // Bump this any time we change the canonical tutorial state so we don't keep
 // rendering stale snapshots from localStorage.
-const TUTORIAL_DATA_VERSION = "2026-03-26-rescue-step13-tx-cancel-ui";
+const TUTORIAL_DATA_VERSION = "2026-03-26-completion-retreat-player-turn-v2";
 
 export function useOnboardingTutorial() {
   // Load saved step index from localStorage, default to 0
