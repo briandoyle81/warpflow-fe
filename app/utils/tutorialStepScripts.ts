@@ -378,10 +378,14 @@ export function applyTutorialStepScript(
         targetShipId: empId,
       });
 
-      // Remove destroyed EMP from board for this canonical branch.
+      // Keep destroyed EMP at its tile with status=1 so last-move destroyed-target
+      // rendering can show the enemy fighter's plasma kill on this step.
       next = {
         ...next,
-        shipPositions: next.shipPositions.filter((p) => p.shipId !== empId),
+        shipPositions: next.shipPositions.map((p) =>
+          p.shipId === empId ? { ...p, status: 1 as const } : p,
+        ),
+        creatorActiveShipIds: next.creatorActiveShipIds.filter((id) => id !== empId),
         turnState: {
           ...next.turnState,
           currentTurn: next.metadata.creator,

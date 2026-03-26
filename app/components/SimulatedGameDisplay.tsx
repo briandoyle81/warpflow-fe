@@ -249,6 +249,17 @@ export function SimulatedGameDisplay({
     return !!attrs && attrs.hullPoints === 0;
   }, [selectedShipId, getShipAttributes]);
 
+  const isCellOccupiedByAliveShip = useCallback(
+    (row: number, col: number) =>
+      gameState.shipPositions.some(
+        (pos) =>
+          (pos.status ?? 0) === 0 &&
+          pos.position.row === row &&
+          pos.position.col === col,
+      ),
+    [gameState.shipPositions],
+  );
+
   // Mirror live-game retreat prep visual: when a disabled ship is selected on
   // the player's turn, show the in-cell retreat effect (flip + engine glow).
   const retreatPrepShipId = useMemo(() => {
@@ -485,9 +496,7 @@ export function SimulatedGameDisplay({
       ) {
         const distance = Math.abs(row - startRow) + Math.abs(col - startCol);
         if (distance <= movementRangeValue && distance > 0) {
-          const isOccupied = gameState.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col,
-          );
+          const isOccupied = isCellOccupiedByAliveShip(row, col);
 
           if (!isOccupied) {
             baseMoves.push({ row, col });
@@ -987,9 +996,7 @@ export function SimulatedGameDisplay({
 
           // Only add positions that are exactly 1 square away and not occupied
           if (distance === 1) {
-            const isOccupied = gameState.shipPositions.some(
-              (pos) => pos.position.row === row && pos.position.col === col,
-            );
+            const isOccupied = isCellOccupiedByAliveShip(row, col);
 
             if (!isOccupied) {
               validShootingPositions.push({ row, col });
@@ -1014,9 +1021,7 @@ export function SimulatedGameDisplay({
           // Only check positions within shooting range, excluding adjacent ones (already added above)
           if (distance <= shootingRange && distance > 1) {
             // Check if position is not occupied by another ship
-            const isOccupied = gameState.shipPositions.some(
-              (pos) => pos.position.row === row && pos.position.col === col,
-            );
+            const isOccupied = isCellOccupiedByAliveShip(row, col);
 
             if (!isOccupied) {
               // Ships can always shoot adjacent enemies (distance === 1) regardless of nebula squares
@@ -1063,9 +1068,7 @@ export function SimulatedGameDisplay({
 
         // Only check positions that are exactly 1 square away from any valid move position
         if (distance === movementRange + 1) {
-          const isOccupied = gameState.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col,
-          );
+          const isOccupied = isCellOccupiedByAliveShip(row, col);
 
           if (!isOccupied) {
             // Check if this position is exactly 1 square away from any valid move position
@@ -1086,10 +1089,9 @@ export function SimulatedGameDisplay({
                   Math.abs(moveRow - startRow) + Math.abs(moveCol - startCol);
                 if (moveDistance <= movementRange && moveDistance > 0) {
                   // Check if this move position is not occupied
-                  const isMoveOccupied = gameState.shipPositions.some(
-                    (pos) =>
-                      pos.position.row === moveRow &&
-                      pos.position.col === moveCol,
+                  const isMoveOccupied = isCellOccupiedByAliveShip(
+                    moveRow,
+                    moveCol,
                   );
 
                   if (!isMoveOccupied) {
@@ -1137,9 +1139,7 @@ export function SimulatedGameDisplay({
           distance !== 1
         ) {
           // Check if position is not occupied by another ship
-          const isOccupied = gameState.shipPositions.some(
-            (pos) => pos.position.row === row && pos.position.col === col,
-          );
+          const isOccupied = isCellOccupiedByAliveShip(row, col);
 
           if (!isOccupied) {
             // Check if any valid move position can shoot to this target position
@@ -1161,10 +1161,9 @@ export function SimulatedGameDisplay({
                   Math.abs(moveRow - startRow) + Math.abs(moveCol - startCol);
                 if (moveDistance <= movementRange && moveDistance > 0) {
                   // Check if this move position is not occupied
-                  const isMoveOccupied = gameState.shipPositions.some(
-                    (pos) =>
-                      pos.position.row === moveRow &&
-                      pos.position.col === moveCol,
+                  const isMoveOccupied = isCellOccupiedByAliveShip(
+                    moveRow,
+                    moveCol,
                   );
 
                   if (!isMoveOccupied) {
@@ -1408,17 +1407,34 @@ export function SimulatedGameDisplay({
         // only stage the target for the composite move+shoot action. The
         // actual shoot is executed when the user clicks Submit, just like
         // in the main game.
-        if (currentStep.id === "shoot") {
-          // Require a proposed move to (1, 3) before allowing the shot.
-          if (
-            !previewPosition ||
-            previewPosition.row !== 1 ||
-            previewPosition.col !== 3
-          ) {
-            toast.error(
-              "Move the Tutorial Sniper to (1, 3) before firing on the enemy.",
-            );
-            return;
+        if (
+          currentStep.id === "shoot" ||
+          currentStep.id === "rescue-outcome-sniper"
+        ) {
+          if (currentStep.id === "shoot") {
+            // Require a proposed move to (1, 3) before allowing the shot.
+            if (
+              !previewPosition ||
+              previewPosition.row !== 1 ||
+              previewPosition.col !== 3
+            ) {
+              toast.error(
+                "Move the Tutorial Sniper to (1, 3) before firing on the enemy.",
+              );
+              return;
+            }
+          } else if (currentStep.id === "rescue-outcome-sniper") {
+            // Require the fighter to stage the center move before optional shot.
+            if (
+              !previewPosition ||
+              previewPosition.row !== 5 ||
+              previewPosition.col !== 8
+            ) {
+              toast.error(
+                "Move the Tutorial Fighter to (5, 8) before firing on the enemy.",
+              );
+              return;
+            }
           }
 
           // Stage the target only; Submit will call executeAction for the
@@ -1585,6 +1601,32 @@ export function SimulatedGameDisplay({
       return;
     }
 
+    // Sniper branch step: submit move-to-center, optionally with a shot target.
+    if (currentStep?.id === "rescue-outcome-sniper") {
+      if (!previewPosition) {
+        toast.error("Move the Tutorial Fighter to (5, 8) before submitting.");
+        return;
+      }
+      if (previewPosition.row !== 5 || previewPosition.col !== 8) {
+        toast.error("Move the Tutorial Fighter to (5, 8) before submitting.");
+        return;
+      }
+
+      const moveAction: TutorialAction = {
+        type: "moveShip",
+        shipId: selectedShipId.toString() as TutorialShipId,
+        position: previewPosition,
+        actionType: ActionType.Pass,
+        // If the player selected a target, we'll perform the optional shot
+        // after the tx is approved (handled in useOnboardingTutorial).
+        targetShipId: targetShipId
+          ? (targetShipId.toString() as TutorialShipId)
+          : undefined,
+      };
+      executeAction(moveAction);
+      return;
+    }
+
     // Rescue step has two valid submit paths:
     // 1) Select disabled EMP and submit retreat.
     // 2) Select sniper, keep position, stage target, then submit shoot.
@@ -1681,7 +1723,8 @@ export function SimulatedGameDisplay({
     if (
       currentStep?.id !== "shoot" &&
       currentStep?.id !== "special-emp" &&
-      currentStep?.id !== "rescue"
+      currentStep?.id !== "rescue" &&
+      currentStep?.id !== "rescue-outcome-sniper"
     ) {
       setPreviewPosition(null);
       setTargetShipId(null);

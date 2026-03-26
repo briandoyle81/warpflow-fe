@@ -17,7 +17,7 @@ const TUTORIAL_STEP_SNAPSHOTS_KEY = "void-tactics-tutorial-step-snapshots";
 const TUTORIAL_DATA_VERSION_KEY = "void-tactics-tutorial-data-version";
 // Bump this any time we change the canonical tutorial state so we don't keep
 // rendering stale snapshots from localStorage.
-const TUTORIAL_DATA_VERSION = "2026-03-26-invisible-branch-step-numbers";
+const TUTORIAL_DATA_VERSION = "2026-03-26-rescue-step13-tx-cancel-ui";
 
 export function useOnboardingTutorial() {
   // Load saved step index from localStorage, default to 0
@@ -43,10 +43,6 @@ export function useOnboardingTutorial() {
   const [pendingAction, setPendingAction] = useState<TutorialAction | null>(null);
   const [lastAction, setLastAction] = useState<TutorialAction | null>(null);
   const [isStepHydrated, setIsStepHydrated] = useState(false);
-  const [rescueBranch, setRescueBranch] = useState<"retreat" | "sniper" | null>(
-    null,
-  );
-
   const displayTotalSteps = 14;
   // The step index whose state is currently hydrated and visible on screen.
   // This lets us persist snapshots for the correct step even when
@@ -289,11 +285,32 @@ export function useOnboardingTutorial() {
 
     // If action was already executed (showTransactionAfter), just close the dialog.
     // Otherwise, execute the action now.
+    let stepCompletionAction: TutorialAction = action;
     if (!currentStep?.showTransactionAfter) {
+      // Standard tx behavior: apply the pending action.
       applyAction(action);
-      setLastAction(action); // Track the last action for step completion checking
+
+      // Special handling for step 13 (rescue-outcome-sniper):
+      // the tx is for the move, and we optionally chain a shot based on
+      // targetShipId embedded on the pending move action.
+      if (
+        currentStep?.id === "rescue-outcome-sniper" &&
+        action.type === "moveShip" &&
+        action.targetShipId
+      ) {
+        const shootAction: TutorialAction = {
+          type: "shoot",
+          shipId: action.shipId,
+          targetShipId: action.targetShipId,
+          actionType: ActionType.Shoot,
+        };
+        applyAction(shootAction);
+        stepCompletionAction = shootAction;
+        setLastAction(shootAction);
+      } else {
+        setLastAction(action);
+      }
     }
-    // Note: If showTransactionAfter is true, action was already executed and lastAction was already set.
 
     setPendingAction(null);
 
@@ -302,7 +319,7 @@ export function useOnboardingTutorial() {
     if (
       currentStep?.requiresTransaction &&
       typeof currentStep.onStepComplete === "function" &&
-      currentStep.onStepComplete(action)
+      currentStep.onStepComplete(stepCompletionAction)
     ) {
       setCurrentStepIndex((prev) => {
         let nextIndex = Math.min(prev + 1, TUTORIAL_STEPS.length - 1);
@@ -321,12 +338,23 @@ export function useOnboardingTutorial() {
             action.actionType === ActionType.Retreat;
 
           if (empRetreat && retreatOutcomeIndex !== -1) {
-            setRescueBranch("retreat");
             nextIndex = retreatOutcomeIndex;
           } else if (sniperOutcomeIndex !== -1) {
-            setRescueBranch("sniper");
             nextIndex = sniperOutcomeIndex;
           }
+        }
+
+        // Route Step 13 outcomes to the correct Step 14 variant.
+        if (currentStep.id === "rescue-outcome-retreat") {
+          const completionIndex = TUTORIAL_STEPS.findIndex(
+            (s) => s.id === "completion-retreat",
+          );
+          if (completionIndex !== -1) nextIndex = completionIndex;
+        } else if (currentStep.id === "rescue-outcome-sniper") {
+          const completionIndex = TUTORIAL_STEPS.findIndex(
+            (s) => s.id === "completion-sniper",
+          );
+          if (completionIndex !== -1) nextIndex = completionIndex;
         }
 
         if (nextIndex !== prev) {
@@ -356,25 +384,22 @@ export function useOnboardingTutorial() {
     setCurrentStepIndex((prev) => {
       let nextIndex = Math.min(prev + 1, TUTORIAL_STEPS.length - 1);
       const currentId = TUTORIAL_STEPS[prev]?.id;
-      if (currentId === "rescue-outcome-retreat" && rescueBranch === "retreat") {
+      // Make branch navigation deterministic even if Debug allows skipping step
+      // completion (which may leave rescueBranch unset).
+      if (currentId === "rescue-outcome-retreat") {
         const completionIndex = TUTORIAL_STEPS.findIndex(
           (s) => s.id === "completion-retreat",
         );
-        if (completionIndex !== -1) {
-          nextIndex = completionIndex;
-        }
-      }
-      if (currentId === "rescue-outcome-sniper" && rescueBranch === "sniper") {
+        if (completionIndex !== -1) nextIndex = completionIndex;
+      } else if (currentId === "rescue-outcome-sniper") {
         const completionIndex = TUTORIAL_STEPS.findIndex(
           (s) => s.id === "completion-sniper",
         );
-        if (completionIndex !== -1) {
-          nextIndex = completionIndex;
-        }
+        if (completionIndex !== -1) nextIndex = completionIndex;
       }
       return nextIndex;
     });
-  }, [rescueBranch]);
+  }, []);
 
   const previousStep = useCallback(() => {
     setCurrentStepIndex((prev) => {
@@ -422,7 +447,6 @@ export function useOnboardingTutorial() {
     setLastAction(null);
     resetState();
     setStepSnapshots(TUTORIAL_STEPS.map(() => null));
-    setRescueBranch(null);
     setCurrentStepIndex(0);
     if (typeof window !== "undefined") {
       localStorage.setItem(TUTORIAL_STEP_STORAGE_KEY, "0");
@@ -523,7 +547,6 @@ export function useOnboardingTutorial() {
 
     setCurrentStepIndex(0);
     setStepSnapshots(TUTORIAL_STEPS.map(() => null));
-    setRescueBranch(null);
     setIsStepHydrated(false);
     setHydratedStepIndex(null);
   }, []);

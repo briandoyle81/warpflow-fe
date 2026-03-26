@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useAccount } from "wagmi";
 import { useTutorialContext } from "./OnboardingTutorial";
 
 interface TutorialStepOverlayProps {
@@ -9,6 +10,8 @@ interface TutorialStepOverlayProps {
 }
 
 export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
+  const [debugEnabled, setDebugEnabled] = useState(false);
+  const { isConnected } = useAccount();
   const {
     currentStepIndex,
     displayStepNumber,
@@ -22,7 +25,9 @@ export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
   } = useTutorialContext();
 
   const step = currentStep;
-  const canAdvance = !isVisibleLastStep && isStepComplete;
+  const canAdvance = !isVisibleLastStep && (debugEnabled || isStepComplete);
+  const lastStepCtaLabel = isConnected ? "Claim Ships" : "Log In";
+  const nextButtonDisabled = isVisibleLastStep ? !isStepComplete : !canAdvance;
 
   if (!step) return null;
 
@@ -80,7 +85,7 @@ export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
         </div>
 
         {/* Navigation */}
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => previousStep()}
@@ -89,13 +94,32 @@ export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
           >
             ← Previous
           </button>
+
+          <div className="flex-1 flex items-center justify-center">
+            {/* Debug override: allow advancing without meeting step requirements */}
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={debugEnabled}
+                onChange={(e) => setDebugEnabled(e.target.checked)}
+              />
+              <span className="text-sm font-mono text-gray-200">Debug</span>
+            </label>
+          </div>
+
           <button
             type="button"
-            onClick={() => nextStep()}
-            disabled={!canAdvance}
-            className="px-4 py-2 bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+            onClick={() => {
+              if (isVisibleLastStep) {
+                onQuit?.();
+              } else {
+                nextStep();
+              }
+            }}
+            disabled={nextButtonDisabled}
+            className="px-4 py-2 bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isVisibleLastStep ? "Finish" : "Next →"}
+            {isVisibleLastStep ? lastStepCtaLabel : "Next →"}
           </button>
         </div>
       </div>

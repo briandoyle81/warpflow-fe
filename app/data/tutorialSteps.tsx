@@ -616,7 +616,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: "rescue-outcome-sniper",
-    title: "Making Tough Decisions",
+    title: "Accepting a Sacrifice",
     description: "You lost the EMP but kept tempo",
     instructions: (
       <div className="space-y-3">
@@ -637,13 +637,40 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
           <span className="font-semibold text-cyan-300">Tutorial Fighter</span>{" "}
           to seize it.
         </p>
-        <p className="text-yellow-300 font-bold">Click Next to continue.</p>
+        <p className="text-yellow-300 font-bold">
+          Move the Tutorial Fighter to (5, 8). You may also fire on the Enemy
+          Fighter before submitting.
+        </p>
       </div>
     ),
-    allowedActions: {},
+    allowedActions: {
+      selectShip: ["1003"],
+      moveShip: {
+        shipId: "1003",
+        allowedPositions: [{ row: 5, col: 8 }],
+      },
+      shoot: {
+        shipId: "1003",
+        allowedTargets: ["2001"],
+      },
+    },
     highlightElements: {
       ships: ["1003", "2001"],
       mapPositions: [{ row: 5, col: 8 }],
+    },
+    requiresTransaction: true,
+    showTransactionAfter: false,
+    onStepComplete: (actionData) => {
+      const movedToCenter =
+        actionData?.type === "moveShip" &&
+        actionData?.shipId === "1003" &&
+        actionData?.position?.row === 5 &&
+        actionData?.position?.col === 8;
+      const shotEnemyFighter =
+        actionData?.type === "shoot" &&
+        actionData?.shipId === "1003" &&
+        actionData?.targetShipId === "2001";
+      return movedToCenter || shotEnemyFighter;
     },
   },
   {
@@ -671,28 +698,24 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: "completion-sniper",
-    title: "Tutorial Complete!",
-    description: "Sniper-fire path complete",
+    title: "Victory Achieved!",
+    description: "You sacrificed tempo to secure your first win",
     instructions: (
       <div className="space-y-3">
         {TUTORIAL_INCOMPLETE_SUBHEADING}
         <p className="text-2xl font-bold text-green-300">
-          🎉 Congratulations! 🎉
+          Victory Achieved!
         </p>
-        <p className="text-lg">You&apos;ve completed the tutorial!</p>
-        <p className="text-sm">You&apos;ve learned:</p>
-        <ul className="list-disc list-inside space-y-1 text-sm">
-          <li>✓ How to read the game map</li>
-          <li>✓ How to move ships</li>
-          <li>✓ How points are scored at end of round</li>
-          <li>✓ How to shoot weapons</li>
-          <li>✓ How end of round clears movement and flips first player</li>
-          <li>✓ How to use special abilities (EMP, Repair)</li>
-          <li>✓ How to rescue disabled ships</li>
-          <li>✓ How to destroy disabled enemies</li>
-        </ul>
+        <p className="text-lg">
+          You sacrificed your Tutorial EMP, but you secured your first
+          victory.
+        </p>
+        <p className="text-sm">
+          This is a tough choice you will have to make in every game.
+        </p>
         <p className="text-yellow-300 font-bold">
-          Ready to play a real game? Head to the Lobbies tab!
+          Great job surviving the tradeoff and taking the win. Log in to
+          claim your ships and record your first win!
         </p>
       </div>
     ),

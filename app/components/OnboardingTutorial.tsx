@@ -1,10 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext } from "react";
 import { useOnboardingTutorial } from "../hooks/useOnboardingTutorial";
 import { TutorialContextValue } from "../types/onboarding";
 import { SimulatedTransactionDialog } from "./SimulatedTransactionDialog";
-import { TUTORIAL_STEPS } from "../data/tutorialSteps";
 import { SimulatedGameDisplay } from "./SimulatedGameDisplay";
 
 // Create context for tutorial
@@ -33,33 +32,11 @@ export function OnboardingTutorial({
 
   const {
     currentStep,
-    currentStepIndex,
     isTransactionDialogOpen,
     pendingAction,
     approveTransaction,
     rejectTransaction,
   } = tutorialContext;
-
-  // Handle completion
-  useEffect(() => {
-    if (
-      currentStep?.id === "completion-retreat" ||
-      currentStep?.id === "completion-sniper"
-    ) {
-      // Tutorial is complete
-      const completionTimer = setTimeout(() => {
-        // Store completion in localStorage
-        if (typeof window !== "undefined") {
-          localStorage.setItem("void-tactics-tutorial-completed", "true");
-          // Clear the step index since tutorial is complete
-          localStorage.removeItem("void-tactics-tutorial-step-index");
-        }
-        onComplete?.();
-      }, 5000); // Wait 5 seconds on completion screen
-
-      return () => clearTimeout(completionTimer);
-    }
-  }, [currentStep, onComplete]);
 
   const handleSkip = () => {
     // Clear saved step index when quitting the tutorial.

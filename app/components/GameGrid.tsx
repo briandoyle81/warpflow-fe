@@ -901,9 +901,12 @@ export function GameGrid({
                             <img
                               src="/img/ship-destroyed.png"
                               alt="Predicted destroyed target ship"
-                              className={`w-[98%] h-[98%] object-contain opacity-75 ${
-                                cell.isCreator ? "" : "scale-x-[-1]"
-                              }`}
+                              className="w-[98%] h-[98%] object-contain opacity-75"
+                              style={{
+                                transform: cell.isCreator
+                                  ? "scaleX(-1)"
+                                  : "scaleX(1)",
+                              }}
                             />
                           </div>
                         );
