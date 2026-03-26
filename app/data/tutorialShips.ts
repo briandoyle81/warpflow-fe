@@ -10,10 +10,14 @@ function createColors(h1: number, s1: number, l1: number, h2: number, s2: number
   return { h1, s1, l1, h2, s2, l2 };
 }
 
-// Helper to create ship data
-function createShipData(cost: number, inFleet: boolean = true): ShipData {
+// Helper to create ship data (shipsDestroyed drives on-chain rank: 10+ = R2, etc.)
+function createShipData(
+  cost: number,
+  inFleet: boolean = true,
+  shipsDestroyed: number = 0,
+): ShipData {
   return {
-    shipsDestroyed: 0,
+    shipsDestroyed,
     costsVersion: 1,
     cost,
     shiny: false,
@@ -25,7 +29,7 @@ function createShipData(cost: number, inFleet: boolean = true): ShipData {
 
 // Player ships for tutorial
 export const TUTORIAL_PLAYER_SHIPS: Ship[] = [
-  // Ship 1: Tutorial EMP ship with Plasma main weapon
+  // Ship 1: Tutorial EMP ship with Plasma main weapon (10 kills = rank 2 on-chain)
   {
     name: "Tutorial EMP",
     id: 1001n,
@@ -43,7 +47,7 @@ export const TUTORIAL_PLAYER_SHIPS: Ship[] = [
       hull: 100,
       speed: 3,
     },
-    shipData: createShipData(10),
+    shipData: createShipData(10, true, 10),
     owner: TUTORIAL_PLAYER_ADDRESS,
   },
   // Ship 2: Tutorial Sniper with Repair drones

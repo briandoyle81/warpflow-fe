@@ -34,7 +34,6 @@ export function OnboardingTutorial({
   const {
     currentStep,
     currentStepIndex,
-    isStepHydrated,
     isTransactionDialogOpen,
     pendingAction,
     approveTransaction,
@@ -44,8 +43,8 @@ export function OnboardingTutorial({
   // Handle completion
   useEffect(() => {
     if (
-      currentStepIndex === TUTORIAL_STEPS.length - 1 &&
-      currentStep?.id === "completion"
+      currentStep?.id === "completion-retreat" ||
+      currentStep?.id === "completion-sniper"
     ) {
       // Tutorial is complete
       const completionTimer = setTimeout(() => {
@@ -60,7 +59,7 @@ export function OnboardingTutorial({
 
       return () => clearTimeout(completionTimer);
     }
-  }, [currentStepIndex, currentStep, onComplete]);
+  }, [currentStep, onComplete]);
 
   const handleSkip = () => {
     // Clear saved step index when quitting the tutorial.
@@ -70,39 +69,28 @@ export function OnboardingTutorial({
     onSkip?.();
   };
 
-  if (!currentStep) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-cyan-300 font-mono">Loading tutorial...</div>
-      </div>
-    );
-  }
-
-  // Avoid rendering the board for a new step until its state has been
-  // fully hydrated from either a cached snapshot or the scripted setup,
-  // so we don't momentarily show the previous step's positions.
-  if (!isStepHydrated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-cyan-300 font-mono">Preparing tutorial step...</div>
-      </div>
-    );
-  }
-
   return (
     <TutorialContext.Provider value={tutorialContext}>
       <div className="relative w-full h-full min-h-screen">
-        <SimulatedGameDisplay
-          tutorialContext={tutorialContext}
-          onBack={handleSkip}
-        />
+        {!currentStep ? (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-cyan-300 font-mono">Loading tutorial...</div>
+          </div>
+        ) : (
+          <>
+            <SimulatedGameDisplay
+              tutorialContext={tutorialContext}
+              onBack={handleSkip}
+            />
 
-        <SimulatedTransactionDialog
-          isOpen={isTransactionDialogOpen}
-          action={pendingAction}
-          onApprove={approveTransaction}
-          onReject={rejectTransaction}
-        />
+            <SimulatedTransactionDialog
+              isOpen={isTransactionDialogOpen}
+              action={pendingAction}
+              onApprove={approveTransaction}
+              onReject={rejectTransaction}
+            />
+          </>
+        )}
       </div>
     </TutorialContext.Provider>
   );

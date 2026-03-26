@@ -35,11 +35,19 @@ function createInitialAttributes(shipId: TutorialShipId): Attributes {
 
   const baseAttrs = calculateAttributesFromContracts(ship);
 
-  // Heavy Enemy (2002) starts with reactor overload but full hull.
-  if (ship.id === 2002n) {
+  // Tutorial EMP (1001) and Heavy Enemy (2002) start with reactor overload.
+  if (ship.id === 1001n || ship.id === 2002n) {
     return {
       ...baseAttrs,
       reactorCriticalTimer: 2,
+    };
+  }
+
+  // Tutorial Fighter (1003) starts at a fixed 100 HP for tutorial pacing.
+  if (ship.id === 1003n) {
+    return {
+      ...baseAttrs,
+      hullPoints: 100,
     };
   }
 
@@ -86,9 +94,9 @@ export function createInitialTutorialGameState(): SimulatedGameState {
       gridWidth: GRID_DIMENSIONS.WIDTH,
       gridHeight: GRID_DIMENSIONS.HEIGHT,
     },
-    maxScore: 10,
-    creatorScore: 0,
-    joinerScore: 0,
+    maxScore: 100,
+    creatorScore: 60,
+    joinerScore: 70,
     shipIds: allShipIds,
     shipAttributes,
     shipPositions: INITIAL_SHIP_POSITIONS,

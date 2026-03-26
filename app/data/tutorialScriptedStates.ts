@@ -42,9 +42,9 @@ function buildScriptedStates(): SimulatedGameState[] {
     position: { row: 5, col: 8 },
   });
   s = applyTutorialStepScript("shoot", s);
-  states.push(s); // index 7
+  states.push(s); // index 7 = entering "shoot"
 
-  // Step 9 special-emp: state after step 8 completion, then Heavy Enemy moves to (5,9) and fires on Tutorial EMP
+  // After shoot step completion: Tutorial Sniper moves and fires on Enemy Fighter
   s = applyTutorialAction(s, {
     type: "moveShip",
     shipId: "1002",
@@ -55,25 +55,43 @@ function buildScriptedStates(): SimulatedGameState[] {
     shipId: "1002",
     targetShipId: "2001",
   });
+  s = applyTutorialStepScript("end-of-round", s);
+  states.push(s); // index 8 = entering "end-of-round"
+
+  // special-emp: Heavy Enemy moves to (5,9) and fires on Tutorial EMP; player turn for EMP
   s = applyTutorialStepScript("special-emp", s);
-  states.push(s); // index 8 = state when entering step 9 (special-emp)
+  states.push(s); // index 9 = entering "special-emp"
 
-  // Step 10 ship-destruction: script only (Heavy destroyed, last move EMP)
+  // ship-destruction: script only (Heavy destroyed, last move EMP)
   s = applyTutorialStepScript("ship-destruction", s);
-  states.push(structuredClone(s)); // index 9 = entering "ship-destruction"
+  states.push(structuredClone(s)); // index 10 = entering "ship-destruction"
 
-  // Step 11 rescue: same starting SimulatedGameState as step 10 (no rescue script)
-  states.push(structuredClone(s)); // index 10
+  // rescue: Enemy Sniper disables Tutorial EMP (scripted shot)
+  s = applyTutorialStepScript("rescue", s);
+  states.push(structuredClone(s)); // index 11 = entering "rescue"
 
-  // Step 12 destroy-disabled: script (2002 destroyed)
-  s = applyTutorialStepScript("destroy-disabled", s);
-  states.push(s); // index 11
+  // Branch variants for step 13 (both derived from the same rescue base).
+  const rescueBase = structuredClone(s);
+  const retreatOutcome = applyTutorialStepScript(
+    "rescue-outcome-retreat",
+    structuredClone(rescueBase),
+  );
+  states.push(retreatOutcome); // index 12
 
-  // Step 13 completion: same
-  states.push(s); // index 12
+  const sniperOutcome = applyTutorialStepScript(
+    "rescue-outcome-sniper",
+    structuredClone(rescueBase),
+  );
+  states.push(sniperOutcome); // index 13
+
+  // completion-retreat
+  states.push(retreatOutcome); // index 14
+
+  // completion-sniper
+  states.push(sniperOutcome); // index 15
 
   // Duplicate completion slot so getScriptedStateForStepIndex(lastIndex) stays valid
-  states.push(s); // index 13
+  states.push(sniperOutcome); // index 16
 
   return states;
 }

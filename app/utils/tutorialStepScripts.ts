@@ -1,5 +1,7 @@
 import { SimulatedGameState, TutorialShipId } from "../types/onboarding";
 import { ActionType } from "../types/types";
+import { applyTutorialAction } from "./simulatedTutorialRules";
+import { tutorialDefaultScoringPoints } from "./tutorialMapScoring";
 
 /**
  * Pure per-step scripted adjustments for the tutorial.
@@ -44,11 +46,11 @@ export function applyTutorialStepScript(
   switch (stepId) {
     case "shoot": {
       // Before this step begins, simulate the enemy fighter advancing and
-      // firing on the Tutorial Scout in the center.
+      // firing on the Tutorial EMP in the center.
       ensureStateClone();
 
       const fighterId: TutorialShipId = "2001";
-      const scoutId: TutorialShipId = "1001";
+      const empId: TutorialShipId = "1001";
 
       const fighterPos = updatedState.shipPositions.find(
         (p) => p.shipId === fighterId,
@@ -63,7 +65,7 @@ export function applyTutorialStepScript(
       );
 
       const targetIndex = updatedState.shipIds.findIndex(
-        (id) => id === scoutId,
+        (id) => id === empId,
       );
       const attackerIndex = updatedState.shipIds.findIndex(
         (id) => id === fighterId,
@@ -75,8 +77,12 @@ export function applyTutorialStepScript(
         const attackerAttrs = newAttributes[attackerIndex];
 
         const baseDamage = attackerAttrs.gunDamage;
-        const damageReduction = targetAttrs.damageReduction;
-        const actualDamage = Math.max(1, baseDamage - damageReduction);
+        const damageReductionPercent = targetAttrs.damageReduction;
+        const actualDamage = Math.max(
+          1,
+          baseDamage -
+            Math.floor((baseDamage * damageReductionPercent) / 100),
+        );
 
         targetAttrs.hullPoints = Math.max(
           0,
@@ -95,7 +101,7 @@ export function applyTutorialStepScript(
           newRow: 4,
           newCol: 8,
           actionType: ActionType.Shoot,
-          targetShipId: scoutId,
+          targetShipId: empId,
         };
       }
 
@@ -106,6 +112,22 @@ export function applyTutorialStepScript(
         ];
       }
 
+      break;
+    }
+
+    case "end-of-round": {
+      // After the prior step (shoot) completes: round has ended. Advance to the
+      // next round, clear all "moved this round" markers, and hand initiative
+      // to the opponent (joiner goes first this round; creator went first last round).
+      // lastMove remains the Tutorial Sniper's shot on the Enemy Fighter.
+      ensureStateClone();
+      updatedState.turnState = {
+        ...updatedState.turnState,
+        currentRound: 2,
+        currentTurn: updatedState.metadata.joiner,
+      };
+      updatedState.creatorMovedShipIds = [];
+      updatedState.joinerMovedShipIds = [];
       break;
     }
 
@@ -177,13 +199,27 @@ export function applyTutorialStepScript(
         };
       }
 
+      // Heavy has moved and fired this round; show the moved marker on that ship.
+      if (!updatedState.joinerMovedShipIds.includes(heavyEnemyId)) {
+        updatedState.joinerMovedShipIds = [
+          ...updatedState.joinerMovedShipIds,
+          heavyEnemyId,
+        ];
+      }
+
+      // Opponent's scripted shot is done; it is now the player's turn to act (EMP).
+      updatedState.turnState = {
+        ...updatedState.turnState,
+        currentTurn: updatedState.metadata.creator,
+      };
+
       break;
     }
 
     case "ship-destruction": {
       // After the EMP attack, the Heavy Enemy has been destroyed by reactor overload
       // and the last move should show the Tutorial EMP firing on it. The EMP ship
-      // should retain whatever damage it had "before" step 9 (from the Heavy
+      // should retain whatever damage it had before this step (from the Heavy
       // Enemy's pre-step shot), so we do NOT modify its hull here.
       updateShipAttributes("2002", (attrs) => {
         attrs.hullPoints = 0;
@@ -215,6 +251,88 @@ export function applyTutorialStepScript(
         };
       }
 
+      // Player has used EMP this round; show the moved marker on Tutorial EMP
+      // (canonical state does not run applyTutorialAction(useSpecial)).
+      if (!updatedState.creatorMovedShipIds.includes("1001")) {
+        updatedState.creatorMovedShipIds = [
+          ...updatedState.creatorMovedShipIds,
+          "1001",
+        ];
+      }
+
+      // Step 11 should display the opponent's turn.
+      ensureStateClone();
+      updatedState.turnState = {
+        ...updatedState.turnState,
+        currentTurn: updatedState.metadata.joiner,
+      };
+
+      break;
+    }
+
+    case "rescue": {
+      // Enemy Sniper (2003) railgun shot on Tutorial EMP (1001): 0 HP, disabled.
+      // EMP keeps its starting 2 reactor damage points; this shot does not add
+      // a third overload point. Last move is the sniper shooting.
+      const sniperId: TutorialShipId = "2003";
+      const empId: TutorialShipId = "1001";
+
+      let next = applyTutorialAction(state, {
+        type: "shoot",
+        shipId: sniperId,
+        targetShipId: empId,
+      });
+
+      if (!next.creatorActiveShipIds.includes(empId)) {
+        next = {
+          ...next,
+          creatorActiveShipIds: [...next.creatorActiveShipIds, empId],
+        };
+      }
+
+      const empIdx = next.shipIds.findIndex((id) => id === empId);
+      if (empIdx !== -1) {
+        const sa = [...next.shipAttributes];
+        const a = { ...sa[empIdx] };
+        a.hullPoints = 0;
+        a.reactorCriticalTimer = 2;
+        sa[empIdx] = a;
+        next = { ...next, shipAttributes: sa };
+      }
+
+      const sniperPos = next.shipPositions.find((p) => p.shipId === sniperId);
+      if (sniperPos) {
+        next = {
+          ...next,
+          lastMove: {
+            shipId: sniperId,
+            oldRow: sniperPos.position.row,
+            oldCol: sniperPos.position.col,
+            newRow: sniperPos.position.row,
+            newCol: sniperPos.position.col,
+            actionType: ActionType.Shoot,
+            targetShipId: empId,
+          },
+        };
+      }
+
+      if (!next.joinerMovedShipIds.includes(sniperId)) {
+        next = {
+          ...next,
+          joinerMovedShipIds: [...next.joinerMovedShipIds, sniperId],
+        };
+      }
+
+      // Step 12 begins on the player's turn.
+      next = {
+        ...next,
+        turnState: {
+          ...next.turnState,
+          currentTurn: next.metadata.creator,
+        },
+      };
+
+      updatedState = next;
       break;
     }
 
@@ -223,6 +341,54 @@ export function applyTutorialStepScript(
         attrs.hullPoints = 0;
         attrs.reactorCriticalTimer = 2;
       });
+      break;
+    }
+
+    case "rescue-outcome-retreat": {
+      const empId: TutorialShipId = "1001";
+      const empPos = state.shipPositions.find((p) => p.shipId === empId)?.position;
+      if (!empPos) return state;
+
+      updatedState = applyTutorialAction(state, {
+        type: "moveShip",
+        shipId: empId,
+        position: empPos,
+        actionType: ActionType.Retreat,
+      });
+      break;
+    }
+
+    case "rescue-outcome-sniper": {
+      // Canonical branch after choosing sniper shot on step 12:
+      // 1) Player sniper fires on enemy fighter.
+      // 2) Enemy fighter responds and destroys disabled EMP.
+      const sniperId: TutorialShipId = "1002";
+      const fighterId: TutorialShipId = "2001";
+      const empId: TutorialShipId = "1001";
+
+      let next = applyTutorialAction(state, {
+        type: "shoot",
+        shipId: sniperId,
+        targetShipId: fighterId,
+      });
+
+      next = applyTutorialAction(next, {
+        type: "shoot",
+        shipId: fighterId,
+        targetShipId: empId,
+      });
+
+      // Remove destroyed EMP from board for this canonical branch.
+      next = {
+        ...next,
+        shipPositions: next.shipPositions.filter((p) => p.shipId !== empId),
+        turnState: {
+          ...next.turnState,
+          currentTurn: next.metadata.creator,
+        },
+      };
+
+      updatedState = next;
       break;
     }
 
@@ -257,7 +423,8 @@ export function applyTutorialStepScript(
           "2003",
         ];
       }
-      updatedState.joinerScore = updatedState.joinerScore + 1;
+      updatedState.joinerScore =
+        updatedState.joinerScore + tutorialDefaultScoringPoints(9, 13);
       updatedState.creatorMovedShipIds =
         updatedState.creatorMovedShipIds.filter((id) => id !== "1001");
       break;

@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { TUTORIAL_STEPS } from "../data/tutorialSteps";
 import { useTutorialContext } from "./OnboardingTutorial";
 
 interface TutorialStepOverlayProps {
@@ -12,6 +11,9 @@ interface TutorialStepOverlayProps {
 export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
   const {
     currentStepIndex,
+    displayStepNumber,
+    displayTotalSteps,
+    isVisibleLastStep,
     currentStep,
     isStepComplete,
     nextStep,
@@ -20,9 +22,7 @@ export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
   } = useTutorialContext();
 
   const step = currentStep;
-  const totalSteps = TUTORIAL_STEPS.length;
-  const canAdvance =
-    currentStepIndex < totalSteps - 1 && isStepComplete;
+  const canAdvance = !isVisibleLastStep && isStepComplete;
 
   if (!step) return null;
 
@@ -35,7 +35,7 @@ export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
               {step.title}
             </h2>
             <p className="text-sm text-gray-400">
-              Step {currentStepIndex + 1} of {totalSteps}
+              Step {displayStepNumber} of {displayTotalSteps}
             </p>
           </div>
           <div className="flex gap-2">
@@ -63,7 +63,9 @@ export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
           <div className="w-full bg-gray-700 rounded-full h-2">
             <div
               className="bg-cyan-400 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentStepIndex + 1) / totalSteps) * 100}%` }}
+              style={{
+                width: `${(displayStepNumber / displayTotalSteps) * 100}%`,
+              }}
             />
           </div>
         </div>
@@ -93,7 +95,7 @@ export function TutorialStepOverlay({ onQuit }: TutorialStepOverlayProps) {
             disabled={!canAdvance}
             className="px-4 py-2 bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
           >
-            {currentStepIndex === totalSteps - 1 ? "Finish" : "Next →"}
+            {isVisibleLastStep ? "Finish" : "Next →"}
           </button>
         </div>
       </div>

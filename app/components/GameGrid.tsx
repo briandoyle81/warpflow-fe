@@ -266,11 +266,22 @@ export function GameGrid({
       return ids;
     }
 
-    const hasSingleSelectedTarget =
-      targetShipId != null && targetShipId !== 0n;
-    const previewTargets = hasSingleSelectedTarget
-      ? validTargets.filter((target) => target.shipId === targetShipId)
-      : (labelTargets ?? validTargets);
+    // Destroyed-ship art is only for EMP reactor-kill preview. Main weapon
+    // (plasma) should show numeric damage preview, not destroyed art. Require a
+    // locked target so we do not preview destruction on every in-range ship
+    // before the player selects one.
+    if (
+      selectedWeaponType !== "special" ||
+      specialType !== 1 ||
+      targetShipId == null ||
+      targetShipId === 0n
+    ) {
+      return ids;
+    }
+
+    const previewTargets = validTargets.filter(
+      (target) => target.shipId === targetShipId,
+    );
 
     previewTargets.forEach((target) => {
       const targetAttributes = getShipAttributes(target.shipId);
@@ -292,10 +303,10 @@ export function GameGrid({
     isShipOwnedByCurrentPlayer,
     targetShipId,
     validTargets,
-    labelTargets,
     getShipAttributes,
     calculateDamage,
     selectedWeaponType,
+    specialType,
   ]);
 
   const findShipPositionById = React.useCallback(
@@ -332,9 +343,13 @@ export function GameGrid({
   return (
     <>
       {/* Map Grid */}
-      <div className="w-full px-2">
-        <div ref={gridContainerRef} key="game-grid" className="relative w-full">
-          <div className="relative z-0 grid gap-0 border border-gray-900 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full">
+      <div className="w-full h-full min-h-0 px-2">
+        <div
+          ref={gridContainerRef}
+          key="game-grid"
+          className="relative w-full h-full min-h-0"
+        >
+          <div className="relative z-0 grid gap-0 border border-gray-900 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full h-full min-h-0">
             {grid.map((row, rowIndex) =>
               row.map((cell, colIndex) => {
                 const ship = cell ? shipMap.get(cell.shipId) : null;
@@ -1619,12 +1634,16 @@ export function GameGrid({
 
             {/* Railgun Shooting Animation */}
             {(selectedShipId || lastMoveShipId) &&
-              targetShipId &&
+              (targetShipId || lastMoveTargetShipId) &&
               selectedWeaponType === "weapon" &&
               (() => {
                 // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
                 const shipId = selectedShipId || lastMoveShipId;
                 if (!shipId) return null;
+
+                if (!selectedShipId && lastMoveActionType === ActionType.Special) {
+                  return null;
+                }
 
                 // Check if the ship has a Railgun weapon (mainWeapon === 1)
                 const ship = shipMap.get(shipId);
@@ -1663,7 +1682,9 @@ export function GameGrid({
                   return null;
                 }
 
-                const targetPosition = findShipPositionById(targetShipId);
+                const effectiveTargetId = targetShipId || lastMoveTargetShipId;
+                if (!effectiveTargetId) return null;
+                const targetPosition = findShipPositionById(effectiveTargetId);
                 if (!targetPosition) return null;
 
                 return (

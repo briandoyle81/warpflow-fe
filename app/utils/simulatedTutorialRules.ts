@@ -1,5 +1,6 @@
 import { SimulatedGameState, TutorialAction } from "../types/onboarding";
 import { ActionType } from "../types/types";
+import { tutorialDefaultScoringPoints } from "./tutorialMapScoring";
 
 /**
  * Pure rules engine for the simulated tutorial game.
@@ -15,6 +16,39 @@ export function applyTutorialAction(
   switch (action.type) {
     case "moveShip": {
       if (!action.shipId || !action.position) break;
+
+      // Retreat/Flee: ship exits the battlefield from its current tile.
+      if (action.actionType === ActionType.Retreat) {
+        const retreatPos = newState.shipPositions.find(
+          (pos) => pos.shipId === action.shipId,
+        );
+        if (!retreatPos) break;
+
+        newState.shipPositions = newState.shipPositions.filter(
+          (pos) => pos.shipId !== action.shipId,
+        );
+        newState.creatorActiveShipIds = newState.creatorActiveShipIds.filter(
+          (id) => id !== action.shipId,
+        );
+        newState.joinerActiveShipIds = newState.joinerActiveShipIds.filter(
+          (id) => id !== action.shipId,
+        );
+        newState.lastMove = {
+          shipId: action.shipId,
+          oldRow: retreatPos.position.row,
+          oldCol: retreatPos.position.col,
+          newRow: -1,
+          newCol: -1,
+          actionType: ActionType.Retreat,
+        };
+        if (!newState.creatorMovedShipIds.includes(action.shipId)) {
+          newState.creatorMovedShipIds = [
+            ...newState.creatorMovedShipIds,
+            action.shipId,
+          ];
+        }
+        break;
+      }
 
       const shipPosIndex = newState.shipPositions.findIndex(
         (pos) => pos.shipId === action.shipId,
@@ -50,11 +84,17 @@ export function applyTutorialAction(
         ];
       }
 
-      const isScoringTile =
-        (action.position.row === 6 && action.position.col === 11) ||
-        (action.position.row === 6 && action.position.col === 12);
-      if (isScoringTile && action.type === "moveShip") {
-        newState.creatorScore = newState.creatorScore + 1;
+      const points = tutorialDefaultScoringPoints(
+        action.position.row,
+        action.position.col,
+      );
+      if (points > 0 && shipPosIndex !== -1) {
+        const moved = newState.shipPositions[shipPosIndex];
+        if (moved.isCreator) {
+          newState.creatorScore = newState.creatorScore + points;
+        } else {
+          newState.joinerScore = newState.joinerScore + points;
+        }
       }
       break;
     }

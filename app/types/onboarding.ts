@@ -120,6 +120,9 @@ export interface TutorialAction {
 
 export interface TutorialContextValue {
   currentStepIndex: number;
+  displayStepNumber: number;
+  displayTotalSteps: number;
+  isVisibleLastStep: boolean;
   currentStep: TutorialStep | null;
   gameState: SimulatedGameState;
   isTransactionDialogOpen: boolean;

@@ -67,6 +67,7 @@ export function SimulatedGameDisplay({
     currentStepIndex,
     validateAction,
     executeAction,
+    isStepHydrated,
   } = tutorialContext;
 
   // For display we follow the main game and keep the selected ship ID as bigint
@@ -105,10 +106,11 @@ export function SimulatedGameDisplay({
     col: number;
   } | null>(null);
 
-  // In the tutorial, we always treat it as the player's turn for UI purposes:
-  // whenever an owned ship is selected and eligible to act, we show the same
-  // top action bar / proposed move UI as the main game.
-  const isMyTurn = true;
+  // Mirror live game: whose turn it is comes from simulated state (e.g. after
+  // end of round, opponent may go first).
+  const isMyTurn =
+    gameState.turnState.currentTurn.toLowerCase() ===
+    TUTORIAL_PLAYER_ADDRESS.toLowerCase();
 
   // Map of on-chain ship ID (bigint) to ship object. Tutorial IDs are strings;
   // when we need a ship we convert TutorialShipId -> bigint for this map only.
@@ -166,15 +168,18 @@ export function SimulatedGameDisplay({
     [gameState.shipPositions],
   );
 
-  // Ship-destruction and rescue (same board): canonical lastMove for EMP replay.
+  // Canonical lastMove when the live gameState might not match the scripted step.
   // destroy-disabled: a bad persisted snapshot can omit lastMove; fall back.
   const tutorialDisplayLastMove = useMemo(() => {
-    if (
-      currentStep?.id === "ship-destruction" ||
-      currentStep?.id === "rescue"
-    ) {
+    if (currentStep?.id === "ship-destruction") {
       return (
         getScriptedStateForTutorialStepId("ship-destruction")?.lastMove ??
+        gameState.lastMove
+      );
+    }
+    if (currentStep?.id === "rescue") {
+      return (
+        getScriptedStateForTutorialStepId("rescue")?.lastMove ??
         gameState.lastMove
       );
     }
@@ -237,6 +242,33 @@ export function SimulatedGameDisplay({
     movedShipIdsSet,
     getShipAttributes,
   ]);
+
+  const isSelectedShipDisabled = useMemo(() => {
+    if (!selectedShipId) return false;
+    const attrs = getShipAttributes(selectedShipId);
+    return !!attrs && attrs.hullPoints === 0;
+  }, [selectedShipId, getShipAttributes]);
+
+  // Mirror live-game retreat prep visual: when a disabled ship is selected on
+  // the player's turn, show the in-cell retreat effect (flip + engine glow).
+  const retreatPrepShipId = useMemo(() => {
+    if (!isMyTurn || !selectedShipId || !isSelectedShipDisabled) return null;
+    return selectedShipId;
+  }, [isMyTurn, selectedShipId, isSelectedShipDisabled]);
+
+  const retreatPrepIsCreator = useMemo(() => {
+    if (retreatPrepShipId == null) return null;
+    const ship = shipMap.get(retreatPrepShipId);
+    return ship ? ship.owner === TUTORIAL_PLAYER_ADDRESS : null;
+  }, [retreatPrepShipId, shipMap]);
+
+  // Match live-game behavior: selecting a disabled ship enters retreat-only mode.
+  useEffect(() => {
+    if (!selectedShipId || !isSelectedShipDisabled) return;
+    setTargetShipId(null);
+    setPreviewPosition(null);
+    setSelectedWeaponType("weapon");
+  }, [selectedShipId, isSelectedShipDisabled]);
 
   // Check line of sight between two positions
   const hasLineOfSight = useCallback(
@@ -372,8 +404,7 @@ export function SimulatedGameDisplay({
         // scripted positions still place the destroyed target so EMP can resolve.
         if (
           !destroyedTargetShipPosition &&
-          (currentStep?.id === "ship-destruction" ||
-            currentStep?.id === "rescue")
+          currentStep?.id === "ship-destruction"
         ) {
           const scripted = getScriptedStateForTutorialStepId("ship-destruction");
           destroyedTargetShipPosition = scripted?.shipPositions.find(
@@ -518,7 +549,8 @@ export function SimulatedGameDisplay({
     // selected on steps that are cinematic or require selection for the next action.
     const lastMoveVisibleWithSelection =
       currentStep?.id === "ship-destruction" ||
-      currentStep?.id === "destroy-disabled";
+      currentStep?.id === "destroy-disabled" ||
+      currentStep?.id === "rescue";
     const suppressLastMoveBecauseSelection =
       selectedShipId !== null && !lastMoveVisibleWithSelection;
     if (!tutorialDisplayLastMove || suppressLastMoveBecauseSelection) {
@@ -687,6 +719,9 @@ export function SimulatedGameDisplay({
   // Show full range for viewing, but filter by tutorial constraints if step requires specific targets
   const validTargets = useMemo(() => {
     if (!selectedShipId) return [];
+    const selectedAttrs = getShipAttributes(selectedShipId);
+    // Match live game: disabled ships are retreat-only, no targeting UI.
+    if (selectedAttrs && selectedAttrs.hullPoints === 0) return [];
 
     // Get allowed targets from tutorial step (if step has specific constraints)
     let allowedTargets: TutorialShipId[] | null = null;
@@ -811,6 +846,8 @@ export function SimulatedGameDisplay({
   // Get assistable targets
   const assistableTargets = useMemo(() => {
     if (!selectedShipId) return [];
+    const selectedAttrs = getShipAttributes(selectedShipId);
+    if (selectedAttrs && selectedAttrs.hullPoints === 0) return [];
 
     const currentPosition = gameState.shipPositions.find(
       (pos) => pos.shipId === selectedShipId.toString(),
@@ -864,6 +901,8 @@ export function SimulatedGameDisplay({
 
   const assistableTargetsFromStart = useMemo(() => {
     if (!selectedShipId) return [];
+    const selectedAttrs = getShipAttributes(selectedShipId);
+    if (selectedAttrs && selectedAttrs.hullPoints === 0) return [];
 
     const currentPosition = gameState.shipPositions.find(
       (pos) => pos.shipId === selectedShipId.toString(),
@@ -1302,6 +1341,12 @@ export function SimulatedGameDisplay({
         return;
       }
 
+      // Step 12 fork rule: Tutorial Sniper is shoot-only and cannot stage moves.
+      if (currentStep?.id === "rescue" && selectedShipId?.toString() === "1002") {
+        toast.error("Tutorial Sniper cannot move in this step.");
+        return;
+      }
+
       // Validate move action
       if (
         selectedShipId &&
@@ -1378,6 +1423,24 @@ export function SimulatedGameDisplay({
 
           // Stage the target only; Submit will call executeAction for the
           // actual shoot.
+          setTargetShipId(shipId);
+          return;
+        }
+
+        // In rescue, the sniper shot is staged (target selection) and is only
+        // executed when the player clicks Submit.
+        if (
+          currentStep.id === "rescue" &&
+          selectedShipId.toString() === "1002"
+        ) {
+          const currentPos = gameState.shipPositions.find(
+            (pos) => pos.shipId === selectedShipId.toString(),
+          )?.position;
+          if (currentPos) {
+            // Keep sniper stationary but provide an explicit firing origin so
+            // railgun animation/effects can render when target is selected.
+            setPreviewPosition({ row: currentPos.row, col: currentPos.col });
+          }
           setTargetShipId(shipId);
           return;
         }
@@ -1468,6 +1531,7 @@ export function SimulatedGameDisplay({
       previewPosition,
       validateAction,
       executeAction,
+      gameState.shipPositions,
     ],
   );
 
@@ -1521,6 +1585,41 @@ export function SimulatedGameDisplay({
       return;
     }
 
+    // Rescue step has two valid submit paths:
+    // 1) Select disabled EMP and submit retreat.
+    // 2) Select sniper, keep position, stage target, then submit shoot.
+    if (currentStep?.id === "rescue") {
+      const selectedId = selectedShipId.toString() as TutorialShipId;
+
+      if (selectedId === "1001") {
+        const currentPos = gameState.shipPositions.find(
+          (pos) => pos.shipId === selectedId,
+        )?.position;
+        if (!currentPos) return;
+
+        executeAction({
+          type: "moveShip",
+          shipId: selectedId,
+          position: currentPos,
+          actionType: ActionType.Retreat,
+        });
+      } else if (selectedId === "1002") {
+        if (!targetShipId) {
+          toast.error("Select Enemy Fighter as target before submitting.");
+          return;
+        }
+        executeAction({
+          type: "shoot",
+          shipId: selectedId,
+          targetShipId: targetShipId.toString() as TutorialShipId,
+          actionType: ActionType.Shoot,
+        });
+      } else {
+        toast.error("Select Tutorial EMP or Tutorial Sniper.");
+        return;
+      }
+    } else
+
     // Special EMP step: no movement, just fire the special at the staged target.
     if (currentStep?.id === "special-emp") {
       const isEmpSelected = selectedWeaponType === "special";
@@ -1573,11 +1672,17 @@ export function SimulatedGameDisplay({
       executeAction(action);
     }
 
-    // For non-shoot steps, clear local staging after submitting; tutorial
-    // state + simulated transaction dialog are handled inside executeAction /
-    // approveTransaction. For the special-emp step we KEEP local staging so the
-    // proposed move and target remain visible while the simulated tx dialog is open.
-    if (currentStep?.id !== "shoot" && currentStep?.id !== "special-emp") {
+    // For most steps, clear local staging after submitting.
+    // Keep local staging for steps that rely on pending tx preview state:
+    // - shoot: staged move+target should remain visible until tx decision
+    // - special-emp: staged target should remain visible until tx decision
+    // - rescue: staged branch choice (retreat or sniper shot) should remain
+    //   visible until approve, or until player cancels via top move-selection UI.
+    if (
+      currentStep?.id !== "shoot" &&
+      currentStep?.id !== "special-emp" &&
+      currentStep?.id !== "rescue"
+    ) {
       setPreviewPosition(null);
       setTargetShipId(null);
       setSelectedShipId(null);
@@ -1586,7 +1691,9 @@ export function SimulatedGameDisplay({
     selectedShipId,
     previewPosition,
     targetShipId,
+    gameState.shipPositions,
     currentStep,
+    isSelectedShipDisabled,
     selectedWeaponType,
     executeAction,
   ]);
@@ -1627,7 +1734,7 @@ export function SimulatedGameDisplay({
                   Round {gameState.turnState.currentRound.toString()}
                 </span>
               </h1>
-              {/* YOUR TURN · 99:99 and static bar (no countdown in tutorial) */}
+              {/* Turn indicator · 99:99 and static bar (no countdown in tutorial) */}
               <div className="flex flex-col gap-1.5">
                 <div
                   className="text-sm flex items-center gap-2 uppercase font-semibold tracking-wider"
@@ -1637,14 +1744,24 @@ export function SimulatedGameDisplay({
                     color: "var(--color-text-secondary)",
                   }}
                 >
-                  <span style={{ color: "var(--color-cyan)" }}>YOUR TURN</span>
+                  <span
+                    style={{
+                      color: isMyTurn
+                        ? "var(--color-cyan)"
+                        : "var(--color-warning-red)",
+                    }}
+                  >
+                    {isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN"}
+                  </span>
                   <span style={{ color: "var(--color-text-muted)" }}>•</span>
                   <span
                     className="font-mono"
                     style={{
                       fontFamily:
                         "var(--font-jetbrains-mono), 'Courier New', monospace",
-                      color: "var(--color-cyan)",
+                      color: isMyTurn
+                        ? "var(--color-cyan)"
+                        : "var(--color-warning-red)",
                     }}
                   >
                     99:99
@@ -1662,7 +1779,9 @@ export function SimulatedGameDisplay({
                       className="h-full"
                       style={{
                         width: "100%",
-                        backgroundColor: "var(--color-cyan)",
+                        backgroundColor: isMyTurn
+                          ? "var(--color-cyan)"
+                          : "var(--color-warning-red)",
                         borderRadius: 0,
                       }}
                     />
@@ -1782,6 +1901,7 @@ export function SimulatedGameDisplay({
                   </div>
                   {/* Weapon / Special selector, mirroring main game UI */}
                   {(() => {
+                    if (isSelectedShipDisabled) return null;
                     if (!selectedShipId) return null;
                     const ship = shipMap.get(selectedShipId);
                     if (!ship || ship.equipment.special <= 0) return null;
@@ -1816,7 +1936,7 @@ export function SimulatedGameDisplay({
                 </div>
 
                 {/* Center: Target selection, mirroring main game UI */}
-                {validTargets.length > 0 && (
+                {!isSelectedShipDisabled && validTargets.length > 0 && (
                   <div className="flex-1">
                     <div
                       className="border border-solid p-3 min-h-[7.5rem]"
@@ -1902,7 +2022,7 @@ export function SimulatedGameDisplay({
                       borderRadius: 0,
                     }}
                   >
-                    Submit Move
+                    {isSelectedShipDisabled ? "Submit Retreat" : "Submit Move"}
                   </button>
                   <button
                     onClick={() => {
@@ -1937,56 +2057,79 @@ export function SimulatedGameDisplay({
       </div>
 
       <div className="relative w-full">
-        <GameBoardLayout isCurrentPlayerTurn={true}>
-          <GameGrid
-            grid={grid}
-            allShipPositions={allShipPositionsForGrid}
-            shipMap={shipMap}
-            selectedShipId={selectedShipId}
-            previewPosition={previewPosition}
-            targetShipId={targetShipId}
-            selectedWeaponType={selectedWeaponType}
-            hoveredCell={hoveredCell}
-            draggedShipId={draggedShipId}
-            dragOverCell={dragOverCell}
-            movementRange={movementRange}
-            shootingRange={shootingRange}
-            validTargets={gridValidTargets}
-            assistableTargets={gridAssistableTargets}
-            assistableTargetsFromStart={gridAssistableTargetsFromStart}
-            dragShootingRange={dragShootingRange}
-            dragValidTargets={dragValidTargets}
-            isCurrentPlayerTurn={true}
-            isShipOwnedByCurrentPlayer={isShipOwnedByCurrentPlayer}
-            movedShipIdsSet={gridMovedShipIdsSet}
-            specialType={specialType}
-            blockedGrid={blockedGrid}
-            scoringGrid={scoringGrid}
-            onlyOnceGrid={onlyOnceGrid}
-            calculateDamage={calculateDamage}
-            getShipAttributes={getShipAttributes}
-            disableTooltips={false}
-            address={TUTORIAL_PLAYER_ADDRESS}
-            currentTurn={gameState.turnState.currentTurn}
-            highlightedMovePosition={highlightedMovePosition}
-            lastMoveShipId={lastMoveProps.lastMoveShipId}
-            lastMoveOldPosition={lastMoveProps.lastMoveOldPosition}
-            lastMoveNewPosition={lastMoveProps.lastMoveNewPosition}
-            lastMoveActionType={lastMoveProps.lastMoveActionType}
-            lastMoveTargetShipId={lastMoveProps.lastMoveTargetShipId}
-            lastMoveIsCurrentPlayer={lastMoveProps.lastMoveIsCurrentPlayer}
-            showLastMoveEmpReplayWhenSelected={
-              currentStep?.id === "ship-destruction" ||
-              currentStep?.id === "destroy-disabled"
-            }
-            setSelectedShipId={wrappedSetSelectedShipId}
-            setPreviewPosition={wrappedSetPreviewPosition}
-            setTargetShipId={wrappedSetTargetShipId}
-            setSelectedWeaponType={setSelectedWeaponType}
-            setHoveredCell={setHoveredCell}
-            setDraggedShipId={setDraggedShipId}
-            setDragOverCell={setDragOverCell}
-          />
+        <GameBoardLayout isCurrentPlayerTurn={isMyTurn}>
+          {/* Fixed 17×11 aspect so the board does not resize between tutorial steps
+              while state hydrates; overlay blocks interaction until ready. */}
+          <div
+            className="relative w-full"
+            style={{ aspectRatio: `${GRID_WIDTH} / ${GRID_HEIGHT}` }}
+          >
+            {!isStepHydrated && (
+              <div
+                className="absolute inset-0 z-[200] flex items-center justify-center"
+                style={{ backgroundColor: "var(--color-near-black)" }}
+                aria-busy
+                aria-live="polite"
+              >
+                <span className="text-cyan-300 font-mono">
+                  Preparing tutorial step...
+                </span>
+              </div>
+            )}
+            <div className="absolute inset-0 min-h-0 overflow-hidden">
+              <GameGrid
+                grid={grid}
+                allShipPositions={allShipPositionsForGrid}
+                shipMap={shipMap}
+                selectedShipId={selectedShipId}
+                previewPosition={previewPosition}
+                targetShipId={targetShipId}
+                selectedWeaponType={selectedWeaponType}
+                hoveredCell={hoveredCell}
+                draggedShipId={draggedShipId}
+                dragOverCell={dragOverCell}
+                movementRange={movementRange}
+                shootingRange={shootingRange}
+                validTargets={gridValidTargets}
+                assistableTargets={gridAssistableTargets}
+                assistableTargetsFromStart={gridAssistableTargetsFromStart}
+                dragShootingRange={dragShootingRange}
+                dragValidTargets={dragValidTargets}
+                isCurrentPlayerTurn={isMyTurn}
+                isShipOwnedByCurrentPlayer={isShipOwnedByCurrentPlayer}
+                movedShipIdsSet={gridMovedShipIdsSet}
+                specialType={specialType}
+                blockedGrid={blockedGrid}
+                scoringGrid={scoringGrid}
+                onlyOnceGrid={onlyOnceGrid}
+                calculateDamage={calculateDamage}
+                getShipAttributes={getShipAttributes}
+                disableTooltips={false}
+                address={TUTORIAL_PLAYER_ADDRESS}
+                currentTurn={gameState.turnState.currentTurn}
+                highlightedMovePosition={highlightedMovePosition}
+                lastMoveShipId={lastMoveProps.lastMoveShipId}
+                lastMoveOldPosition={lastMoveProps.lastMoveOldPosition}
+                lastMoveNewPosition={lastMoveProps.lastMoveNewPosition}
+                lastMoveActionType={lastMoveProps.lastMoveActionType}
+                lastMoveTargetShipId={lastMoveProps.lastMoveTargetShipId}
+                lastMoveIsCurrentPlayer={lastMoveProps.lastMoveIsCurrentPlayer}
+                showLastMoveEmpReplayWhenSelected={
+                  currentStep?.id === "ship-destruction" ||
+                  currentStep?.id === "destroy-disabled"
+                }
+                retreatPrepShipId={retreatPrepShipId}
+                retreatPrepIsCreator={retreatPrepIsCreator}
+                setSelectedShipId={wrappedSetSelectedShipId}
+                setPreviewPosition={wrappedSetPreviewPosition}
+                setTargetShipId={wrappedSetTargetShipId}
+                setSelectedWeaponType={setSelectedWeaponType}
+                setHoveredCell={setHoveredCell}
+                setDraggedShipId={setDraggedShipId}
+                setDragOverCell={setDragOverCell}
+              />
+            </div>
+          </div>
         </GameBoardLayout>
 
         {/* Instructions: overlap grid bottom by ~50%, aligned to left */}
