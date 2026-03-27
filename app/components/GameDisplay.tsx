@@ -81,6 +81,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     row: number;
     col: number;
   } | null>(null);
+  const gameViewRootRef = React.useRef<HTMLDivElement | null>(null);
+  const lastMoveCardRef = React.useRef<HTMLDivElement | null>(null);
 
   // If the user starts targeting or moving, clear any explicit "retreat" override.
   React.useEffect(() => {
@@ -2151,10 +2153,76 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     };
   }, []);
 
+  // Dynamically fit game width to viewport height so the Last Move card stays
+  // fully visible while keeping the board as wide as possible.
+  React.useEffect(() => {
+    const root = gameViewRootRef.current;
+    const lastMove = lastMoveCardRef.current;
+    if (!root || !lastMove) return;
+
+    let rafId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const fitWidth = () => {
+      const parentWidth =
+        root.parentElement?.clientWidth ?? document.documentElement.clientWidth;
+      if (parentWidth <= 0) return;
+
+      let low = Math.min(Math.max(820, Math.floor(parentWidth * 0.55)), parentWidth);
+      let high = parentWidth;
+      let best = low;
+
+      for (let i = 0; i < 12; i++) {
+        const mid = Math.floor((low + high) / 2);
+        root.style.width = `${mid}px`;
+        const bottom = lastMove.getBoundingClientRect().bottom;
+        const fits = bottom <= window.innerHeight - 8;
+
+        if (fits) {
+          best = mid;
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+
+      root.style.width = `${Math.min(best, parentWidth)}px`;
+    };
+
+    const scheduleFit = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(fitWidth);
+      }, 120);
+    };
+
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => {
+            scheduleFit();
+          })
+        : null;
+
+    observer?.observe(root);
+    observer?.observe(lastMove);
+    if (root.parentElement) observer?.observe(root.parentElement);
+
+    window.addEventListener("resize", scheduleFit);
+    scheduleFit();
+
+    return () => {
+      window.removeEventListener("resize", scheduleFit);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (rafId) cancelAnimationFrame(rafId);
+      observer?.disconnect();
+    };
+  }, []);
+
   // Show loading state if game data is being fetched
   if (gameLoading) {
     return (
-      <div className="w-full max-w-[1170px] mx-auto space-y-6">
+      <div className="w-full sm:w-[92%] mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
@@ -2190,7 +2258,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Show error state if game data failed to load
   if (gameError) {
     return (
-      <div className="w-full max-w-[1170px] mx-auto space-y-6">
+      <div className="w-full sm:w-[92%] mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
@@ -2247,7 +2315,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Show loading state while ships and map data are being fetched
   if (shipsLoading || mapLoading) {
     return (
-      <div className="w-full max-w-[1170px] mx-auto space-y-6">
+      <div className="w-full sm:w-[92%] mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
@@ -2299,7 +2367,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   }
 
   return (
-    <div className="w-full max-w-[1170px] mx-auto space-y-6">
+    <div ref={gameViewRootRef} className="w-full mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -3815,13 +3883,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       </div>
 
       {/* Last Move */}
-      <GameEvents
-        lastMove={displayedLastMove}
-        shipMap={shipMap}
-        address={address}
-        appendDestroyedText={appendDestroyedTextToLastMove}
-        debugSuffix={lastMoveTargetPositionDebugSuffix}
-      />
+      <div ref={lastMoveCardRef}>
+        <GameEvents
+          lastMove={displayedLastMove}
+          shipMap={shipMap}
+          address={address}
+          appendDestroyedText={appendDestroyedTextToLastMove}
+          debugSuffix={lastMoveTargetPositionDebugSuffix}
+        />
+      </div>
 
       {/* Ship Details */}
       <div

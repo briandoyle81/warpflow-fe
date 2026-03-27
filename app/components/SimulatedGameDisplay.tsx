@@ -105,6 +105,8 @@ export function SimulatedGameDisplay({
     row: number;
     col: number;
   } | null>(null);
+  const gameViewRootRef = React.useRef<HTMLDivElement | null>(null);
+  const lastMoveCardRef = React.useRef<HTMLDivElement | null>(null);
 
   // Mirror live game: whose turn it is comes from simulated state (e.g. after
   // end of round, opponent may go first).
@@ -1741,8 +1743,74 @@ export function SimulatedGameDisplay({
     executeAction,
   ]);
 
+  // Keep tutorial game width as large as possible while preserving visibility
+  // of the Last Move card at the top of the viewport.
+  useEffect(() => {
+    const root = gameViewRootRef.current;
+    const lastMove = lastMoveCardRef.current;
+    if (!root || !lastMove) return;
+
+    let rafId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const fitWidth = () => {
+      const parentWidth =
+        root.parentElement?.clientWidth ?? document.documentElement.clientWidth;
+      if (parentWidth <= 0) return;
+
+      let low = Math.min(Math.max(820, Math.floor(parentWidth * 0.55)), parentWidth);
+      let high = parentWidth;
+      let best = low;
+
+      for (let i = 0; i < 12; i++) {
+        const mid = Math.floor((low + high) / 2);
+        root.style.width = `${mid}px`;
+        const bottom = lastMove.getBoundingClientRect().bottom;
+        const fits = bottom <= window.innerHeight - 8;
+
+        if (fits) {
+          best = mid;
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+
+      root.style.width = `${Math.min(best, parentWidth)}px`;
+    };
+
+    const scheduleFit = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(fitWidth);
+      }, 120);
+    };
+
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => {
+            scheduleFit();
+          })
+        : null;
+
+    observer?.observe(root);
+    observer?.observe(lastMove);
+    if (root.parentElement) observer?.observe(root.parentElement);
+
+    window.addEventListener("resize", scheduleFit);
+    scheduleFit();
+
+    return () => {
+      window.removeEventListener("resize", scheduleFit);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (rafId) cancelAnimationFrame(rafId);
+      observer?.disconnect();
+    };
+  }, []);
+
   return (
-    <div className="w-full max-w-[1170px] mx-auto space-y-6">
+    <div ref={gameViewRootRef} className="w-full mx-auto space-y-6">
       {/* Header: back + game/round/turn + score + (optional) proposed move + Flee locked */}
       <div className="flex items-start justify-between gap-6">
         <div className="flex items-center gap-4">
@@ -2184,15 +2252,17 @@ export function SimulatedGameDisplay({
       </div>
 
       {/* Last Move panel - reuse GameEvents from live game */}
-      <GameEvents
-        lastMove={lastMoveForEvents}
-        shipMap={shipMap}
-        address={TUTORIAL_PLAYER_ADDRESS}
-        appendDestroyedText={
-          currentStep?.id === "ship-destruction" ||
-          currentStep?.id === "rescue"
-        }
-      />
+      <div ref={lastMoveCardRef}>
+        <GameEvents
+          lastMove={lastMoveForEvents}
+          shipMap={shipMap}
+          address={TUTORIAL_PLAYER_ADDRESS}
+          appendDestroyedText={
+            currentStep?.id === "ship-destruction" ||
+            currentStep?.id === "rescue"
+          }
+        />
+      </div>
 
       {/* Ship Details panel - mirror live game fleet layout using tutorial data */}
       <div
