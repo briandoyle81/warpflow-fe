@@ -180,6 +180,29 @@ const Games: React.FC = () => {
     prevAddressRef.current = address;
   }, [address, storageKey]);
 
+  // Notify Home layout when a game detail is open so global chrome
+  // (header/tabs) can be hidden consistently.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("void-tactics-games-detail-active", {
+        detail: { active: Boolean(selectedGame) },
+      }),
+    );
+  }, [selectedGame]);
+
+  // Ensure we clear the signal on unmount.
+  useEffect(() => {
+    return () => {
+      if (typeof window === "undefined") return;
+      window.dispatchEvent(
+        new CustomEvent("void-tactics-games-detail-active", {
+          detail: { active: false },
+        }),
+      );
+    };
+  }, []);
+
   // If a game is selected, show the game display
   if (selectedGame) {
     return (

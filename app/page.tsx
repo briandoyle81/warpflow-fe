@@ -21,6 +21,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("Info");
   const [isHydrated, setIsHydrated] = useState(false);
   const [isInfoTutorialActive, setIsInfoTutorialActive] = useState(false);
+  const [isGamesDetailActive, setIsGamesDetailActive] = useState(false);
 
   // Load saved tab after hydration
   useEffect(() => {
@@ -78,6 +79,25 @@ export default function Home() {
       document.removeEventListener(
         "void-tactics-navigate-to-games",
         handleNavigateToGames,
+      );
+    };
+  }, []);
+
+  // Listen for Games tab detail view activation so we can hide global chrome.
+  useEffect(() => {
+    const handleGamesDetailActive = (event: Event) => {
+      const custom = event as CustomEvent<{ active?: boolean }>;
+      setIsGamesDetailActive(Boolean(custom.detail?.active));
+    };
+
+    window.addEventListener(
+      "void-tactics-games-detail-active",
+      handleGamesDetailActive as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "void-tactics-games-detail-active",
+        handleGamesDetailActive as EventListener,
       );
     };
   }, []);
@@ -190,12 +210,25 @@ export default function Home() {
       </div>
     );
   }
+
+  const hideGlobalChrome =
+    (activeTab === "Info" && isInfoTutorialActive) || isGamesDetailActive;
+
   return (
     <div
       className="grid grid-rows-[auto_1fr_20px] min-h-screen"
       style={{ backgroundColor: "var(--color-near-black)" }}
     >
-      <Header />
+      <div
+        style={{
+          height: hideGlobalChrome ? 0 : "auto",
+          overflow: "hidden",
+          pointerEvents: hideGlobalChrome ? "none" : "auto",
+        }}
+        aria-hidden={hideGlobalChrome}
+      >
+        <Header />
+      </div>
       <main
         className={`flex flex-col gap-8 row-start-2 pt-4 pb-20 w-full ${
           activeTab === "Games" ||
@@ -214,7 +247,7 @@ export default function Home() {
               : "max-w-7xl mx-auto"
           }`}
         >
-          {status === "connected" && (
+          {status === "connected" && !hideGlobalChrome && (
             <div className="flex flex-wrap justify-center gap-2 mb-8">
               {(() => {
                 const tabs = [
