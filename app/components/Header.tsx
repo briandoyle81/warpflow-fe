@@ -31,9 +31,10 @@ const Header: React.FC = () => {
 
   const account = useAccount();
 
-  const [selectedChainId, setSelectedChainIdState] = useState<number>(
-    DEFAULT_CHAIN_ID
-  );
+  const [selectedChainId, setSelectedChainIdState] = useState<number>(() => {
+    if (typeof window === "undefined") return DEFAULT_CHAIN_ID;
+    return getSelectedChainId();
+  });
   const pendingSwitchChainIdRef = useRef<number | null>(null);
   const lastSwitchRequestRef = useRef<{ chainId: number; at: number } | null>(
     null
@@ -67,12 +68,6 @@ const Header: React.FC = () => {
   // Check if wallet is connecting
   const isConnecting =
     account.status === "connecting" || account.status === "reconnecting";
-
-  useEffect(() => {
-    if (!isHydrated) return;
-    const persisted = getSelectedChainId();
-    setSelectedChainIdState(persisted);
-  }, [isHydrated]);
 
   // When connected, ensure wallet is on the selected chain.
   useEffect(() => {
