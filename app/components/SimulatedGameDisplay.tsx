@@ -1742,7 +1742,7 @@ export function SimulatedGameDisplay({
   ]);
 
   return (
-    <div className="w-full max-w-none space-y-6">
+    <div className="w-full max-w-[1170px] mx-auto space-y-6">
       {/* Header: back + game/round/turn + score + (optional) proposed move + Flee locked */}
       <div className="flex items-start justify-between gap-6">
         <div className="flex items-center gap-4">

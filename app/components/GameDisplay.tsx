@@ -2154,7 +2154,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Show loading state if game data is being fetched
   if (gameLoading) {
     return (
-      <div className="w-full max-w-none space-y-6">
+      <div className="w-full max-w-[1170px] mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
@@ -2190,7 +2190,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Show error state if game data failed to load
   if (gameError) {
     return (
-      <div className="w-full max-w-none space-y-6">
+      <div className="w-full max-w-[1170px] mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <button
             onClick={onBack}
@@ -2247,7 +2247,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Show loading state while ships and map data are being fetched
   if (shipsLoading || mapLoading) {
     return (
-      <div className="w-full max-w-none space-y-6">
+      <div className="w-full max-w-[1170px] mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
@@ -2299,7 +2299,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   }
 
   return (
-    <div className="w-full max-w-none space-y-6">
+    <div className="w-full max-w-[1170px] mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
