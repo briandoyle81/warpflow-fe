@@ -91,6 +91,11 @@ interface GameGridProps {
   showLastMoveEmpReplayWhenSelected?: boolean;
   retreatPrepShipId?: bigint | null; // When set, this ship shows flip + engine glow (Retreat selected)
   retreatPrepIsCreator?: boolean | null; // For retreat prep flip direction
+  /**
+   * **Tutorial highlight**: cells that show a gentle pulsing yellow tint under ships
+   * (e.g. select-ship until a player ship is selected; view-enemy until an enemy ship).
+   */
+  tutorialHighlightCells?: readonly { row: number; col: number }[];
   setSelectedShipId: (shipId: bigint | null) => void;
   setPreviewPosition: (position: { row: number; col: number } | null) => void;
   setTargetShipId: (shipId: bigint | null) => void;
@@ -150,6 +155,7 @@ export function GameGrid({
   showLastMoveEmpReplayWhenSelected = false,
   retreatPrepShipId,
   retreatPrepIsCreator,
+  tutorialHighlightCells,
   setSelectedShipId,
   setPreviewPosition,
   setTargetShipId,
@@ -169,6 +175,14 @@ export function GameGrid({
 
   const showLastMoveEmpReplay =
     !selectedShipId || showLastMoveEmpReplayWhenSelected;
+
+  /** Set of `"row,col"` keys for `tutorialHighlightCells` (tutorial highlight). */
+  const tutorialHighlightKeySet = React.useMemo(() => {
+    if (!tutorialHighlightCells?.length) return null;
+    return new Set(
+      tutorialHighlightCells.map((p) => `${p.row},${p.col}`),
+    );
+  }, [tutorialHighlightCells]);
 
   const flakEffectCells = React.useMemo(() => {
     // Flak should show explosions across all in-range tiles, including tiles
@@ -380,6 +394,10 @@ export function GameGrid({
                 const isShootingTile = shootingRange.some(
                   (pos) => pos.row === rowIndex && pos.col === colIndex,
                 );
+                const isTutorialHighlightCell =
+                  tutorialHighlightKeySet?.has(
+                    `${rowIndex},${colIndex}`,
+                  ) ?? false;
 
                 // Check if this ship has already moved this round
                 const hasShipMoved = cell && movedShipIdsSet.has(cell.shipId);
@@ -911,6 +929,10 @@ export function GameGrid({
                           </div>
                         );
                       })()}
+                    {/* Tutorial highlight: above movement/shooting/drag (z-2–3), below ship art + cell UI (z-10) */}
+                    {isTutorialHighlightCell && (
+                      <div className="absolute inset-0 z-[9] pointer-events-none border border-yellow-400/45 bg-yellow-400/12 animate-pulse" />
+                    )}
                     {shouldRenderShipContent && ship ? (
                       <div
                         className="w-full h-full relative z-10"

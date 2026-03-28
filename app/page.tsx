@@ -165,14 +165,32 @@ export default function Home() {
     }
   }, [activeTab, isHydrated]);
 
+  /** Hide site header (0px row) during Info onboarding tutorial or Games detail; not tied to wallet state. */
+  const hideGlobalChrome = isInfoTutorialActive || isGamesDetailActive;
+
   // Show loading state while wallet is connecting
   if (status === "connecting" || status === "reconnecting") {
     return (
       <div
-        className="grid grid-rows-[auto_1fr_20px] min-h-screen"
+        className={`grid min-h-screen ${
+          hideGlobalChrome
+            ? "grid-rows-[0px_1fr_20px]"
+            : "grid-rows-[auto_1fr_20px]"
+        }`}
         style={{ backgroundColor: "var(--color-near-black)" }}
       >
-        <Header />
+        <div
+          style={{
+            height: hideGlobalChrome ? "0px" : "auto",
+            minHeight: hideGlobalChrome ? 0 : undefined,
+            maxHeight: hideGlobalChrome ? "0px" : undefined,
+            overflow: "hidden",
+            pointerEvents: hideGlobalChrome ? "none" : "auto",
+          }}
+          aria-hidden={hideGlobalChrome}
+        >
+          <Header />
+        </div>
         <main className="flex flex-col gap-8 row-start-2 pt-4 pb-20 px-8 sm:px-20 w-full max-w-7xl mx-auto">
           <div
             className="border border-solid p-8"
@@ -211,17 +229,20 @@ export default function Home() {
     );
   }
 
-  const hideGlobalChrome =
-    (activeTab === "Info" && isInfoTutorialActive) || isGamesDetailActive;
-
   return (
     <div
-      className="grid grid-rows-[auto_1fr_20px] min-h-screen"
+      className={`grid min-h-screen ${
+        hideGlobalChrome
+          ? "grid-rows-[0px_1fr_20px]"
+          : "grid-rows-[auto_1fr_20px]"
+      }`}
       style={{ backgroundColor: "var(--color-near-black)" }}
     >
       <div
         style={{
-          height: hideGlobalChrome ? 0 : "auto",
+          height: hideGlobalChrome ? "0px" : "auto",
+          minHeight: hideGlobalChrome ? 0 : undefined,
+          maxHeight: hideGlobalChrome ? "0px" : undefined,
           overflow: "hidden",
           pointerEvents: hideGlobalChrome ? "none" : "auto",
         }}
@@ -231,10 +252,7 @@ export default function Home() {
       </div>
       <main
         className={`flex flex-col gap-8 row-start-2 pt-4 pb-20 w-full ${
-          activeTab === "Games" ||
-          (activeTab === "Info" && isInfoTutorialActive)
-            ? "px-0"
-            : "px-8 sm:px-20"
+          activeTab === "Games" || isInfoTutorialActive ? "px-0" : "px-8 sm:px-20"
         }`}
       >
         {/* Game Tabs */}
@@ -242,7 +260,7 @@ export default function Home() {
           className={`w-full ${
             activeTab === "Maps" ||
             activeTab === "Games" ||
-            (activeTab === "Info" && isInfoTutorialActive)
+            isInfoTutorialActive
               ? ""
               : "max-w-7xl mx-auto"
           }`}

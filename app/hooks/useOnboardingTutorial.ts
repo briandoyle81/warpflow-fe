@@ -17,7 +17,8 @@ const TUTORIAL_STEP_SNAPSHOTS_KEY = "void-tactics-tutorial-step-snapshots";
 const TUTORIAL_DATA_VERSION_KEY = "void-tactics-tutorial-data-version";
 // Bump this any time we change the canonical tutorial state so we don't keep
 // rendering stale snapshots from localStorage.
-const TUTORIAL_DATA_VERSION = "2026-03-26-completion-retreat-player-turn-v2";
+const TUTORIAL_DATA_VERSION =
+  "2026-03-27-completion-retreat-victory-parity-cta";
 
 export function useOnboardingTutorial() {
   // Load saved step index from localStorage, default to 0
@@ -40,21 +41,29 @@ export function useOnboardingTutorial() {
     return 0;
   });
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<TutorialAction | null>(null);
+  const [pendingAction, setPendingAction] = useState<TutorialAction | null>(
+    null,
+  );
   const [lastAction, setLastAction] = useState<TutorialAction | null>(null);
   const [isStepHydrated, setIsStepHydrated] = useState(false);
   const displayTotalSteps = 14;
   // The step index whose state is currently hydrated and visible on screen.
   // This lets us persist snapshots for the correct step even when
   // currentStepIndex has already advanced to the next step.
-  const [hydratedStepIndex, setHydratedStepIndex] = useState<number | null>(null);
+  const [hydratedStepIndex, setHydratedStepIndex] = useState<number | null>(
+    null,
+  );
 
-  const { gameState, updateGameState, applyAction, resetState } = useSimulatedGameState();
+  const { gameState, updateGameState, applyAction, resetState } =
+    useSimulatedGameState();
 
   // Per-step cached snapshots of game state and last action, so moving between
   // steps (or reloading) preserves positions and damage unless the user resets.
   const [stepSnapshots, setStepSnapshots] = useState<
-    ({ gameState: SimulatedGameState; lastAction: TutorialAction | null } | null)[]
+    ({
+      gameState: SimulatedGameState;
+      lastAction: TutorialAction | null;
+    } | null)[]
   >(() => {
     const empty = TUTORIAL_STEPS.map(() => null);
     if (typeof window === "undefined") return empty;
@@ -63,7 +72,10 @@ export function useOnboardingTutorial() {
       if (!raw) return empty;
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length === TUTORIAL_STEPS.length) {
-        return parsed as ({ gameState: SimulatedGameState; lastAction: TutorialAction | null } | null)[];
+        return parsed as ({
+          gameState: SimulatedGameState;
+          lastAction: TutorialAction | null;
+        } | null)[];
       }
     } catch {
       // Ignore parse errors and fall back to empty snapshots
@@ -74,7 +86,10 @@ export function useOnboardingTutorial() {
   // Save step index to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem(TUTORIAL_STEP_STORAGE_KEY, currentStepIndex.toString());
+      localStorage.setItem(
+        TUTORIAL_STEP_STORAGE_KEY,
+        currentStepIndex.toString(),
+      );
     }
   }, [currentStepIndex]);
 
@@ -98,7 +113,9 @@ export function useOnboardingTutorial() {
         hydratedStep.id === "ship-destruction" ||
         hydratedStep.id === "rescue" ||
         hydratedStep.id === "rescue-outcome-retreat" ||
-        hydratedStep.id === "rescue-outcome-sniper")
+        hydratedStep.id === "rescue-outcome-sniper" ||
+        hydratedStep.id === "completion-sniper" ||
+        hydratedStep.id === "completion-retreat")
     ) {
       return;
     }
@@ -133,148 +150,209 @@ export function useOnboardingTutorial() {
     // when the new step finishes hydrating.
   }, [currentStepIndex]);
 
-  const validateAction = useCallback((action: TutorialAction): { valid: boolean; message?: string } => {
-    if (!currentStep) {
-      return { valid: false, message: "No active tutorial step" };
-    }
-
-    const { allowedActions } = currentStep;
-
-    switch (action.type) {
-      case "selectShip":
-        if (!allowedActions.selectShip) {
-          return { valid: false, message: "Ship selection not allowed in this step" };
-        }
-        if (action.shipId && !allowedActions.selectShip.includes(action.shipId)) {
-          return { valid: false, message: "This ship cannot be selected in this step" };
-        }
-        return { valid: true };
-
-      case "moveShip":
-        if (!allowedActions.moveShip) {
-          return { valid: false, message: "Ship movement not allowed in this step" };
-        }
-        if (action.shipId !== allowedActions.moveShip.shipId) {
-          return { valid: false, message: "This ship cannot be moved in this step" };
-        }
-        if (action.position) {
-          const isAllowed = allowedActions.moveShip.allowedPositions.some(
-            (pos) => pos.row === action.position!.row && pos.col === action.position!.col
-          );
-          if (!isAllowed) {
-            return { valid: false, message: "This position is not allowed in this step" };
-          }
-        }
-        return { valid: true };
-
-      case "shoot":
-        if (!allowedActions.shoot) {
-          return { valid: false, message: "Shooting not allowed in this step" };
-        }
-        if (action.shipId !== allowedActions.shoot.shipId) {
-          return { valid: false, message: "This ship cannot shoot in this step" };
-        }
-        if (action.targetShipId && !allowedActions.shoot.allowedTargets.includes(action.targetShipId)) {
-          return { valid: false, message: "This target is not allowed in this step" };
-        }
-        return { valid: true };
-
-      case "useSpecial":
-        if (!allowedActions.useSpecial) {
-          return { valid: false, message: "Special abilities not allowed in this step" };
-        }
-        if (action.shipId !== allowedActions.useSpecial.shipId) {
-          return { valid: false, message: "This ship cannot use special in this step" };
-        }
-        if (action.targetShipId && !allowedActions.useSpecial.allowedTargets.includes(action.targetShipId)) {
-          return { valid: false, message: "This target is not allowed in this step" };
-        }
-        return { valid: true };
-
-      case "assist":
-        if (!allowedActions.assist) {
-          return { valid: false, message: "Assist not allowed in this step" };
-        }
-        if (action.shipId !== allowedActions.assist.shipId) {
-          return { valid: false, message: "This ship cannot assist in this step" };
-        }
-        if (action.targetShipId && !allowedActions.assist.allowedTargets.includes(action.targetShipId)) {
-          return { valid: false, message: "This target is not allowed in this step" };
-        }
-        return { valid: true };
-
-      case "claimPoints":
-        if (!allowedActions.claimPoints) {
-          return { valid: false, message: "Claiming points not allowed in this step" };
-        }
-        return { valid: true };
-
-      default:
-        return { valid: false, message: "Unknown action type" };
-    }
-  }, [currentStep]);
-
-  const executeAction = useCallback((action: TutorialAction) => {
-    const validation = validateAction(action);
-    if (!validation.valid) {
-      return { success: false, message: validation.message };
-    }
-
-    // If step requires transaction and should show after, execute first then show dialog
-    // Only show transaction dialog for moveShip actions, not for selectShip
-    if (
-      currentStep?.requiresTransaction &&
-      currentStep?.showTransactionAfter &&
-      action.type === "moveShip"
-    ) {
-      applyAction(action);
-      setLastAction(action); // Track the last action for step completion checking
-      setPendingAction(action);
-      // Delay showing the transaction dialog to allow the UI to update first
-      // Use requestAnimationFrame to ensure the ship has visually moved
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsTransactionDialogOpen(true);
-        });
-      });
-      return { success: true, pending: true };
-    }
-
-    // For the "shoot" step, follow the desired sequence:
-    // 1) select ship, 2) propose move (staged in UI), 3) select target,
-    // 4) click Submit to execute the composite action (move + shoot) in a
-    // single simulated transaction. The move is applied immediately with no
-    // transaction; only the shoot opens the simulated tx.
-    if (currentStep?.id === "shoot") {
-      if (action.type === "moveShip") {
-        // Apply the move immediately without any transaction dialog.
-        applyAction(action);
-        return { success: true };
+  const validateAction = useCallback(
+    (action: TutorialAction): { valid: boolean; message?: string } => {
+      if (!currentStep) {
+        return { valid: false, message: "No active tutorial step" };
       }
-      if (action.type === "shoot") {
+
+      const { allowedActions } = currentStep;
+
+      switch (action.type) {
+        case "selectShip":
+          if (!allowedActions.selectShip) {
+            return {
+              valid: false,
+              message: "Ship selection not allowed in this step",
+            };
+          }
+          if (
+            action.shipId &&
+            !allowedActions.selectShip.includes(action.shipId)
+          ) {
+            return {
+              valid: false,
+              message: "This ship cannot be selected in this step",
+            };
+          }
+          return { valid: true };
+
+        case "moveShip":
+          if (!allowedActions.moveShip) {
+            return {
+              valid: false,
+              message: "Ship movement not allowed in this step",
+            };
+          }
+          if (action.shipId !== allowedActions.moveShip.shipId) {
+            return {
+              valid: false,
+              message: "This ship cannot be moved in this step",
+            };
+          }
+          if (action.position) {
+            const isAllowed = allowedActions.moveShip.allowedPositions.some(
+              (pos) =>
+                pos.row === action.position!.row &&
+                pos.col === action.position!.col,
+            );
+            if (!isAllowed) {
+              return {
+                valid: false,
+                message: "This position is not allowed in this step",
+              };
+            }
+          }
+          return { valid: true };
+
+        case "shoot":
+          if (!allowedActions.shoot) {
+            return {
+              valid: false,
+              message: "Shooting not allowed in this step",
+            };
+          }
+          if (action.shipId !== allowedActions.shoot.shipId) {
+            return {
+              valid: false,
+              message: "This ship cannot shoot in this step",
+            };
+          }
+          if (
+            action.targetShipId &&
+            !allowedActions.shoot.allowedTargets.includes(action.targetShipId)
+          ) {
+            return {
+              valid: false,
+              message: "This target is not allowed in this step",
+            };
+          }
+          return { valid: true };
+
+        case "useSpecial":
+          if (!allowedActions.useSpecial) {
+            return {
+              valid: false,
+              message: "Special abilities not allowed in this step",
+            };
+          }
+          if (action.shipId !== allowedActions.useSpecial.shipId) {
+            return {
+              valid: false,
+              message: "This ship cannot use special in this step",
+            };
+          }
+          if (
+            action.targetShipId &&
+            !allowedActions.useSpecial.allowedTargets.includes(
+              action.targetShipId,
+            )
+          ) {
+            return {
+              valid: false,
+              message: "This target is not allowed in this step",
+            };
+          }
+          return { valid: true };
+
+        case "assist":
+          if (!allowedActions.assist) {
+            return { valid: false, message: "Assist not allowed in this step" };
+          }
+          if (action.shipId !== allowedActions.assist.shipId) {
+            return {
+              valid: false,
+              message: "This ship cannot assist in this step",
+            };
+          }
+          if (
+            action.targetShipId &&
+            !allowedActions.assist.allowedTargets.includes(action.targetShipId)
+          ) {
+            return {
+              valid: false,
+              message: "This target is not allowed in this step",
+            };
+          }
+          return { valid: true };
+
+        case "claimPoints":
+          if (!allowedActions.claimPoints) {
+            return {
+              valid: false,
+              message: "Claiming points not allowed in this step",
+            };
+          }
+          return { valid: true };
+
+        default:
+          return { valid: false, message: "Unknown action type" };
+      }
+    },
+    [currentStep],
+  );
+
+  const executeAction = useCallback(
+    (action: TutorialAction) => {
+      const validation = validateAction(action);
+      if (!validation.valid) {
+        return { success: false, message: validation.message };
+      }
+
+      // If step requires transaction and should show after, execute first then show dialog
+      // Only show transaction dialog for moveShip actions, not for selectShip
+      if (
+        currentStep?.requiresTransaction &&
+        currentStep?.showTransactionAfter &&
+        action.type === "moveShip"
+      ) {
+        applyAction(action);
+        setLastAction(action); // Track the last action for step completion checking
+        setPendingAction(action);
+        // Delay showing the transaction dialog to allow the UI to update first
+        // Use requestAnimationFrame to ensure the ship has visually moved
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setIsTransactionDialogOpen(true);
+          });
+        });
+        return { success: true, pending: true };
+      }
+
+      // For the "shoot" step, follow the desired sequence:
+      // 1) select ship, 2) propose move (staged in UI), 3) select target,
+      // 4) click Submit to execute the composite action (move + shoot) in a
+      // single simulated transaction. The move is applied immediately with no
+      // transaction; only the shoot opens the simulated tx.
+      if (currentStep?.id === "shoot") {
+        if (action.type === "moveShip") {
+          // Apply the move immediately without any transaction dialog.
+          applyAction(action);
+          return { success: true };
+        }
+        if (action.type === "shoot") {
+          setPendingAction(action);
+          setIsTransactionDialogOpen(true);
+          return { success: true, pending: true };
+        }
+      }
+
+      // If step requires transaction, show dialog first
+      // Only show transaction dialog for actions that require it (not selectShip)
+      if (currentStep?.requiresTransaction && action.type !== "selectShip") {
         setPendingAction(action);
         setIsTransactionDialogOpen(true);
         return { success: true, pending: true };
       }
-    }
 
-    // If step requires transaction, show dialog first
-    // Only show transaction dialog for actions that require it (not selectShip)
-    if (
-      currentStep?.requiresTransaction &&
-      action.type !== "selectShip"
-    ) {
-      setPendingAction(action);
-      setIsTransactionDialogOpen(true);
-      return { success: true, pending: true };
-    }
+      // Otherwise, execute immediately
+      applyAction(action);
+      setLastAction(action); // Track the last action for step completion checking
 
-    // Otherwise, execute immediately
-    applyAction(action);
-    setLastAction(action); // Track the last action for step completion checking
-
-    return { success: true };
-  }, [currentStep, validateAction, applyAction]);
+      return { success: true };
+    },
+    [currentStep, validateAction, applyAction],
+  );
 
   const approveTransaction = useCallback(() => {
     if (!pendingAction) return;
@@ -405,11 +483,15 @@ export function useOnboardingTutorial() {
     setCurrentStepIndex((prev) => {
       const currentId = TUTORIAL_STEPS[prev]?.id;
       if (currentId === "completion-retreat") {
-        const idx = TUTORIAL_STEPS.findIndex((s) => s.id === "rescue-outcome-retreat");
+        const idx = TUTORIAL_STEPS.findIndex(
+          (s) => s.id === "rescue-outcome-retreat",
+        );
         if (idx !== -1) return idx;
       }
       if (currentId === "completion-sniper") {
-        const idx = TUTORIAL_STEPS.findIndex((s) => s.id === "rescue-outcome-sniper");
+        const idx = TUTORIAL_STEPS.findIndex(
+          (s) => s.id === "rescue-outcome-sniper",
+        );
         if (idx !== -1) return idx;
       }
       const prevIndex = Math.max(prev - 1, 0);
@@ -485,6 +567,8 @@ export function useOnboardingTutorial() {
         currentStep.id === "rescue" ||
         currentStep.id === "rescue-outcome-retreat" ||
         currentStep.id === "rescue-outcome-sniper" ||
+        currentStep.id === "completion-sniper" ||
+        currentStep.id === "completion-retreat" ||
         ((currentStep.id === "score-points" ||
           currentStep.id === "shoot" ||
           currentStep.id === "end-of-round" ||
@@ -543,7 +627,10 @@ export function useOnboardingTutorial() {
     // canonical scripted state.
     window.localStorage.removeItem(TUTORIAL_STEP_STORAGE_KEY);
     window.localStorage.removeItem(TUTORIAL_STEP_SNAPSHOTS_KEY);
-    window.localStorage.setItem(TUTORIAL_DATA_VERSION_KEY, TUTORIAL_DATA_VERSION);
+    window.localStorage.setItem(
+      TUTORIAL_DATA_VERSION_KEY,
+      TUTORIAL_DATA_VERSION,
+    );
 
     setCurrentStepIndex(0);
     setStepSnapshots(TUTORIAL_STEPS.map(() => null));

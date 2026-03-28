@@ -64,9 +64,7 @@ export function applyTutorialStepScript(
           : pos,
       );
 
-      const targetIndex = updatedState.shipIds.findIndex(
-        (id) => id === empId,
-      );
+      const targetIndex = updatedState.shipIds.findIndex((id) => id === empId);
       const attackerIndex = updatedState.shipIds.findIndex(
         (id) => id === fighterId,
       );
@@ -80,8 +78,7 @@ export function applyTutorialStepScript(
         const damageReductionPercent = targetAttrs.damageReduction;
         const actualDamage = Math.max(
           1,
-          baseDamage -
-            Math.floor((baseDamage * damageReductionPercent) / 100),
+          baseDamage - Math.floor((baseDamage * damageReductionPercent) / 100),
         );
 
         targetAttrs.hullPoints = Math.max(
@@ -346,7 +343,9 @@ export function applyTutorialStepScript(
 
     case "rescue-outcome-retreat": {
       const empId: TutorialShipId = "1001";
-      const empPos = state.shipPositions.find((p) => p.shipId === empId)?.position;
+      const empPos = state.shipPositions.find(
+        (p) => p.shipId === empId,
+      )?.position;
       if (!empPos) return state;
 
       updatedState = applyTutorialAction(state, {
@@ -416,13 +415,36 @@ export function applyTutorialStepScript(
         shipPositions: next.shipPositions.map((p) =>
           p.shipId === empId ? { ...p, status: 1 as const } : p,
         ),
-        creatorActiveShipIds: next.creatorActiveShipIds.filter((id) => id !== empId),
+        creatorActiveShipIds: next.creatorActiveShipIds.filter(
+          (id) => id !== empId,
+        ),
         turnState: {
           ...next.turnState,
           currentTurn: next.metadata.creator,
         },
       };
 
+      updatedState = next;
+      break;
+    }
+
+    case "completion-sniper": {
+      // Victory path Step 14: canonical last move is Tutorial Fighter to the
+      // center scoring tile and a shot on the Enemy Fighter (ideal tx outcome).
+      const playerFighterId: TutorialShipId = "1003";
+      const enemyFighterId: TutorialShipId = "2001";
+
+      let next = applyTutorialAction(state, {
+        type: "moveShip",
+        shipId: playerFighterId,
+        position: { row: 5, col: 8 },
+      });
+      next = applyTutorialAction(next, {
+        type: "shoot",
+        shipId: playerFighterId,
+        targetShipId: enemyFighterId,
+        actionType: ActionType.Shoot,
+      });
       updatedState = next;
       break;
     }
@@ -473,4 +495,3 @@ export function applyTutorialStepScript(
 
   return updatedState;
 }
-

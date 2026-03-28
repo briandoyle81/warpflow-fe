@@ -94,3 +94,7 @@ After implementing watchers, monitor:
 - Component re-renders (React DevTools Profiler)
 
 If you see RPC requests triggered by drag-and-drop, modal toggles, or other UI interactions, the watcher is NOT properly memoized.
+
+## Tutorial
+
+**Tutorial highlight**: the gentle pulsing yellow cell tint used in the tutorial (e.g. player fleet on select-ship until a ship is selected; enemy fleet on view-enemy until an enemy ship is selected; Tutorial Fighter on move-ship until a ship is selected). In code this is `tutorialHighlightCells` on `GameGrid` and related naming in `SimulatedGameDisplay`.

@@ -91,11 +91,14 @@ function buildScriptedStates(): SimulatedGameState[] {
   );
   states.push(completionRetreat); // index 14
 
-  // completion-sniper
-  states.push(sniperOutcome); // index 15
+  const completionSniper = applyTutorialStepScript(
+    "completion-sniper",
+    structuredClone(sniperOutcome),
+  );
+  states.push(completionSniper); // index 15 = entering completion-sniper
 
-  // Duplicate completion slot so getScriptedStateForStepIndex(lastIndex) stays valid
-  states.push(sniperOutcome); // index 16
+  // Duplicate slot so getScriptedStateForStepIndex(lastIndex) stays valid
+  states.push(structuredClone(completionSniper)); // index 16
 
   return states;
 }
