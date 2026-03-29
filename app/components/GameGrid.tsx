@@ -931,7 +931,7 @@ export function GameGrid({
                       })()}
                     {/* Tutorial highlight: above movement/shooting/drag (z-2–3), below ship art + cell UI (z-10) */}
                     {isTutorialHighlightCell && (
-                      <div className="absolute inset-0 z-[9] pointer-events-none border border-yellow-400/45 bg-yellow-400/12 animate-pulse" />
+                      <div className="absolute inset-0 z-[9] pointer-events-none border border-yellow-400/90 bg-yellow-400/24 animate-pulse" />
                     )}
                     {shouldRenderShipContent && ship ? (
                       <div

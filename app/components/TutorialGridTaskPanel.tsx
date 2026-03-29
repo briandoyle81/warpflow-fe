@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, type ReactNode } from "react";
+import React, {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 export interface TutorialGridTaskPanelProps {
   /** Step title shown in the panel header */
@@ -47,6 +53,33 @@ const GRID_ROW_COUNT = 11;
 /** Default: panel bottom aligns with the bottom of row index 3 (fourth row). */
 const DEFAULT_PANEL_BOTTOM_ROW_EXCLUSIVE = 4;
 
+const SCROLL_EPS_PX = 4;
+
+function ScrollMoreCue({ variant }: { variant: "overlay" | "sticky" }) {
+  const inner = (
+    <span
+      className="rounded border border-cyan-500/40 bg-slate-950/95 px-2 py-0.5 text-xs font-mono uppercase tracking-wider text-cyan-300 shadow-sm shadow-cyan-950/50"
+      id="tutorial-panel-scroll-hint"
+    >
+      Scroll for more
+    </span>
+  );
+
+  if (variant === "sticky") {
+    return (
+      <div className="pointer-events-none sticky bottom-0 z-[5] -mt-10 flex h-10 shrink-0 items-end justify-center bg-gradient-to-t from-[rgb(15,23,42)] from-30% via-[rgb(15,23,42)]/75 to-transparent pb-1">
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex h-12 items-end justify-center bg-gradient-to-t from-[rgb(15,23,42)] from-25% via-[rgb(15,23,42)]/70 to-transparent pb-1">
+      {inner}
+    </div>
+  );
+}
+
 /**
  * In-grid tutorial panel (top-right over the map): narrative plus optional numbered
  * orders, same chrome (progress, nav; reset and quit in header).
@@ -70,6 +103,35 @@ export function TutorialGridTaskPanel({
   panelFitToContent = false,
 }: TutorialGridTaskPanelProps) {
   const [debugEnabled, setDebugEnabled] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentMeasureRef = useRef<HTMLDivElement>(null);
+  const [moreBelow, setMoreBelow] = useState(false);
+
+  const updateScrollHint = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    const canScrollDown =
+      scrollHeight > clientHeight + SCROLL_EPS_PX &&
+      scrollTop + clientHeight < scrollHeight - SCROLL_EPS_PX;
+    setMoreBelow((prev) => (prev === canScrollDown ? prev : canScrollDown));
+  }, []);
+
+  useLayoutEffect(() => {
+    updateScrollHint();
+    const scrollEl = scrollRef.current;
+    const contentEl = contentMeasureRef.current;
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(updateScrollHint);
+    });
+    if (scrollEl) ro.observe(scrollEl);
+    if (contentEl) ro.observe(contentEl);
+    window.addEventListener("resize", updateScrollHint);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", updateScrollHint);
+    };
+  }, [updateScrollHint, panelFitToContent, displayStepNumber]);
 
   const panelBottomRowExclusive = Math.min(
     GRID_ROW_COUNT,
@@ -84,9 +146,93 @@ export function TutorialGridTaskPanel({
   const canAdvance = !isVisibleLastStep && (debugEnabled || isStepComplete);
   const nextDisabled = !isVisibleLastStep ? !canAdvance : false;
 
+  const mainBody = (
+    <>
+      {typeof brief === "string" ? (
+        <p
+          className="text-sm leading-relaxed text-gray-200 whitespace-pre-line"
+          style={mono}
+        >
+          {brief}
+        </p>
+      ) : (
+        <div
+          className="space-y-2 text-sm leading-relaxed text-gray-200"
+          style={mono}
+        >
+          {brief}
+        </div>
+      )}
+
+      {tasks && tasks.length > 0 ? (
+        <div>
+          <p
+            className="text-sm uppercase tracking-widest text-cyan-400/90 mb-1"
+            style={mono}
+          >
+            {tasksSectionLabel}
+          </p>
+          <ol
+            className="list-decimal list-outside pl-4 space-y-1 text-sm leading-snug text-gray-200"
+            style={mono}
+          >
+            {tasks.map((t, i) => (
+              <li key={i}>{t}</li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
+
+      {primaryCta ? (
+        <div
+          className="mt-2 overflow-hidden border-2 border-cyan-400/70 bg-gradient-to-b from-cyan-950/50 to-slate-950/80 shadow-[0_0_24px_rgba(34,211,238,0.18)]"
+          style={{ borderRadius: 0 }}
+        >
+          <div className="space-y-1.5 px-2.5 pb-2 pt-2.5">
+            <p
+              className="text-sm uppercase tracking-[0.22em] text-cyan-300/95"
+              style={mono}
+            >
+              {primaryCta.eyebrow}
+            </p>
+            <p
+              className="text-base font-bold uppercase tracking-wide leading-tight text-white"
+              style={{
+                fontFamily:
+                  "var(--font-rajdhani), 'Arial Black', sans-serif",
+              }}
+            >
+              {primaryCta.headline}
+            </p>
+            <div
+              className="text-sm leading-relaxed text-gray-200"
+              style={mono}
+            >
+              {primaryCta.supporting}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={primaryCta.onClick}
+            className="w-full border-t-2 border-cyan-400/50 bg-cyan-600 py-3.5 px-3 text-center text-base font-bold uppercase tracking-wide text-white transition-colors hover:bg-cyan-500 active:bg-cyan-700"
+            style={{
+              fontFamily:
+                "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderRadius: 0,
+            }}
+          >
+            {primaryCta.buttonLabel}
+          </button>
+        </div>
+      ) : null}
+    </>
+  );
+
   return (
     <div
-      className={`pointer-events-auto absolute top-2 right-2 z-[190] flex w-[min(94%,23rem)] flex-col border-2 border-cyan-400/90 p-3 shadow-lg shadow-cyan-500/15 ${
+      ref={panelFitToContent ? scrollRef : undefined}
+      onScroll={panelFitToContent ? updateScrollHint : undefined}
+      className={`pointer-events-auto absolute top-2 right-2 z-[190] flex min-h-0 w-[min(117.5%,28.75rem)] flex-col border-2 border-cyan-400/90 p-3 shadow-lg shadow-cyan-500/15 ${
         panelFitToContent
           ? "overflow-y-auto overflow-x-hidden"
           : "overflow-hidden"
@@ -105,11 +251,12 @@ export function TutorialGridTaskPanel({
       }}
       role="region"
       aria-label={`Tutorial briefing, step ${displayStepNumber} of ${displayTotalSteps}`}
+      aria-describedby={moreBelow ? "tutorial-panel-scroll-hint" : undefined}
     >
       <div className="mb-2 flex shrink-0 items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h3
-            className="text-base font-bold uppercase tracking-wide text-cyan-300 leading-tight"
+            className="text-lg font-bold uppercase tracking-wide text-cyan-300 leading-tight"
             style={{
               fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
             }}
@@ -121,7 +268,7 @@ export function TutorialGridTaskPanel({
           <button
             type="button"
             onClick={onReset}
-            className="px-2 py-0.5 text-[10px] bg-yellow-800/90 text-yellow-100 rounded-none font-mono hover:bg-yellow-700 whitespace-nowrap"
+            className="px-2 py-0.5 text-sm bg-yellow-800/90 text-yellow-100 rounded-none font-mono hover:bg-yellow-700 whitespace-nowrap"
           >
             Reset
           </button>
@@ -129,7 +276,7 @@ export function TutorialGridTaskPanel({
             <button
               type="button"
               onClick={onQuit}
-              className="px-2 py-0.5 text-[10px] bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap"
+              className="px-2 py-0.5 text-sm bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap"
             >
               Quit
             </button>
@@ -146,98 +293,37 @@ export function TutorialGridTaskPanel({
         />
       </div>
 
-      <div
-        className={
-          panelFitToContent
-            ? "space-y-2 overflow-x-hidden pr-0.5"
-            : "min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pr-0.5"
-        }
-      >
-        {typeof brief === "string" ? (
-          <p
-            className="text-[11px] sm:text-xs leading-relaxed text-gray-200 whitespace-pre-line"
-            style={mono}
-          >
-            {brief}
-          </p>
-        ) : (
+      {panelFitToContent ? (
+        <>
           <div
-            className="space-y-2 text-[11px] sm:text-xs leading-relaxed text-gray-200"
-            style={mono}
+            ref={contentMeasureRef}
+            className="space-y-2 overflow-x-hidden pr-0.5"
           >
-            {brief}
+            {mainBody}
           </div>
-        )}
-
-        {tasks && tasks.length > 0 ? (
-          <div>
-            <p
-              className="text-[9px] uppercase tracking-widest text-cyan-400/90 mb-1"
-              style={mono}
-            >
-              {tasksSectionLabel}
-            </p>
-            <ol
-              className="list-decimal list-outside pl-4 space-y-1 text-[11px] sm:text-xs leading-snug text-gray-200"
-              style={mono}
-            >
-              {tasks.map((t, i) => (
-                <li key={i}>{t}</li>
-              ))}
-            </ol>
-          </div>
-        ) : null}
-
-        {primaryCta ? (
+          {moreBelow ? <ScrollMoreCue variant="sticky" /> : null}
+        </>
+      ) : (
+        <div className="relative flex min-h-0 flex-1 flex-col">
           <div
-            className="mt-2 overflow-hidden border-2 border-cyan-400/70 bg-gradient-to-b from-cyan-950/50 to-slate-950/80 shadow-[0_0_24px_rgba(34,211,238,0.18)]"
-            style={{ borderRadius: 0 }}
+            ref={scrollRef}
+            onScroll={updateScrollHint}
+            className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pr-0.5"
           >
-            <div className="space-y-1.5 px-2.5 pb-2 pt-2.5">
-              <p
-                className="text-[9px] uppercase tracking-[0.22em] text-cyan-300/95"
-                style={mono}
-              >
-                {primaryCta.eyebrow}
-              </p>
-              <p
-                className="text-sm font-bold uppercase tracking-wide leading-tight text-white"
-                style={{
-                  fontFamily:
-                    "var(--font-rajdhani), 'Arial Black', sans-serif",
-                }}
-              >
-                {primaryCta.headline}
-              </p>
-              <div
-                className="text-[11px] leading-snug text-gray-100"
-                style={mono}
-              >
-                {primaryCta.supporting}
-              </div>
+            <div ref={contentMeasureRef} className="space-y-2">
+              {mainBody}
             </div>
-            <button
-              type="button"
-              onClick={primaryCta.onClick}
-              className="w-full border-t-2 border-cyan-400/50 bg-cyan-600 py-3.5 px-3 text-center text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-cyan-500 active:bg-cyan-700"
-              style={{
-                fontFamily:
-                  "var(--font-rajdhani), 'Arial Black', sans-serif",
-                borderRadius: 0,
-              }}
-            >
-              {primaryCta.buttonLabel}
-            </button>
           </div>
-        ) : null}
-      </div>
+          {moreBelow ? <ScrollMoreCue variant="overlay" /> : null}
+        </div>
+      )}
 
       <div className="mt-2 flex shrink-0 flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={onPrevious}
           disabled={currentStepIndex === 0}
-          className="px-2.5 py-1 text-[10px] sm:text-xs bg-gray-700 text-white rounded-none font-mono hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2.5 py-1 text-sm bg-gray-700 text-white rounded-none font-mono hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           ← Prev
         </button>
@@ -247,14 +333,14 @@ export function TutorialGridTaskPanel({
             checked={debugEnabled}
             onChange={(e) => setDebugEnabled(e.target.checked)}
           />
-          <span className="text-[10px] font-mono text-gray-300">Debug</span>
+          <span className="text-sm font-mono text-gray-300">Debug</span>
         </label>
         {!isVisibleLastStep && (
           <button
             type="button"
             onClick={onNext}
             disabled={nextDisabled}
-            className="ml-auto px-2.5 py-1 text-[10px] sm:text-xs bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="ml-auto px-2.5 py-1 text-sm bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next →
           </button>

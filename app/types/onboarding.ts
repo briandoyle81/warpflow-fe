@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { Address } from "viem";
 import { Position, Attributes, ActionType } from "./types";
 
@@ -26,7 +25,6 @@ export interface TutorialStep {
   id: string;
   title: string;
   description: string;
-  instructions: string | ReactNode;
   allowedActions: {
     selectShip?: TutorialShipId[]; // Specific ship IDs that can be selected
     moveShip?: { shipId: TutorialShipId; allowedPositions: Position[] };
