@@ -2594,13 +2594,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         }
       >
         {renderProposedMoveSubmitCancelRow()}
-        <div
-          className={
-            chromeOnSide
-              ? "flex min-h-0 min-w-0 flex-1 flex-col gap-4"
-              : "flex min-h-0 min-w-0 flex-1 flex-row items-stretch gap-6"
-          }
-        >
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+          <div
+            className={
+              chromeOnSide
+                ? "flex min-h-0 min-w-0 flex-1 flex-col gap-4"
+                : "flex min-h-0 min-w-0 flex-1 flex-row items-stretch gap-6"
+            }
+          >
         <div className="flex min-w-0 flex-shrink-0 flex-col gap-1">
           {(() => {
             const ship = selectedShipId
@@ -2666,59 +2667,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               </div>
             );
           })()}
-          <button
-            type="button"
-            onClick={() => {
-              setActionOverride(ActionType.Retreat);
-              setTargetShipId(null);
-              setPreviewPosition(null);
-            }}
-            className="w-full px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
-            style={{
-              fontFamily:
-                "var(--font-rajdhani), 'Arial Black', sans-serif",
-              borderColor:
-                actionOverride === ActionType.Retreat
-                  ? "var(--color-warning-red)"
-                  : "var(--color-gunmetal)",
-              borderTopColor:
-                actionOverride === ActionType.Retreat
-                  ? "var(--color-warning-red)"
-                  : "var(--color-steel)",
-              borderLeftColor:
-                actionOverride === ActionType.Retreat
-                  ? "var(--color-warning-red)"
-                  : "var(--color-steel)",
-              color:
-                actionOverride === ActionType.Retreat
-                  ? "var(--color-warning-red)"
-                  : "var(--color-text-secondary)",
-              backgroundColor:
-                actionOverride === ActionType.Retreat
-                  ? "rgba(255, 77, 77, 0.15)"
-                  : "var(--color-slate)",
-              borderWidth: "2px",
-              borderStyle: "solid",
-              borderRadius: 0,
-            }}
-            onMouseEnter={(e) => {
-              if (actionOverride !== ActionType.Retreat) {
-                e.currentTarget.style.borderColor = "var(--color-warning-red)";
-                e.currentTarget.style.color = "var(--color-warning-red)";
-                e.currentTarget.style.backgroundColor =
-                  "rgba(255, 77, 77, 0.12)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (actionOverride !== ActionType.Retreat) {
-                e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-                e.currentTarget.style.color = "var(--color-text-secondary)";
-                e.currentTarget.style.backgroundColor = "var(--color-slate)";
-              }
-            }}
-          >
-            Retreat
-          </button>
         </div>
 
         {!isSelectedShipDisabled && validTargets.length > 0 && (
@@ -2802,6 +2750,60 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           (validTargets.length === 0 || isSelectedShipDisabled) && (
             <div className="min-h-0 min-w-0 flex-1" aria-hidden />
           )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setActionOverride(ActionType.Retreat);
+              setTargetShipId(null);
+              setPreviewPosition(null);
+            }}
+            className="w-full shrink-0 px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+            style={{
+              fontFamily:
+                "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderColor:
+                actionOverride === ActionType.Retreat
+                  ? "var(--color-warning-red)"
+                  : "var(--color-gunmetal)",
+              borderTopColor:
+                actionOverride === ActionType.Retreat
+                  ? "var(--color-warning-red)"
+                  : "var(--color-steel)",
+              borderLeftColor:
+                actionOverride === ActionType.Retreat
+                  ? "var(--color-warning-red)"
+                  : "var(--color-steel)",
+              color:
+                actionOverride === ActionType.Retreat
+                  ? "var(--color-warning-red)"
+                  : "var(--color-text-secondary)",
+              backgroundColor:
+                actionOverride === ActionType.Retreat
+                  ? "rgba(255, 77, 77, 0.15)"
+                  : "var(--color-slate)",
+              borderWidth: "2px",
+              borderStyle: "solid",
+              borderRadius: 0,
+            }}
+            onMouseEnter={(e) => {
+              if (actionOverride !== ActionType.Retreat) {
+                e.currentTarget.style.borderColor = "var(--color-warning-red)";
+                e.currentTarget.style.color = "var(--color-warning-red)";
+                e.currentTarget.style.backgroundColor =
+                  "rgba(255, 77, 77, 0.12)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (actionOverride !== ActionType.Retreat) {
+                e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                e.currentTarget.style.color = "var(--color-text-secondary)";
+                e.currentTarget.style.backgroundColor = "var(--color-slate)";
+              }
+            }}
+          >
+            Retreat
+          </button>
         </div>
       </div>
     </>
