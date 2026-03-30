@@ -34,6 +34,9 @@ interface TransactionButtonProps {
 
   // Validation
   validateBeforeTransaction?: () => boolean | string; // Return true or error message
+
+  /** Merged with defaults (e.g. square corners). Use for theme borders on the underlying button. */
+  style?: React.CSSProperties;
 }
 
 export function TransactionButton({
@@ -54,6 +57,7 @@ export function TransactionButton({
   onTransactionSent,
   onReceipt,
   validateBeforeTransaction,
+  style: buttonStyle,
 }: TransactionButtonProps) {
   const { writeContract, isPending, error, data: hash } = useWriteContract();
   const {
@@ -318,6 +322,7 @@ export function TransactionButton({
         isDisabled ? "opacity-50 cursor-not-allowed" : ""
       }`}
       style={{
+        ...(buttonStyle ?? {}),
         borderRadius: 0, // Force square corners for industrial theme
       }}
     >

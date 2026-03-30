@@ -2758,7 +2758,7 @@ export function SimulatedGameDisplay({
         <div
           className={
             chromeOnSide
-              ? "flex max-h-[min(100dvh-7rem,920px)] w-[min(18rem,34vw)] max-w-[20rem] shrink-0 flex-col gap-3 overflow-y-auto pl-2 pr-1"
+              ? "flex min-h-0 self-stretch w-[min(18rem,34vw)] max-w-[20rem] shrink-0 flex-col gap-3 overflow-hidden pl-2 pr-1"
               : "flex items-start justify-between gap-6"
           }
         >
@@ -2936,14 +2936,13 @@ export function SimulatedGameDisplay({
           </div>
         </div>
 
-        {/* Proposed Move panel: inline between score and Flee Battle when active.
-            Mirrors main game behavior: appears whenever an owned ship is selected
-            and eligible to act this round, even before a move is proposed. */}
+        {/* Proposed Move panel: Submit/Cancel on top; below that, ship + targets.
+            Shown when an owned ship is selected and eligible to act this round. */}
         {isShowingProposedMove && (
           <div
             className={
               chromeOnSide
-                ? "flex min-h-0 min-w-0 flex-1 flex-col border border-solid p-3"
+                ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto border border-solid p-3"
                 : "min-h-0 flex-1 border border-solid p-3"
             }
             style={{
@@ -2958,16 +2957,65 @@ export function SimulatedGameDisplay({
               className={
                 chromeOnSide
                   ? "flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 p-4"
-                  : "flex items-center gap-6 p-4"
+                  : "flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 p-4"
               }
             >
+              <div className="flex w-full min-w-0 shrink-0 flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={handleSubmitMove}
+                  className={`px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 min-w-0 flex-[2] ${
+                    shouldPulseSubmitMoveButton
+                      ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                      : ""
+                  }`}
+                  style={{
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    borderColor: "var(--color-phosphor-green)",
+                    borderTopColor: "var(--color-phosphor-green)",
+                    borderLeftColor: "var(--color-phosphor-green)",
+                    color: "var(--color-phosphor-green)",
+                    backgroundColor: "var(--color-steel)",
+                    borderWidth: "2px",
+                    borderStyle: "solid",
+                    borderRadius: 0,
+                  }}
+                >
+                  {isSelectedShipDisabled ? "Submit Retreat" : "Submit Move"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewPosition(null);
+                    setTargetShipId(null);
+                    setActionOverride(null);
+                  }}
+                  className="min-w-0 flex-[1] px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                  style={{
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    borderColor: "var(--color-gunmetal)",
+                    borderTopColor: "var(--color-steel)",
+                    borderLeftColor: "var(--color-steel)",
+                    color: "var(--color-text-secondary)",
+                    backgroundColor: "var(--color-slate)",
+                    borderWidth: "2px",
+                    borderStyle: "solid",
+                    borderRadius: 0,
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
               <div
                 className={
                   chromeOnSide
-                    ? "order-2 flex min-w-0 flex-shrink-0 flex-col gap-1"
-                    : "flex min-w-0 flex-shrink-0 flex-col gap-1"
+                    ? "flex min-h-0 min-w-0 flex-1 flex-col gap-4"
+                    : "flex min-h-0 min-w-0 flex-1 flex-row items-stretch gap-6"
                 }
               >
+              <div className="flex min-w-0 flex-shrink-0 flex-col gap-1">
                 {(() => {
                   const ship = shipMap.get(selectedShipId!);
                   const name =
@@ -3098,7 +3146,7 @@ export function SimulatedGameDisplay({
                 <div
                   className={
                     chromeOnSide
-                      ? "order-3 flex min-h-0 min-w-0 flex-1 flex-col"
+                      ? "flex min-h-0 min-w-0 flex-1 flex-col"
                       : "min-h-0 flex-1"
                   }
                 >
@@ -3175,69 +3223,8 @@ export function SimulatedGameDisplay({
 
               {chromeOnSide &&
                 (validTargets.length === 0 || isSelectedShipDisabled) && (
-                  <div
-                    className="order-4 min-h-0 min-w-0 flex-1"
-                    aria-hidden
-                  />
+                  <div className="min-h-0 min-w-0 flex-1" aria-hidden />
                 )}
-
-              <div
-                className={
-                  chromeOnSide
-                    ? "order-1 flex w-full shrink-0 flex-row gap-2"
-                    : "flex items-center gap-2"
-                }
-              >
-                <button
-                  type="button"
-                  onClick={handleSubmitMove}
-                  className={`px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 ${
-                    chromeOnSide ? "min-w-0 flex-[2]" : ""
-                  } ${
-                    shouldPulseSubmitMoveButton
-                      ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
-                      : ""
-                  }`}
-                  style={{
-                    fontFamily:
-                      "var(--font-rajdhani), 'Arial Black', sans-serif",
-                    borderColor: "var(--color-phosphor-green)",
-                    borderTopColor: "var(--color-phosphor-green)",
-                    borderLeftColor: "var(--color-phosphor-green)",
-                    color: "var(--color-phosphor-green)",
-                    backgroundColor: "var(--color-steel)",
-                    borderWidth: "2px",
-                    borderStyle: "solid",
-                    borderRadius: 0,
-                  }}
-                >
-                  {isSelectedShipDisabled ? "Submit Retreat" : "Submit Move"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPreviewPosition(null);
-                    setTargetShipId(null);
-                    setActionOverride(null);
-                  }}
-                  className={`px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150${
-                    chromeOnSide ? " min-w-0 flex-[1]" : ""
-                  }`}
-                  style={{
-                    fontFamily:
-                      "var(--font-rajdhani), 'Arial Black', sans-serif",
-                    borderColor: "var(--color-gunmetal)",
-                    borderTopColor: "var(--color-steel)",
-                    borderLeftColor: "var(--color-steel)",
-                    color: "var(--color-text-secondary)",
-                    backgroundColor: "var(--color-slate)",
-                    borderWidth: "2px",
-                    borderStyle: "solid",
-                    borderRadius: 0,
-                  }}
-                >
-                  Cancel
-                </button>
               </div>
             </div>
           </div>
