@@ -46,18 +46,18 @@ export function FleeSafetySwitch({
   };
 
   return (
-    <div className="flex items-center space-x-4 p-3 bg-gray-900 rounded-none-lg border border-red-600">
-      {/* Safety Lever */}
-      <div className="flex flex-col items-center space-y-1">
+    <div className="box-border flex h-full min-h-0 w-full min-w-0 items-stretch gap-3 border-2 border-solid border-red-600 bg-gray-900 px-4 py-2">
+      <div className="flex min-h-0 min-w-0 shrink-0 flex-col items-center justify-between self-stretch leading-none">
         <button
+          type="button"
           onClick={handleLeverToggle}
           disabled={locked}
-          className={`w-12 h-6 rounded-none-full border-2 transition-all duration-300 ${
+          className={`relative flex h-5 w-10 shrink-0 items-center overflow-hidden rounded-none border-2 transition-all duration-300 ${
             locked
-              ? "bg-gray-700 border-gray-500 cursor-not-allowed opacity-80"
+              ? "cursor-not-allowed border-gray-500 bg-gray-700 opacity-80"
               : isLeverOpen
-                ? "bg-red-600 border-red-400 shadow-lg shadow-red-600/50"
-                : "bg-gray-700 border-gray-500 hover:border-gray-400"
+                ? "border-red-400 bg-red-600 shadow-lg shadow-red-600/50"
+                : "border-gray-500 bg-gray-700 hover:border-gray-400"
           }`}
           title={
             locked
@@ -68,26 +68,26 @@ export function FleeSafetySwitch({
           }
         >
           <div
-            className={`w-4 h-4 rounded-none-full transition-all duration-300 ${
+            className={`h-3 w-3 rounded-none-full transition-all duration-300 ${
               isLeverOpen
-                ? "bg-red-200 translate-x-6"
-                : "bg-gray-400 translate-x-1"
+                ? "translate-x-5 bg-red-200"
+                : "translate-x-0.5 bg-gray-400"
             }`}
           />
         </button>
-        <div className="text-xs text-gray-500 font-mono">
+        <span className="text-[9px] font-mono uppercase tracking-tight text-gray-500">
           {isLeverOpen ? "UNLOCKED" : "LOCKED"}
-        </div>
+        </span>
       </div>
 
-      {/* Flee Button - Always visible but disabled when lever is locked */}
       <button
+        type="button"
         onClick={isLeverOpen ? handleFleeClick : undefined}
         disabled={!isLeverOpen}
-        className={`px-4 py-2 font-mono font-bold rounded-none border-2 transition-all duration-200 ${
+        className={`min-h-0 shrink-0 px-3 py-2 text-xs font-mono font-bold uppercase leading-none tracking-wider rounded-none border-2 border-solid transition-all duration-200 ${
           isLeverOpen
-            ? "bg-red-700 hover:bg-red-600 text-white border-red-500 hover:shadow-lg hover:shadow-red-600/50 cursor-pointer"
-            : "bg-gray-600 text-gray-400 border-gray-500 cursor-not-allowed"
+            ? "cursor-pointer border-red-500 bg-red-700 text-white hover:bg-red-600 hover:shadow-lg hover:shadow-red-600/50"
+            : "cursor-not-allowed border-gray-500 bg-gray-600 text-gray-400"
         }`}
       >
         FLEE BATTLE

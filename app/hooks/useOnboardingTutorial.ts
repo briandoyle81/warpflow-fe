@@ -3,6 +3,7 @@ import {
   TutorialAction,
   TutorialContextValue,
   SimulatedGameState,
+  TUTORIAL_STEP_STORAGE_KEY,
 } from "../types/onboarding";
 import { ActionType } from "../types/types";
 import { TUTORIAL_STEPS } from "../data/tutorialSteps";
@@ -12,7 +13,6 @@ import {
 } from "../data/tutorialScriptedStates";
 import { useSimulatedGameState } from "./useSimulatedGameState";
 
-const TUTORIAL_STEP_STORAGE_KEY = "void-tactics-tutorial-step-index";
 const TUTORIAL_STEP_SNAPSHOTS_KEY = "void-tactics-tutorial-step-snapshots";
 const TUTORIAL_DATA_VERSION_KEY = "void-tactics-tutorial-data-version";
 // Bump this any time we change the canonical tutorial state so we don't keep

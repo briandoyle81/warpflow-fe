@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useLayoutEffect } from "react";
 import { OnboardingTutorial } from "./OnboardingTutorial";
+import { TUTORIAL_STEP_STORAGE_KEY } from "../types/onboarding";
 import { useAccount } from "wagmi";
 import { HeroShipShowcase } from "./HeroShipShowcase";
 import { useFreeShipClaiming } from "../hooks/useFreeShipClaiming";
 import { useOwnedShips } from "../hooks/useOwnedShips";
 import { FreeShipClaimButton } from "./FreeShipClaimButton";
-
-const TUTORIAL_STEP_STORAGE_KEY = "void-tactics-tutorial-step-index";
 
 const Info: React.FC = () => {
   const { isConnected } = useAccount();
@@ -32,7 +31,7 @@ const Info: React.FC = () => {
 
   // Notify the top-level layout when tutorial is active so it can mirror
   // the full-width game view layout (no extra padding/max-width).
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     window.dispatchEvent(
       new CustomEvent("void-tactics-info-tutorial-active", {

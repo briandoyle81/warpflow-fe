@@ -19,6 +19,9 @@ import { Position, Attributes, ActionType } from "./types";
  *   bigint IDs, convert at the boundary with BigInt(idString).
  */
 
+/** Persisted tutorial step index; presence means Info should resume the sim tutorial. */
+export const TUTORIAL_STEP_STORAGE_KEY = "void-tactics-tutorial-step-index";
+
 export type TutorialShipId = string;
 
 export interface TutorialStep {

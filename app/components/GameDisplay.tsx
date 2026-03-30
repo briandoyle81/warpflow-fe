@@ -24,6 +24,10 @@ import {
 import { TransactionButton } from "./TransactionButton";
 import { toast } from "react-hot-toast";
 import { useTransaction } from "../providers/TransactionContext";
+import {
+  GAME_VIEW_SIDE_ROOT_CLASS,
+  useGameViewChromeLayout,
+} from "../hooks/useGameViewChromeLayout";
 import { useSpecialRange } from "../hooks/useSpecialRange";
 import {
   useSpecialData,
@@ -81,8 +85,22 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     row: number;
     col: number;
   } | null>(null);
+  const [isLastMovePanelMinimized, setIsLastMovePanelMinimized] =
+    useState(true);
   const gameViewRootRef = React.useRef<HTMLDivElement | null>(null);
-  const lastMoveCardRef = React.useRef<HTMLDivElement | null>(null);
+  const gridContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const chromeLayout = useGameViewChromeLayout(
+    gameViewRootRef,
+    gridContainerRef,
+  );
+  const chromeOnSide = chromeLayout === "side";
+
+  const proposedMoveTargetListClass = chromeOnSide
+    ? "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
+    : "flex flex-wrap gap-2 min-h-[5rem]";
+  const proposedMoveTargetBtnClass = chromeOnSide
+    ? "h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex w-full shrink-0 items-center justify-center"
+    : "h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0";
 
   // If the user starts targeting or moving, clear any explicit "retreat" override.
   React.useEffect(() => {
@@ -2153,72 +2171,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     };
   }, []);
 
-  // Dynamically fit game width to viewport height so the Last Move card stays
-  // fully visible while keeping the board as wide as possible.
-  React.useEffect(() => {
-    const root = gameViewRootRef.current;
-    const lastMove = lastMoveCardRef.current;
-    if (!root || !lastMove) return;
-
-    let rafId: number | null = null;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    const fitWidth = () => {
-      const parentWidth =
-        root.parentElement?.clientWidth ?? document.documentElement.clientWidth;
-      if (parentWidth <= 0) return;
-
-      let low = Math.min(Math.max(820, Math.floor(parentWidth * 0.55)), parentWidth);
-      let high = parentWidth;
-      let best = low;
-
-      for (let i = 0; i < 12; i++) {
-        const mid = Math.floor((low + high) / 2);
-        root.style.width = `${mid}px`;
-        const bottom = lastMove.getBoundingClientRect().bottom;
-        const fits = bottom <= window.innerHeight - 8;
-
-        if (fits) {
-          best = mid;
-          low = mid + 1;
-        } else {
-          high = mid - 1;
-        }
-      }
-
-      root.style.width = `${Math.min(best, parentWidth)}px`;
-    };
-
-    const scheduleFit = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(fitWidth);
-      }, 120);
-    };
-
-    const observer =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => {
-            scheduleFit();
-          })
-        : null;
-
-    observer?.observe(root);
-    observer?.observe(lastMove);
-    if (root.parentElement) observer?.observe(root.parentElement);
-
-    window.addEventListener("resize", scheduleFit);
-    scheduleFit();
-
-    return () => {
-      window.removeEventListener("resize", scheduleFit);
-      if (timeoutId) clearTimeout(timeoutId);
-      if (rafId) cancelAnimationFrame(rafId);
-      observer?.disconnect();
-    };
-  }, []);
-
   // Show loading state if game data is being fetched
   if (gameLoading) {
     return (
@@ -2367,33 +2319,105 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   }
 
   return (
-    <div ref={gameViewRootRef} className="w-full mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={onBack}
-            className="px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
-            style={{
-              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-              borderColor: "var(--color-gunmetal)",
-              color: "var(--color-text-secondary)",
-              backgroundColor: "var(--color-steel)",
-              borderRadius: 0,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--color-slate)";
-              e.currentTarget.style.borderColor = "var(--color-cyan)";
-              e.currentTarget.style.color = "var(--color-cyan)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--color-steel)";
-              e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-              e.currentTarget.style.color = "var(--color-text-secondary)";
-            }}
-          >
-            ←
-          </button>
+    <div
+      ref={gameViewRootRef}
+      className={`flex flex-col gap-6 ${
+        chromeOnSide ? GAME_VIEW_SIDE_ROOT_CLASS : "mx-auto w-full"
+      }`}
+      style={
+        chromeOnSide
+          ? {
+              marginLeft: "8px",
+            }
+          : undefined
+      }
+    >
+      <div
+        className={
+          chromeOnSide
+            ? "flex min-h-0 min-w-0 flex-row items-stretch gap-4"
+            : "flex flex-col gap-6"
+        }
+      >
+      {/* Header chrome (top bar or left rail) */}
+      <div
+        className={
+          chromeOnSide
+            ? "flex min-h-0 w-[min(18rem,34vw)] max-w-[20rem] shrink-0 flex-col gap-3 self-stretch overflow-hidden pl-2 pr-1"
+            : "flex items-center justify-between"
+        }
+      >
+        <div
+          className={
+            chromeOnSide
+              ? "flex shrink-0 flex-col items-stretch gap-3"
+              : "flex items-center space-x-4"
+          }
+        >
+          <div className="flex w-full min-w-0 flex-col gap-2">
+            <div className="flex w-full min-w-0 items-stretch gap-2">
+              <div className="flex w-1/5 min-h-0 shrink-0 justify-start">
+                <button
+                  onClick={onBack}
+                  className="flex min-h-0 w-full items-center justify-center px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    borderColor: "var(--color-gunmetal)",
+                    color: "var(--color-text-secondary)",
+                    backgroundColor: "var(--color-steel)",
+                    borderRadius: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                    e.currentTarget.style.borderColor = "var(--color-cyan)";
+                    e.currentTarget.style.color = "var(--color-cyan)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                    e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                    e.currentTarget.style.color = "var(--color-text-secondary)";
+                  }}
+                >
+                  ←
+                </button>
+              </div>
+              <div className="flex min-h-0 w-4/5 min-w-0 flex-col justify-center">
+                {game.metadata.winner ===
+                  "0x0000000000000000000000000000000000000000" && (
+                  <FleeSafetySwitch
+                    gameId={game.metadata.gameId}
+                    onFlee={() => {
+                      toast.success("You have fled the battle!");
+                      refetch?.();
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+            <div className="flex w-full min-w-0 items-center gap-2">
+              <div className="w-1/5 shrink-0" aria-hidden />
+              <div className="w-4/5 min-w-0 text-right">
+                <div className="text-sm text-gray-400">
+                  {game.metadata.winner !==
+                    "0x0000000000000000000000000000000000000000" && (
+                    <span
+                      className="uppercase font-bold tracking-wider"
+                      style={{
+                        fontFamily:
+                          "var(--font-rajdhani), 'Arial Black', sans-serif",
+                        color:
+                          game.metadata.winner === address
+                            ? "var(--color-phosphor-green)"
+                            : "var(--color-warning-red)",
+                      }}
+                    >
+                      {game.metadata.winner === address ? "VICTORY" : "DEFEAT"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="flex flex-col">
             <h1 className="text-2xl font-mono text-white flex items-center gap-3">
               <span>Game {game.metadata.gameId.toString()}</span>
@@ -2661,7 +2685,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           </div>
           {/* Scores box aligned left, to the right of title */}
           <div
-            className="ml-6 p-2 border border-solid w-48 text-lg"
+            className={
+              chromeOnSide
+                ? "w-full border border-solid p-2 text-lg"
+                : "ml-6 w-48 border border-solid p-2 text-lg"
+            }
             style={{
               backgroundColor: "var(--color-slate)",
               borderColor: "var(--color-gunmetal)",
@@ -2730,9 +2758,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         {/* Move Confirmation UI - positioned between left and right sections */}
         {/* Reserve space even when hidden to avoid layout jumping */}
         <div
-          className="flex-1 mx-6 border border-solid min-h-[128px]"
+          className={
+            chromeOnSide
+              ? "flex min-h-0 min-w-0 flex-1 flex-col border border-solid p-3"
+              : "mx-6 min-h-[128px] flex-1 border border-solid"
+          }
           style={{
-            backgroundColor: "var(--color-slate)",
+            backgroundColor: chromeOnSide
+              ? "var(--color-near-black)"
+              : "var(--color-slate)",
             borderColor: "var(--color-gunmetal)",
             borderTopColor: "var(--color-steel)",
             borderLeftColor: "var(--color-steel)",
@@ -2742,163 +2776,317 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           {/* Show ONLY for player's own proposed moves, NOT for last move display */}
           {isShowingProposedMove ? (
             <>
-              <div className="flex items-center gap-6 p-4">
-                {/* Left: Ship Info */}
-                <div className="flex flex-col gap-2 min-w-0 flex-shrink-0">
-                  <div className="flex items-center gap-3">
-                    <span className="text-white font-semibold">
-                      {(() => {
-                        if (selectedShipId) {
-                          const selectedShip = shipMap.get(selectedShipId);
-                          return (
-                            selectedShip?.name ||
-                            `Ship #${selectedShipId.toString()}`
-                          );
-                        }
-                        return "Unknown Ship";
-                      })()}
-                    </span>
-                    <span className="text-gray-500">→</span>
-                    <span className="text-gray-300 font-mono">
-                      {(() => {
-                        const currentPosition = game.shipPositions.find(
-                          (pos) => pos.shipId === selectedShipId,
-                        );
-                        const isHoldingPosition =
-                          !previewPosition ||
-                          (!!currentPosition &&
-                            previewPosition.row ===
-                              currentPosition.position.row &&
-                            previewPosition.col ===
-                              currentPosition.position.col);
-
-                        if (isHoldingPosition) return "HOLD POSITION";
-                        return `(${previewPosition!.row}, ${previewPosition!.col})`;
-                      })()}
-                    </span>
+              <div
+                className={
+                  chromeOnSide
+                    ? "flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 p-4"
+                    : "flex items-center gap-6 p-4"
+                }
+              >
+                {/* Ship + weapon + retreat (side rail: vertical, matches tutorial) */}
+                {chromeOnSide ? (
+                  <div className="order-2 flex min-w-0 flex-shrink-0 flex-col gap-1">
                     {(() => {
-                      const points = (() => {
-                        if (previewPosition) {
-                          const row = previewPosition.row;
-                          const col = previewPosition.col;
-                          return (
-                            (scoringGrid[row] && scoringGrid[row][col]) || 0
-                          );
-                        }
-                        const currentPosition = game.shipPositions.find(
-                          (pos) => pos.shipId === selectedShipId,
-                        );
-                        if (!currentPosition) return 0;
-                        const r = currentPosition.position.row;
-                        const c = currentPosition.position.col;
-                        return (scoringGrid[r] && scoringGrid[r][c]) || 0;
-                      })();
-                      return points > 0 ? (
-                        <span className="text-yellow-400 text-sm">
-                          ⭐ {points}
-                        </span>
-                      ) : null;
+                      const ship = selectedShipId
+                        ? shipMap.get(selectedShipId)
+                        : undefined;
+                      const name =
+                        ship?.name ||
+                        (selectedShipId
+                          ? `Ship #${selectedShipId.toString()}`
+                          : "Unknown Ship");
+                      const currentPosition = game.shipPositions.find(
+                        (pos) => pos.shipId === selectedShipId,
+                      );
+                      const fromRow = currentPosition?.position.row ?? 0;
+                      const fromCol = currentPosition?.position.col ?? 0;
+                      const toRow = previewPosition
+                        ? previewPosition.row
+                        : fromRow;
+                      const toCol = previewPosition
+                        ? previewPosition.col
+                        : fromCol;
+                      return (
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                          <div className="text-sm font-semibold text-white">
+                            {name}
+                          </div>
+                          <div className="text-sm font-mono text-gray-300">
+                            ({fromRow}, {fromCol}) → ({toRow}, {toCol})
+                          </div>
+                        </div>
+                      );
                     })()}
-                  </div>
-                  {selectedShip && selectedShip.equipment.special > 0 && (
-                    <select
-                      value={selectedWeaponType}
-                      onChange={(e) => {
-                        const newWeaponType = e.target.value as
-                          | "weapon"
-                          | "special";
-                        setSelectedWeaponType(newWeaponType);
-                        if (newWeaponType === "special" && specialType === 3) {
-                          setTargetShipId(0n);
-                        } else {
-                          setTargetShipId(null);
-                        }
+                    {selectedShip && selectedShip.equipment.special > 0 && (
+                      <select
+                        value={selectedWeaponType}
+                        onChange={(e) => {
+                          const newWeaponType = e.target.value as
+                            | "weapon"
+                            | "special";
+                          setSelectedWeaponType(newWeaponType);
+                          if (
+                            newWeaponType === "special" &&
+                            specialType === 3
+                          ) {
+                            setTargetShipId(0n);
+                          } else {
+                            setTargetShipId(null);
+                          }
+                        }}
+                        className="mt-1 w-full px-3 py-1.5 text-sm uppercase font-semibold tracking-wider"
+                        style={{
+                          fontFamily:
+                            "var(--font-jetbrains-mono), 'Courier New', monospace",
+                          borderRadius: 0,
+                          backgroundColor: "var(--color-slate)",
+                          color: "var(--color-text-primary)",
+                        }}
+                      >
+                        <option value="weapon">
+                          {selectedShip
+                            ? getMainWeaponName(
+                                selectedShip.equipment.mainWeapon,
+                              )
+                            : "Weapon"}
+                        </option>
+                        <option value="special">
+                          {selectedShip
+                            ? getSpecialName(selectedShip.equipment.special)
+                            : "Special"}
+                        </option>
+                      </select>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActionOverride(ActionType.Retreat);
+                        setTargetShipId(null);
+                        setPreviewPosition(null);
                       }}
-                      className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider"
+                      className="w-full px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
                       style={{
                         fontFamily:
-                          "var(--font-jetbrains-mono), 'Courier New', monospace",
+                          "var(--font-rajdhani), 'Arial Black', sans-serif",
+                        borderColor:
+                          actionOverride === ActionType.Retreat
+                            ? "var(--color-warning-red)"
+                            : "var(--color-gunmetal)",
+                        borderTopColor:
+                          actionOverride === ActionType.Retreat
+                            ? "var(--color-warning-red)"
+                            : "var(--color-steel)",
+                        borderLeftColor:
+                          actionOverride === ActionType.Retreat
+                            ? "var(--color-warning-red)"
+                            : "var(--color-steel)",
+                        color:
+                          actionOverride === ActionType.Retreat
+                            ? "var(--color-warning-red)"
+                            : "var(--color-text-secondary)",
+                        backgroundColor:
+                          actionOverride === ActionType.Retreat
+                            ? "rgba(255, 77, 77, 0.15)"
+                            : "var(--color-slate)",
+                        borderWidth: "2px",
+                        borderStyle: "solid",
                         borderRadius: 0,
                       }}
+                      onMouseEnter={(e) => {
+                        if (actionOverride !== ActionType.Retreat) {
+                          e.currentTarget.style.borderColor =
+                            "var(--color-warning-red)";
+                          e.currentTarget.style.color =
+                            "var(--color-warning-red)";
+                          e.currentTarget.style.backgroundColor =
+                            "rgba(255, 77, 77, 0.12)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (actionOverride !== ActionType.Retreat) {
+                          e.currentTarget.style.borderColor =
+                            "var(--color-gunmetal)";
+                          e.currentTarget.style.color =
+                            "var(--color-text-secondary)";
+                          e.currentTarget.style.backgroundColor =
+                            "var(--color-slate)";
+                        }
+                      }}
                     >
-                      <option value="weapon">
-                        {selectedShip
-                          ? getMainWeaponName(selectedShip.equipment.mainWeapon)
-                          : "Weapon"}
-                      </option>
-                      <option value="special">
-                        {selectedShip
-                          ? getSpecialName(selectedShip.equipment.special)
-                          : "Special"}
-                      </option>
-                    </select>
-                  )}
-                  {/* Retreat: always below weapon select, independent of target */}
-                  <button
-                    onClick={() => {
-                      setActionOverride(ActionType.Retreat);
-                      setTargetShipId(null);
-                      setPreviewPosition(null);
-                      // Keep selectedWeaponType so it only changes when player uses the dropdown
-                    }}
-                    className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 w-fit"
-                    style={{
-                      fontFamily:
-                        "var(--font-rajdhani), 'Arial Black', sans-serif",
-                      borderColor:
-                        actionOverride === ActionType.Retreat
-                          ? "var(--color-warning-red)"
-                          : "var(--color-gunmetal)",
-                      borderTopColor:
-                        actionOverride === ActionType.Retreat
-                          ? "var(--color-warning-red)"
-                          : "var(--color-steel)",
-                      borderLeftColor:
-                        actionOverride === ActionType.Retreat
-                          ? "var(--color-warning-red)"
-                          : "var(--color-steel)",
-                      color:
-                        actionOverride === ActionType.Retreat
-                          ? "var(--color-warning-red)"
-                          : "var(--color-text-secondary)",
-                      backgroundColor:
-                        actionOverride === ActionType.Retreat
-                          ? "rgba(255, 77, 77, 0.15)"
-                          : "var(--color-slate)",
-                      borderWidth: "2px",
-                      borderStyle: "solid",
-                      borderRadius: 0,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (actionOverride !== ActionType.Retreat) {
-                        e.currentTarget.style.borderColor =
-                          "var(--color-warning-red)";
-                        e.currentTarget.style.color =
-                          "var(--color-warning-red)";
-                        e.currentTarget.style.backgroundColor =
-                          "rgba(255, 77, 77, 0.12)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (actionOverride !== ActionType.Retreat) {
-                        e.currentTarget.style.borderColor =
-                          "var(--color-gunmetal)";
-                        e.currentTarget.style.color =
-                          "var(--color-text-secondary)";
-                        e.currentTarget.style.backgroundColor =
-                          "var(--color-slate)";
-                      }
-                    }}
-                  >
-                    Retreat
-                  </button>
-                </div>
+                      Retreat
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex min-w-0 flex-shrink-0 flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-white font-semibold">
+                        {(() => {
+                          if (selectedShipId) {
+                            const selectedShip = shipMap.get(selectedShipId);
+                            return (
+                              selectedShip?.name ||
+                              `Ship #${selectedShipId.toString()}`
+                            );
+                          }
+                          return "Unknown Ship";
+                        })()}
+                      </span>
+                      <span className="text-gray-500">→</span>
+                      <span className="text-gray-300 font-mono">
+                        {(() => {
+                          const currentPosition = game.shipPositions.find(
+                            (pos) => pos.shipId === selectedShipId,
+                          );
+                          const isHoldingPosition =
+                            !previewPosition ||
+                            (!!currentPosition &&
+                              previewPosition.row ===
+                                currentPosition.position.row &&
+                              previewPosition.col ===
+                                currentPosition.position.col);
+
+                          if (isHoldingPosition) return "HOLD POSITION";
+                          return `(${previewPosition!.row}, ${previewPosition!.col})`;
+                        })()}
+                      </span>
+                      {(() => {
+                        const points = (() => {
+                          if (previewPosition) {
+                            const row = previewPosition.row;
+                            const col = previewPosition.col;
+                            return (
+                              (scoringGrid[row] && scoringGrid[row][col]) || 0
+                            );
+                          }
+                          const currentPosition = game.shipPositions.find(
+                            (pos) => pos.shipId === selectedShipId,
+                          );
+                          if (!currentPosition) return 0;
+                          const r = currentPosition.position.row;
+                          const c = currentPosition.position.col;
+                          return (scoringGrid[r] && scoringGrid[r][c]) || 0;
+                        })();
+                        return points > 0 ? (
+                          <span className="text-yellow-400 text-sm">
+                            ⭐ {points}
+                          </span>
+                        ) : null;
+                      })()}
+                    </div>
+                    {selectedShip && selectedShip.equipment.special > 0 && (
+                      <select
+                        value={selectedWeaponType}
+                        onChange={(e) => {
+                          const newWeaponType = e.target.value as
+                            | "weapon"
+                            | "special";
+                          setSelectedWeaponType(newWeaponType);
+                          if (
+                            newWeaponType === "special" &&
+                            specialType === 3
+                          ) {
+                            setTargetShipId(0n);
+                          } else {
+                            setTargetShipId(null);
+                          }
+                        }}
+                        className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider"
+                        style={{
+                          fontFamily:
+                            "var(--font-jetbrains-mono), 'Courier New', monospace",
+                          borderRadius: 0,
+                        }}
+                      >
+                        <option value="weapon">
+                          {selectedShip
+                            ? getMainWeaponName(
+                                selectedShip.equipment.mainWeapon,
+                              )
+                            : "Weapon"}
+                        </option>
+                        <option value="special">
+                          {selectedShip
+                            ? getSpecialName(selectedShip.equipment.special)
+                            : "Special"}
+                        </option>
+                      </select>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActionOverride(ActionType.Retreat);
+                        setTargetShipId(null);
+                        setPreviewPosition(null);
+                      }}
+                      className="px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 w-fit"
+                      style={{
+                        fontFamily:
+                          "var(--font-rajdhani), 'Arial Black', sans-serif",
+                        borderColor:
+                          actionOverride === ActionType.Retreat
+                            ? "var(--color-warning-red)"
+                            : "var(--color-gunmetal)",
+                        borderTopColor:
+                          actionOverride === ActionType.Retreat
+                            ? "var(--color-warning-red)"
+                            : "var(--color-steel)",
+                        borderLeftColor:
+                          actionOverride === ActionType.Retreat
+                            ? "var(--color-warning-red)"
+                            : "var(--color-steel)",
+                        color:
+                          actionOverride === ActionType.Retreat
+                            ? "var(--color-warning-red)"
+                            : "var(--color-text-secondary)",
+                        backgroundColor:
+                          actionOverride === ActionType.Retreat
+                            ? "rgba(255, 77, 77, 0.15)"
+                            : "var(--color-slate)",
+                        borderWidth: "2px",
+                        borderStyle: "solid",
+                        borderRadius: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (actionOverride !== ActionType.Retreat) {
+                          e.currentTarget.style.borderColor =
+                            "var(--color-warning-red)";
+                          e.currentTarget.style.color =
+                            "var(--color-warning-red)";
+                          e.currentTarget.style.backgroundColor =
+                            "rgba(255, 77, 77, 0.12)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (actionOverride !== ActionType.Retreat) {
+                          e.currentTarget.style.borderColor =
+                            "var(--color-gunmetal)";
+                          e.currentTarget.style.color =
+                            "var(--color-text-secondary)";
+                          e.currentTarget.style.backgroundColor =
+                            "var(--color-slate)";
+                        }
+                      }}
+                    >
+                      Retreat
+                    </button>
+                  </div>
+                )}
 
                 {/* Center: Target Selection */}
                 {validTargets.length > 0 && (
-                  <div className="flex-1">
+                  <div
+                    className={
+                      chromeOnSide
+                        ? "order-3 flex min-h-0 min-w-0 flex-1 flex-col"
+                        : "min-h-0 flex-1"
+                    }
+                  >
                     <div
-                      className="border border-solid p-3 min-h-[7.5rem]"
+                      className={
+                        chromeOnSide
+                          ? "flex min-h-0 min-w-0 flex-1 flex-col border border-solid p-3"
+                          : "min-h-[7.5rem] border border-solid p-3"
+                      }
                       style={{
                         backgroundColor: "var(--color-near-black)",
                         borderColor: "var(--color-gunmetal)",
@@ -2908,7 +3096,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       }}
                     >
                       <div
-                        className="text-xs mb-2 uppercase tracking-wide"
+                        className="shrink-0 text-xs mb-2 uppercase tracking-wide"
                         style={{
                           fontFamily:
                             "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -2917,13 +3105,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       >
                         Select Target (Optional)
                       </div>
-                      <div className="flex flex-wrap gap-2 min-h-[5rem]">
+                      <div className={proposedMoveTargetListClass}>
                         {selectedWeaponType === "special" &&
                         specialType === 3 ? (
                           <>
                             <button
                               onClick={() => setTargetShipId(0n)}
-                              className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
+                              className={proposedMoveTargetBtnClass}
                               style={{
                                 fontFamily:
                                   "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -2977,7 +3165,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             {previewPosition && (
                               <button
                                 onClick={() => setTargetShipId(null)}
-                                className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
+                                className={proposedMoveTargetBtnClass}
                                 style={{
                                   fontFamily:
                                     "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -3038,7 +3226,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               <button
                                 key={target.shipId.toString()}
                                 onClick={() => setTargetShipId(target.shipId)}
-                                className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
+                                className={proposedMoveTargetBtnClass}
                                 style={{
                                   fontFamily:
                                     "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -3105,7 +3293,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                                 <button
                                   key={target.shipId.toString()}
                                   onClick={() => setTargetShipId(target.shipId)}
-                                  className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
+                                  className={proposedMoveTargetBtnClass}
                                   style={{
                                     fontFamily:
                                       "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -3200,7 +3388,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               setActionOverride(null);
                               setTargetShipId(null);
                             }}
-                            className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
+                            className={proposedMoveTargetBtnClass}
                             style={{
                               fontFamily:
                                 "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -3237,9 +3425,21 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   </div>
                 )}
 
-                {/* Right: Actions */}
-                {/* Show action buttons for proposed moves */}
-                <div className="flex flex-col gap-2 flex-shrink-0 ml-auto">
+                {chromeOnSide && validTargets.length === 0 && (
+                  <div
+                    className="order-4 min-h-0 min-w-0 flex-1"
+                    aria-hidden
+                  />
+                )}
+
+                {/* Submit / Cancel (side rail: top row, side by side) */}
+                <div
+                  className={
+                    chromeOnSide
+                      ? "order-1 flex w-full shrink-0 flex-row gap-2"
+                      : "ml-auto flex shrink-0 flex-col gap-2"
+                  }
+                >
                   <>
                     {(() => {
                       // Compute the actual actionType that will be submitted (same as args)
@@ -3357,7 +3557,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
                       return (
                         <div
-                          className="inline-block"
+                          className={
+                            chromeOnSide
+                              ? "flex min-w-0 flex-[2] flex-col"
+                              : "inline-block"
+                          }
                           style={{
                             fontFamily:
                               "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -3382,7 +3586,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                               computedActionType,
                               targetShipId || 0n,
                             ]}
-                            className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 w-full h-full"
+                            className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 h-full w-full"
                             loadingText="Submitting..."
                             errorText="Error"
                             onTransactionSent={() => {
@@ -3528,8 +3732,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       );
                     })()}
                     <button
+                      type="button"
                       onClick={handleCancelMove}
-                      className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                      className={`px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150${
+                        chromeOnSide ? " min-w-0 flex-[1]" : ""
+                      }`}
                       style={{
                         fontFamily:
                           "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -3617,7 +3824,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             </>
           ) : (
             // Placeholder content to preserve height when UI isn't active
-            <div className="p-4 opacity-0 pointer-events-none select-none">
+            <div
+              className={`p-4 opacity-0 pointer-events-none select-none${
+                chromeOnSide ? " flex min-h-0 flex-1 flex-col" : ""
+              }`}
+            >
               <div className="flex items-center gap-6">
                 <div className="flex flex-col gap-2 min-w-0 flex-shrink-0">
                   <div className="flex items-center gap-3">
@@ -3641,49 +3852,17 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             </div>
           )}
         </div>
-
-        {/* Right side: Emergency Flee Safety Switch and Game Status */}
-        <div className="flex items-center space-x-4">
-          {/* Emergency Flee Safety Switch */}
-          {game.metadata.winner ===
-            "0x0000000000000000000000000000000000000000" && (
-            <FleeSafetySwitch
-              gameId={game.metadata.gameId}
-              onFlee={() => {
-                // Handle successful flee - could navigate back or show message
-                toast.success("You have fled the battle!");
-                refetch?.();
-              }}
-            />
-          )}
-
-          {/* Game Status */}
-          <div className="text-right">
-            <div className="text-sm text-gray-400">
-              {game.metadata.winner !==
-                "0x0000000000000000000000000000000000000000" && (
-                <span
-                  className="uppercase font-bold tracking-wider"
-                  style={{
-                    fontFamily:
-                      "var(--font-rajdhani), 'Arial Black', sans-serif",
-                    color:
-                      game.metadata.winner === address
-                        ? "var(--color-phosphor-green)"
-                        : "var(--color-warning-red)",
-                  }}
-                >
-                  {game.metadata.winner === address ? "VICTORY" : "DEFEAT"}
-                </span>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Game Map */}
       <div
-        className="p-2 w-full border border-solid"
+        ref={gridContainerRef}
+        className={
+          chromeOnSide
+            ? "relative min-h-0 min-w-0 flex-1 border border-solid p-2"
+            : "relative w-full border border-solid p-2"
+        }
         style={{
           backgroundColor: "var(--color-slate)",
           borderColor: "var(--color-gunmetal)",
@@ -3746,50 +3925,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           setDragOverCell={setDragOverCell}
         />
 
-        {/* Legend and Test Controls Row */}
-        <div className="flex items-center justify-between mt-4 text-sm">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-blue-500 border border-gray-700"></div>
-              <span className="text-gray-300">Creator Ships</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-red-500 border border-gray-700"></div>
-              <span className="text-gray-300">Joiner Ships</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-green-400 bg-green-500/20"></div>
-              <span className="text-gray-300">Movement Range</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-orange-400 bg-orange-500/20"></div>
-              <span className="text-gray-300">Shooting Range</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-gray-600 border border-gray-700"></div>
-              <span className="text-gray-300">Moved This Round</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-blue-400 bg-blue-900"></div>
-              <span className="text-gray-300">Your Ship (Movable)</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-purple-400 bg-purple-900"></div>
-              <span className="text-gray-300">Opponent Ship (View Only)</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-1 border-orange-400 bg-orange-900/50"></div>
-              <span className="text-gray-300">Valid Target</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-red-400 bg-red-900"></div>
-              <span className="text-gray-300">Selected Target</span>
-            </div>
-          </div>
-
-          {/* Test controls moved to the right of the key */}
-          {game.metadata.winner ===
-            "0x0000000000000000000000000000000000000000" && (
+        {game.metadata.winner ===
+          "0x0000000000000000000000000000000000000000" && (
+          <div className="mt-4 flex justify-end text-sm">
             <div className="flex items-center space-x-4">
               <label className="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer">
                 <input
@@ -3878,19 +4016,63 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 Test Events
               </button>
             </div>
-          )}
+          </div>
+        )}
+        <div className="absolute bottom-0 right-0 z-[210] pointer-events-none">
+          <div className="pointer-events-auto">
+            {isLastMovePanelMinimized ? (
+              <button
+                type="button"
+                onClick={() => setIsLastMovePanelMinimized(false)}
+                className="px-3 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-xs transition-colors duration-150"
+                style={{
+                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  borderColor: "var(--color-purple, #a855f7)",
+                  color: "var(--color-purple, #d8b4fe)",
+                  backgroundColor: "rgba(10, 10, 15, 0.88)",
+                  borderRadius: 0,
+                }}
+              >
+                Last Move
+              </button>
+            ) : (
+              <div className="w-[min(30rem,70vw)] max-w-full">
+                <div className="mb-1 flex items-center justify-between border border-solid px-2 py-1 bg-black/80">
+                  <span
+                    className="text-xs uppercase tracking-wider"
+                    style={{
+                      fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      color: "var(--color-purple, #d8b4fe)",
+                    }}
+                  >
+                    Last Move
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsLastMovePanelMinimized(true)}
+                    className="px-2 py-0.5 text-[11px] uppercase tracking-wider border border-solid"
+                    style={{
+                      fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      borderColor: "var(--color-purple, #a855f7)",
+                      color: "var(--color-purple, #d8b4fe)",
+                      backgroundColor: "var(--color-near-black)",
+                      borderRadius: 0,
+                    }}
+                  >
+                    Minimize
+                  </button>
+                </div>
+                <GameEvents
+                  lastMove={displayedLastMove}
+                  shipMap={shipMap}
+                  address={address}
+                  appendDestroyedText={appendDestroyedTextToLastMove}
+                  debugSuffix={lastMoveTargetPositionDebugSuffix}
+                />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* Last Move */}
-      <div ref={lastMoveCardRef}>
-        <GameEvents
-          lastMove={displayedLastMove}
-          shipMap={shipMap}
-          address={address}
-          appendDestroyedText={appendDestroyedTextToLastMove}
-          debugSuffix={lastMoveTargetPositionDebugSuffix}
-        />
       </div>
 
       {/* Ship Details */}

@@ -2,7 +2,10 @@
 
 import React, { createContext, useContext } from "react";
 import { useOnboardingTutorial } from "../hooks/useOnboardingTutorial";
-import { TutorialContextValue } from "../types/onboarding";
+import {
+  TutorialContextValue,
+  TUTORIAL_STEP_STORAGE_KEY,
+} from "../types/onboarding";
 import { SimulatedTransactionDialog } from "./SimulatedTransactionDialog";
 import { SimulatedGameDisplay } from "./SimulatedGameDisplay";
 
@@ -41,7 +44,7 @@ export function OnboardingTutorial({
   const handleSkip = () => {
     // Clear saved step index when quitting the tutorial.
     if (typeof window !== "undefined") {
-      localStorage.removeItem("void-tactics-tutorial-step-index");
+      localStorage.removeItem(TUTORIAL_STEP_STORAGE_KEY);
     }
     onSkip?.();
   };

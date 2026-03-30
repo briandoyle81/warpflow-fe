@@ -38,6 +38,10 @@ import { GameEvents } from "./GameEvents";
 import { getScriptedStateForTutorialStepId } from "../data/tutorialScriptedStates";
 import { FleeSafetySwitch } from "./FleeSafetySwitch";
 import ShipCard from "./ShipCard";
+import {
+  GAME_VIEW_SIDE_ROOT_CLASS,
+  useGameViewChromeLayout,
+} from "../hooks/useGameViewChromeLayout";
 import { useSpecialRange } from "../hooks/useSpecialRange";
 import {
   useSpecialData,
@@ -757,6 +761,7 @@ export function SimulatedGameDisplay({
   const [selectedWeaponType, setSelectedWeaponType] = useState<
     "weapon" | "special"
   >("weapon");
+  const [actionOverride, setActionOverride] = useState<ActionType | null>(null);
 
   // Deselect all ships when moving between steps. Use layout effect so that
   // selection and previews are cleared before the new step is painted, which
@@ -766,6 +771,7 @@ export function SimulatedGameDisplay({
     setPreviewPosition(null);
     setTargetShipId(null);
     setSelectedWeaponType("weapon");
+    setActionOverride(null);
   }, [currentStepIndex]);
   const [hoveredCell, setHoveredCell] = useState<{
     shipId: bigint;
@@ -780,8 +786,29 @@ export function SimulatedGameDisplay({
     row: number;
     col: number;
   } | null>(null);
+  const [isLastMovePanelMinimized, setIsLastMovePanelMinimized] =
+    useState(true);
   const gameViewRootRef = React.useRef<HTMLDivElement | null>(null);
-  const lastMoveCardRef = React.useRef<HTMLDivElement | null>(null);
+  const gridContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const chromeLayout = useGameViewChromeLayout(
+    gameViewRootRef,
+    gridContainerRef,
+  );
+  const chromeOnSide = chromeLayout === "side";
+
+  const proposedMoveTargetListClass = chromeOnSide
+    ? "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
+    : "flex flex-wrap gap-2 min-h-[5rem]";
+  const proposedMoveTargetBtnClass = chromeOnSide
+    ? "h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex w-full shrink-0 items-center justify-center"
+    : "h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0";
+
+  React.useEffect(() => {
+    if (actionOverride !== ActionType.Retreat) return;
+    if (targetShipId !== null || previewPosition !== null) {
+      setActionOverride(null);
+    }
+  }, [actionOverride, targetShipId, previewPosition]);
 
   // Mirror live game: whose turn it is comes from simulated state (e.g. after
   // end of round, opponent may go first).
@@ -2477,6 +2504,21 @@ export function SimulatedGameDisplay({
       return;
     }
 
+    if (actionOverride === ActionType.Retreat) {
+      const currentPos = gameState.shipPositions.find(
+        (p) => p.shipId === selectedShipId.toString(),
+      )?.position;
+      if (!currentPos) return;
+      executeAction({
+        type: "moveShip",
+        shipId: selectedShipId.toString() as TutorialShipId,
+        position: currentPos,
+        actionType: ActionType.Retreat,
+      });
+      setActionOverride(null);
+      return;
+    }
+
     // For the shooting tutorial step, Submit should execute the composite
     // move+shoot action in one go: apply the staged move, then open the
     // simulated transaction for the shot.
@@ -2653,76 +2695,8 @@ export function SimulatedGameDisplay({
     isSelectedShipDisabled,
     selectedWeaponType,
     executeAction,
+    actionOverride,
   ]);
-
-  // Keep tutorial game width as large as possible while preserving visibility
-  // of the Last Move card at the top of the viewport.
-  useEffect(() => {
-    const root = gameViewRootRef.current;
-    const lastMove = lastMoveCardRef.current;
-    if (!root || !lastMove) return;
-
-    let rafId: number | null = null;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    const fitWidth = () => {
-      const parentWidth =
-        root.parentElement?.clientWidth ?? document.documentElement.clientWidth;
-      if (parentWidth <= 0) return;
-
-      let low = Math.min(
-        Math.max(820, Math.floor(parentWidth * 0.55)),
-        parentWidth,
-      );
-      let high = parentWidth;
-      let best = low;
-
-      for (let i = 0; i < 12; i++) {
-        const mid = Math.floor((low + high) / 2);
-        root.style.width = `${mid}px`;
-        const bottom = lastMove.getBoundingClientRect().bottom;
-        const fits = bottom <= window.innerHeight - 8;
-
-        if (fits) {
-          best = mid;
-          low = mid + 1;
-        } else {
-          high = mid - 1;
-        }
-      }
-
-      root.style.width = `${Math.min(best, parentWidth)}px`;
-    };
-
-    const scheduleFit = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(fitWidth);
-      }, 120);
-    };
-
-    const observer =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => {
-            scheduleFit();
-          })
-        : null;
-
-    observer?.observe(root);
-    observer?.observe(lastMove);
-    if (root.parentElement) observer?.observe(root.parentElement);
-
-    window.addEventListener("resize", scheduleFit);
-    scheduleFit();
-
-    return () => {
-      window.removeEventListener("resize", scheduleFit);
-      if (timeoutId) clearTimeout(timeoutId);
-      if (rafId) cancelAnimationFrame(rafId);
-      observer?.disconnect();
-    };
-  }, []);
 
   const tutorialGridPanelConfig = useMemo(() => {
     if (!currentStep?.id) return null;
@@ -2760,34 +2734,77 @@ export function SimulatedGameDisplay({
   }, [currentStep?.id]);
 
   return (
-    <div ref={gameViewRootRef} className="w-full mx-auto space-y-6">
-      {/* Header: back + game/round/turn + score + (optional) proposed move + Flee locked */}
-      <div className="flex items-start justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
-            style={{
-              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-              borderColor: "var(--color-gunmetal)",
-              color: "var(--color-text-secondary)",
-              backgroundColor: "var(--color-steel)",
-              borderRadius: 0,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--color-slate)";
-              e.currentTarget.style.borderColor = "var(--color-cyan)";
-              e.currentTarget.style.color = "var(--color-cyan)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--color-steel)";
-              e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-              e.currentTarget.style.color = "var(--color-text-secondary)";
-            }}
+    <div
+      ref={gameViewRootRef}
+      className={`flex flex-col gap-6 ${
+        chromeOnSide ? GAME_VIEW_SIDE_ROOT_CLASS : "mx-auto w-full"
+      }`}
+      style={
+        chromeOnSide
+          ? {
+              marginLeft: "8px",
+            }
+          : undefined
+      }
+    >
+      <div
+        className={
+          chromeOnSide
+            ? "flex min-h-0 min-w-0 flex-row items-stretch gap-4"
+            : "flex flex-col gap-6"
+        }
+      >
+        {/* Header: back + game/round/turn + score + (optional) proposed move + Flee locked */}
+        <div
+          className={
+            chromeOnSide
+              ? "flex max-h-[min(100dvh-7rem,920px)] w-[min(18rem,34vw)] max-w-[20rem] shrink-0 flex-col gap-3 overflow-y-auto pl-2 pr-1"
+              : "flex items-start justify-between gap-6"
+          }
+        >
+        <div
+          className={
+            chromeOnSide
+              ? "flex shrink-0 flex-col items-stretch gap-3"
+              : "flex items-center gap-4"
+          }
+        >
+          <div className="flex w-full min-w-0 items-stretch gap-2">
+            <div className="flex w-1/5 min-h-0 shrink-0 justify-start">
+              <button
+                onClick={onBack}
+                className="flex min-h-0 w-full items-center justify-center px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+                style={{
+                  fontFamily:
+                    "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  borderColor: "var(--color-gunmetal)",
+                  color: "var(--color-text-secondary)",
+                  backgroundColor: "var(--color-steel)",
+                  borderRadius: 0,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                  e.currentTarget.style.borderColor = "var(--color-cyan)";
+                  e.currentTarget.style.color = "var(--color-cyan)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                  e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                  e.currentTarget.style.color = "var(--color-text-secondary)";
+                }}
+              >
+                ←
+              </button>
+            </div>
+            <div className="flex min-h-0 w-4/5 min-w-0 flex-col justify-center">
+              <FleeSafetySwitch gameId={0n} locked />
+            </div>
+          </div>
+          <div
+            className={
+              chromeOnSide ? "flex flex-col gap-2" : "flex items-start gap-6"
+            }
           >
-            ←
-          </button>
-          <div className="flex items-start gap-6">
             <div className="flex flex-col">
               <h1 className="text-2xl font-mono text-white flex items-center gap-3">
                 <span>Game 0</span>
@@ -2852,7 +2869,11 @@ export function SimulatedGameDisplay({
             </div>
             {/* Score grouped with game/round (same conceptual row as in reference) */}
             <div
-              className="p-2 border border-solid w-48 text-lg shrink-0"
+              className={
+                chromeOnSide
+                  ? "w-full shrink-0 border border-solid p-2 text-lg"
+                  : "w-48 shrink-0 border border-solid p-2 text-lg"
+              }
               style={{
                 backgroundColor: "var(--color-slate)",
                 borderColor: "var(--color-gunmetal)",
@@ -2920,7 +2941,11 @@ export function SimulatedGameDisplay({
             and eligible to act this round, even before a move is proposed. */}
         {isShowingProposedMove && (
           <div
-            className="flex-1 border border-solid p-3"
+            className={
+              chromeOnSide
+                ? "flex min-h-0 min-w-0 flex-1 flex-col border border-solid p-3"
+                : "min-h-0 flex-1 border border-solid p-3"
+            }
             style={{
               backgroundColor: "var(--color-near-black)",
               borderColor: "var(--color-gunmetal)",
@@ -2929,37 +2954,46 @@ export function SimulatedGameDisplay({
               borderRadius: 0,
             }}
           >
-            <div className="flex items-center gap-6">
-              <div className="flex flex-col gap-1 min-w-0 flex-shrink-0">
-                <div
-                  className="text-xs uppercase tracking-wide"
-                  style={{
-                    fontFamily:
-                      "var(--font-jetbrains-mono), 'Courier New', monospace",
-                    color: "var(--color-text-secondary)",
-                  }}
-                >
-                  Proposed Move
-                </div>
-                <div className="text-sm text-white font-mono">
-                  {(() => {
-                    const ship = shipMap.get(selectedShipId!);
-                    const name =
-                      ship?.name || `Ship #${selectedShipId?.toString()}`;
-                    const currentPos = gameState.shipPositions.find(
-                      (pos) => pos.shipId === selectedShipId?.toString(),
-                    );
-                    const fromRow = currentPos?.position.row ?? 0;
-                    const fromCol = currentPos?.position.col ?? 0;
-                    const toRow = previewPosition
-                      ? previewPosition.row
-                      : fromRow;
-                    const toCol = previewPosition
-                      ? previewPosition.col
-                      : fromCol;
-                    return `${name} (${fromRow}, ${fromCol}) → (${toRow}, ${toCol})`;
-                  })()}
-                </div>
+            <div
+              className={
+                chromeOnSide
+                  ? "flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 p-4"
+                  : "flex items-center gap-6 p-4"
+              }
+            >
+              <div
+                className={
+                  chromeOnSide
+                    ? "order-2 flex min-w-0 flex-shrink-0 flex-col gap-1"
+                    : "flex min-w-0 flex-shrink-0 flex-col gap-1"
+                }
+              >
+                {(() => {
+                  const ship = shipMap.get(selectedShipId!);
+                  const name =
+                    ship?.name || `Ship #${selectedShipId?.toString()}`;
+                  const currentPos = gameState.shipPositions.find(
+                    (pos) => pos.shipId === selectedShipId?.toString(),
+                  );
+                  const fromRow = currentPos?.position.row ?? 0;
+                  const fromCol = currentPos?.position.col ?? 0;
+                  const toRow = previewPosition
+                    ? previewPosition.row
+                    : fromRow;
+                  const toCol = previewPosition
+                    ? previewPosition.col
+                    : fromCol;
+                  return (
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <div className="text-sm font-semibold text-white">
+                        {name}
+                      </div>
+                      <div className="text-sm font-mono text-gray-300">
+                        ({fromRow}, {fromCol}) → ({toRow}, {toCol})
+                      </div>
+                    </div>
+                  );
+                })()}
                 {/* Weapon / Special selector, mirroring main game UI */}
                 {(() => {
                   if (isSelectedShipDisabled) return null;
@@ -2970,8 +3004,8 @@ export function SimulatedGameDisplay({
                     <div
                       className={
                         shouldHighlightSpecialEmpWeaponDropdown
-                          ? "mt-1 inline-block rounded-sm ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)] animate-pulse"
-                          : "mt-1"
+                          ? "mt-1 w-full rounded-sm ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)] animate-pulse"
+                          : "mt-1 w-full"
                       }
                     >
                       <select
@@ -2983,7 +3017,7 @@ export function SimulatedGameDisplay({
                           setSelectedWeaponType(newWeaponType);
                           // In tutorial we do not have a boarding special; keep target as-is.
                         }}
-                        className="px-2 py-1 text-xs uppercase font-semibold tracking-wider"
+                        className="w-full px-3 py-1.5 text-sm uppercase font-semibold tracking-wider"
                         style={{
                           fontFamily:
                             "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -3002,13 +3036,78 @@ export function SimulatedGameDisplay({
                     </div>
                   );
                 })()}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActionOverride(ActionType.Retreat);
+                    setTargetShipId(null);
+                    setPreviewPosition(null);
+                  }}
+                  className="w-full px-3 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                  style={{
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    borderColor:
+                      actionOverride === ActionType.Retreat
+                        ? "var(--color-warning-red)"
+                        : "var(--color-gunmetal)",
+                    borderTopColor:
+                      actionOverride === ActionType.Retreat
+                        ? "var(--color-warning-red)"
+                        : "var(--color-steel)",
+                    borderLeftColor:
+                      actionOverride === ActionType.Retreat
+                        ? "var(--color-warning-red)"
+                        : "var(--color-steel)",
+                    color:
+                      actionOverride === ActionType.Retreat
+                        ? "var(--color-warning-red)"
+                        : "var(--color-text-secondary)",
+                    backgroundColor:
+                      actionOverride === ActionType.Retreat
+                        ? "rgba(255, 77, 77, 0.15)"
+                        : "var(--color-slate)",
+                    borderWidth: "2px",
+                    borderStyle: "solid",
+                    borderRadius: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (actionOverride !== ActionType.Retreat) {
+                      e.currentTarget.style.borderColor =
+                        "var(--color-warning-red)";
+                      e.currentTarget.style.color = "var(--color-warning-red)";
+                      e.currentTarget.style.backgroundColor =
+                        "rgba(255, 77, 77, 0.12)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (actionOverride !== ActionType.Retreat) {
+                      e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+                      e.currentTarget.style.color =
+                        "var(--color-text-secondary)";
+                      e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                    }
+                  }}
+                >
+                  Retreat
+                </button>
               </div>
 
               {/* Center: Target selection, mirroring main game UI */}
               {!isSelectedShipDisabled && validTargets.length > 0 && (
-                <div className="flex-1">
+                <div
+                  className={
+                    chromeOnSide
+                      ? "order-3 flex min-h-0 min-w-0 flex-1 flex-col"
+                      : "min-h-0 flex-1"
+                  }
+                >
                   <div
-                    className="border border-solid p-3 min-h-[7.5rem]"
+                    className={
+                      chromeOnSide
+                        ? "flex min-h-0 min-w-0 flex-1 flex-col border border-solid p-3"
+                        : "min-h-[7.5rem] border border-solid p-3"
+                    }
                     style={{
                       backgroundColor: "var(--color-near-black)",
                       borderColor: "var(--color-gunmetal)",
@@ -3018,7 +3117,7 @@ export function SimulatedGameDisplay({
                     }}
                   >
                     <div
-                      className="text-xs mb-2 uppercase tracking-wide"
+                      className="shrink-0 text-xs mb-2 uppercase tracking-wide"
                       style={{
                         fontFamily:
                           "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -3027,7 +3126,7 @@ export function SimulatedGameDisplay({
                     >
                       Select Target (Optional)
                     </div>
-                    <div className="flex flex-wrap gap-2 min-h-[5rem]">
+                    <div className={proposedMoveTargetListClass}>
                       {validTargets.map((target) => {
                         const targetShip = shipMap.get(BigInt(target.shipId));
                         const isSelectedTarget =
@@ -3039,7 +3138,7 @@ export function SimulatedGameDisplay({
                             onClick={() =>
                               setTargetShipId(BigInt(target.shipId))
                             }
-                            className="h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0"
+                            className={proposedMoveTargetBtnClass}
                             style={{
                               fontFamily:
                                 "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -3074,11 +3173,27 @@ export function SimulatedGameDisplay({
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
+              {chromeOnSide &&
+                (validTargets.length === 0 || isSelectedShipDisabled) && (
+                  <div
+                    className="order-4 min-h-0 min-w-0 flex-1"
+                    aria-hidden
+                  />
+                )}
+
+              <div
+                className={
+                  chromeOnSide
+                    ? "order-1 flex w-full shrink-0 flex-row gap-2"
+                    : "flex items-center gap-2"
+                }
+              >
                 <button
                   type="button"
                   onClick={handleSubmitMove}
                   className={`px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 ${
+                    chromeOnSide ? "min-w-0 flex-[2]" : ""
+                  } ${
                     shouldPulseSubmitMoveButton
                       ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
                       : ""
@@ -3099,11 +3214,15 @@ export function SimulatedGameDisplay({
                   {isSelectedShipDisabled ? "Submit Retreat" : "Submit Move"}
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setPreviewPosition(null);
                     setTargetShipId(null);
+                    setActionOverride(null);
                   }}
-                  className="px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
+                  className={`px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150${
+                    chromeOnSide ? " min-w-0 flex-[1]" : ""
+                  }`}
                   style={{
                     fontFamily:
                       "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -3123,15 +3242,19 @@ export function SimulatedGameDisplay({
             </div>
           </div>
         )}
-
-        <div className="flex-shrink-0">
-          {/* Flee Battle: locked in tutorial */}
-          <FleeSafetySwitch gameId={0n} locked />
-        </div>
       </div>
 
-      <div className="relative w-full">
-        <GameBoardLayout isCurrentPlayerTurn={isMyTurn}>
+      <div
+        className={
+          chromeOnSide
+            ? "relative min-h-0 min-w-0 flex-1"
+            : "relative w-full"
+        }
+      >
+        <GameBoardLayout
+          isCurrentPlayerTurn={isMyTurn}
+          containerRef={gridContainerRef}
+        >
           {/* Fixed 17×11 aspect so the board does not resize between tutorial steps
               while state hydrates; overlay blocks interaction until ready. */}
           <div
@@ -3226,21 +3349,69 @@ export function SimulatedGameDisplay({
                 onQuit={onBack}
               />
             )}
+            <div className="absolute bottom-0 right-0 z-[220] pointer-events-none">
+              <div className="pointer-events-auto">
+                {isLastMovePanelMinimized ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsLastMovePanelMinimized(false)}
+                    className="px-3 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-xs transition-colors duration-150"
+                    style={{
+                      fontFamily:
+                        "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      borderColor: "var(--color-purple, #a855f7)",
+                      color: "var(--color-purple, #d8b4fe)",
+                      backgroundColor: "rgba(10, 10, 15, 0.88)",
+                      borderRadius: 0,
+                    }}
+                  >
+                    Last Move
+                  </button>
+                ) : (
+                  <div className="w-[min(30rem,70vw)] max-w-full">
+                    <div className="mb-1 flex items-center justify-between border border-solid px-2 py-1 bg-black/80">
+                      <span
+                        className="text-xs uppercase tracking-wider"
+                        style={{
+                          fontFamily:
+                            "var(--font-rajdhani), 'Arial Black', sans-serif",
+                          color: "var(--color-purple, #d8b4fe)",
+                        }}
+                      >
+                        Last Move
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsLastMovePanelMinimized(true)}
+                        className="px-2 py-0.5 text-[11px] uppercase tracking-wider border border-solid"
+                        style={{
+                          fontFamily:
+                            "var(--font-rajdhani), 'Arial Black', sans-serif",
+                          borderColor: "var(--color-purple, #a855f7)",
+                          color: "var(--color-purple, #d8b4fe)",
+                          backgroundColor: "var(--color-near-black)",
+                          borderRadius: 0,
+                        }}
+                      >
+                        Minimize
+                      </button>
+                    </div>
+                    <GameEvents
+                      lastMove={lastMoveForEvents}
+                      shipMap={shipMap}
+                      address={TUTORIAL_PLAYER_ADDRESS}
+                      appendDestroyedText={
+                        currentStep?.id === "ship-destruction" ||
+                        currentStep?.id === "rescue"
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </GameBoardLayout>
       </div>
-
-      {/* Last Move panel - reuse GameEvents from live game */}
-      <div ref={lastMoveCardRef}>
-        <GameEvents
-          lastMove={lastMoveForEvents}
-          shipMap={shipMap}
-          address={TUTORIAL_PLAYER_ADDRESS}
-          appendDestroyedText={
-            currentStep?.id === "ship-destruction" ||
-            currentStep?.id === "rescue"
-          }
-        />
       </div>
 
       {/* Ship Details panel - mirror live game fleet layout using tutorial data */}

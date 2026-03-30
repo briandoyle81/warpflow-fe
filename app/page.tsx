@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import { useAccount } from "wagmi";
 import Header from "./components/Header";
 import ManageNavy from "./components/ManageNavy";
@@ -12,6 +12,7 @@ import Maps from "./components/Maps";
 import ShipAttributes from "./components/ShipAttributes";
 import ShipConstructor from "./components/ShipConstructor";
 import { useShipAttributesOwner } from "./hooks/useShipAttributesContract";
+import { TUTORIAL_STEP_STORAGE_KEY } from "./types/onboarding";
 
 export default function Home() {
   const { status } = useAccount();
@@ -23,8 +24,27 @@ export default function Home() {
   const [isInfoTutorialActive, setIsInfoTutorialActive] = useState(false);
   const [isGamesDetailActive, setIsGamesDetailActive] = useState(false);
 
-  // Load saved tab after hydration
-  useEffect(() => {
+  // Register tutorial chrome listener before paint so Info's layout effect can use it.
+  useLayoutEffect(() => {
+    const handleInfoTutorialActive = (event: Event) => {
+      const custom = event as CustomEvent<{ active?: boolean }>;
+      setIsInfoTutorialActive(Boolean(custom.detail?.active));
+    };
+
+    window.addEventListener(
+      "void-tactics-info-tutorial-active",
+      handleInfoTutorialActive as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "void-tactics-info-tutorial-active",
+        handleInfoTutorialActive as EventListener,
+      );
+    };
+  }, []);
+
+  // Restore tab and tutorial chrome from localStorage before first paint (avoids nav flash on refresh).
+  useLayoutEffect(() => {
     setIsHydrated(true);
     const savedTab = localStorage.getItem("void-tactics-active-tab");
     const savedGameId = localStorage.getItem("selectedGameId");
@@ -44,18 +64,29 @@ export default function Home() {
       validTabs.push("Ship Attributes");
     }
 
-    // Explicit navigation intent from Lobbies has highest priority.
+    let nextTab = "Info";
     if (forceGamesTab) {
-      setActiveTab("Games");
+      nextTab = "Games";
       localStorage.removeItem("void-tactics-force-games-tab");
-    }
-    // If there's a saved game, prioritize switching to Games tab
-    else if (savedGameId) {
-      setActiveTab("Games");
+    } else if (savedGameId) {
+      nextTab = "Games";
     } else if (savedTab && validTabs.includes(savedTab)) {
-      setActiveTab(savedTab);
+      nextTab = savedTab;
     }
+
+    setActiveTab(nextTab);
+
+    const tutorialInProgress =
+      localStorage.getItem(TUTORIAL_STEP_STORAGE_KEY) !== null;
+    setIsInfoTutorialActive(tutorialInProgress && nextTab === "Info");
   }, [isOwner]);
+
+  // Leaving Info must drop tutorial chrome (tabs are hidden while it is on).
+  useLayoutEffect(() => {
+    if (activeTab !== "Info") {
+      setIsInfoTutorialActive(false);
+    }
+  }, [activeTab]);
 
   // Listen for navigation events from Lobbies component
   useEffect(() => {
@@ -138,26 +169,6 @@ export default function Home() {
     };
   }, []);
 
-  // Listen for Info tab tutorial activation so we can mirror the full-width
-  // game layout when the tutorial is showing.
-  useEffect(() => {
-    const handleInfoTutorialActive = (event: Event) => {
-      const custom = event as CustomEvent<{ active?: boolean }>;
-      setIsInfoTutorialActive(Boolean(custom.detail?.active));
-    };
-
-    window.addEventListener(
-      "void-tactics-info-tutorial-active",
-      handleInfoTutorialActive as EventListener,
-    );
-    return () => {
-      window.removeEventListener(
-        "void-tactics-info-tutorial-active",
-        handleInfoTutorialActive as EventListener,
-      );
-    };
-  }, []);
-
   // Save tab to localStorage whenever it changes (only after hydration)
   useEffect(() => {
     if (isHydrated) {
@@ -191,7 +202,11 @@ export default function Home() {
         >
           <Header />
         </div>
-        <main className="flex flex-col gap-8 row-start-2 pt-4 pb-20 px-8 sm:px-20 w-full max-w-7xl mx-auto">
+        <main
+          className={`flex flex-col gap-8 row-start-2 pb-20 px-8 sm:px-20 w-full max-w-7xl mx-auto ${
+            hideGlobalChrome ? "pt-0" : "pt-4"
+          }`}
+        >
           <div
             className="border border-solid p-8"
             style={{
@@ -251,7 +266,9 @@ export default function Home() {
         <Header />
       </div>
       <main
-        className={`flex flex-col gap-8 row-start-2 pt-4 pb-20 w-full ${
+        className={`flex flex-col gap-8 row-start-2 pb-20 w-full ${
+          hideGlobalChrome ? "pt-0" : "pt-4"
+        } ${
           activeTab === "Games" || isInfoTutorialActive ? "px-0" : "px-8 sm:px-20"
         }`}
       >
