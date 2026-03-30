@@ -29,12 +29,12 @@ function buildScriptedStates(): SimulatedGameState[] {
   });
   states.push(s); // index 5 = state when entering wait-for-opponent
 
-  // Step 7 score-points: run script (enemy 2003 to 9,13, score, lastMove).
+  // Step 7 score-points: run script (Tongs / 2003 to 9,13, score, lastMove).
   // This state is used when entering the score-points step.
   s = applyTutorialStepScript("score-points", s);
   states.push(s); // index 6
 
-  // Step 8 shoot: canonical step 7 completion = scout 1001 moves to (5,8),
+  // Step 8 shoot: canonical step 7 completion = Resolute (1001) moves to (5,8),
   // then run shoot script
   s = applyTutorialAction(s, {
     type: "moveShip",
@@ -44,7 +44,7 @@ function buildScriptedStates(): SimulatedGameState[] {
   s = applyTutorialStepScript("shoot", s);
   states.push(s); // index 7 = entering "shoot"
 
-  // After shoot step completion: Tutorial Sniper moves and fires on Enemy Fighter
+  // After shoot step completion: Vigilant moves and fires on Hammer
   s = applyTutorialAction(s, {
     type: "moveShip",
     shipId: "1002",
@@ -58,15 +58,15 @@ function buildScriptedStates(): SimulatedGameState[] {
   s = applyTutorialStepScript("end-of-round", s);
   states.push(s); // index 8 = entering "end-of-round"
 
-  // special-emp: Heavy Enemy moves to (5,9) and fires on Tutorial EMP; player turn for EMP
+  // special-emp: Anvil moves to (5,9) and fires on Resolute; player turn for EMP
   s = applyTutorialStepScript("special-emp", s);
   states.push(s); // index 9 = entering "special-emp"
 
-  // ship-destruction: script only (Heavy destroyed, last move EMP)
+  // ship-destruction: script only (Anvil destroyed, last move EMP)
   s = applyTutorialStepScript("ship-destruction", s);
   states.push(structuredClone(s)); // index 10 = entering "ship-destruction"
 
-  // rescue: Enemy Sniper disables Tutorial EMP (scripted shot)
+  // rescue: Tongs disables Resolute (scripted shot)
   s = applyTutorialStepScript("rescue", s);
   states.push(structuredClone(s)); // index 11 = entering "rescue"
 

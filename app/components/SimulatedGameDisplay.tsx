@@ -78,44 +78,44 @@ const TUTORIAL_VIEW_ENEMY_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [
   2003n,
 ];
 
-/** Tutorial Fighter (step 5 move-ship) until any ship is selected. */
+/** Sentinel (step 5 move-ship) until any ship is selected. */
 const TUTORIAL_MOVE_SHIP_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [1003n];
 
-/** Tutorial EMP (step 7 score-points) until a ship is selected. */
+/** Resolute (step 7 score-points) until a ship is selected. */
 const TUTORIAL_SCORE_POINTS_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [1001n];
 
-/** Tutorial Sniper (step 8 shoot) until a ship is selected. */
+/** Vigilant (step 8 shoot) until a ship is selected. */
 const TUTORIAL_SHOOT_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [1002n];
 
-/** Enemy Fighter (step 8 shoot) after the Sniper move is staged, until a shot target is chosen. */
+/** Hammer (step 8 shoot) after Vigilant's move is staged, until a shot target is chosen. */
 const TUTORIAL_SHOOT_HIGHLIGHT_ENEMY_SHIP_IDS: readonly bigint[] = [2001n];
 
-/** Tutorial EMP (step 10 special-emp) until a ship is selected. */
+/** Resolute (step 10 special-emp) until a ship is selected. */
 const TUTORIAL_SPECIAL_EMP_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [1001n];
 
-/** Heavy Enemy (step 10): pulse while arming with weapon first, or after Special if target cleared. */
+/** Anvil (step 10): pulse while arming with weapon first, or after Special if target cleared. */
 const TUTORIAL_SPECIAL_EMP_HIGHLIGHT_TARGET_SHIP_IDS: readonly bigint[] = [
   2002n,
 ];
 
-/** Tutorial EMP + Tutorial Sniper (step 12 rescue): both cells pulse for the whole step. */
+/** Resolute + Vigilant (step 12 rescue): both cells pulse for the whole step. */
 const TUTORIAL_RESCUE_CHOICE_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [
   1001n,
   1002n,
 ];
 
-/** Enemy Fighter (step 12 rescue): pulse while Tutorial Sniper is selected and no shot target yet. */
+/** Hammer (step 12 rescue): pulse while Vigilant is selected and no shot target yet. */
 const TUTORIAL_RESCUE_SNIPER_TARGET_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [
   2001n,
 ];
 
-/** Step 13 (rescue-outcome-sniper): Tutorial Fighter until selected; Enemy Fighter after center move is staged, optional shot. */
+/** Step 13 (rescue-outcome-sniper): Sentinel until selected; Hammer after center move is staged, optional shot. */
 const TUTORIAL_RESCUE_OUTCOME_SNIPER_FIGHTER_HIGHLIGHT_SHIP_IDS: readonly bigint[] =
   [1003n];
 const TUTORIAL_RESCUE_OUTCOME_SNIPER_ENEMY_HIGHLIGHT_SHIP_IDS: readonly bigint[] =
   [2001n];
 
-/** Step 13 (rescue-outcome-retreat): Enemy Fighter can seize the open center. */
+/** Step 13 (rescue-outcome-retreat): Hammer can seize the open center. */
 const TUTORIAL_RESCUE_OUTCOME_RETREAT_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [
   2001n,
 ];
@@ -240,8 +240,8 @@ const TUTORIAL_VIEW_ENEMY_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_MOVE_SHIP_GRID_BRIEF = (
   <>
     <p>
-      The <span className="font-semibold text-cyan-300">Tutorial Fighter</span>{" "}
-      is damaged. You can protect it by moving it into a{" "}
+      The <span className="font-semibold text-cyan-300">Sentinel</span> is
+      damaged. You can protect it by moving it into a{" "}
       <span className="font-semibold text-purple-300">nebula</span>.
     </p>
     <p>
@@ -253,7 +253,7 @@ const TUTORIAL_MOVE_SHIP_GRID_BRIEF = (
 );
 
 const TUTORIAL_MOVE_SHIP_GRID_TASKS: React.ReactNode[] = [
-  <>Select the Tutorial Fighter.</>,
+  <>Select the Sentinel.</>,
   <>
     With it selected, click a highlighted tile to stage a move.{" "}
     <span className="font-semibold text-green-400">Green</span> tiles show{" "}
@@ -300,16 +300,16 @@ const TUTORIAL_SCORE_POINTS_GRID_BRIEF = (
     </p>
     <p>
       Their destroyer is already contesting a zone. Respond by moving the{" "}
-      <span className="font-semibold text-cyan-300">Tutorial EMP</span> to
-      capture one for us.
+      <span className="font-semibold text-cyan-300">Resolute</span> to capture
+      one for us.
     </p>
   </>
 );
 
 const TUTORIAL_SCORE_POINTS_GRID_TASKS: React.ReactNode[] = [
   <>
-    Select the <span className="font-semibold text-cyan-300">Tutorial EMP</span>
-    and move it to the highlighted central scoring tile.
+    Select the <span className="font-semibold text-cyan-300">Resolute</span> and
+    move it to the highlighted central scoring tile.
   </>,
   <>
     Confirm the move to the highlighted central scoring tile at row{" "}
@@ -323,20 +323,18 @@ const TUTORIAL_SCORE_POINTS_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_SHOOT_GRID_BRIEF = (
   <>
     <p>
-      Their <span className="font-semibold text-red-300">Enemy Fighter</span>{" "}
-      just hit the{" "}
-      <span className="font-semibold text-cyan-300">Tutorial EMP</span> with a
+      Their <span className="font-semibold text-red-300">Hammer</span> just hit
+      the <span className="font-semibold text-cyan-300">Resolute</span> with a
       plasma shot! Answer with the{" "}
-      <span className="font-semibold text-cyan-300">Tutorial Sniper</span>: move
-      to a resource and shoot back.
+      <span className="font-semibold text-cyan-300">Vigilant</span>: move to a
+      resource and shoot back.
     </p>
   </>
 );
 
 const TUTORIAL_SHOOT_GRID_TASKS: React.ReactNode[] = [
   <>
-    Select the{" "}
-    <span className="font-semibold text-cyan-300">Tutorial Sniper</span> and
+    Select the <span className="font-semibold text-cyan-300">Vigilant</span> and
     stage a move to the highlighted tile at row{" "}
     <span className="font-semibold text-yellow-300">1</span>, column{" "}
     <span className="font-semibold text-yellow-300">3</span> (
@@ -344,8 +342,8 @@ const TUTORIAL_SHOOT_GRID_TASKS: React.ReactNode[] = [
     range).
   </>,
   <>
-    Click the <span className="font-semibold text-red-300">Enemy Fighter</span>{" "}
-    to select your shot (it pulses after you stage the move).
+    Click the <span className="font-semibold text-red-300">Hammer</span> to
+    select your shot (it pulses after you stage the move).
   </>,
   <>
     <span className="font-semibold text-green-400">Submit</span> to confirm move
@@ -378,13 +376,12 @@ const TUTORIAL_END_OF_ROUND_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_SPECIAL_EMP_GRID_BRIEF = (
   <>
     <p>
-      The <span className="font-semibold text-red-300">Heavy Enemy</span> just
-      shot your{" "}
-      <span className="font-semibold text-cyan-300">Tutorial EMP</span>.
+      The <span className="font-semibold text-red-300">Anvil</span> just blasted
+      the <span className="font-semibold text-cyan-300">Resolute</span>!
     </p>
     <p>
       We have a powerful gun, but we still can&apos;t knock it out in one hit.
-      But it has{" "}
+      Luckily, it has{" "}
       <span className="font-semibold text-purple-300">reactor damage</span> from
       earlier in the fight. We can bypass its defenses and kill it instantly
       with an <span className="font-semibold text-cyan-300">EMP</span>!
@@ -394,9 +391,8 @@ const TUTORIAL_SPECIAL_EMP_GRID_BRIEF = (
 
 const TUTORIAL_SPECIAL_EMP_GRID_TASKS: React.ReactNode[] = [
   <>
-    Select the <span className="font-semibold text-cyan-300">Tutorial EMP</span>{" "}
-    and target the{" "}
-    <span className="font-semibold text-red-300">Heavy Enemy</span>.
+    Select the <span className="font-semibold text-cyan-300">Resolute</span> and
+    target the <span className="font-semibold text-red-300">Anvil</span>.
   </>,
   <>
     In the action bar, switch from{" "}
@@ -413,8 +409,8 @@ const TUTORIAL_SPECIAL_EMP_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_SHIP_DESTRUCTION_GRID_BRIEF = (
   <>
     <p>
-      Our EMP rammed the{" "}
-      <span className="font-semibold text-red-300">Heavy Enemy</span>
+      Resolute&apos;s EMP rammed the{" "}
+      <span className="font-semibold text-red-300">Anvil</span>
       &apos;s reactor past{" "}
       <span className="font-semibold text-yellow-300">
         three overload points
@@ -445,10 +441,10 @@ const TUTORIAL_RESCUE_GRID_BRIEF = (
     <p>
       The <span className="font-semibold text-red-300">enemy</span> retaliated
       by disabling the{" "}
-      <span className="font-semibold text-cyan-300">Tutorial EMP</span>. It also
-      has <span className="font-semibold text-purple-300">reactor damage</span>,
-      so one more hit and it&apos;s gone! Even worse, your repair ship is too
-      far away to reach it in time.
+      <span className="font-semibold text-cyan-300">Resolute</span>. It also has{" "}
+      <span className="font-semibold text-purple-300">reactor damage</span>, so
+      one more hit and it&apos;s gone! Even worse, your repair ship is too far
+      away to reach it in time.
     </p>
     <p>
       What matters the most to you?{" "}
@@ -463,14 +459,14 @@ const TUTORIAL_RESCUE_GRID_BRIEF = (
 const TUTORIAL_RESCUE_GRID_TASKS: React.ReactNode[] = [
   <>
     <span className="font-semibold text-cyan-300">Save your ship:</span> select
-    the Tutorial EMP and{" "}
+    the Resolute and{" "}
     <span className="font-semibold text-green-400">submit</span> Retreat to
     leave the map.
   </>,
   <>
     <span className="font-semibold text-cyan-300">Sacrifice for victory:</span>{" "}
-    select the Tutorial Sniper, target the{" "}
-    <span className="font-semibold text-red-300">Enemy Fighter</span>, then{" "}
+    select the Vigilant, target the{" "}
+    <span className="font-semibold text-red-300">Hammer</span>, then{" "}
     <span className="font-semibold text-green-400">submit</span> the shot.
   </>,
 ];
@@ -480,22 +476,20 @@ const TUTORIAL_RESCUE_OUTCOME_SNIPER_GRID_BRIEF = (
   <>
     <p>
       As expected, the{" "}
-      <span className="font-semibold text-red-300">Enemy Fighter</span>{" "}
-      destroyed your{" "}
-      <span className="font-semibold text-cyan-300">Tutorial EMP</span>.
+      <span className="font-semibold text-red-300">Hammer</span> destroyed the{" "}
+      <span className="font-semibold text-cyan-300">Resolute</span>.
     </p>
     <p>
       You traded that ship for the ability to retake the center resource. The
       resource point is open now. Take it with the{" "}
-      <span className="font-semibold text-cyan-300">Tutorial Fighter</span>.
+      <span className="font-semibold text-cyan-300">Sentinel</span>.
     </p>
   </>
 );
 
 const TUTORIAL_RESCUE_OUTCOME_SNIPER_GRID_TASKS: React.ReactNode[] = [
   <>
-    Select the{" "}
-    <span className="font-semibold text-cyan-300">Tutorial Fighter</span> and
+    Select the <span className="font-semibold text-cyan-300">Sentinel</span> and
     stage a move to the highlighted tile at row{" "}
     <span className="font-semibold text-yellow-300">5</span>, column{" "}
     <span className="font-semibold text-yellow-300">8</span> (
@@ -504,8 +498,7 @@ const TUTORIAL_RESCUE_OUTCOME_SNIPER_GRID_TASKS: React.ReactNode[] = [
   </>,
   <>
     Optionally click the{" "}
-    <span className="font-semibold text-red-300">Enemy Fighter</span> to stage a
-    shot.
+    <span className="font-semibold text-red-300">Hammer</span> to stage a shot.
   </>,
   <>
     <span className="font-semibold text-green-400">Submit</span> to confirm the
@@ -513,18 +506,17 @@ const TUTORIAL_RESCUE_OUTCOME_SNIPER_GRID_TASKS: React.ReactNode[] = [
   </>,
 ];
 
-/** Step 13 (rescue-outcome-retreat): saved EMP; center open for Enemy Fighter. */
+/** Step 13 (rescue-outcome-retreat): Resolute saved; center open for Hammer. */
 const TUTORIAL_RESCUE_OUTCOME_RETREAT_GRID_BRIEF = (
   <>
     <p>
-      The <span className="font-semibold text-cyan-300">Tutorial EMP</span> is
+      The <span className="font-semibold text-cyan-300">Resolute</span> is
       safely off the map!
     </p>
     <p>
       You spent your action to save the hull, but the center resource tile is
-      undefended. The{" "}
-      <span className="font-semibold text-red-300">Enemy Fighter</span> can step
-      in and secure it.
+      undefended. The <span className="font-semibold text-red-300">Hammer</span>{" "}
+      can step in and secure it.
     </p>
     <p>
       That puts them over the threshold and central will award them control of
@@ -549,8 +541,8 @@ const TUTORIAL_COMPLETION_SNIPER_GRID_BRIEF = (
     </p>
     <p>
       You gave up the{" "}
-      <span className="font-semibold text-cyan-300">Tutorial EMP</span> to earn
-      that opening. In the outer dust clouds, victory comes at a cost.
+      <span className="font-semibold text-cyan-300">Resolute</span> to earn that
+      opening. In the outer dust clouds, victory comes at a cost.
     </p>
   </>
 );
@@ -568,12 +560,16 @@ const TUTORIAL_COMPLETION_RETREAT_GRID_BRIEF = (
   <>
     <p>
       <span className="font-semibold text-amber-400">Live to fight again.</span>{" "}
-      The <span className="font-semibold text-red-300">Enemy Fighter</span>{" "}
-      claimed the center resource which puts them over the threshold.
+      The <span className="font-semibold text-red-300">Hammer</span> claimed the
+      center resource, which puts the{" "}
+      <span className="font-semibold text-red-300">enemy</span> over the
+      threshold.
     </p>
     <p>
-      You lost this engagement, but you kept your most powerful ship. Sometimes
-      you must accept the loss of a battle to win the war.
+      You <span className="font-semibold text-amber-400">lost</span> this
+      engagement, but you kept your most{" "}
+      <span className="font-semibold text-cyan-300">powerful ship</span>.
+      Sometimes you must accept the loss of a battle to win the war.
     </p>
   </>
 );
@@ -994,7 +990,7 @@ export function SimulatedGameDisplay({
     isSelectedShipDisabled,
   ]);
 
-  /** special-emp: after Heavy is targeted under Weapons, pulse the weapon/special dropdown. */
+  /** special-emp: after Anvil is targeted under Weapons, pulse the weapon/special dropdown. */
   const shouldHighlightSpecialEmpWeaponDropdown = useMemo(
     () =>
       currentStep?.id === "special-emp" &&
@@ -1167,7 +1163,7 @@ export function SimulatedGameDisplay({
             shipPosition.shipId === lm.targetShipId &&
             shipPosition.status === 1,
         );
-        // Stale/persisted gameState can omit status on the Heavy; canonical
+        // Stale/persisted gameState can omit status on Anvil; canonical
         // scripted positions still place the destroyed target so EMP can resolve.
         if (
           !destroyedTargetShipPosition &&
@@ -1317,17 +1313,17 @@ export function SimulatedGameDisplay({
   /**
    * Grid positions for the tutorial highlight (yellow pulse): step 3 on player
    * fleet until a ship is selected; step 4 on enemy fleet until an enemy ship is selected;
-   * step 5 on the Tutorial Fighter until a ship is selected; step 7 on the Tutorial EMP
-   * until a ship is selected; step 8 on the Tutorial Sniper until a ship is selected,
-   * then on the Enemy Fighter after the Sniper move is staged until a target is chosen;
-   * step 10 (special-emp): Tutorial EMP until selected; then Heavy Enemy while Tutorial EMP
-   * is on Weapons until Heavy is targeted; then weapon/special dropdown pulses instead; after
-   * switching to Special, Heavy again if no target (target usually carries over from Weapons);
-   * step 12 (rescue): Tutorial EMP and Tutorial Sniper both pulse for the whole step; Enemy Fighter
-   * is added while Tutorial Sniper is selected and no shot target is chosen yet;
-   * step 13 (rescue-outcome-sniper): Tutorial Fighter until selected; Enemy Fighter after center move
+   * step 5 on the Sentinel until a ship is selected; step 7 on the Resolute
+   * until a ship is selected; step 8 on the Vigilant until a ship is selected,
+   * then on the Hammer after Vigilant's move is staged until a target is chosen;
+   * step 10 (special-emp): Resolute until selected; then Anvil while Resolute
+   * is on Weapons until Anvil is targeted; then weapon/special dropdown pulses instead; after
+   * switching to Special, Anvil again if no target (target usually carries over from Weapons);
+   * step 12 (rescue): Resolute and Vigilant both pulse for the whole step; Hammer
+   * is added while Vigilant is selected and no shot target is chosen yet;
+   * step 13 (rescue-outcome-sniper): Sentinel until selected; Hammer after center move
    * is staged until a target is chosen (optional shot);
-   * step 13 (rescue-outcome-retreat): Enemy Fighter pulses (can take the open center).
+   * step 13 (rescue-outcome-retreat): Hammer pulses (can take the open center).
    */
   const tutorialHighlightCells = useMemo(() => {
     const stepId = currentStep?.id;
@@ -1399,18 +1395,18 @@ export function SimulatedGameDisplay({
       if (selectedShipId.toString() !== "1001") {
         return undefined;
       }
-      // Weapons + Heavy targeted: dropdown highlight only (no grid pulse).
+      // Weapons + Anvil targeted: dropdown highlight only (no grid pulse).
       if (
         selectedWeaponType === "weapon" &&
         targetShipId?.toString() === "2002"
       ) {
         return undefined;
       }
-      // Weapons, not yet targeting Heavy: pulse Heavy so they open with the gun first.
+      // Weapons, not yet targeting Anvil: pulse Anvil so they open with the gun first.
       if (selectedWeaponType === "weapon") {
         return cellsForIds(TUTORIAL_SPECIAL_EMP_HIGHLIGHT_TARGET_SHIP_IDS);
       }
-      // Special armed, no target yet: pulse Heavy for EMP targeting.
+      // Special armed, no target yet: pulse Anvil for EMP targeting.
       if (selectedWeaponType === "special" && targetShipId === null) {
         return cellsForIds(TUTORIAL_SPECIAL_EMP_HIGHLIGHT_TARGET_SHIP_IDS);
       }
@@ -2207,8 +2203,8 @@ export function SimulatedGameDisplay({
         return;
       }
 
-      // In the shooting tutorial step, if the Tutorial Sniper is already selected
-      // and the user clicks the enemy fighter, always treat that click as
+      // In the shooting tutorial step, if the Vigilant is already selected
+      // and the user clicks Hammer, always treat that click as
       // targeting the enemy for the staged move+shoot, not as a selection
       // change. This prevents the proposed move from being cleared.
       if (
@@ -2262,12 +2258,12 @@ export function SimulatedGameDisplay({
         return;
       }
 
-      // Step 12 fork rule: Tutorial Sniper is shoot-only and cannot stage moves.
+      // Step 12 fork rule: Vigilant is shoot-only and cannot stage moves.
       if (
         currentStep?.id === "rescue" &&
         selectedShipId?.toString() === "1002"
       ) {
-        toast.error("Tutorial Sniper cannot move in this step.");
+        toast.error("Vigilant cannot move in this step.");
         return;
       }
 
@@ -2344,7 +2340,7 @@ export function SimulatedGameDisplay({
               previewPosition.col !== 3
             ) {
               toast.error(
-                "Move the Tutorial Sniper to (1, 3) before firing on the enemy.",
+                "Move the Vigilant to (1, 3) before firing on the enemy.",
               );
               return;
             }
@@ -2356,7 +2352,7 @@ export function SimulatedGameDisplay({
               previewPosition.col !== 8
             ) {
               toast.error(
-                "Move the Tutorial Fighter to (5, 8) before firing on the enemy.",
+                "Move the Sentinel to (5, 8) before firing on the enemy.",
               );
               return;
             }
@@ -2544,11 +2540,11 @@ export function SimulatedGameDisplay({
     // Sniper branch step: submit move-to-center, optionally with a shot target.
     if (currentStep?.id === "rescue-outcome-sniper") {
       if (!previewPosition) {
-        toast.error("Move the Tutorial Fighter to (5, 8) before submitting.");
+        toast.error("Move the Sentinel to (5, 8) before submitting.");
         return;
       }
       if (previewPosition.row !== 5 || previewPosition.col !== 8) {
-        toast.error("Move the Tutorial Fighter to (5, 8) before submitting.");
+        toast.error("Move the Sentinel to (5, 8) before submitting.");
         return;
       }
 
@@ -2587,7 +2583,7 @@ export function SimulatedGameDisplay({
         });
       } else if (selectedId === "1002") {
         if (!targetShipId) {
-          toast.error("Select Enemy Fighter as target before submitting.");
+          toast.error("Select Hammer as target before submitting.");
           return;
         }
         executeAction({
@@ -2597,7 +2593,7 @@ export function SimulatedGameDisplay({
           actionType: ActionType.Shoot,
         });
       } else {
-        toast.error("Select Tutorial EMP or Tutorial Sniper.");
+        toast.error("Select Resolute or Vigilant.");
         return;
       }
     } else if (currentStep?.id === "special-emp") {
@@ -2612,10 +2608,10 @@ export function SimulatedGameDisplay({
 
       // Only requirement for submit in this step:
       // - EMP is selected in the dropdown
-      // - Target is one of the allowed useSpecial targets (Heavy Enemy)
+      // - Target is one of the allowed useSpecial targets (Anvil)
       if (!isEmpSelected || !isAllowedTarget) {
         toast.error(
-          "Select the Heavy Enemy as your target and switch to EMP before submitting.",
+          "Select Anvil as your target and switch to EMP before submitting.",
         );
         return;
       }

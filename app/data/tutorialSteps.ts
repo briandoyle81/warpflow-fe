@@ -251,18 +251,18 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
         actionData?.shipId === "1003" &&
         actionData?.position?.row === 5 &&
         actionData?.position?.col === 8;
-      const shotEnemyFighter =
+      const shotHammer =
         actionData?.type === "shoot" &&
         actionData?.shipId === "1003" &&
         actionData?.targetShipId === "2001";
-      return movedToCenter || shotEnemyFighter;
+      return movedToCenter || shotHammer;
     },
   },
   {
     id: "completion-retreat",
     title: "Planning Ahead",
     description:
-      "Enemy Fighter took the center; you kept your strongest ship for the long run",
+      "Hammer took the center; you kept your strongest ship for the long run",
     allowedActions: {},
   },
   {

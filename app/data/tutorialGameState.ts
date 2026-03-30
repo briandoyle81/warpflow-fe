@@ -35,7 +35,7 @@ function createInitialAttributes(shipId: TutorialShipId): Attributes {
 
   const baseAttrs = calculateAttributesFromContracts(ship);
 
-  // Tutorial EMP (1001) and Heavy Enemy (2002) start with reactor overload.
+  // Resolute (1001) and Anvil (2002) start with reactor overload.
   if (ship.id === 1001n || ship.id === 2002n) {
     return {
       ...baseAttrs,
@@ -43,7 +43,7 @@ function createInitialAttributes(shipId: TutorialShipId): Attributes {
     };
   }
 
-  // Tutorial Fighter (1003) starts at a fixed 100 HP for tutorial pacing.
+  // Sentinel (1003) starts at a fixed 100 HP for tutorial pacing.
   if (ship.id === 1003n) {
     return {
       ...baseAttrs,

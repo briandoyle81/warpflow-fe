@@ -45,18 +45,18 @@ export function applyTutorialStepScript(
 
   switch (stepId) {
     case "shoot": {
-      // Before this step begins, simulate the enemy fighter advancing and
-      // firing on the Tutorial EMP in the center.
+      // Before this step begins, simulate Hammer advancing and
+      // firing on the Resolute in the center.
       ensureStateClone();
 
-      const fighterId: TutorialShipId = "2001";
+      const hammerShipId: TutorialShipId = "2001";
       const empId: TutorialShipId = "1001";
 
-      const fighterPos = updatedState.shipPositions.find(
-        (p) => p.shipId === fighterId,
+      const hammerShipPos = updatedState.shipPositions.find(
+        (p) => p.shipId === hammerShipId,
       );
       updatedState.shipPositions = updatedState.shipPositions.map((pos) =>
-        pos.shipId === fighterId
+        pos.shipId === hammerShipId
           ? {
               ...pos,
               position: { row: 4, col: 8 },
@@ -66,7 +66,7 @@ export function applyTutorialStepScript(
 
       const targetIndex = updatedState.shipIds.findIndex((id) => id === empId);
       const attackerIndex = updatedState.shipIds.findIndex(
-        (id) => id === fighterId,
+        (id) => id === hammerShipId,
       );
 
       if (targetIndex !== -1 && attackerIndex !== -1) {
@@ -90,11 +90,11 @@ export function applyTutorialStepScript(
         updatedState.shipAttributes = newAttributes;
       }
 
-      if (fighterPos) {
+      if (hammerShipPos) {
         updatedState.lastMove = {
-          shipId: fighterId,
-          oldRow: fighterPos.position.row,
-          oldCol: fighterPos.position.col,
+          shipId: hammerShipId,
+          oldRow: hammerShipPos.position.row,
+          oldCol: hammerShipPos.position.col,
           newRow: 4,
           newCol: 8,
           actionType: ActionType.Shoot,
@@ -102,10 +102,10 @@ export function applyTutorialStepScript(
         };
       }
 
-      if (!updatedState.joinerMovedShipIds.includes(fighterId)) {
+      if (!updatedState.joinerMovedShipIds.includes(hammerShipId)) {
         updatedState.joinerMovedShipIds = [
           ...updatedState.joinerMovedShipIds,
-          fighterId,
+          hammerShipId,
         ];
       }
 
@@ -116,7 +116,7 @@ export function applyTutorialStepScript(
       // After the prior step (shoot) completes: round has ended. Advance to the
       // next round, clear all "moved this round" markers, and hand initiative
       // to the opponent (joiner goes first this round; creator went first last round).
-      // lastMove remains the Tutorial Sniper's shot on the Enemy Fighter.
+      // lastMove remains the Vigilant's shot on Hammer.
       ensureStateClone();
       updatedState.turnState = {
         ...updatedState.turnState,
@@ -129,10 +129,10 @@ export function applyTutorialStepScript(
     }
 
     case "special-emp": {
-      // Before this step begins, the Heavy Enemy moves to (5, 9) and fires on the Tutorial EMP.
+      // Before this step begins, Anvil moves to (5, 9) and fires on the Resolute.
       ensureStateClone();
 
-      const heavyEnemyId: TutorialShipId = "2002";
+      const anvilShipId: TutorialShipId = "2002";
       const tutorialEmpId: TutorialShipId = "1001";
 
       // All 6 ships have already moved in round 1. Start this step on round 2
@@ -144,11 +144,11 @@ export function applyTutorialStepScript(
       updatedState.creatorMovedShipIds = [];
       updatedState.joinerMovedShipIds = [];
 
-      const heavyPos = updatedState.shipPositions.find(
-        (p) => p.shipId === heavyEnemyId,
+      const anvilShipPos = updatedState.shipPositions.find(
+        (p) => p.shipId === anvilShipId,
       );
       updatedState.shipPositions = updatedState.shipPositions.map((pos) =>
-        pos.shipId === heavyEnemyId
+        pos.shipId === anvilShipId
           ? {
               ...pos,
               position: { row: 5, col: 9 },
@@ -160,7 +160,7 @@ export function applyTutorialStepScript(
         (id) => id === tutorialEmpId,
       );
       const attackerIndex = updatedState.shipIds.findIndex(
-        (id) => id === heavyEnemyId,
+        (id) => id === anvilShipId,
       );
 
       if (targetIndex !== -1 && attackerIndex !== -1) {
@@ -184,11 +184,11 @@ export function applyTutorialStepScript(
         updatedState.shipAttributes = newAttributes;
       }
 
-      if (heavyPos) {
+      if (anvilShipPos) {
         updatedState.lastMove = {
-          shipId: heavyEnemyId,
-          oldRow: heavyPos.position.row,
-          oldCol: heavyPos.position.col,
+          shipId: anvilShipId,
+          oldRow: anvilShipPos.position.row,
+          oldCol: anvilShipPos.position.col,
           newRow: 5,
           newCol: 9,
           actionType: ActionType.Shoot,
@@ -196,11 +196,11 @@ export function applyTutorialStepScript(
         };
       }
 
-      // Heavy has moved and fired this round; show the moved marker on that ship.
-      if (!updatedState.joinerMovedShipIds.includes(heavyEnemyId)) {
+      // Anvil has moved and fired this round; show the moved marker on that ship.
+      if (!updatedState.joinerMovedShipIds.includes(anvilShipId)) {
         updatedState.joinerMovedShipIds = [
           ...updatedState.joinerMovedShipIds,
-          heavyEnemyId,
+          anvilShipId,
         ];
       }
 
@@ -214,10 +214,10 @@ export function applyTutorialStepScript(
     }
 
     case "ship-destruction": {
-      // After the EMP attack, the Heavy Enemy has been destroyed by reactor overload
-      // and the last move should show the Tutorial EMP firing on it. The EMP ship
-      // should retain whatever damage it had before this step (from the Heavy
-      // Enemy's pre-step shot), so we do NOT modify its hull here.
+      // After the EMP attack, Anvil has been destroyed by reactor overload
+      // and the last move should show Resolute firing on it. The EMP-equipped ship
+      // should retain whatever damage it had before this step (from Anvil's
+      // pre-step shot), so we do NOT modify its hull here.
       updateShipAttributes("2002", (attrs) => {
         attrs.hullPoints = 0;
         // Reactor overload of 3 represents permanent destruction.
@@ -232,11 +232,11 @@ export function applyTutorialStepScript(
       const empPos = updatedState.shipPositions.find(
         (p) => p.shipId === "1001",
       );
-      const heavyPos = updatedState.shipPositions.find(
+      const anvilShipPos = updatedState.shipPositions.find(
         (p) => p.shipId === "2002",
       );
 
-      if (empPos && heavyPos) {
+      if (empPos && anvilShipPos) {
         updatedState.lastMove = {
           shipId: "1001",
           oldRow: empPos.position.row,
@@ -248,7 +248,7 @@ export function applyTutorialStepScript(
         };
       }
 
-      // Player has used EMP this round; show the moved marker on Tutorial EMP
+      // Player has used EMP this round; show the moved marker on Resolute
       // (canonical state does not run applyTutorialAction(useSpecial)).
       if (!updatedState.creatorMovedShipIds.includes("1001")) {
         updatedState.creatorMovedShipIds = [
@@ -268,15 +268,15 @@ export function applyTutorialStepScript(
     }
 
     case "rescue": {
-      // Enemy Sniper (2003) railgun shot on Tutorial EMP (1001): 0 HP, disabled.
+      // Tongs (2003) railgun shot on Resolute (1001): 0 HP, disabled.
       // EMP keeps its starting 2 reactor damage points; this shot does not add
-      // a third overload point. Last move is the sniper shooting.
-      const sniperId: TutorialShipId = "2003";
+      // a third overload point. Last move is Tongs shooting.
+      const tongsShipId: TutorialShipId = "2003";
       const empId: TutorialShipId = "1001";
 
       let next = applyTutorialAction(state, {
         type: "shoot",
-        shipId: sniperId,
+        shipId: tongsShipId,
         targetShipId: empId,
       });
 
@@ -297,26 +297,28 @@ export function applyTutorialStepScript(
         next = { ...next, shipAttributes: sa };
       }
 
-      const sniperPos = next.shipPositions.find((p) => p.shipId === sniperId);
-      if (sniperPos) {
+      const tongsShipPos = next.shipPositions.find(
+        (p) => p.shipId === tongsShipId,
+      );
+      if (tongsShipPos) {
         next = {
           ...next,
           lastMove: {
-            shipId: sniperId,
-            oldRow: sniperPos.position.row,
-            oldCol: sniperPos.position.col,
-            newRow: sniperPos.position.row,
-            newCol: sniperPos.position.col,
+            shipId: tongsShipId,
+            oldRow: tongsShipPos.position.row,
+            oldCol: tongsShipPos.position.col,
+            newRow: tongsShipPos.position.row,
+            newCol: tongsShipPos.position.col,
             actionType: ActionType.Shoot,
             targetShipId: empId,
           },
         };
       }
 
-      if (!next.joinerMovedShipIds.includes(sniperId)) {
+      if (!next.joinerMovedShipIds.includes(tongsShipId)) {
         next = {
           ...next,
-          joinerMovedShipIds: [...next.joinerMovedShipIds, sniperId],
+          joinerMovedShipIds: [...next.joinerMovedShipIds, tongsShipId],
         };
       }
 
@@ -369,10 +371,10 @@ export function applyTutorialStepScript(
 
     case "completion-retreat": {
       // Enemy seizes the center scoring tile after your retreat.
-      const fighterId: TutorialShipId = "2001";
+      const hammerShipId: TutorialShipId = "2001";
       updatedState = applyTutorialAction(state, {
         type: "moveShip",
-        shipId: fighterId,
+        shipId: hammerShipId,
         position: { row: 5, col: 8 },
       });
 
@@ -390,26 +392,26 @@ export function applyTutorialStepScript(
 
     case "rescue-outcome-sniper": {
       // Canonical branch after choosing sniper shot on step 12:
-      // 1) Player sniper fires on enemy fighter.
-      // 2) Enemy fighter responds and destroys disabled EMP.
+      // 1) Player sniper fires on Hammer.
+      // 2) Hammer responds and destroys disabled EMP.
       const sniperId: TutorialShipId = "1002";
-      const fighterId: TutorialShipId = "2001";
+      const hammerShipId: TutorialShipId = "2001";
       const empId: TutorialShipId = "1001";
 
       let next = applyTutorialAction(state, {
         type: "shoot",
         shipId: sniperId,
-        targetShipId: fighterId,
+        targetShipId: hammerShipId,
       });
 
       next = applyTutorialAction(next, {
         type: "shoot",
-        shipId: fighterId,
+        shipId: hammerShipId,
         targetShipId: empId,
       });
 
       // Keep destroyed EMP at its tile with status=1 so last-move destroyed-target
-      // rendering can show the enemy fighter's plasma kill on this step.
+      // rendering can show Hammer's plasma kill on this step.
       next = {
         ...next,
         shipPositions: next.shipPositions.map((p) =>
@@ -429,10 +431,10 @@ export function applyTutorialStepScript(
     }
 
     case "completion-sniper": {
-      // Victory path Step 14: canonical last move is Tutorial Fighter to the
-      // center scoring tile and a shot on the Enemy Fighter (ideal tx outcome).
+      // Victory path Step 14: canonical last move is Sentinel to the
+      // center scoring tile and a shot on Hammer (ideal tx outcome).
       const playerFighterId: TutorialShipId = "1003";
-      const enemyFighterId: TutorialShipId = "2001";
+      const hammerShipId: TutorialShipId = "2001";
 
       let next = applyTutorialAction(state, {
         type: "moveShip",
@@ -442,7 +444,7 @@ export function applyTutorialStepScript(
       next = applyTutorialAction(next, {
         type: "shoot",
         shipId: playerFighterId,
-        targetShipId: enemyFighterId,
+        targetShipId: hammerShipId,
         actionType: ActionType.Shoot,
       });
       updatedState = next;
@@ -450,7 +452,7 @@ export function applyTutorialStepScript(
     }
 
     case "score-points": {
-      // Move opponent ship 2003 (Enemy Destroyer) to the scoring tile at
+      // Move opponent ship 2003 (Tongs) to the scoring tile at
       // (9, 13) and update opponent score. Runs when entering the scoring
       // step so the board shows the enemy's move before the player responds.
       ensureStateClone();

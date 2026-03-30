@@ -560,7 +560,7 @@ export function useOnboardingTutorial() {
     // shares the same board as ship-destruction).
     //
     // ship-destruction: a stale snapshot could restore the wrong lastMove
-    // (Heavy shot) instead of the canonical EMP special.
+    // (Anvil shot) instead of the canonical EMP special.
     if (snapshot) {
       const useScriptedInsteadOfSnapshot =
         currentStep.id === "ship-destruction" ||

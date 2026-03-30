@@ -29,9 +29,9 @@ function createShipData(
 
 // Player ships for tutorial
 export const TUTORIAL_PLAYER_SHIPS: Ship[] = [
-  // Ship 1: Tutorial EMP ship with Plasma main weapon (10 kills = rank 2 on-chain)
+  // Ship 1: Resolute (EMP special) with Plasma main weapon (10 kills = rank 2 on-chain)
   {
-    name: "Tutorial EMP",
+    name: "Resolute",
     id: 1001n,
     equipment: {
       mainWeapon: 3, // Plasma
@@ -50,9 +50,9 @@ export const TUTORIAL_PLAYER_SHIPS: Ship[] = [
     shipData: createShipData(10, true, 10),
     owner: TUTORIAL_PLAYER_ADDRESS,
   },
-  // Ship 2: Tutorial Sniper with Repair drones
+  // Ship 2: Vigilant with Repair drones (railgun)
   {
-    name: "Tutorial Sniper",
+    name: "Vigilant",
     id: 1002n,
     equipment: {
       mainWeapon: 1, // Railgun
@@ -71,9 +71,9 @@ export const TUTORIAL_PLAYER_SHIPS: Ship[] = [
     shipData: createShipData(15),
     owner: TUTORIAL_PLAYER_ADDRESS,
   },
-  // Ship 3: Tutorial Fighter (no special)
+  // Ship 3: Sentinel (no special)
   {
-    name: "Tutorial Fighter",
+    name: "Sentinel",
     id: 1003n,
     equipment: {
       mainWeapon: 0, // Laser
@@ -98,7 +98,7 @@ export const TUTORIAL_PLAYER_SHIPS: Ship[] = [
 export const TUTORIAL_OPPONENT_SHIPS: Ship[] = [
   // Enemy ship 1: Basic enemy
   {
-    name: "Enemy Fighter",
+    name: "Hammer",
     id: 2001n,
     equipment: {
       mainWeapon: 3, // Plasma
@@ -117,9 +117,9 @@ export const TUTORIAL_OPPONENT_SHIPS: Ship[] = [
     shipData: createShipData(10),
     owner: TUTORIAL_OPPONENT_ADDRESS,
   },
-  // Enemy ship 2: Heavy enemy used in later steps
+  // Enemy ship 2: Anvil, used in later steps
   {
-    name: "Heavy Enemy",
+    name: "Anvil",
     id: 2002n,
     equipment: {
       mainWeapon: 3, // Plasma
@@ -138,9 +138,9 @@ export const TUTORIAL_OPPONENT_SHIPS: Ship[] = [
     shipData: createShipData(15),
     owner: TUTORIAL_OPPONENT_ADDRESS,
   },
-  // Enemy ship 3: Long-range sniper
+  // Enemy ship 3: Tongs (long-range railgun)
   {
-    name: "Enemy Sniper",
+    name: "Tongs",
     id: 2003n,
     equipment: {
       mainWeapon: 1, // Railgun
