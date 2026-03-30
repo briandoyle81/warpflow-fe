@@ -296,7 +296,9 @@ const TUTORIAL_SCORE_POINTS_GRID_BRIEF = (
     <p>
       At round end, each scoring zone you{" "}
       <span className="font-semibold text-cyan-300">control</span> with a
-      functioning ship (not disabled) on the tile counts toward points.
+      functioning ship (not disabled) on the tile counts toward points. The
+      scoreboard updates after the round finishes, not the instant a ship moves
+      onto a zone.
     </p>
     <p>
       Their destroyer is already contesting a zone. Respond by moving the{" "}
@@ -356,9 +358,9 @@ const TUTORIAL_END_OF_ROUND_GRID_BRIEF = (
   <>
     <p>
       When <span className="font-semibold text-yellow-300">both sides</span>{" "}
-      have finished moving every ship, the round ends. At the start of the next
-      round, movement markers clear so each ship can move again.{" "}
-      <span className="font-semibold text-cyan-300">First player</span> swaps:
+      have finished moving every ship, the round ends, and points are awarded
+      for resources held. Movement markers clear and the{" "}
+      <span className="font-semibold text-cyan-300">first player</span> swaps:
       whoever went second last round leads this one.
     </p>
   </>
@@ -447,11 +449,8 @@ const TUTORIAL_RESCUE_GRID_BRIEF = (
       away to reach it in time.
     </p>
     <p>
-      What matters the most to you?{" "}
-      <span className="font-semibold text-cyan-300">Save your ship</span> and{" "}
-      <span className="font-semibold text-amber-300">lose the game</span>, or{" "}
-      <span className="font-semibold text-cyan-300">sacrifice for victory</span>{" "}
-      and <span className="font-semibold text-green-400">win</span>?
+      We&apos;re at the end: Whoever gets to the center first wins. What matters
+      the most to you?
     </p>
   </>
 );
@@ -549,7 +548,7 @@ const TUTORIAL_COMPLETION_SNIPER_GRID_BRIEF = (
 
 const TUTORIAL_COMPLETION_SNIPER_PRIMARY_CTA_SUPPORTING = (
   <>
-    You held the line in the sim. Claim{" "}
+    You held the line in the battle. Claim{" "}
     <span className="font-semibold text-yellow-300">2 free ships</span>, put
     this win on your record, and join the fight against other admirals.
   </>

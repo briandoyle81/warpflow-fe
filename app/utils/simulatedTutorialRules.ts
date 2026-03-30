@@ -1,6 +1,5 @@
 import { SimulatedGameState, TutorialAction } from "../types/onboarding";
 import { ActionType } from "../types/types";
-import { tutorialDefaultScoringPoints } from "./tutorialMapScoring";
 
 /**
  * Pure rules engine for the simulated tutorial game.
@@ -84,18 +83,9 @@ export function applyTutorialAction(
         ];
       }
 
-      const points = tutorialDefaultScoringPoints(
-        action.position.row,
-        action.position.col,
-      );
-      if (points > 0 && shipPosIndex !== -1) {
-        const moved = newState.shipPositions[shipPosIndex];
-        if (moved.isCreator) {
-          newState.creatorScore = newState.creatorScore + points;
-        } else {
-          newState.joinerScore = newState.joinerScore + points;
-        }
-      }
+      // Simulated tutorial: scores are round-end totals (see initial state), not
+      // incremented when a ship enters a scoring zone. Live play awards zones at
+      // round end; the HUD here stays aligned with that teaching.
       break;
     }
 
@@ -265,7 +255,6 @@ export function applyTutorialAction(
     }
 
     case "claimPoints": {
-      // Points are automatically claimed when moving to scoring tiles in moveShip.
       break;
     }
   }

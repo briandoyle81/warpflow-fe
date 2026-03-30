@@ -1,7 +1,6 @@
 import { SimulatedGameState, TutorialShipId } from "../types/onboarding";
 import { ActionType } from "../types/types";
 import { applyTutorialAction } from "./simulatedTutorialRules";
-import { tutorialDefaultScoringPoints } from "./tutorialMapScoring";
 
 /**
  * Pure per-step scripted adjustments for the tutorial.
@@ -117,6 +116,7 @@ export function applyTutorialStepScript(
       // next round, clear all "moved this round" markers, and hand initiative
       // to the opponent (joiner goes first this round; creator went first last round).
       // lastMove remains the Vigilant's shot on Hammer.
+      // Round-end scoring: both sides resolve to 80 for tutorial pacing (was 60/70).
       ensureStateClone();
       updatedState.turnState = {
         ...updatedState.turnState,
@@ -125,6 +125,8 @@ export function applyTutorialStepScript(
       };
       updatedState.creatorMovedShipIds = [];
       updatedState.joinerMovedShipIds = [];
+      updatedState.creatorScore = 80;
+      updatedState.joinerScore = 80;
       break;
     }
 
@@ -387,6 +389,10 @@ export function applyTutorialStepScript(
         },
       };
 
+      // Planning Ahead: final scoreboard — you 80 / max, enemy 100 / max.
+      updatedState.creatorScore = 80;
+      updatedState.joinerScore = 100;
+
       break;
     }
 
@@ -447,6 +453,9 @@ export function applyTutorialStepScript(
         targetShipId: hammerShipId,
         actionType: ActionType.Shoot,
       });
+      // Victory Achieved: final scoreboard — you 100 / max, enemy 80 / max.
+      next.creatorScore = 100;
+      next.joinerScore = 80;
       updatedState = next;
       break;
     }
@@ -482,8 +491,8 @@ export function applyTutorialStepScript(
           "2003",
         ];
       }
-      updatedState.joinerScore =
-        updatedState.joinerScore + tutorialDefaultScoringPoints(9, 13);
+      // Do not bump joinerScore here: scores apply at round end, not when a ship
+      // enters a zone (matches live rules and keeps 60 / 70 during this step).
       updatedState.creatorMovedShipIds =
         updatedState.creatorMovedShipIds.filter((id) => id !== "1001");
       break;
