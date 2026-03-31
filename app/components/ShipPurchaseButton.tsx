@@ -7,7 +7,7 @@ import { useAccount, useBalance, useReadContract, usePublicClient } from "wagmi"
 import type { Abi } from "viem";
 import { formatEther } from "viem";
 import { toast } from "react-hot-toast";
-import { getSelectedChainId } from "../config/networks";
+import { getSelectedChainId, getVariantForChainId } from "../config/networks";
 
 interface ShipPurchaseButtonProps {
   tier: number;
@@ -77,6 +77,7 @@ export function ShipPurchaseButton({
 }: ShipPurchaseButtonProps) {
   const { address } = useAccount();
   const activeChainId = getSelectedChainId();
+  const chainVariant = getVariantForChainId(activeChainId);
   const { data: flowBalance } = useBalance({
     address,
     chainId: activeChainId,
@@ -132,7 +133,7 @@ export function ShipPurchaseButton({
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               abi: SHIP_PURCHASE_FLOW_ABI as any,
               functionName: "purchaseWithFlow",
-              args: [address, tier, referralAddress, 1],
+              args: [address, tier, referralAddress, chainVariant],
               value: price,
               account: address,
             });
@@ -142,7 +143,7 @@ export function ShipPurchaseButton({
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               abi: SHIP_PURCHASE_UTC_ABI as any,
               functionName: "purchaseWithUC",
-              args: [address, tier, referralAddress, 1],
+              args: [address, tier, referralAddress, chainVariant],
               account: address,
             });
           }
@@ -161,7 +162,7 @@ export function ShipPurchaseButton({
 
       estimateGas();
     }
-  }, [tier, address, paymentMethod, utcApproved, publicClient, referralAddress, price]);
+  }, [tier, address, paymentMethod, utcApproved, publicClient, referralAddress, chainVariant, price]);
 
   const validateBeforeTransaction = React.useCallback(() => {
     if (!address) {
@@ -239,7 +240,7 @@ export function ShipPurchaseButton({
           address,
           tier as number, // Tier is already 0-based (0-4) for contract (uint8)
           referralAddress,
-          1, // Default variant (uint16)
+          chainVariant,
         ]}
         className={className}
         disabled={disabled}
@@ -265,7 +266,7 @@ export function ShipPurchaseButton({
         address,
         tier as number, // Tier is already 0-based (0-4) for contract (uint8)
         referralAddress,
-        1, // Default variant (uint16)
+        chainVariant,
       ]}
       value={price}
       className={className}

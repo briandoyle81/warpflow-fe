@@ -9,7 +9,7 @@ import type { Abi } from "viem";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { getSelectedChainId } from "../config/networks";
+import { getSelectedChainId, getVariantForChainId } from "../config/networks";
 
 // Cache expiration time (24 hours) - only for unclaimed addresses
 const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -41,9 +41,8 @@ export function useFreeShipClaiming() {
   const { refetch } = useOwnedShips();
   const activeChainId = walletChainId ?? getSelectedChainId();
 
-  // `claimFreeShips` takes a `_variant` parameter required by the contract.
-  // We default to `1`, which is accepted on Ronin and Flow deployments.
-  const freeShipVariant = 1;
+  // `claimFreeShips` requires a chain-specific variant expected by the contract.
+  const freeShipVariant = getVariantForChainId(activeChainId);
 
   // Cache for eligibility status and countdown (lastClaim + cooldown for "next claim in")
   const [eligibilityCache, setEligibilityCache] = useState<{

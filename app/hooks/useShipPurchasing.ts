@@ -8,7 +8,7 @@ import { CONTRACT_ADDRESSES, SHIP_PURCHASE_TIERS } from "../config/contracts";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
 import { useEffect } from "react";
-import { getSelectedChainId } from "../config/networks";
+import { getSelectedChainId, getVariantForChainId } from "../config/networks";
 
 // Ships contract ABI for purchasing with FLOW
 const shipsContractABI = [
@@ -30,6 +30,7 @@ export function useShipPurchasing() {
   const { address } = useAccount();
   const { refetch } = useOwnedShips();
   const activeChainId = getSelectedChainId();
+  const chainVariant = getVariantForChainId(activeChainId);
 
   // Get user's FLOW balance
   const { data: flowBalance, isLoading: isLoadingFlowBalance } = useBalance({
@@ -131,7 +132,7 @@ export function useShipPurchasing() {
         address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: shipsContractABI,
         functionName: "purchaseWithFlow",
-        args: [address, tier as number, referralAddress, 1], // tier is 0-based uint8, variant defaults to 1
+        args: [address, tier as number, referralAddress, chainVariant], // tier is 0-based uint8
         value: tierPrice,
       });
 
