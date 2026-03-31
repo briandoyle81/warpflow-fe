@@ -14,7 +14,7 @@ import {
 import { useShipsByIds } from "../hooks/useShipsByIds";
 import ShipCard from "./ShipCard";
 import { useGetGameMapState } from "../hooks/useMapsContract";
-import { gameContractConfig, useGetGame } from "../hooks/useGameContract";
+import { useGameContract, useGetGame } from "../hooks/useGameContract";
 import {
   useContractEvents,
   registerGameRefetch,
@@ -58,6 +58,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Tooltip disable toggle
   const [disableTooltips, setDisableTooltips] = React.useState(false);
   const { address } = useAccount();
+  const gameContract = useGameContract();
   const { clearAllTransactions } = useTransaction();
   const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
   const [previewPosition, setPreviewPosition] = useState<{
@@ -2222,8 +2223,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             return (
                 <TransactionButton
                   transactionId={`move-ship-${selectedShipId}-${game.metadata.gameId}`}
-                  contractAddress={gameContractConfig.address}
-                  abi={gameContractConfig.abi}
+                  contractAddress={gameContract.address}
+                  abi={gameContract.abi}
                   functionName="moveShip"
                   args={[
                     game.metadata.gameId,
@@ -3031,8 +3032,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         >
                           <TransactionButton
                             transactionId={`timeout-${game.metadata.gameId.toString()}`}
-                            contractAddress={gameContractConfig.address}
-                            abi={gameContractConfig.abi}
+                            contractAddress={gameContract.address}
+                            abi={gameContract.abi}
                             functionName="endGameOnTimeout"
                             args={[game.metadata.gameId]}
                             className="px-3 py-1 uppercase font-semibold tracking-wider transition-colors duration-150 w-full h-full animate-timeout-soft"

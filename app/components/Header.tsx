@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   useAccount,
   useBalance,
@@ -20,6 +20,7 @@ import {
   DEFAULT_CHAIN_ID,
   getSelectedChainId,
   getNativeTokenSymbol,
+  getVariantForChainId,
   isSupportedChainId,
   setSelectedChainId,
   SUPPORTED_CHAINS,
@@ -39,13 +40,30 @@ const Header: React.FC = () => {
   const lastSwitchRequestRef = useRef<{ chainId: number; at: number } | null>(
     null
   );
+  const lastVariantWarningKeyRef = useRef<string | null>(null);
 
   const nativeTokenSymbol = getNativeTokenSymbol(selectedChainId);
+  const selectedChainVariant = getVariantForChainId(selectedChainId);
   const { data: balance } = useBalance({
     address: account.address,
     chainId: selectedChainId,
     query: { enabled: isHydrated && !!account.address },
   });
+
+  const maxVariantConfig = useMemo(
+    () => ({
+      address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+      abi: CONTRACT_ABIS.SHIPS as Abi,
+      functionName: "maxVariant" as const,
+      chainId: selectedChainId,
+      query: {
+        enabled: isHydrated && isSupportedChainId(selectedChainId),
+      },
+    }),
+    [isHydrated, selectedChainId]
+  );
+
+  const { data: maxVariant } = useReadContract(maxVariantConfig);
 
   // Read UTC balance
   const { data: utcBalance } = useReadContract({
@@ -68,6 +86,40 @@ const Header: React.FC = () => {
   // Check if wallet is connecting
   const isConnecting =
     account.status === "connecting" || account.status === "reconnecting";
+
+  // Keep selected chain in sync with wallet chain after a successful switch/connect.
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (account.status !== "connected") return;
+    if (!isSupportedChainId(account.chainId)) return;
+    if (pendingSwitchChainIdRef.current && account.chainId !== pendingSwitchChainIdRef.current) {
+      return;
+    }
+
+    pendingSwitchChainIdRef.current = null;
+    if (selectedChainId !== account.chainId) {
+      setSelectedChainId(account.chainId);
+      setSelectedChainIdState(account.chainId);
+    }
+  }, [isHydrated, account.status, account.chainId, selectedChainId]);
+
+  // Warn if chain variant mapping is incompatible with deployed contract config.
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (maxVariant == null) return;
+    const maxVariantNumber = Number(maxVariant);
+    if (!Number.isFinite(maxVariantNumber)) return;
+    if (selectedChainVariant <= maxVariantNumber) return;
+
+    const warningKey = `${selectedChainId}:${selectedChainVariant}:${maxVariantNumber}`;
+    if (lastVariantWarningKeyRef.current === warningKey) return;
+    lastVariantWarningKeyRef.current = warningKey;
+
+    toast.error(
+      `Network variant mismatch: selected variant ${selectedChainVariant} exceeds contract maxVariant ${maxVariantNumber}. Claims and purchases may fail until mapping is updated.`,
+      { duration: 8000 }
+    );
+  }, [isHydrated, maxVariant, selectedChainId, selectedChainVariant]);
 
   // When connected, ensure wallet is on the selected chain.
   useEffect(() => {

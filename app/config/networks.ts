@@ -66,9 +66,10 @@ export function getNativeTokenSymbol(chainId: number | undefined | null): string
 // NOTE: These values must match the backend contract deployment expectations.
 const CHAIN_VARIANT_BY_CHAIN_ID: Record<number, number> = {
   [flowTestnet.id]: 1,
-  [saigon.id]: 2,
-  [baseSepolia.id]: 3,
-  [xaiTestnet.id]: 4,
+  // Current deployments across supported chains are configured with maxVariant=1.
+  [saigon.id]: 1,
+  [baseSepolia.id]: 1,
+  [xaiTestnet.id]: 1,
 };
 
 export function getVariantForChainId(chainId: number | undefined | null): number {

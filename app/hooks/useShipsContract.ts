@@ -1,26 +1,32 @@
-import { useReadContract, useWriteContract } from "wagmi";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
 import type { Abi } from "viem";
+import { getSelectedChainId } from "../config/networks";
 // import { Ship, ShipTuple } from "../types/types";
-
-// Contract instance configuration
-export const shipsContractConfig = {
-  address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
-  abi: CONTRACT_ABIS.SHIPS as Abi,
-} as const;
 
 // Hook for reading contract data
 export function useShipsContract() {
+  const { chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const contractAddresses = getContractAddresses(activeChainId);
+
   return {
-    address: shipsContractConfig.address,
-    abi: shipsContractConfig.abi,
+    address: contractAddresses.SHIPS as `0x${string}`,
+    abi: CONTRACT_ABIS.SHIPS as Abi,
+    chainId: activeChainId,
   };
 }
 
 // Hook for reading contract data with proper typing
 export function useShipsRead(functionName: string, args?: readonly unknown[]) {
+  const { chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const contractAddresses = getContractAddresses(activeChainId);
+
   return useReadContract({
-    ...shipsContractConfig,
+    address: contractAddresses.SHIPS as `0x${string}`,
+    abi: CONTRACT_ABIS.SHIPS as Abi,
+    chainId: activeChainId,
     functionName,
     args,
   });

@@ -3,8 +3,9 @@
 import { useAccount, useWatchContractEvent } from "wagmi";
 import { useOwnedShips } from "./useOwnedShips";
 import { usePlayerGames } from "./usePlayerGames";
-import { CONTRACT_ADDRESSES } from "../config/contracts";
+import { getContractAddresses } from "../config/contracts";
 import { useCallback, useMemo } from "react";
+import { getSelectedChainId } from "../config/networks";
 
 const SHIP_TRANSFER_EVENT_ABI = [
   {
@@ -48,7 +49,9 @@ export function unregisterGameRefetch(gameId: number) {
 }
 
 export function useContractEvents() {
-  const { address } = useAccount();
+  const { address, chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const contractAddresses = getContractAddresses(activeChainId);
   const { refetch: refetchShips } = useOwnedShips();
   const { refetch: refetchGames } = usePlayerGames();
 
@@ -116,7 +119,8 @@ export function useContractEvents() {
 
   const shipEventConfig = useMemo(
     () => ({
-      address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+      chainId: activeChainId,
+      address: contractAddresses.SHIPS as `0x${string}`,
       abi: SHIP_TRANSFER_EVENT_ABI,
       eventName: "Transfer" as const,
       poll: true as const,
@@ -124,12 +128,13 @@ export function useContractEvents() {
       enabled: shouldWatch,
       onLogs: handleShipTransferLogs,
     }),
-    [handleShipTransferLogs, shouldWatch]
+    [activeChainId, contractAddresses.SHIPS, handleShipTransferLogs, shouldWatch]
   );
 
   const gameEventConfig = useMemo(
     () => ({
-      address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
+      chainId: activeChainId,
+      address: contractAddresses.GAME as `0x${string}`,
       abi: GAME_UPDATE_EVENT_ABI,
       eventName: "GameUpdate" as const,
       poll: true as const,
@@ -137,7 +142,7 @@ export function useContractEvents() {
       enabled: shouldWatch,
       onLogs: handleGameUpdateLogs,
     }),
-    [handleGameUpdateLogs, shouldWatch]
+    [activeChainId, contractAddresses.GAME, handleGameUpdateLogs, shouldWatch]
   );
 
   // Watch ship transfer events (only when address is available)

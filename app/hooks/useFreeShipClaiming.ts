@@ -4,7 +4,10 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import {
+  CONTRACT_ABIS,
+  getContractAddresses,
+} from "../config/contracts";
 import type { Abi } from "viem";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
@@ -40,6 +43,7 @@ export function useFreeShipClaiming() {
   const { address, chainId: walletChainId } = useAccount();
   const { refetch } = useOwnedShips();
   const activeChainId = walletChainId ?? getSelectedChainId();
+  const contractAddresses = getContractAddresses(activeChainId);
 
   // `claimFreeShips` requires a chain-specific variant expected by the contract.
   const freeShipVariant = getVariantForChainId(activeChainId);
@@ -69,13 +73,13 @@ export function useFreeShipClaiming() {
   // Check if user can claim free ships (using lastClaimTimestamp)
   const lastClaimTimestampConfig = useMemo(
     () => ({
-      address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+      address: contractAddresses.SHIPS as `0x${string}`,
       abi: CONTRACT_ABIS.SHIPS as Abi,
       functionName: "lastClaimTimestamp" as const,
       args: address ? [address] : undefined,
       chainId: activeChainId,
     }),
-    [address, activeChainId],
+    [address, activeChainId, contractAddresses.SHIPS],
   );
 
   const {
@@ -88,12 +92,12 @@ export function useFreeShipClaiming() {
   // Cooldown period from contract (seconds)
   const claimCooldownPeriodConfig = useMemo(
     () => ({
-      address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+      address: contractAddresses.SHIPS as `0x${string}`,
       abi: CONTRACT_ABIS.SHIPS as Abi,
       functionName: "claimCooldownPeriod" as const,
       chainId: activeChainId,
     }),
-    [activeChainId],
+    [activeChainId, contractAddresses.SHIPS],
   );
 
   const { data: claimCooldownPeriod } = useReadContract(
@@ -360,7 +364,7 @@ export function useFreeShipClaiming() {
     try {
       // Call the smart contract to claim free ships (with variant parameter)
       await writeContract({
-        address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+        address: contractAddresses.SHIPS as `0x${string}`,
         abi: CONTRACT_ABIS.SHIPS as Abi,
         functionName: "claimFreeShips",
         args: [freeShipVariant], // `_variant` expects a chain expectation

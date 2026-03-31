@@ -1,18 +1,18 @@
-import { useReadContract, useWriteContract } from "wagmi";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
 import type { Abi } from "viem";
-
-// Contract instance configuration
-export const gameContractConfig = {
-  address: CONTRACT_ADDRESSES.GAME as `0x${string}`,
-  abi: CONTRACT_ABIS.GAME as Abi,
-} as const;
+import { getSelectedChainId } from "../config/networks";
 
 // Hook for reading contract data
 export function useGameContract() {
+  const { chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const contractAddresses = getContractAddresses(activeChainId);
+
   return {
-    address: gameContractConfig.address,
-    abi: gameContractConfig.abi,
+    address: contractAddresses.GAME as `0x${string}`,
+    abi: CONTRACT_ABIS.GAME as Abi,
+    chainId: activeChainId,
   };
 }
 
@@ -22,8 +22,14 @@ export function useGameRead(
   args?: readonly unknown[],
   options?: { query?: { enabled?: boolean } }
 ) {
+  const { chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const contractAddresses = getContractAddresses(activeChainId);
+
   return useReadContract({
-    ...gameContractConfig,
+    address: contractAddresses.GAME as `0x${string}`,
+    abi: CONTRACT_ABIS.GAME as Abi,
+    chainId: activeChainId,
     functionName,
     args,
     query: options?.query,

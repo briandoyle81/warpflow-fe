@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { TransactionButton } from "./TransactionButton";
-import { gameContractConfig } from "../hooks/useGameContract";
+import { useGameContract } from "../hooks/useGameContract";
 import { toast } from "react-hot-toast";
 
 interface FleeSafetySwitchProps {
@@ -17,6 +17,7 @@ export function FleeSafetySwitch({
   onFlee,
   locked = false,
 }: FleeSafetySwitchProps) {
+  const gameContract = useGameContract();
   const [isLeverOpen, setIsLeverOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
@@ -115,8 +116,8 @@ export function FleeSafetySwitch({
 
               <TransactionButton
                 transactionId={`flee-game-${gameId}`}
-                contractAddress={gameContractConfig.address}
-                abi={gameContractConfig.abi}
+                contractAddress={gameContract.address}
+                abi={gameContract.abi}
                 functionName="flee"
                 args={[gameId]}
                 onSuccess={() => {

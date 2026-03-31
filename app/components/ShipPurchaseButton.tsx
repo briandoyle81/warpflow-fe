@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { TransactionButton } from "./TransactionButton";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import {
+  CONTRACT_ABIS,
+  getContractAddresses,
+} from "../config/contracts";
 import { useAccount, useBalance, useReadContract, usePublicClient } from "wagmi";
 import type { Abi } from "viem";
 import { formatEther } from "viem";
@@ -75,8 +78,9 @@ export function ShipPurchaseButton({
   onError,
   refetch,
 }: ShipPurchaseButtonProps) {
-  const { address } = useAccount();
-  const activeChainId = getSelectedChainId();
+  const { address, chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const contractAddresses = getContractAddresses(activeChainId);
   const chainVariant = getVariantForChainId(activeChainId);
   const { data: flowBalance } = useBalance({
     address,
@@ -85,7 +89,7 @@ export function ShipPurchaseButton({
 
   // Read UTC balance for UTC purchases
   const { data: utcBalance } = useReadContract({
-    address: CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`,
+    address: contractAddresses.UNIVERSAL_CREDITS as `0x${string}`,
     abi: CONTRACT_ABIS.UNIVERSAL_CREDITS as Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
@@ -94,10 +98,10 @@ export function ShipPurchaseButton({
 
   // Read UTC allowance for ShipPurchaser contract
   const { data: utcAllowance, refetch: refetchAllowance } = useReadContract({
-    address: CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`,
+    address: contractAddresses.UNIVERSAL_CREDITS as `0x${string}`,
     abi: CONTRACT_ABIS.UNIVERSAL_CREDITS as Abi,
     functionName: "allowance",
-    args: address && CONTRACT_ADDRESSES.SHIP_PURCHASER ? [address, CONTRACT_ADDRESSES.SHIP_PURCHASER] : undefined,
+    args: address && contractAddresses.SHIP_PURCHASER ? [address, contractAddresses.SHIP_PURCHASER] : undefined,
     query: { enabled: paymentMethod === "UTC" },
   });
 
@@ -129,7 +133,7 @@ export function ShipPurchaseButton({
           let estimatedGas: bigint | undefined;
           if (paymentMethod === "FLOW") {
             estimatedGas = await publicClient.estimateContractGas({
-              address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+              address: contractAddresses.SHIPS as `0x${string}`,
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               abi: SHIP_PURCHASE_FLOW_ABI as any,
               functionName: "purchaseWithFlow",
@@ -139,7 +143,7 @@ export function ShipPurchaseButton({
             });
           } else if (utcApproved) {
             estimatedGas = await publicClient.estimateContractGas({
-              address: CONTRACT_ADDRESSES.SHIP_PURCHASER as `0x${string}`,
+              address: contractAddresses.SHIP_PURCHASER as `0x${string}`,
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               abi: SHIP_PURCHASE_UTC_ABI as any,
               functionName: "purchaseWithUC",
@@ -162,7 +166,7 @@ export function ShipPurchaseButton({
 
       estimateGas();
     }
-  }, [tier, address, paymentMethod, utcApproved, publicClient, referralAddress, chainVariant, price]);
+  }, [tier, address, paymentMethod, utcApproved, publicClient, referralAddress, chainVariant, price, contractAddresses.SHIPS, contractAddresses.SHIP_PURCHASER]);
 
   const validateBeforeTransaction = React.useCallback(() => {
     if (!address) {
@@ -196,11 +200,11 @@ export function ShipPurchaseButton({
     return (
       <TransactionButton
         transactionId={`approve-utc-ship-purchaser-tier-${tier}-${address}`}
-        contractAddress={CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`}
+        contractAddress={contractAddresses.UNIVERSAL_CREDITS as `0x${string}`}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         abi={UTC_APPROVE_ABI as any}
         functionName="approve"
-        args={[CONTRACT_ADDRESSES.SHIP_PURCHASER as `0x${string}`, price]}
+        args={[contractAddresses.SHIP_PURCHASER as `0x${string}`, price]}
         className={`${className} whitespace-nowrap`}
         disabled={disabled || !utcBalance || (utcBalance as bigint) < price}
         loadingText={`[APPROVING ${utcAmount} UTC...]`}
@@ -232,7 +236,7 @@ export function ShipPurchaseButton({
     return (
       <TransactionButton
         transactionId={`purchase-ships-utc-tier-${tier}-${address}`}
-        contractAddress={CONTRACT_ADDRESSES.SHIP_PURCHASER as `0x${string}`}
+        contractAddress={contractAddresses.SHIP_PURCHASER as `0x${string}`}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         abi={SHIP_PURCHASE_UTC_ABI as any}
         functionName="purchaseWithUC"
@@ -258,7 +262,7 @@ export function ShipPurchaseButton({
   return (
     <TransactionButton
       transactionId={`purchase-ships-flow-tier-${tier}-${address}`}
-      contractAddress={CONTRACT_ADDRESSES.SHIPS as `0x${string}`}
+      contractAddress={contractAddresses.SHIPS as `0x${string}`}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       abi={SHIP_PURCHASE_FLOW_ABI as any}
       functionName="purchaseWithFlow"

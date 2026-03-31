@@ -4,7 +4,10 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { CONTRACT_ADDRESSES, SHIP_PURCHASE_TIERS } from "../config/contracts";
+import {
+  SHIP_PURCHASE_TIERS,
+  getContractAddresses,
+} from "../config/contracts";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
 import { useEffect } from "react";
@@ -27,9 +30,10 @@ const shipsContractABI = [
 ] as const;
 
 export function useShipPurchasing() {
-  const { address } = useAccount();
+  const { address, chainId: walletChainId } = useAccount();
   const { refetch } = useOwnedShips();
-  const activeChainId = getSelectedChainId();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const contractAddresses = getContractAddresses(activeChainId);
   const chainVariant = getVariantForChainId(activeChainId);
 
   // Get user's FLOW balance
@@ -129,7 +133,7 @@ export function useShipPurchasing() {
 
     try {
       await writeContract({
-        address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+        address: contractAddresses.SHIPS as `0x${string}`,
         abi: shipsContractABI,
         functionName: "purchaseWithFlow",
         args: [address, tier as number, referralAddress, chainVariant], // tier is 0-based uint8
