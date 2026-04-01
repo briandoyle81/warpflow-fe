@@ -81,7 +81,7 @@ const TUTORIAL_VIEW_ENEMY_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [
 /** Sentinel (step 5 move-ship) until any ship is selected. */
 const TUTORIAL_MOVE_SHIP_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [1003n];
 
-/** Resolute (step 7 score-points) until a ship is selected. */
+/** Resolute (step 7 score-points) until selected; allowed-move cells use step config. */
 const TUTORIAL_SCORE_POINTS_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [1001n];
 
 /** Vigilant (step 8 shoot) until a ship is selected. */
@@ -114,11 +114,6 @@ const TUTORIAL_RESCUE_OUTCOME_SNIPER_FIGHTER_HIGHLIGHT_SHIP_IDS: readonly bigint
   [1003n];
 const TUTORIAL_RESCUE_OUTCOME_SNIPER_ENEMY_HIGHLIGHT_SHIP_IDS: readonly bigint[] =
   [2001n];
-
-/** Step 13 (rescue-outcome-retreat): Hammer can seize the open center. */
-const TUTORIAL_RESCUE_OUTCOME_RETREAT_HIGHLIGHT_SHIP_IDS: readonly bigint[] = [
-  2001n,
-];
 
 function isTutorialEnemyFleetShipId(shipId: bigint): boolean {
   return TUTORIAL_VIEW_ENEMY_HIGHLIGHT_SHIP_IDS.some((id) => id === shipId);
@@ -643,7 +638,7 @@ function getTutorialGridPanelConfig(
       };
     case "shoot":
       return {
-        title: "Return fire",
+        title: "Move and Return Fire",
         brief: TUTORIAL_SHOOT_GRID_BRIEF,
         tasks: TUTORIAL_SHOOT_GRID_TASKS,
       };
@@ -680,7 +675,7 @@ function getTutorialGridPanelConfig(
       };
     case "rescue-outcome-retreat":
       return {
-        title: "Making Tough Decisions",
+        title: "The Resolute is Safe",
         brief: TUTORIAL_RESCUE_OUTCOME_RETREAT_GRID_BRIEF,
         tasks: TUTORIAL_RESCUE_OUTCOME_RETREAT_GRID_TASKS,
       };
@@ -903,11 +898,18 @@ export function SimulatedGameDisplay({
   // main game's behavior: it appears as soon as you select one of your ships
   // that can act this round, even before choosing a destination.
   const isShowingProposedMove = useMemo(() => {
-    if (selectedShipId === null || !isMyTurn) {
+    if (selectedShipId === null) {
+      return false;
+    }
+    if (!isShipOwnedByCurrentPlayer(selectedShipId)) return false;
+    // Keep the panel visible during the simulated wallet approval flow.
+    if (isTransactionDialogOpen) {
+      return true;
+    }
+    if (!isMyTurn) {
       return false;
     }
     const idString = selectedShipId.toString() as TutorialShipId;
-    if (!isShipOwnedByCurrentPlayer(selectedShipId)) return false;
     if (movedShipIdsSet.has(idString)) {
       const attrs = getShipAttributes(idString);
       const isDisabled = attrs && attrs.hullPoints === 0;
@@ -917,6 +919,7 @@ export function SimulatedGameDisplay({
   }, [
     selectedShipId,
     isMyTurn,
+    isTransactionDialogOpen,
     isShipOwnedByCurrentPlayer,
     movedShipIdsSet,
     getShipAttributes,
@@ -929,7 +932,7 @@ export function SimulatedGameDisplay({
   }, [selectedShipId, getShipAttributes]);
 
   /**
-   * Pulse the Submit Move / Submit Retreat button (same idea as tutorial highlight)
+   * Pulse the Submit / Submit Retreat button (same idea as tutorial highlight)
    * when a tx step is ready to confirm: staged inputs present, dialog not open.
    */
   const shouldPulseSubmitMoveButton = useMemo(() => {
@@ -1268,7 +1271,7 @@ export function SimulatedGameDisplay({
     previewPosition,
   ]);
 
-  // Highlighted cell: last move new position (when showing last move) or step 5 allowed move target
+  // Last-move new position pulse on the grid when no ship is selected (in-game parity).
   const highlightedMovePosition = useMemo(() => {
     // When showing last move (no ship selected), highlight the new position (same as in-game)
     if (
@@ -1283,46 +1286,25 @@ export function SimulatedGameDisplay({
         col: tutorialDisplayLastMove.newCol,
       };
     }
-    // Step 13 retreat branch: center scoring tile is open (no player ship to select).
-    if (
-      currentStep?.id === "rescue-outcome-retreat" &&
-      selectedShipId === null
-    ) {
-      return { row: 5, col: 8 };
-    }
-    // Step 5 / 7 / 8: highlight the allowed move target
-    if (
-      (currentStep?.id === "move-ship" ||
-        currentStep?.id === "score-points" ||
-        currentStep?.id === "shoot" ||
-        currentStep?.id === "rescue-outcome-sniper") &&
-      currentStep?.allowedActions.moveShip &&
-      selectedShipId &&
-      selectedShipId.toString() === currentStep.allowedActions.moveShip.shipId
-    ) {
-      const allowedPositions =
-        currentStep.allowedActions.moveShip.allowedPositions;
-      if (allowedPositions.length > 0) {
-        return allowedPositions[0];
-      }
-    }
     return null;
-  }, [currentStep, selectedShipId, tutorialDisplayLastMove]);
+  }, [selectedShipId, tutorialDisplayLastMove]);
 
   /**
    * Grid positions for the tutorial highlight (yellow pulse): step 3 on player
    * fleet until a ship is selected; step 4 on enemy fleet until an enemy ship is selected;
    * step 5 on the Sentinel until a ship is selected; step 7 on the Resolute
-   * until a ship is selected; step 8 on the Vigilant until a ship is selected,
-   * then on the Hammer after Vigilant's move is staged until a target is chosen;
+   * until a ship is selected, then on allowed scoring-zone move destinations until
+   * the move is staged; step 8 on the Vigilant until a ship is selected, then on
+   * allowed move destinations until the move is staged, then on the Hammer after
+   * the move is staged until a target is chosen;
    * step 10 (special-emp): Resolute until selected; then Anvil while Resolute
    * is on Weapons until Anvil is targeted; then weapon/special dropdown pulses instead; after
    * switching to Special, Anvil again if no target (target usually carries over from Weapons);
-   * step 12 (rescue): Resolute and Vigilant both pulse for the whole step; Hammer
-   * is added while Vigilant is selected and no shot target is chosen yet;
-   * step 13 (rescue-outcome-sniper): Sentinel until selected; Hammer after center move
-   * is staged until a target is chosen (optional shot);
-   * step 13 (rescue-outcome-retreat): Hammer pulses (can take the open center).
+   * step 12 (rescue): Resolute and Vigilant both pulse until one is selected; then only
+   * the selected ship pulses (Hammer is added while Vigilant is selected and no shot target yet);
+   * step 13 (rescue-outcome-sniper): Sentinel until selected; allowed center cell(s) pulse
+   * like other move steps; Hammer after center move is staged until a target is chosen;
+   * step 13 (rescue-outcome-retreat): no grid tutorial highlight (narrative only).
    */
   const tutorialHighlightCells = useMemo(() => {
     const stepId = currentStep?.id;
@@ -1356,13 +1338,56 @@ export function SimulatedGameDisplay({
     }
 
     if (stepId === "move-ship") {
-      if (selectedShipId !== null) return undefined;
-      return cellsForIds(TUTORIAL_MOVE_SHIP_HIGHLIGHT_SHIP_IDS);
+      if (selectedShipId === null) {
+        return cellsForIds(TUTORIAL_MOVE_SHIP_HIGHLIGHT_SHIP_IDS);
+      }
+      const moveCfg = currentStep?.allowedActions.moveShip;
+      if (
+        moveCfg &&
+        selectedShipId.toString() === moveCfg.shipId &&
+        moveCfg.allowedPositions.length > 0
+      ) {
+        const isMoveStaged =
+          previewPosition !== null &&
+          moveCfg.allowedPositions.some(
+            (p) => p.row === previewPosition.row && p.col === previewPosition.col,
+          );
+        if (isMoveStaged) {
+          return undefined;
+        }
+        return moveCfg.allowedPositions.map((p) => ({
+          row: p.row,
+          col: p.col,
+        }));
+      }
+      return undefined;
     }
 
     if (stepId === "score-points") {
-      if (selectedShipId !== null) return undefined;
-      return cellsForIds(TUTORIAL_SCORE_POINTS_HIGHLIGHT_SHIP_IDS);
+      if (selectedShipId === null) {
+        return cellsForIds(TUTORIAL_SCORE_POINTS_HIGHLIGHT_SHIP_IDS);
+      }
+      const moveCfg = currentStep?.allowedActions.moveShip;
+      if (
+        moveCfg &&
+        selectedShipId.toString() === moveCfg.shipId &&
+        moveCfg.allowedPositions.length > 0
+      ) {
+        const isMoveStaged =
+          previewPosition !== null &&
+          moveCfg.allowedPositions.some(
+            (p) =>
+              p.row === previewPosition.row && p.col === previewPosition.col,
+          );
+        if (isMoveStaged) {
+          return undefined;
+        }
+        return moveCfg.allowedPositions.map((p) => ({
+          row: p.row,
+          col: p.col,
+        }));
+      }
+      return undefined;
     }
 
     if (stepId === "shoot") {
@@ -1370,19 +1395,26 @@ export function SimulatedGameDisplay({
         return cellsForIds(TUTORIAL_SHOOT_HIGHLIGHT_SHIP_IDS);
       }
       const moveCfg = currentStep?.allowedActions.moveShip;
-      const stagedMoveOk =
-        previewPosition !== null &&
-        moveCfg !== undefined &&
-        selectedShipId.toString() === moveCfg.shipId &&
-        moveCfg.allowedPositions.some(
-          (p) => p.row === previewPosition.row && p.col === previewPosition.col,
-        );
       if (
-        stagedMoveOk &&
-        targetShipId === null &&
-        selectedShipId.toString() === moveCfg.shipId
+        moveCfg &&
+        selectedShipId.toString() === moveCfg.shipId &&
+        moveCfg.allowedPositions.length > 0
       ) {
-        return cellsForIds(TUTORIAL_SHOOT_HIGHLIGHT_ENEMY_SHIP_IDS);
+        const isMoveStaged =
+          previewPosition !== null &&
+          moveCfg.allowedPositions.some(
+            (p) =>
+              p.row === previewPosition.row && p.col === previewPosition.col,
+          );
+        if (isMoveStaged && targetShipId === null) {
+          return cellsForIds(TUTORIAL_SHOOT_HIGHLIGHT_ENEMY_SHIP_IDS);
+        }
+        if (!isMoveStaged) {
+          return moveCfg.allowedPositions.map((p) => ({
+            row: p.row,
+            col: p.col,
+          }));
+        }
       }
       return undefined;
     }
@@ -1413,15 +1445,34 @@ export function SimulatedGameDisplay({
     }
 
     if (stepId === "rescue") {
-      const playerCells =
-        cellsForIds(TUTORIAL_RESCUE_CHOICE_HIGHLIGHT_SHIP_IDS) ?? [];
+      const selectedId = selectedShipId?.toString();
+      const playerCells: { row: number; col: number; label?: string }[] = [];
+      for (const shipId of TUTORIAL_RESCUE_CHOICE_HIGHLIGHT_SHIP_IDS) {
+        const idStr = shipId.toString() as TutorialShipId;
+        // Hard choice: only pulse the ship the player is choosing; hide the other once one is selected.
+        if (selectedId === "1001" && idStr === "1002") continue;
+        if (selectedId === "1002" && idStr === "1001") continue;
+        const sp = positions.find((p) => p.shipId === idStr);
+        if (sp) {
+          playerCells.push({
+            row: sp.position.row,
+            col: sp.position.col,
+            label:
+              idStr === "1001"
+                ? "Save Ship"
+                : idStr === "1002"
+                  ? "Win Game"
+                  : undefined,
+          });
+        }
+      }
       const enemyCells =
         selectedShipId?.toString() === "1002" && targetShipId === null
           ? (cellsForIds(TUTORIAL_RESCUE_SNIPER_TARGET_HIGHLIGHT_SHIP_IDS) ??
             [])
           : [];
       const seen = new Set<string>();
-      const merged: { row: number; col: number }[] = [];
+      const merged: { row: number; col: number; label?: string }[] = [];
       for (const c of [...playerCells, ...enemyCells]) {
         const key = `${c.row},${c.col}`;
         if (!seen.has(key)) {
@@ -1433,7 +1484,7 @@ export function SimulatedGameDisplay({
     }
 
     if (stepId === "rescue-outcome-retreat") {
-      return cellsForIds(TUTORIAL_RESCUE_OUTCOME_RETREAT_HIGHLIGHT_SHIP_IDS);
+      return undefined;
     }
 
     if (stepId === "rescue-outcome-sniper") {
@@ -1443,21 +1494,28 @@ export function SimulatedGameDisplay({
         );
       }
       const moveCfg = currentStep?.allowedActions.moveShip;
-      const stagedMoveOk =
-        previewPosition !== null &&
-        moveCfg !== undefined &&
-        selectedShipId.toString() === moveCfg.shipId &&
-        moveCfg.allowedPositions.some(
-          (p) => p.row === previewPosition.row && p.col === previewPosition.col,
-        );
       if (
-        stagedMoveOk &&
-        targetShipId === null &&
-        selectedShipId.toString() === moveCfg.shipId
+        moveCfg &&
+        selectedShipId.toString() === moveCfg.shipId &&
+        moveCfg.allowedPositions.length > 0
       ) {
-        return cellsForIds(
-          TUTORIAL_RESCUE_OUTCOME_SNIPER_ENEMY_HIGHLIGHT_SHIP_IDS,
-        );
+        const isMoveStaged =
+          previewPosition !== null &&
+          moveCfg.allowedPositions.some(
+            (p) =>
+              p.row === previewPosition.row && p.col === previewPosition.col,
+          );
+        if (!isMoveStaged) {
+          return moveCfg.allowedPositions.map((p) => ({
+            row: p.row,
+            col: p.col,
+          }));
+        }
+        if (isMoveStaged && targetShipId === null) {
+          return cellsForIds(
+            TUTORIAL_RESCUE_OUTCOME_SNIPER_ENEMY_HIGHLIGHT_SHIP_IDS,
+          );
+        }
       }
       return undefined;
     }
@@ -1474,20 +1532,17 @@ export function SimulatedGameDisplay({
 
   // Last move UI props for GameGrid (same as in-game: ghost at old position, pulse at new)
   const lastMoveProps = useMemo(() => {
-    // Match live-game behavior: while a ship is selected, prioritize proposal UI
-    // and do not feed prior last-move markers into GameGrid.
-    // Ship-destruction step must still pass last move (including target id) so
-    // GameGrid can render the destroyed-target overlay like the live game
-    // (isLastMoveDestroyedTargetCell + ship-destroyed.png).
-    // Keep last-move replay (EMP wave, outlines) visible while a ship is
-    // selected on steps that are cinematic or require selection for the next action.
-    const lastMoveVisibleWithSelection =
-      currentStep?.id === "ship-destruction" ||
-      currentStep?.id === "destroy-disabled" ||
-      currentStep?.id === "rescue";
-    const suppressLastMoveBecauseSelection =
-      selectedShipId !== null && !lastMoveVisibleWithSelection;
-    if (!tutorialDisplayLastMove || suppressLastMoveBecauseSelection) {
+    if (selectedShipId !== null) {
+      return {
+        lastMoveShipId: null as bigint | null,
+        lastMoveOldPosition: null as { row: number; col: number } | null,
+        lastMoveNewPosition: null as { row: number; col: number } | null,
+        lastMoveActionType: null as ActionType | null,
+        lastMoveTargetShipId: null as bigint | null,
+        lastMoveIsCurrentPlayer: undefined as boolean | undefined,
+      };
+    }
+    if (!tutorialDisplayLastMove) {
       return {
         lastMoveShipId: null as bigint | null,
         lastMoveOldPosition: null as { row: number; col: number } | null,
@@ -1516,37 +1571,14 @@ export function SimulatedGameDisplay({
         ? ship.owner === TUTORIAL_PLAYER_ADDRESS
         : undefined,
     };
-  }, [tutorialDisplayLastMove, selectedShipId, shipMap, currentStep?.id]);
+  }, [tutorialDisplayLastMove, shipMap, selectedShipId]);
 
   // Last move object for GameEvents panel (adapt tutorial lastMove to on-chain LastMove shape).
-  // When a move is staged (selected ship + preview position), we synthesize a
-  // pending LastMove so the UI shows from/to immediately after selecting the move,
-  // before the simulated transaction is submitted.
+  // Hidden while any ship is selected (matches live game); proposed moves use the submit panel.
   const lastMoveForEvents: LastMove | undefined = useMemo(() => {
-    if (
-      selectedShipId &&
-      previewPosition &&
-      currentStep?.allowedActions.moveShip &&
-      selectedShipId.toString() === currentStep.allowedActions.moveShip.shipId
-    ) {
-      const currentPos = gameState.shipPositions.find(
-        (pos) => pos.shipId === selectedShipId.toString(),
-      );
-
-      if (currentPos) {
-        return {
-          shipId: selectedShipId,
-          oldRow: currentPos.position.row,
-          oldCol: currentPos.position.col,
-          newRow: previewPosition.row,
-          newCol: previewPosition.col,
-          actionType: ActionType.Pass,
-          targetShipId: 0n,
-          timestamp: 0n,
-        };
-      }
+    if (selectedShipId !== null) {
+      return undefined;
     }
-
     if (!tutorialDisplayLastMove) return undefined;
     const lm = tutorialDisplayLastMove;
     return {
@@ -1559,13 +1591,7 @@ export function SimulatedGameDisplay({
       targetShipId: lm.targetShipId ? BigInt(lm.targetShipId) : 0n,
       timestamp: 0n,
     };
-  }, [
-    selectedShipId,
-    previewPosition,
-    tutorialDisplayLastMove,
-    gameState.shipPositions,
-    currentStep,
-  ]);
+  }, [selectedShipId, tutorialDisplayLastMove]);
 
   // Calculate damage for a target ship
   const calculateDamage = useCallback(
@@ -2249,6 +2275,21 @@ export function SimulatedGameDisplay({
       executeAction,
     ],
   );
+
+  /** Match GameDisplay `handleCancelMove`: clear staged move, target, and selection. */
+  const handleCancelMove = useCallback(() => {
+    wrappedSetSelectedShipId(null);
+    setActionOverride(null);
+    setDraggedShipId(null);
+    setDragOverCell(null);
+  }, [wrappedSetSelectedShipId]);
+
+  /** Board frame clicks (padding) do not hit GameGrid; clear selection and target like empty-cell deselect. */
+  const handleBoardChromeMouseDown = useCallback(() => {
+    wrappedSetSelectedShipId(null);
+    setDraggedShipId(null);
+    setDragOverCell(null);
+  }, [wrappedSetSelectedShipId]);
 
   const wrappedSetPreviewPosition = useCallback(
     (position: { row: number; col: number } | null) => {
@@ -2937,37 +2978,49 @@ export function SimulatedGameDisplay({
                     : "flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 p-4"
                 }
               >
-                <div className="flex w-full min-w-0 shrink-0 flex-row gap-2">
+                <div className="relative flex w-full min-w-0 shrink-0 flex-row gap-2 pt-8">
+                  <div className="relative min-w-0 flex-[2]">
+                    {shouldPulseSubmitMoveButton && (
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                        <div className="relative inline-block">
+                          <div
+                            className="absolute inset-0 rounded-none bg-black"
+                            style={{ opacity: 1 }}
+                            aria-hidden
+                          />
+                          <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                            Click here
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSubmitMove}
+                      className={`w-full px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 min-w-0 ${
+                        shouldPulseSubmitMoveButton
+                          ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                          : ""
+                      }`}
+                      style={{
+                        fontFamily:
+                          "var(--font-rajdhani), 'Arial Black', sans-serif",
+                        borderColor: "var(--color-phosphor-green)",
+                        borderTopColor: "var(--color-phosphor-green)",
+                        borderLeftColor: "var(--color-phosphor-green)",
+                        color: "var(--color-phosphor-green)",
+                        backgroundColor: "var(--color-steel)",
+                        borderWidth: "2px",
+                        borderStyle: "solid",
+                        borderRadius: 0,
+                      }}
+                    >
+                      {isSelectedShipDisabled ? "Submit Retreat" : "Submit"}
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={handleSubmitMove}
-                    className={`px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 min-w-0 flex-[2] ${
-                      shouldPulseSubmitMoveButton
-                        ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
-                        : ""
-                    }`}
-                    style={{
-                      fontFamily:
-                        "var(--font-rajdhani), 'Arial Black', sans-serif",
-                      borderColor: "var(--color-phosphor-green)",
-                      borderTopColor: "var(--color-phosphor-green)",
-                      borderLeftColor: "var(--color-phosphor-green)",
-                      color: "var(--color-phosphor-green)",
-                      backgroundColor: "var(--color-steel)",
-                      borderWidth: "2px",
-                      borderStyle: "solid",
-                      borderRadius: 0,
-                    }}
-                  >
-                    {isSelectedShipDisabled ? "Submit Retreat" : "Submit Move"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPreviewPosition(null);
-                      setTargetShipId(null);
-                      setActionOverride(null);
-                    }}
+                    onClick={handleCancelMove}
                     className="min-w-0 flex-[1] px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150"
                     style={{
                       fontFamily:
@@ -3027,13 +3080,28 @@ export function SimulatedGameDisplay({
                         const ship = shipMap.get(selectedShipId);
                         if (!ship || ship.equipment.special <= 0) return null;
                         return (
-                          <div
-                            className={
-                              shouldHighlightSpecialEmpWeaponDropdown
-                                ? "mt-1 w-full rounded-sm ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)] animate-pulse"
-                                : "mt-1 w-full"
-                            }
-                          >
+                          <div className="relative mt-1 w-full">
+                            {shouldHighlightSpecialEmpWeaponDropdown && (
+                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                                <div className="relative inline-block">
+                                  <div
+                                    className="absolute inset-0 rounded-none bg-black"
+                                    style={{ opacity: 1 }}
+                                    aria-hidden
+                                  />
+                                  <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                                    Click here
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            <div
+                              className={
+                                shouldHighlightSpecialEmpWeaponDropdown
+                                  ? "animate-pulse rounded-sm ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                                  : ""
+                              }
+                            >
                             <select
                               value={selectedWeaponType}
                               onChange={(e) => {
@@ -3059,6 +3127,7 @@ export function SimulatedGameDisplay({
                                 {getSpecialName(ship.equipment.special)}
                               </option>
                             </select>
+                            </div>
                           </div>
                         );
                       })()}
@@ -3223,6 +3292,7 @@ export function SimulatedGameDisplay({
           <GameBoardLayout
             isCurrentPlayerTurn={isMyTurn}
             containerRef={gridContainerRef}
+            onBoardChromeMouseDown={handleBoardChromeMouseDown}
           >
             {/* Fixed 17×11 aspect so the board does not resize between tutorial steps
               while state hydrates; overlay blocks interaction until ready. */}

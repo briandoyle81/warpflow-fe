@@ -216,13 +216,10 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: "rescue-outcome-retreat",
-    title: "Making Tough Decisions",
+    title: "The Resolute is Safe",
     description: "You saved your EMP, but yielded initiative on the center",
     allowedActions: {},
-    highlightElements: {
-      ships: ["2001"],
-      mapPositions: [{ row: 5, col: 8 }],
-    },
+    highlightElements: {},
   },
   {
     id: "rescue-outcome-sniper",

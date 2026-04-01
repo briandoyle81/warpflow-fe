@@ -94,8 +94,13 @@ interface GameGridProps {
   /**
    * **Tutorial highlight**: cells that show a gentle pulsing yellow tint under ships
    * (e.g. select-ship until a player ship is selected; view-enemy until an enemy ship).
+   * Optional `label` overrides the floating badge text (default "Click here").
    */
-  tutorialHighlightCells?: readonly { row: number; col: number }[];
+  tutorialHighlightCells?: readonly {
+    row: number;
+    col: number;
+    label?: string;
+  }[];
   setSelectedShipId: (shipId: bigint | null) => void;
   setPreviewPosition: (position: { row: number; col: number } | null) => void;
   setTargetShipId: (shipId: bigint | null) => void;
@@ -165,6 +170,8 @@ export function GameGrid({
   setDragOverCell,
 }: GameGridProps) {
   const gridContainerRef = useRef<HTMLDivElement>(null);
+  /** The bordered CSS grid (cells); tracks are inset by border — use for cell math vs overlay. */
+  const gridLayoutRef = useRef<HTMLDivElement>(null);
   // Track last drag over cell to prevent excessive state updates
   const lastDragOverCellRef = useRef<{ row: number; col: number } | null>(null);
 
@@ -175,6 +182,32 @@ export function GameGrid({
 
   const showLastMoveEmpReplay =
     !selectedShipId || showLastMoveEmpReplayWhenSelected;
+
+  /**
+   * Beam target for directed main weapons. When the player is staging a shot from
+   * a preview or drag origin, only `targetShipId` applies. Falling back to
+   * `lastMoveTargetShipId` in that case would replay the *previous* move's victim
+   * (e.g. opponent shot the player's ship) while drawing from the staged
+   * attacker, which looks like friendly fire.
+   */
+  const directedWeaponBeamTargetId = React.useMemo(() => {
+    const stagingOwnShot =
+      selectedShipId != null &&
+      (previewPosition != null ||
+        (draggedShipId != null && dragOverCell != null));
+    if (stagingOwnShot) {
+      if (targetShipId == null || targetShipId === 0n) return null;
+      return targetShipId;
+    }
+    return targetShipId || lastMoveTargetShipId || null;
+  }, [
+    selectedShipId,
+    previewPosition,
+    draggedShipId,
+    dragOverCell,
+    targetShipId,
+    lastMoveTargetShipId,
+  ]);
 
   /** Set of `"row,col"` keys for `tutorialHighlightCells` (tutorial highlight). */
   const tutorialHighlightKeySet = React.useMemo(() => {
@@ -363,7 +396,10 @@ export function GameGrid({
           key="game-grid"
           className="relative w-full h-full min-h-0"
         >
-          <div className="relative z-0 grid gap-0 border border-gray-900 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full h-full min-h-0">
+          <div
+            ref={gridLayoutRef}
+            className="relative z-0 grid gap-0 border border-gray-900 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full h-full min-h-0"
+          >
             {grid.map((row, rowIndex) =>
               row.map((cell, colIndex) => {
                 const ship = cell ? shipMap.get(cell.shipId) : null;
@@ -631,6 +667,8 @@ export function GameGrid({
                 return (
                   <div
                     key={`cell-${rowIndex}-${colIndex}`}
+                    data-grid-row={rowIndex}
+                    data-grid-col={colIndex}
                     className={`w-full h-full aspect-square ${
                       isShipOnScoringTile
                         ? "border-2 border-yellow-400"
@@ -652,9 +690,9 @@ export function GameGrid({
                           ? "bg-blue-900 ring-2 ring-blue-400"
                           : "bg-purple-900 ring-2 ring-purple-400";
 
-                        // Check for other conditions that might override - gray for any moved ship
+                        // Moved ships: base tile only; grey veil is an absolute layer (z-10) below tutorial (z-11).
                         if (hasShipMoved) {
-                          return "bg-gray-700 opacity-60 cursor-not-allowed";
+                          return "bg-gray-950 cursor-not-allowed";
                         }
                         if (isSelectedTarget) {
                           const isAssistAction =
@@ -691,8 +729,7 @@ export function GameGrid({
                           cursorSuffix = " cursor-not-allowed";
                         }
                       }
-                      const movedStyle =
-                        "bg-gray-700 opacity-60" + cursorSuffix;
+                      const movedStyle = "bg-gray-950" + cursorSuffix;
                       return hasShipMoved
                         ? movedStyle
                         : isSelectedTarget && cell
@@ -878,7 +915,7 @@ export function GameGrid({
                       </>
                     )}
 
-                    {/* Critical hull glow effect for 0 HP ships (not last-move attack target; that uses blue ring below) */}
+                    {/* Critical hull glow effect for 0 HP ships (not last-move attack target; that uses team-colored border below) */}
                     {cell &&
                       (() => {
                         const attributes = getShipAttributes(cell.shipId);
@@ -929,13 +966,20 @@ export function GameGrid({
                           </div>
                         );
                       })()}
-                    {/* Tutorial highlight: above movement/shooting/drag (z-2–3), below ship art + cell UI (z-10) */}
+                    {/* Moved this round: grey veil (z-10), then tutorial pulse (z-11), then ship (z-12). */}
+                    {cell && movedShipIdsSet.has(cell.shipId) && (
+                      <div
+                        className="absolute inset-0 z-[10] pointer-events-none bg-gray-700/60"
+                        aria-hidden
+                      />
+                    )}
+                    {/* Tutorial highlight: above moved veil (z-10), below ship stack (z-12). */}
                     {isTutorialHighlightCell && (
-                      <div className="absolute inset-0 z-[9] pointer-events-none border border-yellow-400/90 bg-yellow-400/24 animate-pulse" />
+                      <div className="absolute inset-0 z-[11] pointer-events-none border border-yellow-400/90 bg-yellow-400/24 animate-pulse" />
                     )}
                     {shouldRenderShipContent && ship ? (
                       <div
-                        className="w-full h-full relative z-10"
+                        className="w-full h-full relative z-[12]"
                         draggable={
                           isCurrentPlayerTurn &&
                           isShipOwnedByCurrentPlayer(cell.shipId) &&
@@ -1408,15 +1452,17 @@ export function GameGrid({
                                 : "animate-pulse-original"
                               : "";
 
-                          // Last move outline: blue = current player, red = opponent; proposed move stays yellow
+                          // Last move outline: mover old/new tiles use the moving ship's team (viewer =
+                          // current player). Attack/special *target* tile uses the *target* ship's team
+                          // so a shot into an enemy cell stays red and a shot into your ship stays blue.
                           const isLastMoveCell =
                             isLastMoveOldPosition || isLastMoveNewPosition;
                           const borderColor = isLastMoveAttackTargetCell
-                            ? lastMoveIsCurrentPlayer === true
-                              ? "border-blue-400"
-                              : lastMoveIsCurrentPlayer === false
-                                ? "border-red-400"
-                                : "border-yellow-400"
+                            ? !address
+                              ? "border-yellow-400"
+                              : isShipOwnedByCurrentPlayer(cell.shipId)
+                                ? "border-blue-400"
+                                : "border-red-400"
                             : isLastMoveCell
                               ? lastMoveIsCurrentPlayer === true
                                 ? "border-blue-400"
@@ -1451,9 +1497,386 @@ export function GameGrid({
                 />
               )}
 
+            {/* Move path arrow: proposed move or last completed move with a spatial path, same geometry. */}
+            {(() => {
+                const proposedDestination =
+                  draggedShipId && dragOverCell ? dragOverCell : previewPosition;
+                const useProposedMoveArrow =
+                  selectedShipId !== null && proposedDestination !== null;
+
+                const lastMoveHasPath =
+                  lastMoveOldPosition != null &&
+                  lastMoveNewPosition != null &&
+                  lastMoveNewPosition.row >= 0 &&
+                  lastMoveNewPosition.col >= 0 &&
+                  (lastMoveOldPosition.row !== lastMoveNewPosition.row ||
+                    lastMoveOldPosition.col !== lastMoveNewPosition.col);
+
+                const useLastMoveArrow =
+                  !useProposedMoveArrow &&
+                  lastMoveShipId != null &&
+                  lastMoveHasPath &&
+                  lastMoveActionType !== ActionType.Retreat;
+
+                if (!useProposedMoveArrow && !useLastMoveArrow) return null;
+
+                const destination = useProposedMoveArrow
+                  ? proposedDestination!
+                  : lastMoveNewPosition!;
+
+                const movingShipId = useProposedMoveArrow
+                  ? selectedShipId!
+                  : lastMoveShipId!;
+
+                const fromPos = useLastMoveArrow
+                  ? lastMoveOldPosition
+                  : allShipPositions?.find((sp) => sp.shipId === movingShipId)
+                      ?.position ??
+                    (() => {
+                      for (let r = 0; r < grid.length; r++) {
+                        const row = grid[r];
+                        for (let c = 0; c < row.length; c++) {
+                          const cell = row[c];
+                          if (cell?.shipId === movingShipId && !cell.isPreview) {
+                            return { row: r, col: c };
+                          }
+                        }
+                      }
+                      return null;
+                    })();
+
+                if (!fromPos) return null;
+                if (
+                  fromPos.row === destination.row &&
+                  fromPos.col === destination.col
+                ) {
+                  return null;
+                }
+                if (!gridContainerRef.current) return null;
+
+                const containerRect =
+                  gridContainerRef.current.getBoundingClientRect();
+                const layoutEl = gridLayoutRef.current;
+                const layoutRect = layoutEl?.getBoundingClientRect();
+                // Overlay SVG uses container (0,0); the bordered grid's *tracks* use the content
+                // box — clientWidth/Height and clientLeft/Top account for border so cell math
+                // matches painted cells (fixes systematic horizontal offset).
+                const originX =
+                  layoutEl && layoutRect
+                    ? layoutRect.left - containerRect.left + layoutEl.clientLeft
+                    : 0;
+                const originY =
+                  layoutEl && layoutRect
+                    ? layoutRect.top - containerRect.top + layoutEl.clientTop
+                    : 0;
+                const cellWidth = layoutEl
+                  ? layoutEl.clientWidth / 17
+                  : containerRect.width / 17;
+                const cellHeight = layoutEl
+                  ? layoutEl.clientHeight / 11
+                  : containerRect.height / 11;
+
+                const toPx = (p: { row: number; col: number }) => ({
+                  x: originX + p.col * cellWidth + cellWidth / 2,
+                  y: originY + p.row * cellHeight + cellHeight / 2,
+                });
+
+                const destinationCenter = toPx(destination);
+                const fromCenter = toPx(fromPos);
+                const arrowHeadLength = 24;
+                const arrowStrokeWidth = 6;
+                const startOutsideOffset = arrowStrokeWidth / 2 + 1;
+
+                const layoutRoot = gridLayoutRef.current;
+                const cellEl = (r: number, c: number) =>
+                  layoutRoot?.querySelector(
+                    `[data-grid-row="${r}"][data-grid-col="${c}"]`,
+                  ) as HTMLElement | null;
+                const cellRectPx = (r: number, c: number) => {
+                  const el = cellEl(r, c);
+                  if (!el) return null;
+                  const rect = el.getBoundingClientRect();
+                  const left = rect.left - containerRect.left;
+                  const right = rect.right - containerRect.left;
+                  const top = rect.top - containerRect.top;
+                  const bottom = rect.bottom - containerRect.top;
+                  return {
+                    left,
+                    right,
+                    top,
+                    bottom,
+                    cx: (left + right) / 2,
+                    cy: (top + bottom) / 2,
+                    w: right - left,
+                    h: bottom - top,
+                  };
+                };
+                const deltaRow = destination.row - fromPos.row;
+                const deltaCol = destination.col - fromPos.col;
+                const isOneStepMove =
+                  Math.abs(deltaRow) + Math.abs(deltaCol) === 1;
+
+                if (isOneStepMove) {
+                  // Prefer DOM-measured cell rects: tracks are not always the same as the
+                  // visible square (cells use aspect-square), so grid math can sit left/right of
+                  // the drawn tile. Measure the shared edge midpoint from actual elements.
+                  let sharedEdgeCenter: { x: number; y: number };
+                  const upperRow = Math.min(fromPos.row, destination.row);
+                  const lowerRow = Math.max(fromPos.row, destination.row);
+                  const leftCol = Math.min(fromPos.col, destination.col);
+                  const rightCol = Math.max(fromPos.col, destination.col);
+                  if (deltaCol !== 0) {
+                    const leftTile = cellEl(fromPos.row, leftCol);
+                    const rightTile = cellEl(fromPos.row, rightCol);
+                    if (leftTile && rightTile) {
+                      const L = leftTile.getBoundingClientRect();
+                      const R = rightTile.getBoundingClientRect();
+                      sharedEdgeCenter = {
+                        x: (L.right + R.left) / 2 - containerRect.left,
+                        y: (L.top + L.bottom) / 2 - containerRect.top,
+                      };
+                    } else {
+                      sharedEdgeCenter = {
+                        x:
+                          originX +
+                          (leftCol + 1) * cellWidth,
+                        y:
+                          originY +
+                          fromPos.row * cellHeight +
+                          cellHeight / 2,
+                      };
+                    }
+                  } else {
+                    const upperTile = cellEl(upperRow, fromPos.col);
+                    const lowerTile = cellEl(lowerRow, fromPos.col);
+                    if (upperTile && lowerTile) {
+                      const U = upperTile.getBoundingClientRect();
+                      const Lo = lowerTile.getBoundingClientRect();
+                      sharedEdgeCenter = {
+                        x: (U.left + U.right) / 2 - containerRect.left,
+                        y: (U.bottom + Lo.top) / 2 - containerRect.top,
+                      };
+                    } else {
+                      sharedEdgeCenter = {
+                        x:
+                          originX +
+                          fromPos.col * cellWidth +
+                          cellWidth / 2,
+                        y:
+                          originY +
+                          (upperRow + 1) * cellHeight,
+                      };
+                    }
+                  }
+                  // wf-move-arrow-head shape (viewBox 0 0 10 10), scaled; centroid at origin.
+                  const headScale = arrowHeadLength / 10;
+                  const vx0 = 0;
+                  const vy0 = 0;
+                  const vx1 = 0;
+                  const vy1 = 10 * headScale;
+                  const vx2 = 10 * headScale;
+                  const vy2 = 5 * headScale;
+                  const centroidX = (vx0 + vx1 + vx2) / 3;
+                  const centroidY = (vy0 + vy1 + vy2) / 3;
+                  const locals = [
+                    { x: vx0 - centroidX, y: vy0 - centroidY },
+                    { x: vx1 - centroidX, y: vy1 - centroidY },
+                    { x: vx2 - centroidX, y: vy2 - centroidY },
+                  ];
+                  // Four Manhattan neighbors only: map canonical "tip +x" triangle with sign flips
+                  // and axis swaps (no trig).
+                  const mapLocalToWorld = (lx: number, ly: number) => {
+                    const mx = sharedEdgeCenter.x;
+                    const my = sharedEdgeCenter.y;
+                    if (deltaCol === 1) {
+                      return { x: mx + lx, y: my + ly };
+                    }
+                    if (deltaCol === -1) {
+                      return { x: mx - lx, y: my - ly };
+                    }
+                    if (deltaRow === 1) {
+                      return { x: mx + ly, y: my + lx };
+                    }
+                    return { x: mx - ly, y: my - lx };
+                  };
+                  const [p0, p1, p2] = locals.map((p) =>
+                    mapLocalToWorld(p.x, p.y),
+                  );
+                  const pathD = `M ${p0.x} ${p0.y} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y} Z`;
+
+                  return (
+                    <svg
+                      className="absolute left-0 top-0 block overflow-visible"
+                      width={containerRect.width}
+                      height={containerRect.height}
+                    >
+                      <path d={pathD} fill="#facc15" />
+                    </svg>
+                  );
+                }
+
+                let start: { x: number; y: number };
+                let turnPoint: { x: number; y: number } | null = null;
+                let tip: { x: number; y: number };
+                let lineEnd: { x: number; y: number };
+
+                if (fromPos.row !== destination.row && fromPos.col !== destination.col) {
+                  const firstDirCol = Math.sign(destination.col - fromPos.col);
+                  const secondDirRow = Math.sign(destination.row - fromPos.row);
+                  const fromR = cellRectPx(fromPos.row, fromPos.col);
+                  const destR = cellRectPx(destination.row, destination.col);
+                  if (fromR && destR) {
+                    // Same horizontal line as one-tile *vertical* move: x at destination column
+                    // tile center (DOM), not the edge between columns.
+                    const vertX = destR.cx;
+                    start = {
+                      x:
+                        firstDirCol > 0
+                          ? fromR.right + startOutsideOffset
+                          : fromR.left - startOutsideOffset,
+                      y: fromR.cy,
+                    };
+                    turnPoint = { x: vertX, y: start.y };
+                    tip = {
+                      x: vertX,
+                      y: destR.cy - (secondDirRow * destR.h) / 2,
+                    };
+                    lineEnd = {
+                      x: tip.x,
+                      y: tip.y - secondDirRow * arrowHeadLength,
+                    };
+                  } else {
+                    start = {
+                      x:
+                        fromCenter.x +
+                        firstDirCol * (cellWidth / 2 + startOutsideOffset),
+                      y: fromCenter.y,
+                    };
+                    turnPoint = { x: destinationCenter.x, y: start.y };
+                    tip = {
+                      x: destinationCenter.x,
+                      y: destinationCenter.y - (secondDirRow * cellHeight) / 2,
+                    };
+                    lineEnd = {
+                      x: tip.x,
+                      y: tip.y - secondDirRow * arrowHeadLength,
+                    };
+                  }
+                } else if (fromPos.row === destination.row) {
+                  const dirCol = Math.sign(destination.col - fromPos.col);
+                  const fromR = cellRectPx(fromPos.row, fromPos.col);
+                  const destR = cellRectPx(destination.row, destination.col);
+                  if (fromR && destR) {
+                    start = {
+                      x:
+                        dirCol > 0
+                          ? fromR.right + startOutsideOffset
+                          : fromR.left - startOutsideOffset,
+                      y: fromR.cy,
+                    };
+                    tip = {
+                      x: dirCol > 0 ? destR.left : destR.right,
+                      y: destR.cy,
+                    };
+                    lineEnd = {
+                      x: tip.x - dirCol * arrowHeadLength,
+                      y: tip.y,
+                    };
+                  } else {
+                    start = {
+                      x:
+                        fromCenter.x +
+                        dirCol * (cellWidth / 2 + startOutsideOffset),
+                      y: fromCenter.y,
+                    };
+                    tip = {
+                      x: destinationCenter.x - (dirCol * cellWidth) / 2,
+                      y: destinationCenter.y,
+                    };
+                    lineEnd = {
+                      x: tip.x - dirCol * arrowHeadLength,
+                      y: tip.y,
+                    };
+                  }
+                } else {
+                  const dirRow = Math.sign(destination.row - fromPos.row);
+                  const fromR = cellRectPx(fromPos.row, fromPos.col);
+                  const destR = cellRectPx(destination.row, destination.col);
+                  if (fromR && destR) {
+                    start = {
+                      x: fromR.cx,
+                      y:
+                        dirRow > 0
+                          ? fromR.bottom + startOutsideOffset
+                          : fromR.top - startOutsideOffset,
+                    };
+                    tip = {
+                      x: destR.cx,
+                      y: destR.cy - (dirRow * destR.h) / 2,
+                    };
+                    lineEnd = {
+                      x: tip.x,
+                      y: tip.y - dirRow * arrowHeadLength,
+                    };
+                  } else {
+                    start = {
+                      x: fromCenter.x,
+                      y:
+                        fromCenter.y +
+                        dirRow * (cellHeight / 2 + startOutsideOffset),
+                    };
+                    tip = {
+                      x: destinationCenter.x,
+                      y: destinationCenter.y - (dirRow * cellHeight) / 2,
+                    };
+                    lineEnd = {
+                      x: tip.x,
+                      y: tip.y - dirRow * arrowHeadLength,
+                    };
+                  }
+                }
+
+                const pathD =
+                  turnPoint
+                    ? `M ${start.x} ${start.y} L ${turnPoint.x} ${turnPoint.y} L ${lineEnd.x} ${lineEnd.y}`
+                    : `M ${start.x} ${start.y} L ${lineEnd.x} ${lineEnd.y}`;
+
+                return (
+                  <svg
+                    className="absolute left-0 top-0 block overflow-visible"
+                    width={containerRect.width}
+                    height={containerRect.height}
+                  >
+                    <defs>
+                      <marker
+                        id="wf-move-arrow-head"
+                        viewBox="0 0 10 10"
+                        refX="0"
+                        refY="5"
+                        markerWidth="24"
+                        markerHeight="24"
+                        markerUnits="userSpaceOnUse"
+                        orient="auto"
+                      >
+                        <path d="M 0 0 L 0 10 L 10 5 z" fill="#facc15" />
+                      </marker>
+                    </defs>
+                    <path
+                      d={pathD}
+                      stroke="#facc15"
+                      strokeWidth={arrowStrokeWidth}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                      markerEnd="url(#wf-move-arrow-head)"
+                    />
+                  </svg>
+                );
+              })()}
+
             {/* Laser Shooting Animation */}
             {(selectedShipId || lastMoveShipId) &&
-              (targetShipId || lastMoveTargetShipId) &&
+              directedWeaponBeamTargetId &&
               selectedWeaponType === "weapon" &&
               (() => {
                 // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
@@ -1511,9 +1934,10 @@ export function GameGrid({
                   return null;
                 }
 
-                const effectiveTargetId = targetShipId || lastMoveTargetShipId;
-                if (!effectiveTargetId) return null;
-                const targetPosition = findShipPositionById(effectiveTargetId);
+                if (!directedWeaponBeamTargetId) return null;
+                const targetPosition = findShipPositionById(
+                  directedWeaponBeamTargetId,
+                );
                 if (!targetPosition) return null;
 
                 return (
@@ -1593,7 +2017,7 @@ export function GameGrid({
 
             {/* Plasma Shooting Animation */}
             {(selectedShipId || lastMoveShipId) &&
-              (targetShipId || lastMoveTargetShipId) &&
+              directedWeaponBeamTargetId &&
               selectedWeaponType === "weapon" &&
               (() => {
                 // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
@@ -1641,9 +2065,10 @@ export function GameGrid({
                   return null;
                 }
 
-                const effectiveTargetId = targetShipId || lastMoveTargetShipId;
-                if (!effectiveTargetId) return null;
-                const targetPosition = findShipPositionById(effectiveTargetId);
+                if (!directedWeaponBeamTargetId) return null;
+                const targetPosition = findShipPositionById(
+                  directedWeaponBeamTargetId,
+                );
                 if (!targetPosition) return null;
 
                 return (
@@ -1659,7 +2084,7 @@ export function GameGrid({
 
             {/* Railgun Shooting Animation */}
             {(selectedShipId || lastMoveShipId) &&
-              (targetShipId || lastMoveTargetShipId) &&
+              directedWeaponBeamTargetId &&
               selectedWeaponType === "weapon" &&
               (() => {
                 // Use selectedShipId if available, otherwise use lastMoveShipId for last move display
@@ -1707,9 +2132,10 @@ export function GameGrid({
                   return null;
                 }
 
-                const effectiveTargetId = targetShipId || lastMoveTargetShipId;
-                if (!effectiveTargetId) return null;
-                const targetPosition = findShipPositionById(effectiveTargetId);
+                if (!directedWeaponBeamTargetId) return null;
+                const targetPosition = findShipPositionById(
+                  directedWeaponBeamTargetId,
+                );
                 if (!targetPosition) return null;
 
                 return (
@@ -1941,7 +2367,7 @@ export function GameGrid({
                 );
               })()}
 
-            {/* Damage Labels - Rendered at grid level above weapon animations */}
+            {/* Damage Labels - grid level; z-40 so tutorial "Click here" overlay (z-[60]) can sit above */}
             {gridContainerRef.current &&
               (() => {
                 const targetsToShow: Array<{
@@ -1949,17 +2375,69 @@ export function GameGrid({
                   row: number;
                   col: number;
                 }> = [];
+                const selectedShipSide =
+                  selectedShipId != null
+                    ? (() => {
+                        for (let r = 0; r < grid.length; r++) {
+                          const row = grid[r];
+                          for (let c = 0; c < row.length; c++) {
+                            const cell = row[c];
+                            if (cell?.shipId === selectedShipId) {
+                              return cell.isCreator;
+                            }
+                          }
+                        }
+                        const fallback = allShipPositions?.find(
+                          (sp) => sp.shipId === selectedShipId,
+                        );
+                        return fallback?.isCreator ?? null;
+                      })()
+                    : null;
+                const shouldShowTargetLabel = (
+                  shipId: bigint,
+                  fallbackIsCreator?: boolean,
+                ) => {
+                  if (selectedShipSide == null) return true;
+                  const targetSide =
+                    fallbackIsCreator ??
+                    (() => {
+                      for (let r = 0; r < grid.length; r++) {
+                        const row = grid[r];
+                        for (let c = 0; c < row.length; c++) {
+                          const cell = row[c];
+                          if (cell?.shipId === shipId) return cell.isCreator;
+                        }
+                      }
+                      const fallback = allShipPositions?.find(
+                        (sp) => sp.shipId === shipId,
+                      );
+                      return fallback?.isCreator;
+                    })();
+                  if (targetSide == null) return true;
+
+                  // Repair labels should stay on allies; attacks should stay on enemies.
+                  if (selectedWeaponType === "special" && specialType === 2) {
+                    return targetSide === selectedShipSide;
+                  }
+                  return targetSide !== selectedShipSide;
+                };
+                const pushTargetIfAllowed = (
+                  shipId: bigint,
+                  row: number,
+                  col: number,
+                  fallbackIsCreator?: boolean,
+                ) => {
+                  if (!shouldShowTargetLabel(shipId, fallbackIsCreator)) return;
+                  if (targetsToShow.some((t) => t.shipId === shipId)) return;
+                  targetsToShow.push({ shipId, row, col });
+                };
 
                 // Collect selected target
                 if (targetShipId) {
                   grid.forEach((row, r) => {
                     row.forEach((cell, c) => {
                       if (cell && cell.shipId === targetShipId) {
-                        targetsToShow.push({
-                          shipId: cell.shipId,
-                          row: r,
-                          col: c,
-                        });
+                        pushTargetIfAllowed(cell.shipId, r, c, cell.isCreator);
                       }
                     });
                   });
@@ -1968,15 +2446,11 @@ export function GameGrid({
                 // Collect drag targets
                 if (draggedShipId && dragOverCell) {
                   dragValidTargets.forEach((target) => {
-                    if (
-                      !targetsToShow.some((t) => t.shipId === target.shipId)
-                    ) {
-                      targetsToShow.push({
-                        shipId: target.shipId,
-                        row: target.position.row,
-                        col: target.position.col,
-                      });
-                    }
+                    pushTargetIfAllowed(
+                      target.shipId,
+                      target.position.row,
+                      target.position.col,
+                    );
                   });
                 }
 
@@ -1991,33 +2465,45 @@ export function GameGrid({
                 // Otherwise (no target or AOE target 0n), show labels for all valid targets.
                 if (selectedShipId && !hasSingleSelectedTarget) {
                   targetsForLabels.forEach((target) => {
-                    if (
-                      !targetsToShow.some((t) => t.shipId === target.shipId)
-                    ) {
-                      targetsToShow.push({
-                        shipId: target.shipId,
-                        row: target.position.row,
-                        col: target.position.col,
-                      });
-                    }
+                    pushTargetIfAllowed(
+                      target.shipId,
+                      target.position.row,
+                      target.position.col,
+                    );
                   });
                 }
 
                 if (targetsToShow.length === 0) return null;
 
-                const gridRect =
+                const containerRect =
                   gridContainerRef.current.getBoundingClientRect();
-                const cellWidth = gridRect.width / 17;
-                const cellHeight = gridRect.height / 11;
+                const layoutEl = gridLayoutRef.current;
+                const layoutRect = layoutEl?.getBoundingClientRect();
+                // Match move-arrow overlay: bordered grid tracks use the content box
+                // (clientLeft/Top + clientWidth/Height), not the container rect alone.
+                const originX =
+                  layoutEl && layoutRect
+                    ? layoutRect.left - containerRect.left + layoutEl.clientLeft
+                    : 0;
+                const originY =
+                  layoutEl && layoutRect
+                    ? layoutRect.top - containerRect.top + layoutEl.clientTop
+                    : 0;
+                const cellWidth = layoutEl
+                  ? layoutEl.clientWidth / 17
+                  : containerRect.width / 17;
+                const cellHeight = layoutEl
+                  ? layoutEl.clientHeight / 11
+                  : containerRect.height / 11;
 
                 return (
                   <div
-                    className="absolute pointer-events-none z-50"
+                    className="absolute pointer-events-none z-40"
                     style={{
                       left: `0px`,
                       top: `0px`,
-                      width: `${gridRect.width}px`,
-                      height: `${gridRect.height}px`,
+                      width: `${containerRect.width}px`,
+                      height: `${containerRect.height}px`,
                     }}
                   >
                     {targetsToShow.map((target) => {
@@ -2078,14 +2564,18 @@ export function GameGrid({
                         labelText = `⚔️ ${damage.reducedDamage} DMG`;
                       }
 
-                      // Calculate position above target cell (relative to grid container)
-                      const cellX = target.col * cellWidth + cellWidth / 2;
-                      const cellTop = target.row * cellHeight; // Top edge of the cell
+                      // Horizontal center of cell in overlay coords (same as move-arrow math)
+                      const cellX =
+                        originX +
+                        target.col * cellWidth +
+                        cellWidth / 2;
+                      const cellTop =
+                        originY + target.row * cellHeight;
 
                       return (
                         <div
                           key={target.shipId.toString()}
-                          className={`absolute rounded-none px-2 py-1 text-xs font-mono text-white whitespace-nowrap ${
+                          className={`absolute rounded-none px-2 py-1 text-xs font-mono text-center text-white whitespace-nowrap ${
                             selectedWeaponType === "special"
                               ? specialType === 3 // Flak
                                 ? "bg-orange-900 border border-orange-500" // Orange for flak
@@ -2096,7 +2586,7 @@ export function GameGrid({
                           }`}
                           style={{
                             left: `${cellX}px`,
-                            top: `${cellTop - 32}px`, // Position 32px above the top of the target cell
+                            top: `${cellTop - 32}px`, // 32px above the top of the target cell
                             transform: "translateX(-50%)",
                           }}
                         >
@@ -2107,6 +2597,80 @@ export function GameGrid({
                   </div>
                 );
               })()}
+
+            {/* Tutorial "Click here": grid-level z-[60] so it appears above damage labels (z-40).
+                Enemy cells shift higher so the badge clears the red damage label above the cell. */}
+            {(() => {
+              const container = gridContainerRef.current;
+              if (
+                !container ||
+                !tutorialHighlightCells?.length
+              ) {
+                return null;
+              }
+              const containerRect = container.getBoundingClientRect();
+              const layoutEl = gridLayoutRef.current;
+              const layoutRect = layoutEl?.getBoundingClientRect();
+              const originX =
+                layoutEl && layoutRect
+                  ? layoutRect.left - containerRect.left + layoutEl.clientLeft
+                  : 0;
+              const originY =
+                layoutEl && layoutRect
+                  ? layoutRect.top - containerRect.top + layoutEl.clientTop
+                  : 0;
+              const cellWidth = layoutEl
+                ? layoutEl.clientWidth / 17
+                : containerRect.width / 17;
+              const cellHeight = layoutEl
+                ? layoutEl.clientHeight / 11
+                : containerRect.height / 11;
+              return (
+                <div
+                  className="absolute pointer-events-none z-[60]"
+                  style={{
+                    left: 0,
+                    top: 0,
+                    width: `${containerRect.width}px`,
+                    height: `${containerRect.height}px`,
+                  }}
+                >
+                  {tutorialHighlightCells.map((p, i) => {
+                    const cellTop = originY + p.row * cellHeight;
+                    const cellX =
+                      originX +
+                      p.col * cellWidth +
+                      cellWidth / 2;
+                    const cell = grid[p.row]?.[p.col];
+                    const shipId = cell?.shipId;
+                    const targetsForLabels = labelTargets ?? validTargets;
+                    const hasSingleSelectedTarget =
+                      targetShipId != null && targetShipId !== 0n;
+                    const damageLabelOnThisShip =
+                      shipId != null &&
+                      selectedShipId != null &&
+                      !isShipOwnedByCurrentPlayer(shipId) &&
+                      (hasSingleSelectedTarget
+                        ? targetShipId === shipId
+                        : targetsForLabels.some((t) => t.shipId === shipId));
+                    const topPx = cellTop - (damageLabelOnThisShip ? 68 : 32);
+                    return (
+                      <div
+                        key={`tutorial-click-${p.row}-${p.col}-${i}`}
+                        className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-white whitespace-nowrap bg-yellow-900 border border-yellow-400"
+                        style={{
+                          left: `${cellX}px`,
+                          top: `${topPx}px`,
+                          transform: "translateX(-50%)",
+                        }}
+                      >
+                        {p.label ?? "Click here"}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>

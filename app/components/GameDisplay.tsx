@@ -59,7 +59,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   const [disableTooltips, setDisableTooltips] = React.useState(false);
   const { address } = useAccount();
   const gameContract = useGameContract();
-  const { clearAllTransactions } = useTransaction();
+  const { clearAllTransactions, transactionState } = useTransaction();
   const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
   const [previewPosition, setPreviewPosition] = useState<{
     row: number;
@@ -1808,6 +1808,48 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     shipMap,
   ]);
 
+  // Last-move arrow, borders, and replay overlays: same visibility as ghost tiles.
+  // Hide whenever any ship is selected so the grid focuses on the active selection.
+  const shouldShowLastMoveOnGrid = React.useMemo(() => {
+    if (game.metadata.winner !== "0x0000000000000000000000000000000000000000") {
+      return false;
+    }
+    if (!displayedLastMove || displayedLastMove.shipId === 0n) {
+      return false;
+    }
+    if (selectedShipId !== null) {
+      return false;
+    }
+    if ((displayedLastMove.actionType as ActionType) === ActionType.Retreat) {
+      return true;
+    }
+    const lastMoveShip = shipMap.get(displayedLastMove.shipId);
+    if (!lastMoveShip) {
+      return false;
+    }
+    if (optimisticLastMove) {
+      return true;
+    }
+    const currentPosition = game.shipPositions.find(
+      (pos) => pos.shipId === displayedLastMove.shipId,
+    );
+    if (
+      currentPosition &&
+      currentPosition.position.row === displayedLastMove.newRow &&
+      currentPosition.position.col === displayedLastMove.newCol
+    ) {
+      return true;
+    }
+    return false;
+  }, [
+    game.metadata.winner,
+    displayedLastMove,
+    optimisticLastMove,
+    game.shipPositions,
+    shipMap,
+    selectedShipId,
+  ]);
+
   // Check if a ship belongs to the current player
   const isShipOwnedByCurrentPlayer = React.useCallback(
     (shipId: bigint): boolean => {
@@ -1822,19 +1864,34 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     // Show move submission UI whenever it's your turn and you have one of your
     // ships selected that hasn't moved yet, OR a disabled (0 HP) ship selected
     // that can only Retreat.
-    if (selectedShipId === null || !canActInGame) {
+    if (selectedShipId === null) {
       return false;
     }
     if (!isShipOwnedByCurrentPlayer(selectedShipId)) return false;
+
+    const moveShipTxId = `move-ship-${selectedShipId}-${game.metadata.gameId}`;
+    const waitingOnMoveTx =
+      (transactionState.isPending &&
+        transactionState.activeTransactionId === moveShipTxId) ||
+      awaitingTurnSyncAfterSubmit;
+
     if (movedShipIdsSet.has(selectedShipId)) {
       const attrs = getShipAttributes(selectedShipId);
       const isDisabled = attrs && attrs.hullPoints === 0;
       if (!isDisabled) return false;
     }
+
+    if (!canActInGame && !waitingOnMoveTx) {
+      return false;
+    }
     return true;
   }, [
     selectedShipId,
     canActInGame,
+    awaitingTurnSyncAfterSubmit,
+    transactionState.isPending,
+    transactionState.activeTransactionId,
+    game.metadata.gameId,
     isShipOwnedByCurrentPlayer,
     movedShipIdsSet,
     getShipAttributes,
@@ -1989,21 +2046,30 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Last move props for GameGrid
   const lastMoveShipId =
-    shouldShowLastMove && displayedLastMove && !isShowingProposedMove
+    shouldShowLastMoveOnGrid && displayedLastMove && !isShowingProposedMove
       ? displayedLastMove.shipId
       : null;
   const lastMoveOldPosition =
-    shouldShowLastMove && displayedLastMove && !isShowingProposedMove
+    shouldShowLastMoveOnGrid && displayedLastMove && !isShowingProposedMove
       ? { row: displayedLastMove.oldRow, col: displayedLastMove.oldCol }
       : null;
 
+  const lastMoveNewPosition =
+    shouldShowLastMoveOnGrid &&
+    displayedLastMove &&
+    !isShowingProposedMove &&
+    displayedLastMove.newRow >= 0 &&
+    displayedLastMove.newCol >= 0
+      ? { row: displayedLastMove.newRow, col: displayedLastMove.newCol }
+      : null;
+
   const lastMoveActionType =
-    shouldShowLastMove && displayedLastMove && !isShowingProposedMove
+    shouldShowLastMoveOnGrid && displayedLastMove && !isShowingProposedMove
       ? displayedLastMove.actionType
       : null;
 
   const lastMoveTargetShipId =
-    shouldShowLastMove &&
+    shouldShowLastMoveOnGrid &&
     displayedLastMove &&
     !isShowingProposedMove &&
     ((displayedLastMove.actionType as ActionType) === ActionType.Special ||
@@ -2014,7 +2080,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   // Who made the last move: use ship owner when ship is in map; otherwise derive from turn (after a move, turn switches to the other player)
   const lastMoveIsCurrentPlayer =
-    shouldShowLastMove && displayedLastMove && !isShowingProposedMove
+    shouldShowLastMoveOnGrid && displayedLastMove && !isShowingProposedMove
       ? (() => {
           const ship = shipMap.get(displayedLastMove!.shipId);
           if (ship) return ship.owner === address;
@@ -2353,7 +2419,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     return true;
                   }}
                 >
-                  {isSelectedShipDisabled ? "Submit Retreat" : "Submit Move"}
+                  {isSelectedShipDisabled ? "Submit Retreat" : "Submit"}
                 </TransactionButton>
             );
           })()}
@@ -3293,6 +3359,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         <GameBoardLayout
           isCurrentPlayerTurn={!readOnly && isMyTurnEffective}
           containerRef={gridContainerRef}
+          onBoardChromeMouseDown={handleCancelMove}
           rightControls={
             game.metadata.winner ===
             "0x0000000000000000000000000000000000000000" ? (
@@ -3428,6 +3495,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 highlightedMovePosition={highlightedMovePosition}
                 lastMoveShipId={lastMoveShipId}
                 lastMoveOldPosition={lastMoveOldPosition}
+                lastMoveNewPosition={lastMoveNewPosition}
                 lastMoveActionType={lastMoveActionType}
                 lastMoveTargetShipId={lastMoveTargetShipId}
                 lastMoveIsCurrentPlayer={lastMoveIsCurrentPlayer}
@@ -3490,7 +3558,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       </button>
                     </div>
                     <GameEvents
-                      lastMove={displayedLastMove}
+                      lastMove={
+                        selectedShipId !== null ? undefined : displayedLastMove
+                      }
                       shipMap={shipMap}
                       address={address}
                       appendDestroyedText={appendDestroyedTextToLastMove}

@@ -7,6 +7,8 @@ interface GameBoardLayoutProps {
   children: React.ReactNode;
   rightControls?: React.ReactNode;
   containerRef?: React.Ref<HTMLDivElement>;
+  /** Fires on left-click directly on the board frame (e.g. padding), not on the grid or controls. */
+  onBoardChromeMouseDown?: () => void;
 }
 
 export const GameBoardLayout: React.FC<GameBoardLayoutProps> = ({
@@ -14,11 +16,17 @@ export const GameBoardLayout: React.FC<GameBoardLayoutProps> = ({
   children,
   rightControls,
   containerRef,
+  onBoardChromeMouseDown,
 }) => {
   return (
     <div
       ref={containerRef}
       className="p-2 w-full border border-solid"
+      onMouseDown={(e) => {
+        if (e.button !== 0) return;
+        if (e.target !== e.currentTarget) return;
+        onBoardChromeMouseDown?.();
+      }}
       style={{
         backgroundColor: "var(--color-slate)",
         borderColor: "var(--color-gunmetal)",

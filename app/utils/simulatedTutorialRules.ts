@@ -2,6 +2,38 @@ import { SimulatedGameState, TutorialAction } from "../types/onboarding";
 import { ActionType } from "../types/types";
 
 /**
+ * When a move (Pass) was applied immediately before shoot/special/assist, keep
+ * oldRow/oldCol from that move so last-move UI can draw the movement arrow.
+ */
+function spatialLastMoveCornersFromPriorPass(
+  prev: SimulatedGameState,
+  shipId: string,
+  currentRow: number,
+  currentCol: number,
+): { oldRow: number; oldCol: number; newRow: number; newCol: number } {
+  const prevLm = prev.lastMove;
+  if (
+    prevLm &&
+    prevLm.shipId === shipId &&
+    Number(prevLm.actionType) === ActionType.Pass &&
+    (prevLm.oldRow !== prevLm.newRow || prevLm.oldCol !== prevLm.newCol)
+  ) {
+    return {
+      oldRow: prevLm.oldRow,
+      oldCol: prevLm.oldCol,
+      newRow: currentRow,
+      newCol: currentCol,
+    };
+  }
+  return {
+    oldRow: currentRow,
+    oldCol: currentCol,
+    newRow: currentRow,
+    newCol: currentCol,
+  };
+}
+
+/**
  * Pure rules engine for the simulated tutorial game.
  * Takes a previous SimulatedGameState and a TutorialAction, and returns
  * the next SimulatedGameState without any React or tutorial-step concerns.
@@ -97,12 +129,15 @@ export function applyTutorialAction(
       );
       if (shooterPos) {
         const { row, col } = shooterPos.position;
+        const corners = spatialLastMoveCornersFromPriorPass(
+          prev,
+          action.shipId,
+          row,
+          col,
+        );
         newState.lastMove = {
           shipId: action.shipId,
-          oldRow: row,
-          oldCol: col,
-          newRow: row,
-          newCol: col,
+          ...corners,
           actionType: ActionType.Shoot,
           targetShipId: action.targetShipId,
         };
@@ -177,12 +212,15 @@ export function applyTutorialAction(
       );
       if (actorPos) {
         const { row, col } = actorPos.position;
+        const corners = spatialLastMoveCornersFromPriorPass(
+          prev,
+          action.shipId,
+          row,
+          col,
+        );
         newState.lastMove = {
           shipId: action.shipId,
-          oldRow: row,
-          oldCol: col,
-          newRow: row,
-          newCol: col,
+          ...corners,
           actionType: ActionType.Special,
           targetShipId: action.targetShipId,
         };
@@ -223,12 +261,15 @@ export function applyTutorialAction(
       );
       if (actorPos) {
         const { row, col } = actorPos.position;
+        const corners = spatialLastMoveCornersFromPriorPass(
+          prev,
+          action.shipId,
+          row,
+          col,
+        );
         newState.lastMove = {
           shipId: action.shipId,
-          oldRow: row,
-          oldCol: col,
-          newRow: row,
-          newCol: col,
+          ...corners,
           actionType: ActionType.Assist,
           targetShipId: action.targetShipId,
         };
