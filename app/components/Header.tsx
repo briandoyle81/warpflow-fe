@@ -11,7 +11,6 @@ import {
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { formatEther } from "viem";
 import MusicPlayer from "./MusicPlayer";
-import PayButton from "./PayButton";
 import { toast } from "react-hot-toast";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import type { Abi } from "viem";
@@ -29,6 +28,7 @@ import {
 const Header: React.FC = () => {
   const [isHydrated, setIsHydrated] = useState(false);
   const [showUTCPurchaseModal, setShowUTCPurchaseModal] = useState(false);
+  const [isNetworkMenuOpen, setIsNetworkMenuOpen] = useState(false);
 
   const account = useAccount();
 
@@ -38,9 +38,10 @@ const Header: React.FC = () => {
   });
   const pendingSwitchChainIdRef = useRef<number | null>(null);
   const lastSwitchRequestRef = useRef<{ chainId: number; at: number } | null>(
-    null
+    null,
   );
   const lastVariantWarningKeyRef = useRef<string | null>(null);
+  const networkMenuRef = useRef<HTMLDivElement | null>(null);
 
   const nativeTokenSymbol = getNativeTokenSymbol(selectedChainId);
   const selectedChainVariant = getVariantForChainId(selectedChainId);
@@ -60,7 +61,7 @@ const Header: React.FC = () => {
         enabled: isHydrated && isSupportedChainId(selectedChainId),
       },
     }),
-    [isHydrated, selectedChainId]
+    [isHydrated, selectedChainId],
   );
 
   const { data: maxVariant } = useReadContract(maxVariantConfig);
@@ -92,7 +93,10 @@ const Header: React.FC = () => {
     if (!isHydrated) return;
     if (account.status !== "connected") return;
     if (!isSupportedChainId(account.chainId)) return;
-    if (pendingSwitchChainIdRef.current && account.chainId !== pendingSwitchChainIdRef.current) {
+    if (
+      pendingSwitchChainIdRef.current &&
+      account.chainId !== pendingSwitchChainIdRef.current
+    ) {
       return;
     }
 
@@ -117,7 +121,7 @@ const Header: React.FC = () => {
 
     toast.error(
       `Network variant mismatch: selected variant ${selectedChainVariant} exceeds contract maxVariant ${maxVariantNumber}. Claims and purchases may fail until mapping is updated.`,
-      { duration: 8000 }
+      { duration: 8000 },
     );
   }, [isHydrated, maxVariant, selectedChainId, selectedChainVariant]);
 
@@ -142,14 +146,36 @@ const Header: React.FC = () => {
     }
     lastSwitchRequestRef.current = { chainId: selectedChainId, at: now };
     switchChain({ chainId: selectedChainId });
-  }, [account.status, account.chainId, isHydrated, selectedChainId, switchChain]);
+  }, [
+    account.status,
+    account.chainId,
+    isHydrated,
+    selectedChainId,
+    switchChain,
+  ]);
 
-  const handleNetworkChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextId = Number(e.target.value);
+  const handleNetworkChange = (nextId: number) => {
     setSelectedChainId(nextId);
     setSelectedChainIdState(nextId);
     pendingSwitchChainIdRef.current = nextId;
+    setIsNetworkMenuOpen(false);
   };
+
+  useEffect(() => {
+    if (!isNetworkMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (networkMenuRef.current && !networkMenuRef.current.contains(target)) {
+        setIsNetworkMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isNetworkMenuOpen]);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -169,15 +195,15 @@ const Header: React.FC = () => {
 
   return (
     <header
-      className="border-b-2 border-solid"
+      className="relative z-[300] border-b-2 border-solid overflow-visible"
       style={{
         backgroundColor: "var(--color-slate)",
         borderColor: "var(--color-gunmetal)",
         borderTopColor: "var(--color-steel)",
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-between py-2 gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
+        <div className="flex flex-wrap items-center justify-between py-2 gap-4 overflow-visible">
           {/* Left side - Logo and Title */}
           <div className="flex flex-col items-start gap-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -185,7 +211,8 @@ const Header: React.FC = () => {
                 <h1
                   className="text-3xl sm:text-4xl font-black uppercase tracking-wider"
                   style={{
-                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
                     color: "var(--color-text-primary)",
                   }}
                 >
@@ -200,7 +227,8 @@ const Header: React.FC = () => {
                 <div
                   className="px-3 py-1 border border-solid"
                   style={{
-                    fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                    fontFamily:
+                      "var(--font-jetbrains-mono), 'Courier New', monospace",
                     fontSize: "14px",
                     fontWeight: 600,
                     textTransform: "uppercase",
@@ -218,7 +246,8 @@ const Header: React.FC = () => {
               <span
                 className="text-sm px-2 py-1 border border-solid"
                 style={{
-                  fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  fontFamily:
+                    "var(--font-jetbrains-mono), 'Courier New', monospace",
                   fontWeight: 600,
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
@@ -296,7 +325,8 @@ const Header: React.FC = () => {
                                   type="button"
                                   className="px-6 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
                                   style={{
-                                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                    fontFamily:
+                                      "var(--font-rajdhani), 'Arial Black', sans-serif",
                                     borderColor: "var(--color-cyan)",
                                     color: "var(--color-cyan)",
                                     backgroundColor: "var(--color-steel)",
@@ -315,7 +345,8 @@ const Header: React.FC = () => {
                                   type="button"
                                   className="px-6 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
                                   style={{
-                                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                    fontFamily:
+                                      "var(--font-rajdhani), 'Arial Black', sans-serif",
                                     borderColor: "var(--color-warning-red)",
                                     color: "var(--color-warning-red)",
                                     backgroundColor: "var(--color-steel)",
@@ -354,7 +385,8 @@ const Header: React.FC = () => {
                         <span
                           className="text-xs font-bold tracking-wider uppercase"
                           style={{
-                            fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                            fontFamily:
+                              "var(--font-jetbrains-mono), 'Courier New', monospace",
                             color: "var(--color-phosphor-green)",
                           }}
                         >
@@ -363,8 +395,23 @@ const Header: React.FC = () => {
                             : `0.00 ${nativeTokenSymbol}`}
                         </span>
                       </div>
-                      {/* Buy Flow button (match network width) */}
-                      <PayButton className="w-32 h-8" />
+                      {/* Buy Tokens button (disabled placeholder) */}
+                      <button
+                        type="button"
+                        disabled
+                        className="w-32 h-8 border border-solid text-xs font-bold tracking-wider uppercase cursor-not-allowed opacity-70"
+                        style={{
+                          fontFamily:
+                            "var(--font-jetbrains-mono), 'Courier New', monospace",
+                          color: "var(--color-text-muted)",
+                          backgroundColor: "var(--color-steel)",
+                          borderColor: "var(--color-gunmetal)",
+                          borderTopColor: "var(--color-steel)",
+                          borderLeftColor: "var(--color-steel)",
+                        }}
+                      >
+                        [BUY TOKENS]
+                      </button>
                     </div>
 
                     {/* UTC Balance and Network */}
@@ -380,18 +427,23 @@ const Header: React.FC = () => {
                           borderLeftColor: "var(--color-steel)",
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = "var(--color-amber)";
-                          e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                          e.currentTarget.style.borderColor =
+                            "var(--color-amber)";
+                          e.currentTarget.style.backgroundColor =
+                            "var(--color-slate)";
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = "var(--color-amber)";
-                          e.currentTarget.style.backgroundColor = "var(--color-near-black)";
+                          e.currentTarget.style.borderColor =
+                            "var(--color-amber)";
+                          e.currentTarget.style.backgroundColor =
+                            "var(--color-near-black)";
                         }}
                       >
                         <span
                           className="text-xs font-bold tracking-wider uppercase"
                           style={{
-                            fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                            fontFamily:
+                              "var(--font-jetbrains-mono), 'Courier New', monospace",
                             color: "var(--color-amber)",
                           }}
                         >
@@ -402,41 +454,90 @@ const Header: React.FC = () => {
                       </button>
                       {/* Network (moved here) */}
                       <div
-                        className="flex items-center gap-2 px-3 py-1.5 h-8 w-32 justify-center border border-solid"
-                        style={{
-                          backgroundColor: "var(--color-near-black)",
-                          borderColor: "var(--color-cyan)",
-                          borderTopColor: "var(--color-steel)",
-                          borderLeftColor: "var(--color-steel)",
-                        }}
+                        ref={networkMenuRef}
+                        className="relative z-[120] h-8 w-32"
                       >
-                        <div
-                          className="w-2 h-2"
-                          style={{
-                            backgroundColor: "var(--color-cyan)",
-                            animation: "pulse-functional 1.5s ease-in-out infinite",
-                          }}
-                        ></div>
-                        <select
-                          value={selectedChainId}
-                          onChange={handleNetworkChange}
+                        <button
+                          type="button"
+                          onClick={() => setIsNetworkMenuOpen((prev) => !prev)}
                           disabled={!isHydrated || isConnecting}
-                          className="bg-transparent text-xs font-bold tracking-wider uppercase outline-none cursor-pointer w-full text-center truncate"
+                          className="flex h-full w-full items-center justify-center border border-solid px-3 pr-7 text-center text-[11px] font-bold uppercase tracking-wider transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-70"
                           style={{
-                            fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                            fontFamily:
+                              "var(--font-jetbrains-mono), 'Courier New', monospace",
                             color: "var(--color-cyan)",
+                            backgroundColor: "var(--color-near-black)",
+                            borderColor: "var(--color-cyan)",
+                            borderTopColor: "var(--color-steel)",
+                            borderLeftColor: "var(--color-steel)",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isHydrated || isConnecting) return;
+                            e.currentTarget.style.backgroundColor =
+                              "var(--color-slate)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              "var(--color-near-black)";
                           }}
                         >
-                          {SUPPORTED_CHAINS.map((c) => (
-                            <option
-                              key={c.id}
-                              value={c.id}
-                              className="text-black"
-                            >
-                              {c.name.toUpperCase()}
-                            </option>
-                          ))}
-                        </select>
+                          {(
+                            SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)
+                              ?.name ?? "NETWORK"
+                          ).toUpperCase()}
+                        </button>
+                        <span
+                          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] leading-none"
+                          style={{ color: "var(--color-cyan)" }}
+                        >
+                          {isNetworkMenuOpen ? "▲" : "▼"}
+                        </span>
+
+                        {isNetworkMenuOpen && (
+                          <div
+                            className="absolute left-0 top-[calc(100%+4px)] z-[130] w-32 border border-solid shadow-lg"
+                            style={{
+                              backgroundColor: "var(--color-near-black)",
+                              borderColor: "var(--color-cyan)",
+                              borderTopColor: "var(--color-steel)",
+                              borderLeftColor: "var(--color-steel)",
+                            }}
+                          >
+                            {SUPPORTED_CHAINS.map((c) => {
+                              const isActive = c.id === selectedChainId;
+                              return (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => handleNetworkChange(c.id)}
+                                  className="flex h-8 w-full items-center px-2 text-left text-[11px] font-bold uppercase tracking-wider transition-colors duration-150"
+                                  style={{
+                                    fontFamily:
+                                      "var(--font-jetbrains-mono), 'Courier New', monospace",
+                                    color: isActive
+                                      ? "var(--color-near-black)"
+                                      : "var(--color-cyan)",
+                                    backgroundColor: isActive
+                                      ? "var(--color-cyan)"
+                                      : "transparent",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (isActive) return;
+                                    e.currentTarget.style.backgroundColor =
+                                      "var(--color-slate)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (isActive) return;
+                                    e.currentTarget.style.backgroundColor =
+                                      "transparent";
+                                  }}
+                                >
+                                  {c.name.toUpperCase()}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -447,17 +548,20 @@ const Header: React.FC = () => {
                       onClick={handleDisconnect}
                       className="px-3 py-1.5 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150 w-48 flex items-center justify-center text-xs h-8"
                       style={{
-                        fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                        fontFamily:
+                          "var(--font-rajdhani), 'Arial Black', sans-serif",
                         borderColor: "var(--color-warning-red)",
                         color: "var(--color-warning-red)",
                         backgroundColor: "var(--color-steel)",
                         borderRadius: 0, // Square corners for industrial theme
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                        e.currentTarget.style.backgroundColor =
+                          "var(--color-slate)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "var(--color-steel)";
+                        e.currentTarget.style.backgroundColor =
+                          "var(--color-steel)";
                       }}
                     >
                       [LOG OUT]
@@ -475,7 +579,8 @@ const Header: React.FC = () => {
                       <span
                         className="text-xs font-bold tracking-wider uppercase"
                         style={{
-                          fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                          fontFamily:
+                            "var(--font-jetbrains-mono), 'Courier New', monospace",
                           color: "var(--color-text-secondary)",
                         }}
                       >
@@ -492,10 +597,12 @@ const Header: React.FC = () => {
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.color = "var(--color-cyan)";
-                          e.currentTarget.style.backgroundColor = "var(--color-slate)";
+                          e.currentTarget.style.backgroundColor =
+                            "var(--color-slate)";
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.color = "var(--color-text-secondary)";
+                          e.currentTarget.style.color =
+                            "var(--color-text-secondary)";
                           e.currentTarget.style.backgroundColor = "transparent";
                         }}
                         title="Copy address to clipboard"

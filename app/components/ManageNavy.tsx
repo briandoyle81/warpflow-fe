@@ -740,12 +740,32 @@ const ManageNavy: React.FC = () => {
 
       {/* Ship Purchase Interface */}
       {showShipPurchase && (
-        <div className="bg-black/40 border border-blue-400 rounded-none p-6 mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-6">
-              <h4 className="text-xl font-bold text-blue-400">
-                [SHIP PURCHASING]
-              </h4>
+        <div
+          className="mb-8 border border-blue-400/80 bg-gradient-to-b from-slate-950/90 to-black/50 p-6 sm:p-8"
+          style={{ borderRadius: 0 }}
+        >
+          <div className="mx-auto max-w-6xl">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-cyan-500/20 pb-4">
+            <div className="flex flex-wrap items-start gap-6">
+              <div className="flex flex-col gap-1">
+                <h4
+                  className="text-xl font-black uppercase tracking-[0.08em] text-cyan-300 sm:text-2xl"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  }}
+                >
+                  Ship purchasing
+                </h4>
+                <p
+                  className="text-xs font-mono font-bold uppercase tracking-[0.08em] text-red-400"
+                  style={{
+                    fontFamily:
+                      "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  }}
+                >
+                  Prices not yet normalized for all chains
+                </p>
+              </div>
               <div className="flex items-center gap-3">
                 <span className="text-gray-300 font-mono text-sm">
                   PAYMENT METHOD:
@@ -762,7 +782,7 @@ const ManageNavy: React.FC = () => {
                       borderRadius: 0, // Square corners for industrial theme
                     }}
                   >
-                    FLOW
+                    TOKENS
                   </button>
                   <button
                     onClick={() => setPaymentMethod("UTC")}
@@ -793,6 +813,7 @@ const ManageNavy: React.FC = () => {
             paymentMethod={paymentMethod}
             onPaymentMethodChange={setPaymentMethod}
           />
+          </div>
         </div>
       )}
 

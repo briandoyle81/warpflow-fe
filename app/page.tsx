@@ -195,7 +195,7 @@ export default function Home() {
             height: hideGlobalChrome ? "0px" : "auto",
             minHeight: hideGlobalChrome ? 0 : undefined,
             maxHeight: hideGlobalChrome ? "0px" : undefined,
-            overflow: "hidden",
+            overflow: hideGlobalChrome ? "hidden" : "visible",
             pointerEvents: hideGlobalChrome ? "none" : "auto",
           }}
           aria-hidden={hideGlobalChrome}
@@ -258,7 +258,7 @@ export default function Home() {
           height: hideGlobalChrome ? "0px" : "auto",
           minHeight: hideGlobalChrome ? 0 : undefined,
           maxHeight: hideGlobalChrome ? "0px" : undefined,
-          overflow: "hidden",
+          overflow: hideGlobalChrome ? "hidden" : "visible",
           pointerEvents: hideGlobalChrome ? "none" : "auto",
         }}
         aria-hidden={hideGlobalChrome}

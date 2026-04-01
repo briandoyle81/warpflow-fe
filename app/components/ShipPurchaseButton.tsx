@@ -227,7 +227,12 @@ export function ShipPurchaseButton({
           return true;
         }}
       >
-        {`[APPROVE ${utcAmount} UTC]`}
+        <div className="flex flex-col items-center gap-2">
+          {children}
+          <span className="text-[11px] uppercase tracking-[0.08em]">
+            [CLICK TO APPROVE {utcAmount} UTC]
+          </span>
+        </div>
       </TransactionButton>
     );
   }
@@ -254,7 +259,12 @@ export function ShipPurchaseButton({
         onError={onError}
         validateBeforeTransaction={validateBeforeTransaction}
       >
-        {children}
+        <div className="flex flex-col items-center gap-2">
+          {children}
+          <span className="text-[11px] uppercase tracking-[0.08em]">
+            [CLICK TO PURCHASE]
+          </span>
+        </div>
       </TransactionButton>
     );
   }
