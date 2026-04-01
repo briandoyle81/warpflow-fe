@@ -89,6 +89,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   } | null>(null);
   const [isLastMovePanelMinimized, setIsLastMovePanelMinimized] =
     useState(true);
+  const [isDebugPanelMinimized, setIsDebugPanelMinimized] = useState(true);
   const gameViewRootRef = React.useRef<HTMLDivElement | null>(null);
   const gridContainerRef = React.useRef<HTMLDivElement | null>(null);
   const chromeLayout = useGameViewChromeLayout(
@@ -3360,101 +3361,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           isCurrentPlayerTurn={!readOnly && isMyTurnEffective}
           containerRef={gridContainerRef}
           onBoardChromeMouseDown={handleCancelMove}
-          rightControls={
-            game.metadata.winner ===
-            "0x0000000000000000000000000000000000000000" ? (
-              <div className="flex items-center space-x-4">
-                <label className="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showDebug}
-                    onChange={(e) => setShowDebug(e.target.checked)}
-                    className="w-4 h-4"
-                    style={{
-                      accentColor: "var(--color-cyan)",
-                      borderColor: "var(--color-cyan)",
-                      backgroundColor: "var(--color-near-black)",
-                      borderRadius: 0,
-                      appearance: "none",
-                      WebkitAppearance: "none",
-                      MozAppearance: "none",
-                      width: "16px",
-                      height: "16px",
-                      border: "2px solid",
-                    }}
-                  />
-                  <span>Show Debug</span>
-                </label>
-                <label className="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={disableTooltips}
-                    onChange={(e) => setDisableTooltips(e.target.checked)}
-                    className="w-4 h-4"
-                    style={{
-                      accentColor: "var(--color-cyan)",
-                      borderColor: "var(--color-cyan)",
-                      backgroundColor: "var(--color-near-black)",
-                      borderRadius: 0,
-                      appearance: "none",
-                      WebkitAppearance: "none",
-                      MozAppearance: "none",
-                      width: "16px",
-                      height: "16px",
-                      border: "2px solid",
-                    }}
-                  />
-                  <span>Disable Tooltips</span>
-                </label>
-                <button
-                  onClick={() => {
-                    refetchGame();
-                  }}
-                  className="px-2 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-xs transition-colors duration-150"
-                  style={{
-                    fontFamily:
-                      "var(--font-rajdhani), 'Arial Black', sans-serif",
-                    borderColor: "var(--color-cyan)",
-                    color: "var(--color-cyan)",
-                    backgroundColor: "var(--color-steel)",
-                    borderRadius: 0,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "var(--color-slate)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "var(--color-steel)";
-                  }}
-                >
-                  Test Refetch
-                </button>
-                <button
-                  onClick={() => {
-                    globalGameRefetchFunctions.forEach((refetchFn) => {
-                      refetchFn();
-                    });
-                  }}
-                  className="px-2 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-xs transition-colors duration-150"
-                  style={{
-                    fontFamily:
-                      "var(--font-rajdhani), 'Arial Black', sans-serif",
-                    borderColor: "var(--color-phosphor-green)",
-                    color: "var(--color-phosphor-green)",
-                    backgroundColor: "var(--color-steel)",
-                    borderRadius: 0,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "var(--color-slate)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "var(--color-steel)";
-                  }}
-                >
-                  Test Events
-                </button>
-              </div>
-            ) : undefined
-          }
         >
           <div
             className="relative w-full"
@@ -3510,6 +3416,167 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 setDragOverCell={setDragOverCell}
               />
             </div>
+            {game.metadata.winner ===
+              "0x0000000000000000000000000000000000000000" && (
+              <div className="absolute bottom-0 left-0 z-[220] pointer-events-none">
+                <div className="pointer-events-auto">
+                  {isDebugPanelMinimized ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsDebugPanelMinimized(false)}
+                      className="px-3 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-xs transition-colors duration-150"
+                      style={{
+                        fontFamily:
+                          "var(--font-rajdhani), 'Arial Black', sans-serif",
+                        borderColor: "var(--color-cyan)",
+                        color: "var(--color-cyan)",
+                        backgroundColor: "rgba(10, 10, 15, 0.88)",
+                        borderRadius: 0,
+                      }}
+                    >
+                      Debug
+                    </button>
+                  ) : (
+                    <div className="w-[min(30rem,70vw)] max-w-full">
+                      <div className="mb-1 flex items-center justify-between border border-solid px-2 py-1 bg-black/80">
+                        <span
+                          className="text-xs uppercase tracking-wider"
+                          style={{
+                            fontFamily:
+                              "var(--font-rajdhani), 'Arial Black', sans-serif",
+                            color: "var(--color-cyan)",
+                          }}
+                        >
+                          Debug
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsDebugPanelMinimized(true)}
+                          className="px-2 py-0.5 text-[11px] uppercase tracking-wider border border-solid"
+                          style={{
+                            fontFamily:
+                              "var(--font-rajdhani), 'Arial Black', sans-serif",
+                            borderColor: "var(--color-cyan)",
+                            color: "var(--color-cyan)",
+                            backgroundColor: "var(--color-near-black)",
+                            borderRadius: 0,
+                          }}
+                        >
+                          Minimize
+                        </button>
+                      </div>
+                      <div
+                        className="border border-solid bg-black/40 p-3"
+                        style={{ borderColor: "var(--color-cyan)" }}
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                          <label className="flex cursor-pointer items-center space-x-2 text-xs text-gray-400">
+                            <input
+                              type="checkbox"
+                              checked={showDebug}
+                              onChange={(e) =>
+                                setShowDebug(e.target.checked)
+                              }
+                              className="h-4 w-4"
+                              style={{
+                                accentColor: "var(--color-cyan)",
+                                borderColor: "var(--color-cyan)",
+                                backgroundColor: "var(--color-near-black)",
+                                borderRadius: 0,
+                                appearance: "none",
+                                WebkitAppearance: "none",
+                                MozAppearance: "none",
+                                width: "16px",
+                                height: "16px",
+                                border: "2px solid",
+                              }}
+                            />
+                            <span>Show Debug</span>
+                          </label>
+                          <label className="flex cursor-pointer items-center space-x-2 text-xs text-gray-400">
+                            <input
+                              type="checkbox"
+                              checked={disableTooltips}
+                              onChange={(e) =>
+                                setDisableTooltips(e.target.checked)
+                              }
+                              className="h-4 w-4"
+                              style={{
+                                accentColor: "var(--color-cyan)",
+                                borderColor: "var(--color-cyan)",
+                                backgroundColor: "var(--color-near-black)",
+                                borderRadius: 0,
+                                appearance: "none",
+                                WebkitAppearance: "none",
+                                MozAppearance: "none",
+                                width: "16px",
+                                height: "16px",
+                                border: "2px solid",
+                              }}
+                            />
+                            <span>Disable Tooltips</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              refetchGame();
+                            }}
+                            className="border-2 border-solid px-2 py-1 text-xs font-semibold uppercase tracking-wider transition-colors duration-150"
+                            style={{
+                              fontFamily:
+                                "var(--font-rajdhani), 'Arial Black', sans-serif",
+                              borderColor: "var(--color-cyan)",
+                              color: "var(--color-cyan)",
+                              backgroundColor: "var(--color-steel)",
+                              borderRadius: 0,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                "var(--color-slate)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                "var(--color-steel)";
+                            }}
+                          >
+                            Test Refetch
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              globalGameRefetchFunctions.forEach(
+                                (refetchFn) => {
+                                  refetchFn();
+                                },
+                              );
+                            }}
+                            className="border-2 border-solid px-2 py-1 text-xs font-semibold uppercase tracking-wider transition-colors duration-150"
+                            style={{
+                              fontFamily:
+                                "var(--font-rajdhani), 'Arial Black', sans-serif",
+                              borderColor: "var(--color-phosphor-green)",
+                              color: "var(--color-phosphor-green)",
+                              backgroundColor: "var(--color-steel)",
+                              borderRadius: 0,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                "var(--color-slate)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                "var(--color-steel)";
+                            }}
+                          >
+                            Test Events
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="absolute bottom-0 right-0 z-[220] pointer-events-none">
               <div className="pointer-events-auto">
                 {isLastMovePanelMinimized ? (

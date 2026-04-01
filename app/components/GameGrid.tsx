@@ -15,6 +15,37 @@ import { EmpWaveAnimation } from "./weapon-animations/EmpWaveAnimation";
 import { RetreatPrepAnimation } from "./weapon-animations/RetreatPrepAnimation";
 import { WarpFieldCollapseAnimation } from "./weapon-animations/WarpFieldCollapseAnimation";
 
+/** Horizontal center and top of a cell in overlay coords (container-relative).
+ * Prefer DOM rects: tiles are aspect-square inside fr tracks, so uniform track
+ * math can sit left/right of the painted square (same fix as move-path arrows). */
+function measureGridCellLabelAnchor(
+  containerRect: DOMRect,
+  layoutRoot: HTMLElement | null,
+  row: number,
+  col: number,
+  fallback: {
+    originX: number;
+    originY: number;
+    cellWidth: number;
+    cellHeight: number;
+  },
+): { cx: number; cellTop: number } {
+  const el = layoutRoot?.querySelector(
+    `[data-grid-row="${row}"][data-grid-col="${col}"]`,
+  ) as HTMLElement | null;
+  if (el) {
+    const rect = el.getBoundingClientRect();
+    return {
+      cx: (rect.left + rect.right) / 2 - containerRect.left,
+      cellTop: rect.top - containerRect.top,
+    };
+  }
+  return {
+    cx: fallback.originX + col * fallback.cellWidth + fallback.cellWidth / 2,
+    cellTop: fallback.originY + row * fallback.cellHeight,
+  };
+}
+
 interface GameGridProps {
   grid: (ShipPosition | null)[][];
   allShipPositions?: readonly ShipPosition[];
@@ -2564,13 +2595,18 @@ export function GameGrid({
                         labelText = `⚔️ ${damage.reducedDamage} DMG`;
                       }
 
-                      // Horizontal center of cell in overlay coords (same as move-arrow math)
-                      const cellX =
-                        originX +
-                        target.col * cellWidth +
-                        cellWidth / 2;
-                      const cellTop =
-                        originY + target.row * cellHeight;
+                      const { cx: cellX, cellTop } = measureGridCellLabelAnchor(
+                        containerRect,
+                        gridLayoutRef.current,
+                        target.row,
+                        target.col,
+                        {
+                          originX,
+                          originY,
+                          cellWidth,
+                          cellHeight,
+                        },
+                      );
 
                       return (
                         <div
@@ -2625,6 +2661,7 @@ export function GameGrid({
               const cellHeight = layoutEl
                 ? layoutEl.clientHeight / 11
                 : containerRect.height / 11;
+
               return (
                 <div
                   className="absolute pointer-events-none z-[60]"
@@ -2636,11 +2673,18 @@ export function GameGrid({
                   }}
                 >
                   {tutorialHighlightCells.map((p, i) => {
-                    const cellTop = originY + p.row * cellHeight;
-                    const cellX =
-                      originX +
-                      p.col * cellWidth +
-                      cellWidth / 2;
+                    const { cx: cellX, cellTop } = measureGridCellLabelAnchor(
+                      containerRect,
+                      gridLayoutRef.current,
+                      p.row,
+                      p.col,
+                      {
+                        originX,
+                        originY,
+                        cellWidth,
+                        cellHeight,
+                      },
+                    );
                     const cell = grid[p.row]?.[p.col];
                     const shipId = cell?.shipId;
                     const targetsForLabels = labelTargets ?? validTargets;
