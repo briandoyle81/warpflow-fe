@@ -21,6 +21,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Void Tactics",
   description: "Don't play to earn, play to win",
+  // Talent App domain / project verification (public token, non-executable).
+  other: {
+    "talentapp:project_verification":
+      "ccd99a570185c2fec7a44930dc3b30732f617a6bd4390ebcff5c3f16e020448312fd63176d45ad22493038ef29dd21349e6c9169bc365e484ded9857e07b5a98",
+  },
 };
 
 export default function RootLayout({
