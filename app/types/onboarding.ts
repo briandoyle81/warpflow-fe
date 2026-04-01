@@ -22,6 +22,14 @@ import { Position, Attributes, ActionType } from "./types";
 /** Persisted tutorial step index; presence means Info should resume the sim tutorial. */
 export const TUTORIAL_STEP_STORAGE_KEY = "void-tactics-tutorial-step-index";
 
+/** JSON `string[]` of `TutorialStep.id` values the player has fully completed once. */
+export const TUTORIAL_COMPLETED_STEPS_KEY =
+  "void-tactics-tutorial-completed-step-ids";
+
+/** Which branch the player took on the `rescue` step: `retreat` or `sniper`. */
+export const TUTORIAL_RESCUE_BRANCH_KEY =
+  "void-tactics-tutorial-rescue-completion-branch";
+
 export type TutorialShipId = string;
 
 export interface TutorialStep {

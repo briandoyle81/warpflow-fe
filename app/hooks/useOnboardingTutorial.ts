@@ -2,7 +2,8 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   TutorialAction,
   TutorialContextValue,
-  SimulatedGameState,
+  TUTORIAL_COMPLETED_STEPS_KEY,
+  TUTORIAL_RESCUE_BRANCH_KEY,
   TUTORIAL_STEP_STORAGE_KEY,
 } from "../types/onboarding";
 import { ActionType } from "../types/types";
@@ -15,10 +16,12 @@ import { useSimulatedGameState } from "./useSimulatedGameState";
 
 const TUTORIAL_STEP_SNAPSHOTS_KEY = "void-tactics-tutorial-step-snapshots";
 const TUTORIAL_DATA_VERSION_KEY = "void-tactics-tutorial-data-version";
-// Bump this any time we change the canonical tutorial state so we don't keep
-// rendering stale snapshots from localStorage.
+// Bump when canonical tutorial state or step behavior changes; clears saved
+// step index and legacy snapshot storage from older clients.
+type RescueCompletionBranch = "retreat" | "sniper" | null;
+
 const TUTORIAL_DATA_VERSION =
-  "2026-03-27-completion-retreat-victory-parity-cta";
+  "2026-04-01-tutorial-rescue-branch-skip";
 
 export function useOnboardingTutorial() {
   // Load saved step index from localStorage, default to 0
@@ -47,41 +50,79 @@ export function useOnboardingTutorial() {
   const [lastAction, setLastAction] = useState<TutorialAction | null>(null);
   const [isStepHydrated, setIsStepHydrated] = useState(false);
   const displayTotalSteps = 14;
-  // The step index whose state is currently hydrated and visible on screen.
-  // This lets us persist snapshots for the correct step even when
-  // currentStepIndex has already advanced to the next step.
-  const [hydratedStepIndex, setHydratedStepIndex] = useState<number | null>(
-    null,
-  );
 
   const { gameState, updateGameState, applyAction, resetState } =
     useSimulatedGameState();
 
-  // Per-step cached snapshots of game state and last action, so moving between
-  // steps (or reloading) preserves positions and damage unless the user resets.
-  const [stepSnapshots, setStepSnapshots] = useState<
-    ({
-      gameState: SimulatedGameState;
-      lastAction: TutorialAction | null;
-    } | null)[]
-  >(() => {
-    const empty = TUTORIAL_STEPS.map(() => null);
-    if (typeof window === "undefined") return empty;
-    try {
-      const raw = window.localStorage.getItem(TUTORIAL_STEP_SNAPSHOTS_KEY);
-      if (!raw) return empty;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length === TUTORIAL_STEPS.length) {
-        return parsed as ({
-          gameState: SimulatedGameState;
-          lastAction: TutorialAction | null;
-        } | null)[];
-      }
-    } catch {
-      // Ignore parse errors and fall back to empty snapshots
+  const [completedStepIds, setCompletedStepIds] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") {
+      return new Set();
     }
-    return empty;
+    const prevVersion = window.localStorage.getItem(TUTORIAL_DATA_VERSION_KEY);
+    if (prevVersion !== TUTORIAL_DATA_VERSION) {
+      return new Set();
+    }
+    try {
+      const raw = window.localStorage.getItem(TUTORIAL_COMPLETED_STEPS_KEY);
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return new Set();
+      return new Set(
+        parsed.filter((id): id is string => typeof id === "string"),
+      );
+    } catch {
+      return new Set();
+    }
   });
+
+  const [rescueCompletionBranch, setRescueCompletionBranch] =
+    useState<RescueCompletionBranch>(() => {
+      if (typeof window === "undefined") {
+        return null;
+      }
+      const prevVersion = window.localStorage.getItem(TUTORIAL_DATA_VERSION_KEY);
+      if (prevVersion !== TUTORIAL_DATA_VERSION) {
+        return null;
+      }
+      const raw = window.localStorage.getItem(TUTORIAL_RESCUE_BRANCH_KEY);
+      if (raw === "retreat" || raw === "sniper") {
+        return raw;
+      }
+      return null;
+    });
+
+  const persistRescueCompletionBranch = useCallback(
+    (branch: "retreat" | "sniper") => {
+      setRescueCompletionBranch(branch);
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(TUTORIAL_RESCUE_BRANCH_KEY, branch);
+        } catch {
+          // Ignore storage quota errors
+        }
+      }
+    },
+    [],
+  );
+
+  const addCompletedStepId = useCallback((stepId: string) => {
+    setCompletedStepIds((prev) => {
+      if (prev.has(stepId)) return prev;
+      const next = new Set(prev);
+      next.add(stepId);
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(
+            TUTORIAL_COMPLETED_STEPS_KEY,
+            JSON.stringify([...next]),
+          );
+        } catch {
+          // Ignore storage quota errors
+        }
+      }
+      return next;
+    });
+  }, []);
 
   // Save step index to localStorage whenever it changes
   useEffect(() => {
@@ -93,61 +134,15 @@ export function useOnboardingTutorial() {
     }
   }, [currentStepIndex]);
 
-  // Persist a snapshot for the current step only after that step's state is
-  // hydrated. Otherwise when we advance (e.g. 5 → 6), we'd save step 5's
-  // gameState as step 6's snapshot, then the step effect would "restore" it
-  // and never run the step 6 script, causing flicker between the two states.
-  useEffect(() => {
-    if (!isStepHydrated || hydratedStepIndex === null) return;
-
-    // Do not persist snapshots for scripted steps that have a pre-step enemy
-    // move/attack or a hardcoded cinematic setup, so we always show that when
-    // entering (no stale snapshot).
-    const hydratedStep = TUTORIAL_STEPS[hydratedStepIndex];
-    if (
-      hydratedStep &&
-      (hydratedStep.id === "score-points" ||
-        hydratedStep.id === "shoot" ||
-        hydratedStep.id === "end-of-round" ||
-        hydratedStep.id === "special-emp" ||
-        hydratedStep.id === "ship-destruction" ||
-        hydratedStep.id === "rescue" ||
-        hydratedStep.id === "rescue-outcome-retreat" ||
-        hydratedStep.id === "rescue-outcome-sniper" ||
-        hydratedStep.id === "completion-sniper" ||
-        hydratedStep.id === "completion-retreat")
-    ) {
-      return;
-    }
-
-    setStepSnapshots((prev) => {
-      const next = [...prev];
-      next[hydratedStepIndex] = { gameState, lastAction };
-      if (typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem(
-            TUTORIAL_STEP_SNAPSHOTS_KEY,
-            JSON.stringify(next),
-          );
-        } catch {
-          // Ignore storage quota errors
-        }
-      }
-      return next;
-    });
-  }, [gameState, lastAction, hydratedStepIndex, isStepHydrated]);
-
   const currentStep = useMemo(() => {
     return TUTORIAL_STEPS[currentStepIndex] || null;
   }, [currentStepIndex]);
 
   // Whenever the current step index changes, mark the step as not yet
-  // hydrated so the UI can avoid briefly showing the previous step's
-  // board before the new step's snapshot/scripted state is applied.
+  // hydrated so the UI can avoid briefly showing the previous step's board
+  // before canonical scripted state is applied.
   useEffect(() => {
     setIsStepHydrated(false);
-    // We intentionally do NOT reset hydratedStepIndex here; it will be updated
-    // when the new step finishes hydrating.
   }, [currentStepIndex]);
 
   const validateAction = useCallback(
@@ -399,6 +394,7 @@ export function useOnboardingTutorial() {
       typeof currentStep.onStepComplete === "function" &&
       currentStep.onStepComplete(stepCompletionAction)
     ) {
+      addCompletedStepId(currentStep.id);
       setCurrentStepIndex((prev) => {
         let nextIndex = Math.min(prev + 1, TUTORIAL_STEPS.length - 1);
 
@@ -414,6 +410,8 @@ export function useOnboardingTutorial() {
             action.type === "moveShip" &&
             action.shipId === "1001" &&
             action.actionType === ActionType.Retreat;
+
+          persistRescueCompletionBranch(empRetreat ? "retreat" : "sniper");
 
           if (empRetreat && retreatOutcomeIndex !== -1) {
             nextIndex = retreatOutcomeIndex;
@@ -441,7 +439,13 @@ export function useOnboardingTutorial() {
         return nextIndex;
       });
     }
-  }, [pendingAction, currentStep, applyAction]);
+  }, [
+    pendingAction,
+    currentStep,
+    applyAction,
+    addCompletedStepId,
+    persistRescueCompletionBranch,
+  ]);
 
   const rejectTransaction = useCallback(() => {
     setIsTransactionDialogOpen(false);
@@ -459,9 +463,63 @@ export function useOnboardingTutorial() {
   }, []);
 
   const nextStep = useCallback(() => {
+    const leaving = TUTORIAL_STEPS[currentStepIndex];
+    const naturalComplete = leaving
+      ? !leaving.onStepComplete || leaving.onStepComplete(lastAction)
+      : false;
+
+    if (leaving?.id === "rescue" && naturalComplete && lastAction) {
+      const empRetreat =
+        lastAction.type === "moveShip" &&
+        lastAction.shipId === "1001" &&
+        lastAction.actionType === ActionType.Retreat;
+      persistRescueCompletionBranch(empRetreat ? "retreat" : "sniper");
+    }
+
+    if (leaving && naturalComplete) {
+      addCompletedStepId(leaving.id);
+    }
+
     setCurrentStepIndex((prev) => {
       let nextIndex = Math.min(prev + 1, TUTORIAL_STEPS.length - 1);
       const currentId = TUTORIAL_STEPS[prev]?.id;
+
+      if (currentId === "rescue") {
+        const stepAtPrev = TUTORIAL_STEPS[prev];
+        const rescueNaturalComplete =
+          !stepAtPrev?.onStepComplete ||
+          stepAtPrev.onStepComplete(lastAction);
+        const retreatOutcomeIndex = TUTORIAL_STEPS.findIndex(
+          (s) => s.id === "rescue-outcome-retreat",
+        );
+        const sniperOutcomeIndex = TUTORIAL_STEPS.findIndex(
+          (s) => s.id === "rescue-outcome-sniper",
+        );
+        if (rescueNaturalComplete && lastAction) {
+          const empRetreat =
+            lastAction.type === "moveShip" &&
+            lastAction.shipId === "1001" &&
+            lastAction.actionType === ActionType.Retreat;
+          if (empRetreat && retreatOutcomeIndex !== -1) {
+            nextIndex = retreatOutcomeIndex;
+          } else if (sniperOutcomeIndex !== -1) {
+            nextIndex = sniperOutcomeIndex;
+          }
+        } else if (!rescueNaturalComplete) {
+          if (
+            rescueCompletionBranch === "retreat" &&
+            retreatOutcomeIndex !== -1
+          ) {
+            nextIndex = retreatOutcomeIndex;
+          } else if (
+            rescueCompletionBranch === "sniper" &&
+            sniperOutcomeIndex !== -1
+          ) {
+            nextIndex = sniperOutcomeIndex;
+          }
+        }
+      }
+
       // Make branch navigation deterministic even if Debug allows skipping step
       // completion (which may leave rescueBranch unset).
       if (currentId === "rescue-outcome-retreat") {
@@ -477,27 +535,36 @@ export function useOnboardingTutorial() {
       }
       return nextIndex;
     });
-  }, []);
+  }, [
+    addCompletedStepId,
+    currentStepIndex,
+    lastAction,
+    rescueCompletionBranch,
+    persistRescueCompletionBranch,
+  ]);
 
   const previousStep = useCallback(() => {
+    // Use the step id from the last committed render so Prev matches what the user
+    // sees. Relying only on TUTORIAL_STEPS[prev]?.id can disagree with `currentStep`
+    // during hydration or updates, so Victory Achieved would fall through to prev-1
+    // (completion-retreat) instead of Accepting a Sacrifice.
+    const fromStepId = currentStep?.id;
     setCurrentStepIndex((prev) => {
-      const currentId = TUTORIAL_STEPS[prev]?.id;
-      if (currentId === "completion-retreat") {
+      if (fromStepId === "completion-retreat") {
         const idx = TUTORIAL_STEPS.findIndex(
           (s) => s.id === "rescue-outcome-retreat",
         );
         if (idx !== -1) return idx;
       }
-      if (currentId === "completion-sniper") {
+      if (fromStepId === "completion-sniper") {
         const idx = TUTORIAL_STEPS.findIndex(
           (s) => s.id === "rescue-outcome-sniper",
         );
         if (idx !== -1) return idx;
       }
-      const prevIndex = Math.max(prev - 1, 0);
-      return prevIndex;
+      return Math.max(prev - 1, 0);
     });
-  }, []);
+  }, [currentStep?.id]);
 
   const displayStepNumber = useMemo(() => {
     if (!currentStep) return currentStepIndex + 1;
@@ -528,93 +595,58 @@ export function useOnboardingTutorial() {
     setPendingAction(null);
     setLastAction(null);
     resetState();
-    setStepSnapshots(TUTORIAL_STEPS.map(() => null));
+    setCompletedStepIds(new Set());
     setCurrentStepIndex(0);
+    setRescueCompletionBranch(null);
     if (typeof window !== "undefined") {
       localStorage.setItem(TUTORIAL_STEP_STORAGE_KEY, "0");
       window.localStorage.removeItem(TUTORIAL_STEP_SNAPSHOTS_KEY);
+      window.localStorage.removeItem(TUTORIAL_COMPLETED_STEPS_KEY);
+      window.localStorage.removeItem(TUTORIAL_RESCUE_BRANCH_KEY);
     }
   }, [resetState]);
 
-  // Check if current step is complete
-  const isStepComplete = useMemo(() => {
+  const isStepNaturallyComplete = useMemo(() => {
     if (!currentStep?.onStepComplete) {
-      return true; // If no completion condition, step is always "complete" (can proceed)
+      return true;
     }
     return currentStep.onStepComplete(lastAction);
   }, [currentStep, lastAction]);
 
-  // Step-specific simulated state adjustments. When a snapshot exists for the
-  // current step, restore it instead of re-running scripted changes so ship
-  // positions and damage persist across navigation and refresh.
+  // Allow Next if the player finishes the step now or has completed it before
+  // (repeat visits still load canonical start state, but they may skip ahead).
+  const isStepComplete = useMemo(() => {
+    if (!currentStep) return true;
+    if (currentStep.id === "rescue") {
+      return (
+        isStepNaturallyComplete || rescueCompletionBranch !== null
+      );
+    }
+    return (
+      isStepNaturallyComplete || completedStepIds.has(currentStep.id)
+    );
+  }, [
+    currentStep,
+    completedStepIds,
+    isStepNaturallyComplete,
+    rescueCompletionBranch,
+  ]);
+
+  // Always hydrate the active step from canonical scripted state when the step
+  // changes (Next, Prev, or initial index). Re-entering a step must show its
+  // opening board, not an ending snapshot from a prior visit.
   useEffect(() => {
     if (!currentStep) return;
 
-    const snapshot = stepSnapshots[currentStepIndex];
-    // For most steps, restore from snapshot if it exists. For scripted steps
-    // (score-points, shoot, special-emp, destroy-disabled), only restore when
-    // the player has already taken their action (snapshot.lastAction != null).
-    // Otherwise use scripted state so the pre-step setup is shown from the start.
-    //
-    // ship-destruction / rescue: always use scripted state on entry (rescue
-    // shares the same board as ship-destruction).
-    //
-    // ship-destruction: a stale snapshot could restore the wrong lastMove
-    // (Anvil shot) instead of the canonical EMP special.
-    if (snapshot) {
-      const useScriptedInsteadOfSnapshot =
-        currentStep.id === "ship-destruction" ||
-        currentStep.id === "rescue" ||
-        currentStep.id === "rescue-outcome-retreat" ||
-        currentStep.id === "rescue-outcome-sniper" ||
-        currentStep.id === "completion-sniper" ||
-        currentStep.id === "completion-retreat" ||
-        ((currentStep.id === "score-points" ||
-          currentStep.id === "shoot" ||
-          currentStep.id === "end-of-round" ||
-          currentStep.id === "special-emp" ||
-          currentStep.id === "destroy-disabled") &&
-          snapshot.lastAction === null);
-
-      if (useScriptedInsteadOfSnapshot) {
-        // Ignore this snapshot and fall through to scripted state.
-      } else {
-        updateGameState(() => snapshot.gameState);
-        setLastAction(snapshot.lastAction);
-        // Defer hydration so the board is not shown until the restored state
-        // is committed, and record which step index is hydrated.
-        const indexForHydration = currentStepIndex;
-        queueMicrotask(() => {
-          setHydratedStepIndex(indexForHydration);
-          setIsStepHydrated(true);
-        });
-        return;
-      }
-    }
-
-    // Use canonical scripted state for this step so refresh and step navigation
-    // always show the correct cumulative board (all prior moves preserved).
-    // Key by step id so the board matches `currentStep` even if step index and
-    // scripted array comments ever drift.
+    setLastAction(null);
     const scriptedState =
       getScriptedStateForTutorialStepId(currentStep.id) ??
       getScriptedStateForStepIndex(currentStepIndex);
     updateGameState(() => scriptedState);
 
-    // Defer hydration until after the game state update is committed, and
-    // record which step index is hydrated.
-    const indexForHydration = currentStepIndex;
     queueMicrotask(() => {
-      setHydratedStepIndex(indexForHydration);
       setIsStepHydrated(true);
     });
-    // Intentionally omit `stepSnapshots` from deps: when the user acts on a step
-    // (e.g. selectShip), the snapshot effect updates `stepSnapshots` one tick later.
-    // Re-running this effect on that update reapplies an older snapshot with
-    // lastAction still null and overwrites setLastAction from executeAction,
-    // which breaks onStepComplete and causes the Next button to flicker.
-    // Re-hydrate only when the active step changes, not when snapshots refresh.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- stepSnapshots excluded; see above
   }, [currentStep, currentStepIndex, updateGameState]);
 
   // Invalidate persisted snapshots if canonical tutorial state changed.
@@ -627,15 +659,17 @@ export function useOnboardingTutorial() {
     // canonical scripted state.
     window.localStorage.removeItem(TUTORIAL_STEP_STORAGE_KEY);
     window.localStorage.removeItem(TUTORIAL_STEP_SNAPSHOTS_KEY);
+    window.localStorage.removeItem(TUTORIAL_COMPLETED_STEPS_KEY);
+    window.localStorage.removeItem(TUTORIAL_RESCUE_BRANCH_KEY);
     window.localStorage.setItem(
       TUTORIAL_DATA_VERSION_KEY,
       TUTORIAL_DATA_VERSION,
     );
 
     setCurrentStepIndex(0);
-    setStepSnapshots(TUTORIAL_STEPS.map(() => null));
+    setCompletedStepIds(new Set());
+    setRescueCompletionBranch(null);
     setIsStepHydrated(false);
-    setHydratedStepIndex(null);
   }, []);
 
   const contextValue: TutorialContextValue = useMemo(
