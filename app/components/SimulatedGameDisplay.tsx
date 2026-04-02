@@ -132,7 +132,7 @@ const TUTORIAL_WELCOME_GRID_BRIEF = (
       <span className="font-bold text-cyan-300">Admiral</span>
       {", you're late. We've traded losses with the "}
       <span className="font-semibold text-red-300">enemy</span>
-      {", and we're still "}
+      {", and we're "}
       <span className="font-semibold text-amber-300">behind on the board</span>
       {", but with "}
       <span className="font-bold text-cyan-300">you on station</span>
@@ -143,9 +143,11 @@ const TUTORIAL_WELCOME_GRID_BRIEF = (
       <span className="font-semibold text-amber-200">outer dust belts</span>
       {" over "}
       <span className="font-semibold text-yellow-300">sparse resources</span>
-      {". Whoever exploits a site first keeps it under "}
+      {". Under "}
       <span className="font-semibold text-orange-300">space law</span>
-      {". Out here, that's the rule that matters."}
+      {
+        ", whoever exploits a site first keeps it. Out here, that's the rule that matters."
+      }
     </p>
   </>
 );
@@ -157,16 +159,17 @@ const TUTORIAL_GOALS_GRID_BRIEF = (
       Each round, ships can mine the resources in the area they control.{" "}
       <span className="font-semibold text-cyan-300">Central</span> has set the
       claim minimum at <span className="font-bold text-yellow-300">100</span>{" "}
-      for this{" "}
+      tons for this{" "}
       <span className="font-semibold text-amber-200">resource cluster</span>.
       {"  "}
       Whoever gets there first gets{" "}
-      <span className="font-semibold text-orange-300">legal claim</span> on the
-      site.
+      <span className="font-semibold text-orange-300">legal control</span> of
+      the site.
     </p>
     <p>
-      Current tally: <span className="font-semibold text-cyan-300">60</span> us,{" "}
-      <span className="font-semibold text-red-300">70</span> them. You&apos;re{" "}
+      Current tally: <span className="font-semibold text-cyan-300">60</span>{" "}
+      tons us, <span className="font-semibold text-red-300">70</span> tons them.
+      We&apos;re{" "}
       <span className="font-semibold text-amber-300">in the hole</span>, but{" "}
       <span className="font-bold text-cyan-300">
         the fight is still yours to take
@@ -180,20 +183,18 @@ const TUTORIAL_GOALS_GRID_BRIEF = (
 const TUTORIAL_SELECT_SHIP_GRID_BRIEF = (
   <>
     <p>
-      Our <span className="font-semibold text-cyan-300">fleet</span>, or{" "}
-      <span className="font-semibold text-amber-300">
-        what&apos;s left of it
-      </span>
-      , is ready for your{" "}
-      <span className="font-semibold text-yellow-300">inspection</span>.
+      <span className="font-semibold text-amber-300">What&apos;s left of</span>{" "}
+      our <span className="font-semibold text-cyan-300">fleet</span> is ready
+      for your <span className="font-semibold text-yellow-300">inspection</span>
+      .
     </p>
   </>
 );
 
 const TUTORIAL_SELECT_SHIP_GRID_TASKS: React.ReactNode[] = [
-  <>Hover over your ships to view their stats and abilities.</>,
+  <>Hover over our ships to view their stats and abilities.</>,
   <>
-    Click on your ships to see their{" "}
+    Click on our ships to see their{" "}
     <span className="font-semibold text-green-400">movement</span>
     {" and "}
     <span className="font-semibold text-orange-400">threat range</span>.
@@ -255,10 +256,8 @@ const TUTORIAL_MOVE_SHIP_GRID_TASKS: React.ReactNode[] = [
     <span className="font-semibold text-green-400">movement</span> range.
   </>,
   <>
-    Confirm the move to the highlighted tile at row{" "}
-    <span className="font-semibold text-yellow-300">6</span>, column{" "}
-    <span className="font-semibold text-yellow-300">7</span> (
-    <span className="font-semibold text-green-400">submit</span> when prompted).
+    <span className="font-semibold text-green-400">Submit</span> the move from
+    the left panel and approve the transaction.
   </>,
 ];
 
@@ -266,9 +265,9 @@ const TUTORIAL_MOVE_SHIP_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_WAIT_FOR_OPPONENT_GRID_BRIEF = (
   <>
     <p>
-      After you move, both you and your opponent can still see the{" "}
-      <span className="font-semibold text-yellow-300">previous position</span>{" "}
-      of your ship on the map and in the Last Move display.
+      After a ship moves, both you and your opponent can see the{" "}
+      <span className="font-semibold text-purple-300">Last Move</span> of the
+      ship on the map.
     </p>
     <p>
       This helps you track how ships moved during the turn so you can see what
@@ -289,16 +288,14 @@ const TUTORIAL_WAIT_FOR_OPPONENT_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_SCORE_POINTS_GRID_BRIEF = (
   <>
     <p>
-      At round end, each scoring zone you{" "}
-      <span className="font-semibold text-cyan-300">control</span> with a
-      functioning ship (not disabled) on the tile counts toward points. The
-      scoreboard updates after the round finishes, not the instant a ship moves
-      onto a zone.
+      At round end, each scoring zone we{" "}
+      <span className="font-semibold text-yellow-300">controlled</span> by a
+      functioning ship (not disabled) counts toward points.
     </p>
     <p>
-      Their destroyer is already contesting a zone. Respond by moving the{" "}
-      <span className="font-semibold text-cyan-300">Resolute</span> to capture
-      one for us.
+      The enemy destroyer moved to capture a resource. Respond by moving the{" "}
+      <span className="font-semibold text-cyan-300">Resolute</span> to claim one
+      for us.
     </p>
   </>
 );
@@ -309,10 +306,8 @@ const TUTORIAL_SCORE_POINTS_GRID_TASKS: React.ReactNode[] = [
     move it to the highlighted central scoring tile.
   </>,
   <>
-    Confirm the move to the highlighted central scoring tile at row{" "}
-    <span className="font-semibold text-yellow-300">5</span>, column{" "}
-    <span className="font-semibold text-yellow-300">8</span> (
-    <span className="font-semibold text-green-400">submit</span> when prompted).
+    <span className="font-semibold text-green-400">Submit</span> the move and
+    approve the transaction.
   </>,
 ];
 
@@ -320,7 +315,7 @@ const TUTORIAL_SCORE_POINTS_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_SHOOT_GRID_BRIEF = (
   <>
     <p>
-      Their <span className="font-semibold text-red-300">Hammer</span> just hit
+      The <span className="font-semibold text-red-300">Hammer</span> just hit
       the <span className="font-semibold text-cyan-300">Resolute</span> with a
       plasma shot! Answer with the{" "}
       <span className="font-semibold text-cyan-300">Vigilant</span>: move to a
@@ -332,15 +327,11 @@ const TUTORIAL_SHOOT_GRID_BRIEF = (
 const TUTORIAL_SHOOT_GRID_TASKS: React.ReactNode[] = [
   <>
     Select the <span className="font-semibold text-cyan-300">Vigilant</span> and
-    stage a move to the highlighted tile at row{" "}
-    <span className="font-semibold text-yellow-300">1</span>, column{" "}
-    <span className="font-semibold text-yellow-300">3</span> (
-    <span className="font-semibold text-green-400">green</span> shows movement
-    range).
+    stage a move to the highlighted tile.
   </>,
   <>
     Click the <span className="font-semibold text-red-300">Hammer</span> to
-    select your shot (it pulses after you stage the move).
+    target it.
   </>,
   <>
     <span className="font-semibold text-green-400">Submit</span> to confirm move
@@ -353,8 +344,8 @@ const TUTORIAL_END_OF_ROUND_GRID_BRIEF = (
   <>
     <p>
       When <span className="font-semibold text-yellow-300">both sides</span>{" "}
-      have finished moving every ship, the round ends, and points are awarded
-      for resources held. Movement markers clear and the{" "}
+      have moved all their ships, the round ends, and points are awarded for
+      resources held. Movement markers clear and the{" "}
       <span className="font-semibold text-cyan-300">first player</span> swaps:
       whoever went second last round leads this one.
     </p>
@@ -363,9 +354,8 @@ const TUTORIAL_END_OF_ROUND_GRID_BRIEF = (
 
 const TUTORIAL_END_OF_ROUND_GRID_TASKS: React.ReactNode[] = [
   <>
-    The interface shows whose turn it is. Here the opponent opens the new round.
-    Click <span className="font-semibold text-cyan-300">Next</span> when you are
-    ready.
+    You must wait for the opponent to open the new round. Click{" "}
+    <span className="font-semibold text-cyan-300">Next</span> to see their move.
   </>,
 ];
 
@@ -378,10 +368,11 @@ const TUTORIAL_SPECIAL_EMP_GRID_BRIEF = (
     </p>
     <p>
       We have a powerful gun, but we still can&apos;t knock it out in one hit.
-      Luckily, it has{" "}
-      <span className="font-semibold text-purple-300">reactor damage</span> from
-      earlier in the fight. We can bypass its defenses and kill it instantly
-      with an <span className="font-semibold text-cyan-300">EMP</span>!
+      Luckily, the <span className="font-semibold text-red-300">Anvil</span> has{" "}
+      <span className="font-semibold text-purple-300">reactor damage</span> (💀)
+      from earlier in the fight. We can bypass its defenses and kill it
+      instantly with an <span className="font-semibold text-cyan-300">EMP</span>
+      !
     </p>
   </>
 );
@@ -394,7 +385,7 @@ const TUTORIAL_SPECIAL_EMP_GRID_TASKS: React.ReactNode[] = [
   <>
     In the action bar, switch from{" "}
     <span className="font-semibold text-cyan-200">Plasma</span> to{" "}
-    <span className="font-semibold text-cyan-200">Special</span>.
+    <span className="font-semibold text-cyan-200">EMP</span>.
   </>,
   <>
     <span className="font-semibold text-green-400">Submit</span>, then approve
@@ -412,11 +403,10 @@ const TUTORIAL_SHIP_DESTRUCTION_GRID_BRIEF = (
       <span className="font-semibold text-yellow-300">
         three overload points
       </span>
-      . The stack detonates from the inside. One blinding flash, then the hull
-      splits open and the ship is gone!
+      . The stack detonates in a blinding flash and the ship is destroyed!
     </p>
     <p>
-      No ship survives once its reactor reaches three overload points. The{" "}
+      No ship survives once its reactor reaches three overload points (💀). The{" "}
       <span className="font-semibold text-cyan-300">owner</span> may recycle the
       NFT and take half the usual UTC recycle value. The player who{" "}
       <span className="font-semibold text-cyan-300">destroyed it</span> gets the
@@ -439,13 +429,13 @@ const TUTORIAL_RESCUE_GRID_BRIEF = (
       The <span className="font-semibold text-red-300">enemy</span> retaliated
       by disabling the{" "}
       <span className="font-semibold text-cyan-300">Resolute</span>. It also has{" "}
-      <span className="font-semibold text-purple-300">reactor damage</span>, so
-      one more hit and it&apos;s gone! Even worse, your repair ship is too far
-      away to reach it in time.
+      <span className="font-semibold text-purple-300">reactor damage</span>{" "}
+      (💀), so one more hit and it&apos;s gone! Even worse, your repair ship is
+      too far away to reach it in time.
     </p>
     <p>
-      We&apos;re at the end: Whoever gets to the center first wins. What matters
-      the most to you?
+      We&apos;re at the end: Whoever holds the center wins. What matters the
+      most to you?
     </p>
   </>
 );
@@ -484,11 +474,7 @@ const TUTORIAL_RESCUE_OUTCOME_SNIPER_GRID_BRIEF = (
 const TUTORIAL_RESCUE_OUTCOME_SNIPER_GRID_TASKS: React.ReactNode[] = [
   <>
     Select the <span className="font-semibold text-cyan-300">Sentinel</span> and
-    stage a move to the highlighted tile at row{" "}
-    <span className="font-semibold text-yellow-300">5</span>, column{" "}
-    <span className="font-semibold text-yellow-300">8</span> (
-    <span className="font-semibold text-green-400">green</span> shows movement
-    range).
+    stage a move to the highlighted tile.
   </>,
   <>
     Optionally click the{" "}
@@ -1322,6 +1308,19 @@ export function SimulatedGameDisplay({
       return cells.length > 0 ? cells : undefined;
     };
 
+    if (stepId === "goals") {
+      const resourceCells: { row: number; col: number; hideLabel: true }[] = [];
+      for (let row = 0; row < scoringGrid.length; row++) {
+        const cols = scoringGrid[row];
+        for (let col = 0; col < cols.length; col++) {
+          if ((cols[col] ?? 0) > 0) {
+            resourceCells.push({ row, col, hideLabel: true });
+          }
+        }
+      }
+      return resourceCells.length > 0 ? resourceCells : undefined;
+    }
+
     if (stepId === "select-ship") {
       if (selectedShipId !== null) return undefined;
       return cellsForIds(TUTORIAL_SELECT_SHIP_HIGHLIGHT_SHIP_IDS);
@@ -1350,7 +1349,8 @@ export function SimulatedGameDisplay({
         const isMoveStaged =
           previewPosition !== null &&
           moveCfg.allowedPositions.some(
-            (p) => p.row === previewPosition.row && p.col === previewPosition.col,
+            (p) =>
+              p.row === previewPosition.row && p.col === previewPosition.col,
           );
         if (isMoveStaged) {
           return undefined;
@@ -1528,6 +1528,7 @@ export function SimulatedGameDisplay({
     targetShipId,
     selectedWeaponType,
     gameState.shipPositions,
+    scoringGrid,
   ]);
 
   // Last move UI props for GameGrid (same as in-game: ghost at old position, pulse at new)
@@ -2298,13 +2299,23 @@ export function SimulatedGameDisplay({
         return;
       }
 
-      // Step 12 fork rule: Vigilant is shoot-only and cannot stage moves.
+      // Hard choice (rescue): Vigilant is shoot-only and cannot stage moves to a new square.
+      // Clicking a target still sets preview to the Vigilant's current cell first (stay-in-place + fire);
+      // only block when the player tries to move to a different cell.
       if (
         currentStep?.id === "rescue" &&
         selectedShipId?.toString() === "1002"
       ) {
-        toast.error("Vigilant cannot move in this step.");
-        return;
+        const currentPos = gameState.shipPositions.find(
+          (p) => p.shipId === selectedShipId.toString(),
+        )?.position;
+        if (
+          currentPos &&
+          (position.row !== currentPos.row || position.col !== currentPos.col)
+        ) {
+          toast.error("Vigilant cannot move in this step.");
+          return;
+        }
       }
 
       // Validate move action
@@ -2341,7 +2352,13 @@ export function SimulatedGameDisplay({
         setPreviewPosition(position);
       }
     },
-    [selectedShipId, currentStep, validateAction, executeAction],
+    [
+      selectedShipId,
+      currentStep,
+      gameState.shipPositions,
+      validateAction,
+      executeAction,
+    ],
   );
 
   const wrappedSetTargetShipId = useCallback(
@@ -2889,14 +2906,34 @@ export function SimulatedGameDisplay({
               <div
                 className={
                   chromeOnSide
-                    ? "w-full shrink-0 border border-solid p-2 text-lg"
-                    : "w-48 shrink-0 border border-solid p-2 text-lg"
+                    ? `w-full shrink-0 border border-solid p-2 text-lg ${
+                        currentStep?.id === "goals"
+                          ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                          : ""
+                      }`
+                    : `w-48 shrink-0 border border-solid p-2 text-lg ${
+                        currentStep?.id === "goals"
+                          ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                          : ""
+                      }`
                 }
                 style={{
-                  backgroundColor: "var(--color-slate)",
-                  borderColor: "var(--color-gunmetal)",
-                  borderTopColor: "var(--color-steel)",
-                  borderLeftColor: "var(--color-steel)",
+                  backgroundColor:
+                    currentStep?.id === "goals"
+                      ? "rgba(113, 63, 18, 0.35)"
+                      : "var(--color-slate)",
+                  borderColor:
+                    currentStep?.id === "goals"
+                      ? "rgb(250 204 21 / 0.9)"
+                      : "var(--color-gunmetal)",
+                  borderTopColor:
+                    currentStep?.id === "goals"
+                      ? "rgb(250 204 21 / 0.95)"
+                      : "var(--color-steel)",
+                  borderLeftColor:
+                    currentStep?.id === "goals"
+                      ? "rgb(250 204 21 / 0.95)"
+                      : "var(--color-steel)",
                   borderRadius: 0,
                 }}
               >
@@ -3102,31 +3139,31 @@ export function SimulatedGameDisplay({
                                   : ""
                               }
                             >
-                            <select
-                              value={selectedWeaponType}
-                              onChange={(e) => {
-                                const newWeaponType = e.target.value as
-                                  | "weapon"
-                                  | "special";
-                                setSelectedWeaponType(newWeaponType);
-                                // In tutorial we do not have a boarding special; keep target as-is.
-                              }}
-                              className="w-full px-3 py-1.5 text-sm uppercase font-semibold tracking-wider"
-                              style={{
-                                fontFamily:
-                                  "var(--font-jetbrains-mono), 'Courier New', monospace",
-                                borderRadius: 0,
-                                backgroundColor: "var(--color-slate)",
-                                color: "var(--color-text-primary)",
-                              }}
-                            >
-                              <option value="weapon">
-                                {getMainWeaponName(ship.equipment.mainWeapon)}
-                              </option>
-                              <option value="special">
-                                {getSpecialName(ship.equipment.special)}
-                              </option>
-                            </select>
+                              <select
+                                value={selectedWeaponType}
+                                onChange={(e) => {
+                                  const newWeaponType = e.target.value as
+                                    | "weapon"
+                                    | "special";
+                                  setSelectedWeaponType(newWeaponType);
+                                  // In tutorial we do not have a boarding special; keep target as-is.
+                                }}
+                                className="w-full px-3 py-1.5 text-sm uppercase font-semibold tracking-wider"
+                                style={{
+                                  fontFamily:
+                                    "var(--font-jetbrains-mono), 'Courier New', monospace",
+                                  borderRadius: 0,
+                                  backgroundColor: "var(--color-slate)",
+                                  color: "var(--color-text-primary)",
+                                }}
+                              >
+                                <option value="weapon">
+                                  {getMainWeaponName(ship.equipment.mainWeapon)}
+                                </option>
+                                <option value="special">
+                                  {getSpecialName(ship.equipment.special)}
+                                </option>
+                              </select>
                             </div>
                           </div>
                         );
@@ -3171,43 +3208,73 @@ export function SimulatedGameDisplay({
                               const targetShip = shipMap.get(
                                 BigInt(target.shipId),
                               );
+                              const isHammerTargetTutorialHighlight =
+                                currentStep?.id === "shoot" &&
+                                previewPosition !== null &&
+                                targetShipId === null &&
+                                BigInt(target.shipId) === 2001n;
                               const isSelectedTarget =
                                 targetShipId !== null &&
                                 targetShipId === BigInt(target.shipId);
-                              return (
+                              const targetButtonStyle: React.CSSProperties = {
+                                fontFamily:
+                                  "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                borderColor: isSelectedTarget
+                                  ? "var(--color-warning-red)"
+                                  : "var(--color-gunmetal)",
+                                borderTopColor: isSelectedTarget
+                                  ? "var(--color-warning-red)"
+                                  : "var(--color-steel)",
+                                borderLeftColor: isSelectedTarget
+                                  ? "var(--color-warning-red)"
+                                  : "var(--color-steel)",
+                                color: isSelectedTarget
+                                  ? "var(--color-warning-red)"
+                                  : "var(--color-warning-red)",
+                                backgroundColor: isSelectedTarget
+                                  ? "var(--color-steel)"
+                                  : "var(--color-slate)",
+                                borderWidth: "2px",
+                                borderStyle: "solid",
+                                borderRadius: 0,
+                              };
+                              const targetButton = (
                                 <button
-                                  key={target.shipId}
                                   onClick={() =>
                                     setTargetShipId(BigInt(target.shipId))
                                   }
                                   className={proposedMoveTargetBtnClass}
-                                  style={{
-                                    fontFamily:
-                                      "var(--font-rajdhani), 'Arial Black', sans-serif",
-                                    borderColor: isSelectedTarget
-                                      ? "var(--color-warning-red)"
-                                      : "var(--color-gunmetal)",
-                                    borderTopColor: isSelectedTarget
-                                      ? "var(--color-warning-red)"
-                                      : "var(--color-steel)",
-                                    borderLeftColor: isSelectedTarget
-                                      ? "var(--color-warning-red)"
-                                      : "var(--color-steel)",
-                                    color: isSelectedTarget
-                                      ? "var(--color-warning-red)"
-                                      : "var(--color-warning-red)",
-                                    backgroundColor: isSelectedTarget
-                                      ? "var(--color-steel)"
-                                      : "var(--color-slate)",
-                                    borderWidth: "2px",
-                                    borderStyle: "solid",
-                                    borderRadius: 0,
-                                  }}
+                                  style={targetButtonStyle}
                                 >
                                   🎯{" "}
                                   {targetShip?.name ||
                                     `#${BigInt(target.shipId).toString()}`}
                                 </button>
+                              );
+                              return (
+                                <div key={target.shipId} className="relative">
+                                  {isHammerTargetTutorialHighlight && (
+                                    <div className="mb-1 flex justify-center pointer-events-none">
+                                      <div className="relative inline-block">
+                                        <div
+                                          className="absolute inset-0 rounded-none bg-black"
+                                          style={{ opacity: 1 }}
+                                          aria-hidden
+                                        />
+                                        <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                                          Click here
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {isHammerTargetTutorialHighlight ? (
+                                    <div className="w-full rounded-none border-2 border-yellow-400 animate-pulse">
+                                      {targetButton}
+                                    </div>
+                                  ) : (
+                                    targetButton
+                                  )}
+                                </div>
                               );
                             })}
                           </div>
@@ -3375,6 +3442,15 @@ export function SimulatedGameDisplay({
                   tasks={tutorialGridPanelConfig.tasks}
                   tasksSectionLabel={tutorialGridPanelConfig.tasksSectionLabel}
                   primaryCta={tutorialGridPanelConfig.primaryCta}
+                  panelAnchor={
+                    currentStep?.id === "goals" ||
+                    currentStep?.id === "view-enemy" ||
+                    currentStep?.id === "move-ship" ||
+                    currentStep?.id === "score-points" ||
+                    currentStep?.id === "special-emp"
+                      ? "left"
+                      : "right"
+                  }
                   panelBottomRowExclusive={
                     tutorialGridPanelConfig.panelBottomRowExclusive
                   }

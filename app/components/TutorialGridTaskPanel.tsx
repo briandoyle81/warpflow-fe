@@ -2,6 +2,7 @@
 
 import React, {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -42,6 +43,8 @@ export interface TutorialGridTaskPanelProps {
   panelBottomRowExclusive?: number;
   /** If true, height follows content up to the max implied by `panelBottomRowExclusive`. */
   panelFitToContent?: boolean;
+  /** Horizontal anchor for in-grid panel placement. Defaults to top-right. */
+  panelAnchor?: "left" | "right";
 }
 
 const mono = {
@@ -101,6 +104,7 @@ export function TutorialGridTaskPanel({
   primaryCta,
   panelBottomRowExclusive: panelBottomRowExclusiveProp,
   panelFitToContent = false,
+  panelAnchor = "right",
 }: TutorialGridTaskPanelProps) {
   const [debugEnabled, setDebugEnabled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -132,6 +136,15 @@ export function TutorialGridTaskPanel({
       window.removeEventListener("resize", updateScrollHint);
     };
   }, [updateScrollHint, panelFitToContent, displayStepNumber]);
+
+  // Always start at top when changing tutorial slides.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    setMoreBelow(false);
+    requestAnimationFrame(updateScrollHint);
+  }, [currentStepIndex, updateScrollHint]);
 
   const panelBottomRowExclusive = Math.min(
     GRID_ROW_COUNT,
@@ -232,7 +245,7 @@ export function TutorialGridTaskPanel({
     <div
       ref={panelFitToContent ? scrollRef : undefined}
       onScroll={panelFitToContent ? updateScrollHint : undefined}
-      className={`pointer-events-auto absolute top-2 right-2 z-[190] flex min-h-0 w-[min(117.5%,28.75rem)] flex-col border-2 border-cyan-400/90 p-3 shadow-lg shadow-cyan-500/15 ${
+      className={`pointer-events-auto absolute top-2 ${panelAnchor === "left" ? "left-2" : "right-2"} z-[190] flex min-h-0 w-[min(117.5%,28.75rem)] flex-col border-2 border-cyan-400/90 p-3 shadow-lg shadow-cyan-500/15 ${
         panelFitToContent
           ? "overflow-y-auto overflow-x-hidden"
           : "overflow-hidden"

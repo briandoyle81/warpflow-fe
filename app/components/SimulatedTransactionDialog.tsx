@@ -50,64 +50,87 @@ export function SimulatedTransactionDialog({
   };
 
   return (
-    <div className="fixed top-4 right-4 z-[200] pointer-events-auto">
-      <div className="bg-gray-900 border-2 border-cyan-400 rounded-none p-6 max-w-md w-full shadow-lg shadow-cyan-400/20">
-        <h3 className="text-xl font-bold text-cyan-300 mb-4 font-mono">
-          [SIMULATED] Transaction Approval
-        </h3>
+    <div
+      className="fixed inset-0 z-[400] flex flex-col pointer-events-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="simulated-tx-title"
+    >
+      {/* Blocks all interaction with the game and tutorial chrome until approve/reject */}
+      <div className="absolute inset-0 bg-black/55" aria-hidden />
+      <div className="relative z-10 flex flex-1 justify-end p-4 pt-4 pointer-events-none">
+        <div className="pointer-events-auto w-full max-w-md">
+          <div className="bg-gray-900 border-2 border-cyan-400 rounded-none p-6 w-full shadow-lg shadow-cyan-400/20">
+            <h3
+              id="simulated-tx-title"
+              className="text-xl font-bold text-cyan-300 mb-4 font-mono"
+            >
+              [SIMULATED] Transaction Approval
+            </h3>
 
-        <div className="space-y-3 mb-6">
-          <div className="bg-yellow-400/10 border border-yellow-400/50 rounded-none p-3">
-            <p className="text-yellow-300 text-sm font-mono">
-              ⚠️ This is a tutorial simulation. No real transaction will be sent.
-            </p>
-          </div>
+            <div className="space-y-3 mb-6">
+              <div className="bg-yellow-400/10 border border-yellow-400/50 rounded-none p-3">
+                <p className="text-yellow-300 text-sm font-mono">
+                  ⚠️ This is a tutorial simulation. No real transaction will be
+                  sent.
+                </p>
+              </div>
 
-          <div className="space-y-2 text-sm">
-            <div>
-              <span className="text-gray-400">Action Type:</span>
-              <span className="text-cyan-300 ml-2 font-mono">{getActionTypeName()}</span>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="text-gray-400">Action Type:</span>
+                  <span className="text-cyan-300 ml-2 font-mono">
+                    {getActionTypeName()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Description:</span>
+                  <span className="text-white ml-2">{getActionDescription()}</span>
+                </div>
+                {action.shipId && (
+                  <div>
+                    <span className="text-gray-400">Ship ID:</span>
+                    <span className="text-white ml-2 font-mono">
+                      {action.shipId.toString()}
+                    </span>
+                  </div>
+                )}
+                {action.targetShipId && (
+                  <div>
+                    <span className="text-gray-400">Target Ship ID:</span>
+                    <span className="text-white ml-2 font-mono">
+                      {action.targetShipId.toString()}
+                    </span>
+                  </div>
+                )}
+                {action.position && (
+                  <div>
+                    <span className="text-gray-400">Position:</span>
+                    <span className="text-white ml-2 font-mono">
+                      ({action.position.row}, {action.position.col})
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <span className="text-gray-400">Description:</span>
-              <span className="text-white ml-2">{getActionDescription()}</span>
-            </div>
-            {action.shipId && (
-              <div>
-                <span className="text-gray-400">Ship ID:</span>
-                <span className="text-white ml-2 font-mono">{action.shipId.toString()}</span>
-              </div>
-            )}
-            {action.targetShipId && (
-              <div>
-                <span className="text-gray-400">Target Ship ID:</span>
-                <span className="text-white ml-2 font-mono">{action.targetShipId.toString()}</span>
-              </div>
-            )}
-            {action.position && (
-              <div>
-                <span className="text-gray-400">Position:</span>
-                <span className="text-white ml-2 font-mono">
-                  ({action.position.row}, {action.position.col})
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
 
-        <div className="flex gap-3">
-          <button
-            onClick={onReject}
-            className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-none font-mono hover:bg-gray-600 transition-colors"
-          >
-            Reject
-          </button>
-          <button
-            onClick={onApprove}
-            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-none font-mono hover:bg-green-700 transition-colors"
-          >
-            Approve
-          </button>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onReject}
+                className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-none font-mono hover:bg-gray-600 transition-colors"
+              >
+                Reject
+              </button>
+              <button
+                type="button"
+                onClick={onApprove}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-none font-mono hover:bg-green-700 transition-colors"
+              >
+                Approve
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

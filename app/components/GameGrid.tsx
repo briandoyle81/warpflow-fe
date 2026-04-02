@@ -126,11 +126,13 @@ interface GameGridProps {
    * **Tutorial highlight**: cells that show a gentle pulsing yellow tint under ships
    * (e.g. select-ship until a player ship is selected; view-enemy until an enemy ship).
    * Optional `label` overrides the floating badge text (default "Click here").
+   * Set `hideLabel` to pulse the cell without rendering the badge.
    */
   tutorialHighlightCells?: readonly {
     row: number;
     col: number;
     label?: string;
+    hideLabel?: boolean;
   }[];
   setSelectedShipId: (shipId: bigint | null) => void;
   setPreviewPosition: (position: { row: number; col: number } | null) => void;
@@ -981,9 +983,10 @@ export function GameGrid({
                           isLastMoveDestroyedTargetCell || shouldPreviewDestroyedTarget;
                         if (!shouldShowDestroyedArt) return null;
 
-                        // Layer above scoring/zone art, but below selection overlays.
+                        // Keep destroyed art above moved-ship dim veil (z-[10]) so it
+                        // remains visible in move preview and last-move states.
                         return (
-                          <div className="absolute inset-0 z-1 flex items-center justify-center pointer-events-none">
+                          <div className="absolute inset-0 z-[13] flex items-center justify-center pointer-events-none">
                             <img
                               src="/img/ship-destroyed.png"
                               alt="Predicted destroyed target ship"
@@ -1118,7 +1121,7 @@ export function GameGrid({
                           if ((cell.status ?? 0) === 1) return null;
                           return (
                             <div
-                              className="absolute top-0 left-1/2 -translate-x-1/2 mt-0.5 z-10 flex items-center justify-center pointer-events-none"
+                              className="absolute top-0 left-1/2 -translate-x-1/2 mt-0.5 z-20 flex items-center justify-center pointer-events-none"
                               title="Disabled (0 HP)"
                             >
                               <div className="w-5 h-5 flex items-center justify-center">
@@ -1169,7 +1172,7 @@ export function GameGrid({
                             : { top: topOffset, left: 0, right: dotOffset };
 
                           return (
-                            <div className="absolute z-15" style={style}>
+                            <div className="absolute z-20" style={style}>
                               <div className="w-full h-1 bg-gray-700 rounded-sm overflow-hidden relative">
                                 <div
                                   className={`h-full transition-all duration-300 ${
@@ -1226,7 +1229,7 @@ export function GameGrid({
                         {(() => {
                           const shouldPreviewDestroyedTarget =
                             destroyPreviewShipIds.has(cell.shipId);
-                          const imageClassName = `w-full h-full relative z-10 ${
+                          const imageClassName = `w-full h-full relative z-0 ${
                             retreatPrepShipId === cell.shipId
                               ? "opacity-0 pointer-events-none"
                               : cell.isCreator
@@ -1313,7 +1316,7 @@ export function GameGrid({
                         {/* Moved badge */}
                         {movedShipIdsSet.has(cell.shipId) && (
                           <div
-                            className={`absolute ${
+                            className={`absolute z-20 ${
                               cell.isCreator
                                 ? "bottom-0 right-0"
                                 : "bottom-0 left-0"
@@ -1346,7 +1349,7 @@ export function GameGrid({
 
                           return (
                             <div
-                              className={`absolute ${
+                              className={`absolute z-20 ${
                                 cell.isCreator
                                   ? "bottom-0 left-0"
                                   : "bottom-0 right-0"
@@ -1367,7 +1370,7 @@ export function GameGrid({
                         })()}
                         {/* Team indicator overlay */}
                         <div
-                          className={`absolute top-0 ${
+                          className={`absolute z-20 top-0 ${
                             cell.isCreator ? "left-0" : "right-0"
                           } w-2 h-2 rounded-full ${
                             isShipOwnedByCurrentPlayer(cell.shipId)
@@ -1504,7 +1507,7 @@ export function GameGrid({
 
                           return (
                             <div
-                              className={`absolute inset-0 ${borderWidth} ${borderColor} rounded-sm pointer-events-none ${borderStyle} ${animationClass}`}
+                              className={`absolute inset-0 z-20 ${borderWidth} ${borderColor} rounded-sm pointer-events-none ${borderStyle} ${animationClass}`}
                             />
                           );
                         })()}
@@ -2673,6 +2676,7 @@ export function GameGrid({
                   }}
                 >
                   {tutorialHighlightCells.map((p, i) => {
+                    if (p.hideLabel) return null;
                     const { cx: cellX, cellTop } = measureGridCellLabelAnchor(
                       containerRect,
                       gridLayoutRef.current,

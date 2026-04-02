@@ -1,0 +1,20 @@
+---
+description: Require approval before editing tutorial JSX constants
+globs: app/components/SimulatedGameDisplay.tsx
+alwaysApply: false
+---
+
+# Tutorial Constants Require Approval
+
+In `app/components/SimulatedGameDisplay.tsx`, do not edit tutorial JSX/TSX
+constants without explicit user approval in the current chat.
+
+This includes constants like:
+- `TUTORIAL_WELCOME_GRID_BRIEF`
+- `TUTORIAL_*_GRID_BRIEF`
+- `TUTORIAL_*_GRID_TASKS`
+
+When a requested change would touch these constants:
+1. Stop and ask for confirmation first.
+2. Only proceed after the user explicitly approves editing them.
+
