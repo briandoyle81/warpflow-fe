@@ -1,15 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { UTCPurchaseButton } from "./UTCPurchaseButton";
-import { ShipImage } from "./ShipImage";
-import {
-  CONTRACT_ADDRESSES,
-  CONTRACT_ABIS,
-  SHIP_PURCHASE_TIERS,
-} from "../config/contracts";
-import type { Ship } from "../types/types";
+import { CONTRACT_ADDRESSES, CONTRACT_ABIS, SHIP_PURCHASE_TIERS } from "../config/contracts";
+import { getNativeTokenSymbol, getSelectedChainId } from "../config/networks";
 import type { Abi } from "viem";
 import { formatEther } from "viem";
 
@@ -18,10 +13,10 @@ interface UTCPurchaseModalProps {
 }
 
 const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
-  const { address } = useAccount();
-  const previewSeed = useMemo(() => Math.floor(Math.random() * 1_000_000), []);
+  const { address, chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const nativeTokenSymbol = getNativeTokenSymbol(activeChainId);
 
-  // Read UTC balance to show current balance
   const { data: utcBalance, refetch: refetchUTCBalance } = useReadContract({
     address: CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`,
     abi: CONTRACT_ABIS.UNIVERSAL_CREDITS as Abi,
@@ -29,7 +24,6 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
     args: address ? [address] : undefined,
   });
 
-  // Get color classes based on tier (0-based: 0-4)
   const getTierColors = (tier: number) => {
     switch (tier) {
       case 0:
@@ -83,110 +77,6 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
     }
   };
 
-  const getGuaranteedRanks = (tier: number): string[] => {
-    switch (tier) {
-      case 0:
-        return ["R1"];
-      case 1:
-        return ["R2", "R1"];
-      case 2:
-        return ["R3", "R2", "R1"];
-      case 3:
-        return ["R4", "R3", "R2", "R1"];
-      case 4:
-        return ["R5", "R4", "R3", "R2", "R1"];
-      default:
-        return ["R1"];
-    }
-  };
-
-  const getTierCallout = (tier: number): string => {
-    switch (tier) {
-      case 4:
-        return "FLAGSHIP PACK";
-      case 3:
-        return "VETERAN CORE";
-      case 2:
-        return "BALANCED VALUE";
-      case 1:
-        return "STARTER BOOST";
-      default:
-        return "ENTRY PACK";
-    }
-  };
-
-  const getTierBadge = (tier: number): string | null => {
-    if (tier === 4) return "BEST VALUE";
-    if (tier === 3) return "MOST POPULAR";
-    return null;
-  };
-
-  const createPreviewShip = (seed: number, shipsDestroyed: number): Ship => ({
-    name: `Preview ${seed}`,
-    id: BigInt(910000 + seed),
-    equipment: {
-      mainWeapon: seed % 4,
-      armor: (seed % 3) + 1,
-      shields: 0,
-      special: (seed + 1) % 4,
-    },
-    traits: {
-      serialNumber: BigInt(910000 + seed),
-      colors: {
-        h1: (seed * 53) % 360,
-        s1: 68,
-        l1: 50,
-        h2: (seed * 53 + 84) % 360,
-        s2: 60,
-        l2: 44,
-      },
-      variant: 1,
-      accuracy: seed % 3,
-      hull: (seed + 1) % 3,
-      speed: (seed + 2) % 3,
-    },
-    shipData: {
-      shipsDestroyed,
-      costsVersion: 0,
-      cost: 0,
-      shiny: seed % 8 === 0,
-      constructed: true,
-      inFleet: false,
-      timestampDestroyed: 0n,
-    },
-    owner: "0x0000000000000000000000000000000000000000",
-  });
-
-  const shipsDestroyedForRank = (rank: number): number => {
-    switch (rank) {
-      case 5:
-        return 350;
-      case 4:
-        return 120;
-      case 3:
-        return 45;
-      case 2:
-        return 15;
-      default:
-        return 5;
-    }
-  };
-
-  const getPreviewShipsForTier = (tier: number): Ship[] => {
-    const base = previewSeed + tier * 20 + 1;
-    const rankStacks: Record<number, number[]> = {
-      0: [1],
-      1: [2, 1],
-      2: [3, 2, 1],
-      3: [4, 3, 2, 1],
-      4: [5, 4, 3, 2, 1],
-    };
-    const ranks = rankStacks[tier] ?? [1];
-    return ranks.map((rank, idx) =>
-      createPreviewShip(base + idx, shipsDestroyedForRank(rank))
-    );
-  };
-
   const handlePurchaseSuccess = () => {
     refetchUTCBalance();
     onClose();
@@ -208,20 +98,23 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
           </button>
         </div>
 
-        <div className="mb-4 p-4 bg-cyan-400/10 border border-cyan-400/40 rounded-none">
+        <div className="mb-5 p-4 bg-cyan-400/10 border border-cyan-400/40 rounded-none">
           <div className="flex justify-between items-center mb-2">
-            <p className="text-cyan-200 text-sm font-mono">
-              Current UTC Balance:
-            </p>
+            <p className="text-cyan-200 text-sm font-mono">Current UTC balance</p>
             <p className="text-cyan-300 text-sm font-mono font-bold">
               {utcBalance
                 ? `${formatEther(utcBalance as bigint)} UTC`
                 : "0.00 UTC"}
             </p>
           </div>
-          <p className="text-cyan-100/85 text-xs font-mono mt-2">
-            Purchase Universal Credits (UTC) using FLOW at a 1:1 rate (e.g., 4.99 FLOW → 4.99 UTC).
-            UTC can be used to reserve games and purchase ships.
+          <p className="text-cyan-100/85 text-xs font-mono leading-relaxed">
+            Universal Credits (UTC) are the in-game balance token. Buy UTC with
+            TOKENS at a 1:1 rate, then spend UTC when you reserve games or
+            check out ship packs elsewhere. This purchase only adds UTC to your
+            wallet.
+          </p>
+          <p className="mt-2 text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-red-400">
+            Prices not yet adjusted for all chains
           </p>
         </div>
 
@@ -232,116 +125,61 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
               fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
             }}
           >
-            Top up for fleet purchases
+            Choose an amount
           </h3>
           <p className="mt-2 max-w-2xl text-xs leading-relaxed text-slate-300 font-mono">
-            Each bundle matches a fleet pack size. Bigger bundles fund larger rosters with more guaranteed veteran slots.
+            Each option is a fixed {nativeTokenSymbol} payment. You receive the
+            same amount in UTC. Larger options are for convenience only, not a
+            different product.
           </p>
         </header>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {SHIP_PURCHASE_TIERS.prices.map((flowCost, index) => {
             const flowCostFormatted = formatEther(flowCost);
+            const flowNum = parseFloat(flowCostFormatted);
             const tier = index;
             const colors = getTierColors(tier);
-            const utcAmount = flowCostFormatted;
-            const shipsCount = SHIP_PURCHASE_TIERS.shipsPerTier[tier] ?? 0;
-            const guaranteedRanks = getGuaranteedRanks(tier);
-            const tierCallout = getTierCallout(tier);
-            const badge = getTierBadge(tier);
-            const previewShips = getPreviewShipsForTier(tier);
+            const utcDisplay = flowNum.toFixed(2);
 
             return (
               <UTCPurchaseButton
                 key={index}
                 tier={tier}
                 flowCost={flowCost}
-                utcAmount={utcAmount}
-                className={`relative min-h-[420px] px-4 py-3 rounded-none border-2 ${colors.border} ${colors.text} ${colors.hoverBorder} ${colors.hoverText} ${colors.hoverBg} font-mono tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+                utcAmount={flowCostFormatted}
+                className={`relative min-h-0 px-4 py-4 rounded-none border-2 ${colors.border} ${colors.text} ${colors.hoverBorder} ${colors.hoverText} ${colors.hoverBg} font-mono tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-left`}
                 refetch={refetchUTCBalance}
                 onSuccess={handlePurchaseSuccess}
               >
-                <div className="flex h-full flex-col gap-2 text-left">
-                  {badge && (
-                    <div className="absolute right-2 top-2 border border-solid border-cyan-300 bg-cyan-300/10 px-2 py-0.5 text-[10px] font-bold tracking-[0.12em] text-cyan-300">
-                      {badge}
-                    </div>
-                  )}
-                  <div className="pr-20">
-                    <div className="text-lg font-extrabold leading-tight">
-                      {tierCallout}
-                    </div>
+                <div className="flex flex-col gap-3">
+                  <div className="text-base font-extrabold leading-tight">
+                    {utcDisplay} UTC
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-[12px]">
-                    <div className="border border-solid border-current/30 bg-black/20 px-2 py-1">
-                      <div className="opacity-75">FLOW COST</div>
+                  <div className="grid grid-cols-1 gap-2 text-[12px] sm:grid-cols-2">
+                    <div className="border border-solid border-current/30 bg-black/20 px-2 py-1.5">
+                      <div className="opacity-75 text-[10px] uppercase tracking-wide">
+                        You pay
+                      </div>
                       <div className="font-bold">
-                        {parseFloat(flowCostFormatted).toFixed(2)} FLOW
+                        {flowNum.toFixed(2)} {nativeTokenSymbol}
                       </div>
                     </div>
-                    <div className="border border-solid border-current/30 bg-black/20 px-2 py-1">
-                      <div className="opacity-75">UTC RECEIVED</div>
-                      <div className="font-bold">
-                        {parseFloat(utcAmount).toFixed(2)} UTC
+                    <div className="border border-solid border-current/30 bg-black/20 px-2 py-1.5">
+                      <div className="opacity-75 text-[10px] uppercase tracking-wide">
+                        You receive
                       </div>
+                      <div className="font-bold">{utcDisplay} UTC</div>
                     </div>
                   </div>
-
-                  <div className="border border-solid border-current/35 bg-black/20 p-2">
-                    <div className="mb-1 text-[10px] opacity-75">
-                      Pack preview
-                    </div>
-                    {tier === 0 ? (
-                      <div className="flex justify-center">
-                        <div className="h-64 w-64 shrink-0">
-                          <ShipImage
-                            ship={previewShips[0]}
-                            showLoadingState={false}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-end justify-center gap-2">
-                        <div className="h-64 w-64 shrink-0">
-                          <ShipImage
-                            ship={previewShips[0]}
-                            showLoadingState={false}
-                          />
-                        </div>
-                        <div className="flex shrink-0 flex-col items-start justify-end gap-0.5 pb-0.5">
-                          {previewShips.slice(1).map((ship) => (
-                            <div
-                              key={ship.id.toString()}
-                              className="h-16 w-16 shrink-0"
-                            >
-                              <ShipImage
-                                ship={ship}
-                                showLoadingState={false}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-[11px] leading-tight opacity-90">
-                    Covers a {shipsCount}-ship fleet purchase at checkout.
-                  </div>
-                  <div className="text-[11px] leading-tight opacity-90">
-                    Guaranteed ranks when you buy that fleet:{" "}
-                    {guaranteedRanks.join(" + ")}
+                  <div className="text-[10px] uppercase tracking-[0.08em] opacity-80">
+                    [Click to buy with {nativeTokenSymbol}]
                   </div>
                 </div>
               </UTCPurchaseButton>
             );
           })}
         </div>
-        <p className="mt-4 text-[11px] uppercase tracking-[0.08em] text-slate-400 font-mono">
-          Preview ships are examples only. Final minted ships may differ in
-          loadout and visuals.
-        </p>
       </div>
     </div>
   );

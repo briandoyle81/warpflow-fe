@@ -61,6 +61,19 @@ const ShipCard: React.FC<ShipCardProps> = ({
 }) => {
   // Determine border class based on selection mode and ship state
   const getBorderClass = () => {
+    const isInGameView = tooltipMode || gameViewMode;
+    const isDisabledInGame =
+      showInGameProperties &&
+      inGameAttributes &&
+      ship.shipData.timestampDestroyed === 0n &&
+      inGameAttributes.hullPoints === 0;
+
+    if (isInGameView && isDisabledInGame) {
+      return tooltipMode
+        ? "border-gray-500 bg-gray-900"
+        : "border-gray-500 bg-gray-900";
+    }
+
     // Reactor critical status takes priority (for game view)
     if (reactorCriticalStatus === "critical") {
       return "border-red-500 bg-gray-900";
@@ -70,13 +83,16 @@ const ShipCard: React.FC<ShipCardProps> = ({
     }
 
     // Game view (tooltip or Ship Details): blue for current player, red for opponent
-    const isInGameView = tooltipMode || gameViewMode;
-
     if (
       isInGameView &&
       ship.shipData.constructed &&
       !ship.shipData.timestampDestroyed
     ) {
+      if (!isCurrentPlayerShip && hasMoved) {
+        return tooltipMode
+          ? "border-gray-500 bg-gray-900"
+          : "border-gray-500 bg-gray-900";
+      }
       return tooltipMode
         ? isCurrentPlayerShip
           ? "border-blue-400 bg-gray-900"
@@ -128,6 +144,25 @@ const ShipCard: React.FC<ShipCardProps> = ({
 
   // Get industrial border styles
   const getIndustrialBorderStyle = () => {
+    const isInGameView = tooltipMode || gameViewMode;
+    const greyFleetCardBorder = {
+      borderColor: "var(--color-gunmetal)",
+      borderTopColor: "var(--color-steel)",
+      borderLeftColor: "var(--color-steel)",
+      backgroundColor: tooltipMode ? "var(--color-slate)" : "var(--color-near-black)",
+    } as const;
+
+    // Disabled in match (0 HP): grey, not team red/blue or reactor red.
+    const isDisabledInGame =
+      showInGameProperties &&
+      inGameAttributes &&
+      ship.shipData.timestampDestroyed === 0n &&
+      inGameAttributes.hullPoints === 0;
+
+    if (isInGameView && isDisabledInGame) {
+      return { ...greyFleetCardBorder };
+    }
+
     if (reactorCriticalStatus === "critical") {
       return {
         borderColor: "var(--color-warning-red)",
@@ -145,8 +180,11 @@ const ShipCard: React.FC<ShipCardProps> = ({
       };
     }
 
-    const isInGameView = tooltipMode || gameViewMode;
     if (isInGameView && ship.shipData.constructed && !ship.shipData.timestampDestroyed) {
+      // Opponent ship has already acted this round: grey instead of red "team" border.
+      if (!isCurrentPlayerShip && hasMoved) {
+        return { ...greyFleetCardBorder };
+      }
       return {
         borderColor: isCurrentPlayerShip ? "var(--color-cyan)" : "var(--color-warning-red)",
         borderTopColor: isCurrentPlayerShip ? "var(--color-cyan)" : "var(--color-warning-red)",

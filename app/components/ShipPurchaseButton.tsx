@@ -88,12 +88,15 @@ export function ShipPurchaseButton({
   });
 
   // Read UTC balance for UTC purchases
-  const { data: utcBalance } = useReadContract({
+  const {
+    data: utcBalance,
+    isPending: utcBalancePending,
+  } = useReadContract({
     address: contractAddresses.UNIVERSAL_CREDITS as `0x${string}`,
     abi: CONTRACT_ABIS.UNIVERSAL_CREDITS as Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: paymentMethod === "UTC" },
+    query: { enabled: paymentMethod === "UTC" && !!address },
   });
 
   // Read UTC allowance for ShipPurchaser contract
@@ -177,7 +180,10 @@ export function ShipPurchaseButton({
         return "Insufficient FLOW balance";
       }
     } else {
-      if (!utcBalance || (utcBalance as bigint) < price) {
+      if (utcBalancePending) {
+        return "Loading UTC balance...";
+      }
+      if (utcBalance === undefined || (utcBalance as bigint) < price) {
         return "Insufficient UTC balance";
       }
       if (!utcApproved) {
@@ -185,7 +191,15 @@ export function ShipPurchaseButton({
       }
     }
     return true;
-  }, [address, flowBalance, utcBalance, utcApproved, price, paymentMethod]);
+  }, [
+    address,
+    flowBalance,
+    utcBalance,
+    utcBalancePending,
+    utcApproved,
+    price,
+    paymentMethod,
+  ]);
 
   const handleSuccess = React.useCallback(() => {
     // Call the provided onSuccess callback
@@ -206,7 +220,12 @@ export function ShipPurchaseButton({
         functionName="approve"
         args={[contractAddresses.SHIP_PURCHASER as `0x${string}`, price]}
         className={`${className} whitespace-nowrap`}
-        disabled={disabled || !utcBalance || (utcBalance as bigint) < price}
+        disabled={
+          disabled ||
+          !address ||
+          (!utcBalancePending &&
+            (utcBalance === undefined || (utcBalance as bigint) < price))
+        }
         loadingText={`[APPROVING ${utcAmount} UTC...]`}
         errorText="[ERROR APPROVING]"
         onSuccess={() => {
@@ -221,7 +240,10 @@ export function ShipPurchaseButton({
           if (!address) {
             return "Please connect your wallet";
           }
-          if (!utcBalance || (utcBalance as bigint) < price) {
+          if (utcBalancePending) {
+            return "Loading UTC balance...";
+          }
+          if (utcBalance === undefined || (utcBalance as bigint) < price) {
             return "Insufficient UTC balance";
           }
           return true;
