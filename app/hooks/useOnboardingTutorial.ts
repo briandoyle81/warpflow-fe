@@ -562,6 +562,16 @@ export function useOnboardingTutorial() {
         );
         if (idx !== -1) return idx;
       }
+      // Fork: array order is rescue → outcome-retreat → outcome-sniper, but the player
+      // only visits one outcome. Prev from either outcome must return to rescue, not
+      // to the sibling branch step.
+      if (
+        fromStepId === "rescue-outcome-retreat" ||
+        fromStepId === "rescue-outcome-sniper"
+      ) {
+        const idx = TUTORIAL_STEPS.findIndex((s) => s.id === "rescue");
+        if (idx !== -1) return idx;
+      }
       return Math.max(prev - 1, 0);
     });
   }, [currentStep?.id]);

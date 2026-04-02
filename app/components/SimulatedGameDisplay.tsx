@@ -120,6 +120,12 @@ function isTutorialEnemyFleetShipId(shipId: bigint): boolean {
 }
 
 /**
+ * Hard choice (rescue): max panel height as a fraction of the grid. Default
+ * `TutorialGridTaskPanel` height is 4 rows; this is 4 + 2. Must be ≤ 11.
+ */
+const TUTORIAL_RESCUE_PANEL_MAX_ROWS = 6;
+
+/**
  * Branch final steps: max panel height as a fraction of the grid when the panel
  * is content-sized (`panelFitToContent`). Must be ≤ grid row count (11).
  */
@@ -567,7 +573,7 @@ type TutorialGridPanelConfig = {
   title: string;
   brief: React.ReactNode;
   tasks?: React.ReactNode[];
-  tasksSectionLabel?: string;
+  tasksSectionLabel?: React.ReactNode;
   primaryCta?: {
     eyebrow: string;
     headline: string;
@@ -576,8 +582,9 @@ type TutorialGridPanelConfig = {
     onClick: () => void;
   };
   /**
-   * Max panel height as a fraction of the grid for branch finals
-   * (see TUTORIAL_COMPLETION_ENDPOINT_PANEL_MAX_ROWS). Used with `panelFitToContent`.
+   * Max panel height as a fraction of the grid (11 rows). Branch finals use
+   * `TUTORIAL_COMPLETION_ENDPOINT_PANEL_MAX_ROWS` with `panelFitToContent`;
+   * rescue (Hard choice) uses `TUTORIAL_RESCUE_PANEL_MAX_ROWS`.
    */
   panelBottomRowExclusive?: number;
   /** Branch finals: size panel to content, capped by `panelBottomRowExclusive`. */
@@ -651,7 +658,18 @@ function getTutorialGridPanelConfig(
         title: "Hard choice",
         brief: TUTORIAL_RESCUE_GRID_BRIEF,
         tasks: TUTORIAL_RESCUE_GRID_TASKS,
-        tasksSectionLabel: "Make your decision",
+        tasksSectionLabel: (
+          <span
+            className="text-red-400 drop-shadow-[0_0_14px_rgba(248,113,113,0.8)] animate-tutorial-decision-label font-black"
+            style={{
+              fontFamily:
+                "var(--font-rajdhani), 'Arial Black', sans-serif",
+            }}
+          >
+            Make your decision
+          </span>
+        ),
+        panelBottomRowExclusive: TUTORIAL_RESCUE_PANEL_MAX_ROWS,
       };
     case "rescue-outcome-sniper":
       return {
@@ -3443,6 +3461,7 @@ export function SimulatedGameDisplay({
                   tasksSectionLabel={tutorialGridPanelConfig.tasksSectionLabel}
                   primaryCta={tutorialGridPanelConfig.primaryCta}
                   panelAnchor={
+                    currentStep?.id === "rescue" ||
                     currentStep?.id === "goals" ||
                     currentStep?.id === "view-enemy" ||
                     currentStep?.id === "move-ship" ||
@@ -3450,6 +3469,9 @@ export function SimulatedGameDisplay({
                     currentStep?.id === "special-emp"
                       ? "left"
                       : "right"
+                  }
+                  panelVerticalAnchor={
+                    currentStep?.id === "rescue" ? "bottom" : "top"
                   }
                   panelBottomRowExclusive={
                     tutorialGridPanelConfig.panelBottomRowExclusive

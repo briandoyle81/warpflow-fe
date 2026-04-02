@@ -17,7 +17,7 @@ export interface TutorialGridTaskPanelProps {
   /** Numbered tasks (omit or pass [] to hide the section); strings or rich JSX per item */
   tasks?: ReactNode[];
   /** Label above the numbered list (default "Orders") */
-  tasksSectionLabel?: string;
+  tasksSectionLabel?: ReactNode;
   displayStepNumber: number;
   displayTotalSteps: number;
   currentStepIndex: number;
@@ -45,6 +45,8 @@ export interface TutorialGridTaskPanelProps {
   panelFitToContent?: boolean;
   /** Horizontal anchor for in-grid panel placement. Defaults to top-right. */
   panelAnchor?: "left" | "right";
+  /** Vertical anchor: top (default) or bottom of the grid overlay area. */
+  panelVerticalAnchor?: "top" | "bottom";
 }
 
 const mono = {
@@ -105,6 +107,7 @@ export function TutorialGridTaskPanel({
   panelBottomRowExclusive: panelBottomRowExclusiveProp,
   panelFitToContent = false,
   panelAnchor = "right",
+  panelVerticalAnchor = "top",
 }: TutorialGridTaskPanelProps) {
   const [debugEnabled, setDebugEnabled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -245,7 +248,9 @@ export function TutorialGridTaskPanel({
     <div
       ref={panelFitToContent ? scrollRef : undefined}
       onScroll={panelFitToContent ? updateScrollHint : undefined}
-      className={`pointer-events-auto absolute top-2 ${panelAnchor === "left" ? "left-2" : "right-2"} z-[190] flex min-h-0 w-[min(117.5%,28.75rem)] flex-col border-2 border-cyan-400/90 p-3 shadow-lg shadow-cyan-500/15 ${
+      className={`pointer-events-auto absolute ${
+        panelVerticalAnchor === "bottom" ? "bottom-2" : "top-2"
+      } ${panelAnchor === "left" ? "left-2" : "right-2"} z-[190] flex min-h-0 w-[min(117.5%,28.75rem)] flex-col border-2 border-cyan-400/90 p-3 shadow-lg shadow-cyan-500/15 ${
         panelFitToContent
           ? "overflow-y-auto overflow-x-hidden"
           : "overflow-hidden"
