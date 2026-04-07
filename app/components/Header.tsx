@@ -20,6 +20,7 @@ import {
   getSelectedChainId,
   getNativeTokenSymbol,
   getVariantForChainId,
+  isChainSelectableInUi,
   isSupportedChainId,
   setSelectedChainId,
   SUPPORTED_CHAINS,
@@ -102,6 +103,8 @@ const Header: React.FC = () => {
 
     pendingSwitchChainIdRef.current = null;
     if (selectedChainId !== account.chainId) {
+      // Temporary: do not adopt a connected wallet chain unless it is selectable in the UI.
+      if (!isChainSelectableInUi(account.chainId)) return;
       setSelectedChainId(account.chainId);
       setSelectedChainIdState(account.chainId);
     }
@@ -155,6 +158,10 @@ const Header: React.FC = () => {
   ]);
 
   const handleNetworkChange = (nextId: number) => {
+    if (!isChainSelectableInUi(nextId)) {
+      toast.error("This network is unavailable for now");
+      return;
+    }
     setSelectedChainId(nextId);
     setSelectedChainIdState(nextId);
     pendingSwitchChainIdRef.current = nextId;
@@ -505,12 +512,23 @@ const Header: React.FC = () => {
                           >
                             {SUPPORTED_CHAINS.map((c) => {
                               const isActive = c.id === selectedChainId;
+                              const selectable = isChainSelectableInUi(c.id);
                               return (
                                 <button
                                   key={c.id}
                                   type="button"
+                                  disabled={!selectable}
+                                  title={
+                                    selectable
+                                      ? undefined
+                                      : "Unavailable on this build"
+                                  }
                                   onClick={() => handleNetworkChange(c.id)}
-                                  className="flex h-8 w-full items-center px-2 text-left text-[11px] font-bold uppercase tracking-wider transition-colors duration-150"
+                                  className={`flex h-8 w-full items-center px-2 text-left text-[11px] font-bold uppercase tracking-wider transition-colors duration-150 ${
+                                    !selectable
+                                      ? "cursor-not-allowed opacity-45"
+                                      : ""
+                                  }`}
                                   style={{
                                     fontFamily:
                                       "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -522,12 +540,12 @@ const Header: React.FC = () => {
                                       : "transparent",
                                   }}
                                   onMouseEnter={(e) => {
-                                    if (isActive) return;
+                                    if (isActive || !selectable) return;
                                     e.currentTarget.style.backgroundColor =
                                       "var(--color-slate)";
                                   }}
                                   onMouseLeave={(e) => {
-                                    if (isActive) return;
+                                    if (isActive || !selectable) return;
                                     e.currentTarget.style.backgroundColor =
                                       "transparent";
                                   }}

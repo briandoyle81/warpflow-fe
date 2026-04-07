@@ -6,6 +6,7 @@ import UniversalCreditsContract from "../contracts/DeployModule#UniversalCredits
 import MapsContract from "../contracts/DeployModule#Maps.json";
 import ShipAttributesContract from "../contracts/DeployModule#ShipAttributes.json";
 import DroneYardContract from "../contracts/DeployModule#DroneYard.json";
+import TutorialClaimContract from "../contracts/DeployModule#TutorialClaim.json";
 import { baseSepolia, flowTestnet, saigon } from "viem/chains";
 import { getSelectedChainId, xaiTestnet } from "./networks";
 import flowTestnetDeployedAddresses from "../contracts/flow-testnet/deployed_addresses.json";
@@ -45,6 +46,8 @@ const FLOW_TESTNET_CONTRACT_ADDRESSES = {
   SHIP_ATTRIBUTES: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#ShipAttributes"],
   SHIP_PURCHASER: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#ShipPurchaser"],
   DRONE_YARD: FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#DroneYard"],
+  TUTORIAL_CLAIM:
+    FLOW_TESTNET_DEPLOYED_ADDRESSES["DeployModule#TutorialClaim"] ?? ZERO_ADDRESS,
 } as const;
 
 const RONIN_SAIGON_CONTRACT_ADDRESSES = {
@@ -66,6 +69,9 @@ const RONIN_SAIGON_CONTRACT_ADDRESSES = {
     ZERO_ADDRESS,
   DRONE_YARD:
     RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#DroneYard"] ?? ZERO_ADDRESS,
+  TUTORIAL_CLAIM:
+    RONIN_SAIGON_DEPLOYED_ADDRESSES["DeployModule#TutorialClaim"] ??
+    ZERO_ADDRESS,
 } as const;
 
 const BASE_SEPOLIA_CONTRACT_ADDRESSES = {
@@ -87,6 +93,9 @@ const BASE_SEPOLIA_CONTRACT_ADDRESSES = {
     ZERO_ADDRESS,
   DRONE_YARD:
     BASE_SEPOLIA_DEPLOYED_ADDRESSES["DeployModule#DroneYard"] ?? ZERO_ADDRESS,
+  TUTORIAL_CLAIM:
+    BASE_SEPOLIA_DEPLOYED_ADDRESSES["DeployModule#TutorialClaim"] ??
+    ZERO_ADDRESS,
 } as const;
 
 const XAI_TESTNET_CONTRACT_ADDRESSES = {
@@ -108,6 +117,9 @@ const XAI_TESTNET_CONTRACT_ADDRESSES = {
     ZERO_ADDRESS,
   DRONE_YARD:
     XAI_TESTNET_DEPLOYED_ADDRESSES["DeployModule#DroneYard"] ?? ZERO_ADDRESS,
+  TUTORIAL_CLAIM:
+    XAI_TESTNET_DEPLOYED_ADDRESSES["DeployModule#TutorialClaim"] ??
+    ZERO_ADDRESS,
 } as const;
 
 export const CONTRACT_ADDRESSES_BY_CHAIN_ID = {
@@ -151,7 +163,8 @@ export const CONTRACT_ABIS = {
   UNIVERSAL_CREDITS: UniversalCreditsContract.abi,
   MAPS: MapsContract.abi,
   SHIP_ATTRIBUTES: ShipAttributesContract.abi,
-   DRONE_YARD: DroneYardContract.abi,
+  DRONE_YARD: DroneYardContract.abi,
+  TUTORIAL_CLAIM: TutorialClaimContract.abi,
 } as const;
 
 // Hard-coded ship purchase tiers (from Ships contract)

@@ -51,6 +51,16 @@ import {
   computeMovementRange,
   computeShootingRange,
 } from "../utils/gameGridRanges";
+import {
+  useAccount,
+  useReadContract,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import type { Abi } from "viem";
+import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
+import { getSelectedChainId } from "../config/networks";
 
 interface SimulatedGameDisplayProps {
   tutorialContext: TutorialContextValue;
@@ -60,6 +70,43 @@ interface SimulatedGameDisplayProps {
 
 const GRID_WIDTH = 17;
 const GRID_HEIGHT = 11;
+
+/** Once true per chain+wallet, tutorial claim never reverts; cache indefinitely. */
+const TUTORIAL_CLAIM_COMPLETED_CACHE_KEY =
+  "void-tactics-tutorial-claim-completed";
+
+function isTutorialClaimCompletedCached(
+  chainId: number,
+  walletAddress: string,
+): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.localStorage.getItem(TUTORIAL_CLAIM_COMPLETED_CACHE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as Record<string, boolean>;
+    return parsed[`${chainId}:${walletAddress.toLowerCase()}`] === true;
+  } catch {
+    return false;
+  }
+}
+
+function persistTutorialClaimCompleted(
+  chainId: number,
+  walletAddress: string,
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(TUTORIAL_CLAIM_COMPLETED_CACHE_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+    parsed[`${chainId}:${walletAddress.toLowerCase()}`] = true;
+    window.localStorage.setItem(
+      TUTORIAL_CLAIM_COMPLETED_CACHE_KEY,
+      JSON.stringify(parsed),
+    );
+  } catch {
+    // Quota or disabled storage
+  }
+}
 
 /**
  * Player ships whose cells get the **tutorial highlight** on step 3 (select-ship)
@@ -662,8 +709,7 @@ function getTutorialGridPanelConfig(
           <span
             className="text-red-400 drop-shadow-[0_0_14px_rgba(248,113,113,0.8)] animate-tutorial-decision-label font-black"
             style={{
-              fontFamily:
-                "var(--font-rajdhani), 'Arial Black', sans-serif",
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
             }}
           >
             Make your decision
@@ -706,6 +752,23 @@ export function SimulatedGameDisplay({
   tutorialContext,
   onBack,
 }: SimulatedGameDisplayProps) {
+  const { address, chainId: walletChainId } = useAccount();
+  const { openConnectModal } = useConnectModal();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const contractAddresses = useMemo(
+    () => getContractAddresses(activeChainId),
+    [activeChainId],
+  );
+  const [pendingTutorialClaimPath, setPendingTutorialClaimPath] = useState<
+    "win" | "loss" | null
+  >(null);
+  const {
+    writeContract: writeTutorialClaim,
+    isPending: isTutorialClaimPending,
+    data: tutorialClaimHash,
+    error: tutorialClaimWriteError,
+  } = useWriteContract();
+
   const {
     gameState,
     currentStep,
@@ -722,6 +785,115 @@ export function SimulatedGameDisplay({
     previousStep,
     resetTutorial,
   } = tutorialContext;
+
+  const [claimCompleteCached, setClaimCompleteCached] = useState(false);
+
+  useEffect(() => {
+    if (!address) {
+      setClaimCompleteCached(false);
+      return;
+    }
+    setClaimCompleteCached(
+      isTutorialClaimCompletedCached(activeChainId, address),
+    );
+  }, [activeChainId, address]);
+
+  const isTutorialCompletionStep =
+    currentStep?.id === "completion-retreat" ||
+    currentStep?.id === "completion-sniper";
+
+  const tutorialClaimContractReady =
+    !!contractAddresses.TUTORIAL_CLAIM &&
+    contractAddresses.TUTORIAL_CLAIM !==
+      "0x0000000000000000000000000000000000000000";
+
+  const shouldReadTutorialCompletedFromChain = useMemo(
+    () =>
+      isTutorialCompletionStep &&
+      !!address &&
+      tutorialClaimContractReady &&
+      !claimCompleteCached,
+    [
+      address,
+      claimCompleteCached,
+      isTutorialCompletionStep,
+      tutorialClaimContractReady,
+    ],
+  );
+
+  const tutorialCompletedReadConfig = useMemo(
+    () => ({
+      address: contractAddresses.TUTORIAL_CLAIM as `0x${string}`,
+      abi: CONTRACT_ABIS.TUTORIAL_CLAIM as Abi,
+      functionName: "tutorialCompleted" as const,
+      args: address ? [address] : undefined,
+      chainId: activeChainId,
+      query: {
+        enabled: shouldReadTutorialCompletedFromChain,
+      },
+    }),
+    [
+      activeChainId,
+      address,
+      contractAddresses.TUTORIAL_CLAIM,
+      shouldReadTutorialCompletedFromChain,
+    ],
+  );
+
+  const { data: tutorialCompletedOnChain } = useReadContract(
+    tutorialCompletedReadConfig,
+  );
+
+  useEffect(() => {
+    if (tutorialCompletedOnChain !== true) return;
+    if (!address) return;
+    persistTutorialClaimCompleted(activeChainId, address);
+    setClaimCompleteCached(true);
+  }, [tutorialCompletedOnChain, activeChainId, address]);
+
+  const isTutorialRewardAlreadyClaimed =
+    claimCompleteCached || tutorialCompletedOnChain === true;
+
+  const tutorialClaimReceiptConfig = useMemo(
+    () => ({
+      hash: tutorialClaimHash,
+    }),
+    [tutorialClaimHash],
+  );
+  const {
+    isLoading: isTutorialClaimConfirming,
+    isSuccess: isTutorialClaimConfirmed,
+    error: tutorialClaimReceiptError,
+  } = useWaitForTransactionReceipt(tutorialClaimReceiptConfig);
+
+  useEffect(() => {
+    if (!tutorialClaimWriteError) return;
+    const message = tutorialClaimWriteError.message || "Transaction failed";
+    if (
+      message.includes("User rejected") ||
+      message.includes("User denied") ||
+      message.includes("rejected")
+    ) {
+      toast.error("Transaction declined by user");
+    } else {
+      toast.error("Tutorial claim failed");
+    }
+    setPendingTutorialClaimPath(null);
+  }, [tutorialClaimWriteError]);
+
+  useEffect(() => {
+    if (!tutorialClaimReceiptError) return;
+    toast.error("Tutorial claim transaction failed");
+    setPendingTutorialClaimPath(null);
+  }, [tutorialClaimReceiptError]);
+
+  useEffect(() => {
+    if (!isTutorialClaimConfirmed || !address) return;
+    persistTutorialClaimCompleted(activeChainId, address);
+    setClaimCompleteCached(true);
+    toast.success("Tutorial reward claimed");
+    setPendingTutorialClaimPath(null);
+  }, [isTutorialClaimConfirmed, activeChainId, address]);
 
   // For display we follow the main game and keep the selected ship ID as bigint
   // (so GameGrid behavior and animations are identical). When we need to talk
@@ -792,11 +964,19 @@ export function SimulatedGameDisplay({
 
   // Map of on-chain ship ID (bigint) to ship object. Tutorial IDs are strings;
   // when we need a ship we convert TutorialShipId -> bigint for this map only.
+  // Fingerprint `tutorialShips.ts` content so HMR updates ship objects; `useMemo([])`
+  // previously froze the first snapshot and hid equipment changes in ShipImage.
+  const tutorialShipsFingerprint = JSON.stringify(
+    ALL_TUTORIAL_SHIPS,
+    (_, v) => (typeof v === "bigint" ? v.toString() : v),
+  );
+  /* eslint-disable react-hooks/exhaustive-deps -- fingerprint busts stale map when `tutorialShips.ts` HMRs */
   const shipMap = useMemo(() => {
     return new Map<bigint, Ship>(
       ALL_TUTORIAL_SHIPS.map((ship) => [ship.id, ship]),
     );
-  }, []);
+  }, [tutorialShipsFingerprint]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // Create grids from default map (same format as real game map grids)
   const { blockedGrid, scoringGrid, onlyOnceGrid } = useMemo(
@@ -1464,7 +1644,12 @@ export function SimulatedGameDisplay({
 
     if (stepId === "rescue") {
       const selectedId = selectedShipId?.toString();
-      const playerCells: { row: number; col: number; label?: string }[] = [];
+      const playerCells: {
+        row: number;
+        col: number;
+        label?: string;
+        hideLabel?: boolean;
+      }[] = [];
       for (const shipId of TUTORIAL_RESCUE_CHOICE_HIGHLIGHT_SHIP_IDS) {
         const idStr = shipId.toString() as TutorialShipId;
         // Hard choice: only pulse the ship the player is choosing; hide the other once one is selected.
@@ -1472,15 +1657,21 @@ export function SimulatedGameDisplay({
         if (selectedId === "1002" && idStr === "1001") continue;
         const sp = positions.find((p) => p.shipId === idStr);
         if (sp) {
+          const resoluteSelectedPulseOnly =
+            selectedId === "1001" && idStr === "1001";
           playerCells.push({
             row: sp.position.row,
             col: sp.position.col,
-            label:
-              idStr === "1001"
-                ? "Save Ship"
-                : idStr === "1002"
-                  ? "Win Game"
-                  : undefined,
+            ...(resoluteSelectedPulseOnly
+              ? { hideLabel: true as const }
+              : {
+                  label:
+                    idStr === "1001"
+                      ? "Save Ship"
+                      : idStr === "1002"
+                        ? "Win Game"
+                        : undefined,
+                }),
           });
         }
       }
@@ -1490,7 +1681,12 @@ export function SimulatedGameDisplay({
             [])
           : [];
       const seen = new Set<string>();
-      const merged: { row: number; col: number; label?: string }[] = [];
+      const merged: {
+        row: number;
+        col: number;
+        label?: string;
+        hideLabel?: boolean;
+      }[] = [];
       for (const c of [...playerCells, ...enemyCells]) {
         const key = `${c.row},${c.col}`;
         if (!seen.has(key)) {
@@ -2760,9 +2956,41 @@ export function SimulatedGameDisplay({
           eyebrow: "Ready for more?",
           headline: "Take your fleet live",
           supporting: TUTORIAL_COMPLETION_SNIPER_PRIMARY_CTA_SUPPORTING,
-          buttonLabel: "Log in & claim 3 free ships",
+          buttonLabel: isTutorialRewardAlreadyClaimed
+            ? "Reward Claimed"
+            : !address
+              ? "Log in"
+              : pendingTutorialClaimPath === "win" &&
+                  (isTutorialClaimPending || isTutorialClaimConfirming)
+                ? "Claiming..."
+                : "Claim 2 ships + win",
           onClick: () => {
-            alert("Feature not implemented");
+            if (!address) {
+              openConnectModal?.();
+              return;
+            }
+            if (isTutorialRewardAlreadyClaimed) {
+              toast.error("Tutorial reward already claimed");
+              return;
+            }
+            if (
+              !contractAddresses.TUTORIAL_CLAIM ||
+              contractAddresses.TUTORIAL_CLAIM ===
+                "0x0000000000000000000000000000000000000000"
+            ) {
+              toast.error("Tutorial claim is unavailable on this network");
+              return;
+            }
+            if (isTutorialClaimPending || isTutorialClaimConfirming) {
+              return;
+            }
+            setPendingTutorialClaimPath("win");
+            writeTutorialClaim({
+              address: contractAddresses.TUTORIAL_CLAIM as `0x${string}`,
+              abi: CONTRACT_ABIS.TUTORIAL_CLAIM as Abi,
+              functionName: "completeTutorialWinPath",
+              chainId: activeChainId,
+            });
           },
         },
       };
@@ -2774,15 +3002,58 @@ export function SimulatedGameDisplay({
           eyebrow: "Ready for more?",
           headline: "Take your fleet live",
           supporting: TUTORIAL_COMPLETION_RETREAT_PRIMARY_CTA_SUPPORTING,
-          buttonLabel: "Log in & claim 3 free ships",
+          buttonLabel: isTutorialRewardAlreadyClaimed
+            ? "Reward Claimed"
+            : !address
+              ? "Log in"
+              : pendingTutorialClaimPath === "loss" &&
+                  (isTutorialClaimPending || isTutorialClaimConfirming)
+                ? "Claiming..."
+                : "Claim 3 ships + loss record",
           onClick: () => {
-            alert("Feature not implemented");
+            if (!address) {
+              openConnectModal?.();
+              return;
+            }
+            if (isTutorialRewardAlreadyClaimed) {
+              toast.error("Tutorial reward already claimed");
+              return;
+            }
+            if (
+              !contractAddresses.TUTORIAL_CLAIM ||
+              contractAddresses.TUTORIAL_CLAIM ===
+                "0x0000000000000000000000000000000000000000"
+            ) {
+              toast.error("Tutorial claim is unavailable on this network");
+              return;
+            }
+            if (isTutorialClaimPending || isTutorialClaimConfirming) {
+              return;
+            }
+            setPendingTutorialClaimPath("loss");
+            writeTutorialClaim({
+              address: contractAddresses.TUTORIAL_CLAIM as `0x${string}`,
+              abi: CONTRACT_ABIS.TUTORIAL_CLAIM as Abi,
+              functionName: "completeTutorialLossPath",
+              chainId: activeChainId,
+            });
           },
         },
       };
     }
     return base;
-  }, [currentStep?.id]);
+  }, [
+    activeChainId,
+    address,
+    contractAddresses.TUTORIAL_CLAIM,
+    currentStep?.id,
+    isTutorialRewardAlreadyClaimed,
+    isTutorialClaimConfirming,
+    isTutorialClaimPending,
+    pendingTutorialClaimPath,
+    openConnectModal,
+    writeTutorialClaim,
+  ]);
 
   return (
     <div

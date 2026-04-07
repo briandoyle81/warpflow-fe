@@ -21,7 +21,7 @@ const TUTORIAL_DATA_VERSION_KEY = "void-tactics-tutorial-data-version";
 type RescueCompletionBranch = "retreat" | "sniper" | null;
 
 const TUTORIAL_DATA_VERSION =
-  "2026-04-01-tutorial-rescue-branch-skip";
+  "2026-04-07-resolute-shields-enhanced";
 
 export function useOnboardingTutorial() {
   // Load saved step index from localStorage, default to 0

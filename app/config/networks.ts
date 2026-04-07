@@ -27,6 +27,13 @@ export type SupportedChain = (typeof SUPPORTED_CHAINS)[number];
 
 export const DEFAULT_CHAIN_ID: number = flowTestnet.id;
 
+/** Temporary: only Flow Testnet can be selected in the app network UI. */
+const CHAIN_IDS_SELECTABLE_IN_UI = new Set<number>([flowTestnet.id]);
+
+export function isChainSelectableInUi(chainId: number): boolean {
+  return CHAIN_IDS_SELECTABLE_IN_UI.has(chainId);
+}
+
 const STORAGE_KEY = "void-tactics.selectedChainId";
 
 export function isSupportedChainId(chainId: number | undefined | null): boolean {
@@ -39,12 +46,15 @@ export function getSelectedChainId(): number {
   const raw = window.localStorage.getItem(STORAGE_KEY);
   const parsed = raw ? Number(raw) : NaN;
   if (!Number.isFinite(parsed)) return DEFAULT_CHAIN_ID;
-  return isSupportedChainId(parsed) ? parsed : DEFAULT_CHAIN_ID;
+  if (!isSupportedChainId(parsed)) return DEFAULT_CHAIN_ID;
+  if (!isChainSelectableInUi(parsed)) return DEFAULT_CHAIN_ID;
+  return parsed;
 }
 
 export function setSelectedChainId(chainId: number) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, String(chainId));
+  const next = isChainSelectableInUi(chainId) ? chainId : DEFAULT_CHAIN_ID;
+  window.localStorage.setItem(STORAGE_KEY, String(next));
 }
 
 export function getChainById(chainId: number | undefined | null): SupportedChain {
