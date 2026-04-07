@@ -51,7 +51,10 @@ function createShipData(
  * mutually exclusive; at most one of armor or shields may be non-zero.
  */
 const TUTORIAL_SHIP_DATA_STANDARD = createShipData(0, true, 0);
-const RESOLUTE_SHIP_DATA = createShipData(0, true, 10);
+const RESOLUTE_SHIP_DATA: ShipData = {
+  ...createShipData(0, true, 10),
+  shiny: true,
+};
 
 const RESOLUTE_EQUIPMENT: ShipEquipment = {
   mainWeapon: 3,
