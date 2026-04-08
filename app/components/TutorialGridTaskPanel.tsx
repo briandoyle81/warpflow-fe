@@ -47,6 +47,14 @@ export interface TutorialGridTaskPanelProps {
   panelAnchor?: "left" | "right";
   /** Vertical anchor: top (default) or bottom of the grid overlay area. */
   panelVerticalAnchor?: "top" | "bottom";
+  /**
+   * Completion steps only: small debug control next to the Debug checkbox to clear
+   * localStorage for tutorial claim / reward state (e.g. after changing rewards on-chain).
+   */
+  tutorialRewardCacheDebug?: {
+    onClear: () => void;
+    disabled?: boolean;
+  };
 }
 
 const mono = {
@@ -108,6 +116,7 @@ export function TutorialGridTaskPanel({
   panelFitToContent = false,
   panelAnchor = "right",
   panelVerticalAnchor = "top",
+  tutorialRewardCacheDebug,
 }: TutorialGridTaskPanelProps) {
   const [debugEnabled, setDebugEnabled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -353,6 +362,16 @@ export function TutorialGridTaskPanel({
           />
           <span className="text-sm font-mono text-gray-300">Debug</span>
         </label>
+        {tutorialRewardCacheDebug ? (
+          <button
+            type="button"
+            disabled={tutorialRewardCacheDebug.disabled}
+            onClick={tutorialRewardCacheDebug.onClear}
+            className="px-2 py-1 text-xs bg-amber-900/80 text-amber-100 rounded-none font-mono border border-amber-600/60 hover:bg-amber-800/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Clear reward cache
+          </button>
+        ) : null}
         {!isVisibleLastStep && (
           <button
             type="button"

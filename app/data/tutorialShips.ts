@@ -1,10 +1,9 @@
 import { Ship, ShipColors, ShipData, ShipEquipment } from "../types/types";
 import { Address } from "viem";
 import {
-  buildTutorialShipFromMockAttributes,
-  tutorialMockAttributesFromTraitTiers,
-  type TutorialMockAttributes,
-} from "../utils/tutorialShipFromMockAttributes";
+  buildTutorialShip,
+  type TutorialCombatTraits,
+} from "../utils/tutorialShipBuilder";
 
 // Tutorial player address (simulated)
 export const TUTORIAL_PLAYER_ADDRESS =
@@ -42,10 +41,10 @@ function createShipData(
 }
 
 /**
- * Per ship we define loadout and tier seeds once, then derive `*_MOCK`
- * (frozen range/hull/movement/damageReduction targets). Runtime `Ship` uses the
- * same `equipment` plus traits recovered from the mock via
- * `deriveTraitIndicesFromMockAttributes`.
+ * Tutorial ships: **equipment** and **traits** (`accuracy`, `hull`, `speed` each
+ * 0–2, contract enum indices) are canonical. Combat stats come only from
+ * `calculateAttributesFromContracts(ship)` (same rules as
+ * `ShipAttributes.calculateShipAttributes`).
  *
  * Equipment rule (matches contracts / ShipConstructor): armor and shields are
  * mutually exclusive; at most one of armor or shields may be non-zero.
@@ -62,12 +61,11 @@ const RESOLUTE_EQUIPMENT: ShipEquipment = {
   shields: 2,
   special: 1,
 };
-const RESOLUTE_MOCK: TutorialMockAttributes =
-  tutorialMockAttributesFromTraitTiers(RESOLUTE_EQUIPMENT, RESOLUTE_SHIP_DATA, {
-    accuracy: 2,
-    hull: 2,
-    speed: 2,
-  });
+const RESOLUTE_TRAITS: TutorialCombatTraits = {
+  accuracy: 2,
+  hull: 2,
+  speed: 2,
+};
 
 const VIGILANT_EQUIPMENT: ShipEquipment = {
   mainWeapon: 1,
@@ -75,12 +73,11 @@ const VIGILANT_EQUIPMENT: ShipEquipment = {
   shields: 1,
   special: 2,
 };
-const VIGILANT_MOCK: TutorialMockAttributes =
-  tutorialMockAttributesFromTraitTiers(
-    VIGILANT_EQUIPMENT,
-    TUTORIAL_SHIP_DATA_STANDARD,
-    { accuracy: 1, hull: 0, speed: 0 },
-  );
+const VIGILANT_TRAITS: TutorialCombatTraits = {
+  accuracy: 1,
+  hull: 0,
+  speed: 0,
+};
 
 const SENTINEL_EQUIPMENT: ShipEquipment = {
   mainWeapon: 0,
@@ -88,12 +85,11 @@ const SENTINEL_EQUIPMENT: ShipEquipment = {
   shields: 0,
   special: 0,
 };
-const SENTINEL_MOCK: TutorialMockAttributes =
-  tutorialMockAttributesFromTraitTiers(
-    SENTINEL_EQUIPMENT,
-    TUTORIAL_SHIP_DATA_STANDARD,
-    { accuracy: 1, hull: 0, speed: 0 },
-  );
+const SENTINEL_TRAITS: TutorialCombatTraits = {
+  accuracy: 1,
+  hull: 0,
+  speed: 0,
+};
 
 const HAMMER_EQUIPMENT: ShipEquipment = {
   mainWeapon: 3,
@@ -101,12 +97,11 @@ const HAMMER_EQUIPMENT: ShipEquipment = {
   shields: 1,
   special: 0,
 };
-const HAMMER_MOCK: TutorialMockAttributes =
-  tutorialMockAttributesFromTraitTiers(
-    HAMMER_EQUIPMENT,
-    TUTORIAL_SHIP_DATA_STANDARD,
-    { accuracy: 1, hull: 1, speed: 1 },
-  );
+const HAMMER_TRAITS: TutorialCombatTraits = {
+  accuracy: 1,
+  hull: 1,
+  speed: 1,
+};
 
 const ANVIL_EQUIPMENT: ShipEquipment = {
   mainWeapon: 3,
@@ -114,11 +109,11 @@ const ANVIL_EQUIPMENT: ShipEquipment = {
   shields: 0,
   special: 0,
 };
-const ANVIL_MOCK: TutorialMockAttributes = tutorialMockAttributesFromTraitTiers(
-  ANVIL_EQUIPMENT,
-  TUTORIAL_SHIP_DATA_STANDARD,
-  { accuracy: 1, hull: 2, speed: 0 },
-);
+const ANVIL_TRAITS: TutorialCombatTraits = {
+  accuracy: 1,
+  hull: 2,
+  speed: 0,
+};
 
 const TONGS_EQUIPMENT: ShipEquipment = {
   mainWeapon: 1,
@@ -126,47 +121,47 @@ const TONGS_EQUIPMENT: ShipEquipment = {
   shields: 2,
   special: 0,
 };
-const TONGS_MOCK: TutorialMockAttributes = tutorialMockAttributesFromTraitTiers(
-  TONGS_EQUIPMENT,
-  TUTORIAL_SHIP_DATA_STANDARD,
-  { accuracy: 2, hull: 2, speed: 2 },
-);
+const TONGS_TRAITS: TutorialCombatTraits = {
+  accuracy: 2,
+  hull: 2,
+  speed: 2,
+};
 
 // Player ships for tutorial
 export const TUTORIAL_PLAYER_SHIPS: Ship[] = [
-  buildTutorialShipFromMockAttributes({
+  buildTutorialShip({
     name: "Resolute",
     id: 1001n,
     owner: TUTORIAL_PLAYER_ADDRESS,
     equipment: RESOLUTE_EQUIPMENT,
     shipData: RESOLUTE_SHIP_DATA,
-    mockAttributes: RESOLUTE_MOCK,
+    traits: RESOLUTE_TRAITS,
     visual: {
       serialNumber: 1001n,
       colors: createColors(200, 80, 50, 220, 70, 40),
       variant: 1,
     },
   }),
-  buildTutorialShipFromMockAttributes({
+  buildTutorialShip({
     name: "Vigilant",
     id: 1002n,
     owner: TUTORIAL_PLAYER_ADDRESS,
     equipment: VIGILANT_EQUIPMENT,
     shipData: TUTORIAL_SHIP_DATA_STANDARD,
-    mockAttributes: VIGILANT_MOCK,
+    traits: VIGILANT_TRAITS,
     visual: {
       serialNumber: 1002n,
       colors: createColors(250, 90, 60, 270, 80, 50),
       variant: 1,
     },
   }),
-  buildTutorialShipFromMockAttributes({
+  buildTutorialShip({
     name: "Sentinel",
     id: 1003n,
     owner: TUTORIAL_PLAYER_ADDRESS,
     equipment: SENTINEL_EQUIPMENT,
     shipData: TUTORIAL_SHIP_DATA_STANDARD,
-    mockAttributes: SENTINEL_MOCK,
+    traits: SENTINEL_TRAITS,
     visual: {
       serialNumber: 1003n,
       colors: createColors(150, 70, 55, 170, 60, 45),
@@ -177,39 +172,39 @@ export const TUTORIAL_PLAYER_SHIPS: Ship[] = [
 
 // Opponent ships for tutorial
 export const TUTORIAL_OPPONENT_SHIPS: Ship[] = [
-  buildTutorialShipFromMockAttributes({
+  buildTutorialShip({
     name: "Hammer",
     id: 2001n,
     owner: TUTORIAL_OPPONENT_ADDRESS,
     equipment: HAMMER_EQUIPMENT,
     shipData: TUTORIAL_SHIP_DATA_STANDARD,
-    mockAttributes: HAMMER_MOCK,
+    traits: HAMMER_TRAITS,
     visual: {
       serialNumber: 2001n,
       colors: createColors(0, 80, 40, 20, 70, 30),
       variant: 1,
     },
   }),
-  buildTutorialShipFromMockAttributes({
+  buildTutorialShip({
     name: "Anvil",
     id: 2002n,
     owner: TUTORIAL_OPPONENT_ADDRESS,
     equipment: ANVIL_EQUIPMENT,
     shipData: TUTORIAL_SHIP_DATA_STANDARD,
-    mockAttributes: ANVIL_MOCK,
+    traits: ANVIL_TRAITS,
     visual: {
       serialNumber: 2002n,
       colors: createColors(10, 70, 35, 30, 60, 25),
       variant: 1,
     },
   }),
-  buildTutorialShipFromMockAttributes({
+  buildTutorialShip({
     name: "Tongs",
     id: 2003n,
     owner: TUTORIAL_OPPONENT_ADDRESS,
     equipment: TONGS_EQUIPMENT,
     shipData: TUTORIAL_SHIP_DATA_STANDARD,
-    mockAttributes: TONGS_MOCK,
+    traits: TONGS_TRAITS,
     visual: {
       serialNumber: 2003n,
       colors: createColors(5, 75, 38, 25, 65, 28),

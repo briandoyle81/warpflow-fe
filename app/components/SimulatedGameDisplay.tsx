@@ -108,6 +108,31 @@ function persistTutorialClaimCompleted(
   }
 }
 
+/** Dev: clear local "already claimed" cache when tutorial reward contract or rewards change. */
+function clearTutorialClaimCompletedCacheEntry(
+  chainId: number,
+  walletAddress: string,
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(TUTORIAL_CLAIM_COMPLETED_CACHE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as Record<string, boolean>;
+    const key = `${chainId}:${walletAddress.toLowerCase()}`;
+    delete parsed[key];
+    if (Object.keys(parsed).length === 0) {
+      window.localStorage.removeItem(TUTORIAL_CLAIM_COMPLETED_CACHE_KEY);
+    } else {
+      window.localStorage.setItem(
+        TUTORIAL_CLAIM_COMPLETED_CACHE_KEY,
+        JSON.stringify(parsed),
+      );
+    }
+  } catch {
+    // Corrupt or disabled storage
+  }
+}
+
 /**
  * Player ships whose cells get the **tutorial highlight** on step 3 (select-ship)
  * until the player selects a ship.
@@ -801,6 +826,16 @@ export function SimulatedGameDisplay({
   const isTutorialCompletionStep =
     currentStep?.id === "completion-retreat" ||
     currentStep?.id === "completion-sniper";
+
+  const handleClearTutorialRewardCache = useCallback(() => {
+    if (!address) {
+      toast.error("Connect a wallet to clear the reward cache");
+      return;
+    }
+    clearTutorialClaimCompletedCacheEntry(activeChainId, address);
+    setClaimCompleteCached(false);
+    toast.success("Cleared local tutorial reward / claim cache for this wallet");
+  }, [activeChainId, address]);
 
   const tutorialClaimContractReady =
     !!contractAddresses.TUTORIAL_CLAIM &&
@@ -2957,7 +2992,7 @@ export function SimulatedGameDisplay({
           headline: "Take your fleet live",
           supporting: TUTORIAL_COMPLETION_SNIPER_PRIMARY_CTA_SUPPORTING,
           buttonLabel: isTutorialRewardAlreadyClaimed
-            ? "Reward Claimed"
+            ? "Reward Claimed / View Ships"
             : !address
               ? "Log in"
               : pendingTutorialClaimPath === "win" &&
@@ -2970,7 +3005,12 @@ export function SimulatedGameDisplay({
               return;
             }
             if (isTutorialRewardAlreadyClaimed) {
-              toast.error("Tutorial reward already claimed");
+              onBack?.();
+              queueMicrotask(() =>
+                window.dispatchEvent(
+                  new CustomEvent("void-tactics-navigate-to-manage-navy"),
+                ),
+              );
               return;
             }
             if (
@@ -3003,7 +3043,7 @@ export function SimulatedGameDisplay({
           headline: "Take your fleet live",
           supporting: TUTORIAL_COMPLETION_RETREAT_PRIMARY_CTA_SUPPORTING,
           buttonLabel: isTutorialRewardAlreadyClaimed
-            ? "Reward Claimed"
+            ? "Reward Claimed / View Ships"
             : !address
               ? "Log in"
               : pendingTutorialClaimPath === "loss" &&
@@ -3016,7 +3056,12 @@ export function SimulatedGameDisplay({
               return;
             }
             if (isTutorialRewardAlreadyClaimed) {
-              toast.error("Tutorial reward already claimed");
+              onBack?.();
+              queueMicrotask(() =>
+                window.dispatchEvent(
+                  new CustomEvent("void-tactics-navigate-to-manage-navy"),
+                ),
+              );
               return;
             }
             if (
@@ -3052,6 +3097,7 @@ export function SimulatedGameDisplay({
     isTutorialClaimPending,
     pendingTutorialClaimPath,
     openConnectModal,
+    onBack,
     writeTutorialClaim,
   ]);
 
@@ -3757,6 +3803,14 @@ export function SimulatedGameDisplay({
                   onPrevious={() => previousStep()}
                   onReset={() => resetTutorial()}
                   onQuit={onBack}
+                  tutorialRewardCacheDebug={
+                    isTutorialCompletionStep
+                      ? {
+                          onClear: handleClearTutorialRewardCache,
+                          disabled: !address,
+                        }
+                      : undefined
+                  }
                 />
               )}
               <div className="absolute bottom-0 right-0 z-[220] pointer-events-none">
