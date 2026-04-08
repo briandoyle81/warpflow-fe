@@ -9,7 +9,7 @@ import {
   getArmorName,
   getShieldName,
 } from "../types/types";
-import { calculateShipRank, getRankColor } from "../utils/shipLevel";
+import { calculateShipRank, getRankProgressInfo, getRankColor } from "../utils/shipLevel";
 import { formatDestroyedDate } from "../utils/dateUtils";
 import { Attributes } from "../types/types";
 
@@ -243,6 +243,22 @@ const ShipCard: React.FC<ShipCardProps> = ({
   };
 
   const borderStyle = getIndustrialBorderStyle();
+  const rankInfo = getRankProgressInfo(ship);
+  const rankTooltipLines =
+    rankInfo.nextRank == null
+      ? [`Kills: ${rankInfo.shipsDestroyed}`, "Max rank reached"]
+      : [
+          `Kills: ${rankInfo.shipsDestroyed}`,
+          `Next rank (R${rankInfo.nextRank}) in ${rankInfo.killsToNextRank} kill${rankInfo.killsToNextRank === 1 ? "" : "s"}`,
+        ];
+  const rankTooltipAccent =
+    rankInfo.rank <= 2
+      ? "var(--color-phosphor-green)"
+      : rankInfo.rank <= 4
+        ? "var(--color-cyan)"
+        : rankInfo.rank === 5
+          ? "var(--color-amber)"
+          : "var(--color-warning-red)";
 
   return (
     <div
@@ -506,20 +522,38 @@ const ShipCard: React.FC<ShipCardProps> = ({
           </span>
           {/* Rank */}
           {ship.shipData.constructed && (
-            <span
-              className="text-xs px-2 py-1 border border-solid uppercase font-semibold tracking-wider"
-              style={{
-                fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-                backgroundColor: "var(--color-near-black)",
-                color: "var(--color-text-primary)",
-                borderColor: "var(--color-gunmetal)",
-                borderTopColor: "var(--color-steel)",
-                borderLeftColor: "var(--color-steel)",
-                borderRadius: 0, // Square corners
-              }}
-            >
-              R{calculateShipRank(ship).rank}
-            </span>
+            <div className="relative group">
+              <span
+                className="text-xs px-2 py-1 border border-solid uppercase font-semibold tracking-wider cursor-default"
+                style={{
+                  fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  backgroundColor: "var(--color-near-black)",
+                  color: "var(--color-text-primary)",
+                  borderColor: "var(--color-gunmetal)",
+                  borderTopColor: "var(--color-steel)",
+                  borderLeftColor: "var(--color-steel)",
+                  borderRadius: 0, // Square corners
+                }}
+              >
+                R{rankInfo.rank}
+              </span>
+              <div
+                className="pointer-events-none absolute right-0 top-full mt-1 hidden min-w-max border border-solid px-2 py-1 text-xs group-hover:block z-20"
+                style={{
+                  fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                  backgroundColor: "var(--color-slate)",
+                  color: "var(--color-text-primary)",
+                  borderColor: rankTooltipAccent,
+                  borderTopColor: rankTooltipAccent,
+                  borderLeftColor: rankTooltipAccent,
+                  borderRadius: 0,
+                  boxShadow: `0 0 12px color-mix(in srgb, ${rankTooltipAccent} 25%, transparent)`,
+                }}
+              >
+                <div style={{ color: rankTooltipAccent }}>{rankTooltipLines[0]}</div>
+                <div className="opacity-80">{rankTooltipLines[1]}</div>
+              </div>
+            </div>
           )}
         </div>
       </div>

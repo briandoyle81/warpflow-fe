@@ -38,6 +38,30 @@ export function calculateShipRank(ship: Ship): {
   };
 }
 
+export function getRankProgressInfo(ship: Ship): {
+  rank: number;
+  shipsDestroyed: number;
+  nextRank: number | null;
+  killsToNextRank: number | null;
+} {
+  const { rank, shipsDestroyed } = calculateShipRank(ship);
+
+  let nextRankThreshold: number | null = null;
+  if (rank === 1) nextRankThreshold = 10;
+  else if (rank === 2) nextRankThreshold = 30;
+  else if (rank === 3) nextRankThreshold = 100;
+  else if (rank === 4) nextRankThreshold = 300;
+  else if (rank === 5) nextRankThreshold = 1000;
+
+  return {
+    rank,
+    shipsDestroyed,
+    nextRank: rank < 6 ? rank + 1 : null,
+    killsToNextRank:
+      nextRankThreshold == null ? null : Math.max(0, nextRankThreshold - shipsDestroyed),
+  };
+}
+
 /**
  * Calculate ship tier based on average stats
  * Uses the same logic as useNavyAnalytics.ts
