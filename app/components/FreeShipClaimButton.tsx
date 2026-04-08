@@ -10,6 +10,8 @@ interface FreeShipClaimButtonProps {
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  /** Fires when the user activates the button (before eligibility checks and claim). */
+  onPress?: () => void;
   onSuccess?: () => void;
   onError?: (error: Error) => void;
 }
@@ -19,6 +21,7 @@ export function FreeShipClaimButton({
   children,
   className = "",
   disabled = false,
+  onPress,
   onSuccess,
   onError,
 }: FreeShipClaimButtonProps) {
@@ -42,6 +45,7 @@ export function FreeShipClaimButton({
   }, [isPending]);
 
   const handleClick = async () => {
+    onPress?.();
     if (!address) {
       toast.error("Please connect your wallet");
       return;

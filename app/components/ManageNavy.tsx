@@ -15,7 +15,7 @@ import {
   getQueueStatus,
   clearCacheOnLogout,
 } from "../hooks";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import { formatEther } from "viem";
 import { toast } from "react-hot-toast";
 import { Ship } from "../types/types";
@@ -28,9 +28,187 @@ import { useShipsRead } from "../hooks/useShipsContract";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
 import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
+import {
+  dismissBuyShipsTutorialForSession,
+  dismissConstructDeliveryTutorialForSession,
+  dismissDroneFactoryTutorialForSession,
+  hasCompletedBuyShipsTutorial,
+  hasCompletedConstructDeliveryTutorial,
+  hasEverClickedFreeShipClaim,
+  isBuyShipsTutorialSessionDismissed,
+  isConstructDeliveryTutorialSessionDismissed,
+  isDroneFactoryTutorialSessionDismissed,
+  persistBuyShipsTutorialCompleted,
+  persistConstructDeliveryTutorialCompleted,
+  persistFreeShipClaimClicked,
+} from "../utils/freeShipClaimTutorialStorage";
+
+/** Same typography as `TutorialGridTaskPanel` brief body. */
+const MANAGE_NAVY_TUTORIAL_MONO: React.CSSProperties = {
+  fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+};
+
+function ManageNavyDroneFactoryBrief({
+  onNotNow,
+  className = "",
+}: {
+  onNotNow: () => void;
+  /** e.g. absolute positioning so the panel does not shift the three-button row */
+  className?: string;
+}) {
+  return (
+    <aside
+      className={`pointer-events-auto flex min-w-0 w-[min(calc(100vw-2rem),28.75rem)] max-w-[28.75rem] flex-col border-2 border-cyan-400/90 bg-[#0f172a] p-3 shadow-lg shadow-cyan-500/15 ${className}`}
+      style={{
+        borderRadius: 0,
+      }}
+      role="region"
+      aria-label="Drone factory briefing"
+    >
+      <h3
+        className="text-lg font-bold uppercase leading-tight tracking-wide text-cyan-300"
+        style={{
+          fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+        }}
+      >
+        Drone factories online
+      </h3>
+      <div className="mb-2 mt-2 h-1 w-full shrink-0 bg-gray-700">
+        <div
+          className="h-1 bg-cyan-400 transition-all duration-300"
+          style={{ width: "33%" }}
+        />
+      </div>
+      <p
+        className="text-sm leading-relaxed text-gray-200 whitespace-pre-line"
+        style={MANAGE_NAVY_TUTORIAL_MONO}
+      >
+        {`Admiral, your faction has access to drone-based factories that stay hard at work producing new ships.
+
+The drones make ships efficiently, but they are not very responsive when you demand exact specifications. In any given run you never know what they will produce.
+
+Use the highlighted [CLAIM FREE SHIPS] control to draw from the next production batch.`}
+      </p>
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          onClick={onNotNow}
+          className="px-2 py-0.5 text-sm bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap"
+        >
+          Not now
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function ManageNavyConstructDeliveryBrief({
+  onNotNow,
+  constructButtonLabel,
+  className = "",
+}: {
+  onNotNow: () => void;
+  constructButtonLabel: "[CONSTRUCT ALL SHIPS]" | "[CONSTRUCT 150 SHIPS]";
+  className?: string;
+}) {
+  return (
+    <aside
+      className={`pointer-events-auto flex min-w-0 w-[min(calc(100vw-2rem),28.75rem)] max-w-[28.75rem] flex-col border-2 border-cyan-400/90 bg-[#0f172a] p-3 shadow-lg shadow-cyan-500/15 ${className}`}
+      style={{
+        borderRadius: 0,
+      }}
+      role="region"
+      aria-label="Construct delivery briefing"
+    >
+      <h3
+        className="text-lg font-bold uppercase leading-tight tracking-wide text-cyan-300"
+        style={{
+          fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+        }}
+      >
+        Ready for delivery
+      </h3>
+      <div className="mb-2 mt-2 h-1 w-full shrink-0 bg-gray-700">
+        <div
+          className="h-1 bg-cyan-400 transition-all duration-300"
+          style={{ width: "66%" }}
+        />
+      </div>
+      <p
+        className="text-sm leading-relaxed text-gray-200 whitespace-pre-line"
+        style={MANAGE_NAVY_TUTORIAL_MONO}
+      >
+        {`Admiral, your new ships are staged for fit and finishing. The yard will not release them until you give the word.
+
+Tell the drones you are ready for delivery with the highlighted ${constructButtonLabel} control.`}
+      </p>
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          onClick={onNotNow}
+          className="px-2 py-0.5 text-sm bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap"
+        >
+          Not now
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function ManageNavyBuyShipsBrief({
+  onNotNow,
+  className = "",
+}: {
+  onNotNow: () => void;
+  className?: string;
+}) {
+  return (
+    <aside
+      className={`pointer-events-auto flex min-w-0 w-[min(calc(100vw-2rem),28.75rem)] max-w-[28.75rem] flex-col border-2 border-cyan-400/90 bg-[#0f172a] p-3 shadow-lg shadow-cyan-500/15 ${className}`}
+      style={{
+        borderRadius: 0,
+      }}
+      role="region"
+      aria-label="Buy ships briefing"
+    >
+      <h3
+        className="text-lg font-bold uppercase leading-tight tracking-wide text-cyan-300"
+        style={{
+          fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+        }}
+      >
+        Materials and energy
+      </h3>
+      <div className="mb-2 mt-2 h-1 w-full shrink-0 bg-gray-700">
+        <div
+          className="h-1 bg-cyan-400 transition-all duration-300"
+          style={{ width: "100%" }}
+        />
+      </div>
+      <p
+        className="text-sm leading-relaxed text-gray-200 whitespace-pre-line"
+        style={MANAGE_NAVY_TUTORIAL_MONO}
+      >
+        {`Admiral, you can order more hulls from the drone yards by supplying them with materials and energy.
+
+Big orders make the drones happy. The more hulls you order in one go, the higher the guaranteed floor on quality you can expect.`}
+      </p>
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          onClick={onNotNow}
+          className="px-2 py-0.5 text-sm bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap"
+        >
+          Not now
+        </button>
+      </div>
+    </aside>
+  );
+}
 
 const ManageNavy: React.FC = () => {
   const { address, isConnected, status } = useAccount();
+  const chainId = useChainId();
   const { transactionState } = useTransaction();
   const { ships, isLoading, error, hasShips, shipCount, refetch } =
     useOwnedShips();
@@ -81,6 +259,155 @@ const ManageNavy: React.FC = () => {
     nextClaimInFormatted,
   } = useFreeShipClaiming();
 
+  const [showDroneFactoryTutorial, setShowDroneFactoryTutorial] =
+    React.useState(false);
+
+  const markFreeShipClaimClickedForTutorial = React.useCallback(() => {
+    if (!address) return;
+    persistFreeShipClaimClicked(address, chainId);
+    setShowDroneFactoryTutorial(false);
+  }, [address, chainId]);
+
+  const dismissDroneFactoryTutorialNotNow = React.useCallback(() => {
+    dismissDroneFactoryTutorialForSession();
+    setShowDroneFactoryTutorial(false);
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !address || !isConnected) {
+      setShowDroneFactoryTutorial(false);
+      return;
+    }
+    if (hasEverClickedFreeShipClaim(address, chainId)) {
+      setShowDroneFactoryTutorial(false);
+      return;
+    }
+    if (isDroneFactoryTutorialSessionDismissed()) {
+      setShowDroneFactoryTutorial(false);
+      return;
+    }
+    setShowDroneFactoryTutorial(true);
+  }, [address, chainId, isConnected]);
+
+  const [showConstructDeliveryTutorial, setShowConstructDeliveryTutorial] =
+    React.useState(false);
+
+  const dismissConstructDeliveryTutorialNotNow = React.useCallback(() => {
+    dismissConstructDeliveryTutorialForSession();
+    setShowConstructDeliveryTutorial(false);
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !address || !isConnected) {
+      setShowConstructDeliveryTutorial(false);
+      return;
+    }
+    if (isLoading) {
+      setShowConstructDeliveryTutorial(false);
+      return;
+    }
+    if (!hasShips) {
+      setShowConstructDeliveryTutorial(false);
+      return;
+    }
+    if (!hasEverClickedFreeShipClaim(address, chainId)) {
+      setShowConstructDeliveryTutorial(false);
+      return;
+    }
+    if (hasCompletedConstructDeliveryTutorial(address, chainId)) {
+      setShowConstructDeliveryTutorial(false);
+      return;
+    }
+    if (isConstructDeliveryTutorialSessionDismissed()) {
+      setShowConstructDeliveryTutorial(false);
+      return;
+    }
+    if (fleetStats.unconstructedShips === 0) {
+      setShowConstructDeliveryTutorial(false);
+      return;
+    }
+    setShowConstructDeliveryTutorial(true);
+  }, [
+    address,
+    chainId,
+    isConnected,
+    isLoading,
+    hasShips,
+    fleetStats.unconstructedShips,
+  ]);
+
+  /**
+   * After navy data is loaded, if nothing is left unconstructed, mark this step done.
+   * Must not run while loading: unconstructed reads as 0 when `ships` is still empty, which
+   * used to persist "completed" immediately and hide the panel forever.
+   */
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !address) return;
+    if (isLoading) return;
+    if (!hasShips) return;
+    if (!hasEverClickedFreeShipClaim(address, chainId)) return;
+    if (hasCompletedConstructDeliveryTutorial(address, chainId)) return;
+    if (fleetStats.unconstructedShips > 0) return;
+    persistConstructDeliveryTutorialCompleted(address, chainId);
+  }, [
+    address,
+    chainId,
+    fleetStats.unconstructedShips,
+    isLoading,
+    hasShips,
+  ]);
+
+  const [showBuyShipsTutorial, setShowBuyShipsTutorial] = React.useState(false);
+
+  const dismissBuyShipsTutorialNotNow = React.useCallback(() => {
+    dismissBuyShipsTutorialForSession();
+    setShowBuyShipsTutorial(false);
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !address || !isConnected) {
+      setShowBuyShipsTutorial(false);
+      return;
+    }
+    if (isLoading) {
+      setShowBuyShipsTutorial(false);
+      return;
+    }
+    if (!hasShips) {
+      setShowBuyShipsTutorial(false);
+      return;
+    }
+    if (!hasCompletedConstructDeliveryTutorial(address, chainId)) {
+      setShowBuyShipsTutorial(false);
+      return;
+    }
+    if (hasCompletedBuyShipsTutorial(address, chainId)) {
+      setShowBuyShipsTutorial(false);
+      return;
+    }
+    if (isBuyShipsTutorialSessionDismissed()) {
+      setShowBuyShipsTutorial(false);
+      return;
+    }
+    if (fleetStats.unconstructedShips > 0) {
+      setShowBuyShipsTutorial(false);
+      return;
+    }
+    setShowBuyShipsTutorial(true);
+  }, [
+    address,
+    chainId,
+    isConnected,
+    isLoading,
+    hasShips,
+    fleetStats.unconstructedShips,
+  ]);
+
+  const showManageNavyTutorialChrome =
+    showDroneFactoryTutorial ||
+    showConstructDeliveryTutorial ||
+    showBuyShipsTutorial;
+
   // Phase 3: Real-time updates
   const { isListening } = useContractEvents();
 
@@ -110,6 +437,15 @@ const ManageNavy: React.FC = () => {
     new Set(),
   );
   const [showShipPurchase, setShowShipPurchase] = React.useState(false);
+
+  const handleBuyNewShipsClick = React.useCallback(() => {
+    if (address && showBuyShipsTutorial) {
+      persistBuyShipsTutorialCompleted(address, chainId);
+      setShowBuyShipsTutorial(false);
+    }
+    setShowShipPurchase(true);
+  }, [address, chainId, showBuyShipsTutorial]);
+
   const [paymentMethod, setPaymentMethod] = React.useState<"FLOW" | "UTC">(
     "FLOW",
   );
@@ -289,6 +625,71 @@ const ManageNavy: React.FC = () => {
       </div>
     );
   }
+
+  const constructTutorialButtonLabel =
+    fleetStats.unconstructedShips > 150
+      ? ("[CONSTRUCT 150 SHIPS]" as const)
+      : ("[CONSTRUCT ALL SHIPS]" as const);
+
+  const claimFreeShipControls = (
+    <div className="flex flex-nowrap items-center justify-center gap-4">
+      {isLoadingClaimStatus && (
+        <button
+          disabled
+          className="px-6 py-3 rounded-none border-2 border-gray-400 text-gray-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
+        >
+          [CHECKING ELIGIBILITY...]
+        </button>
+      )}
+      {!isLoadingClaimStatus && freeShipError && (
+        <button
+          disabled
+          className="px-6 py-3 rounded-none border-2 border-red-400 text-red-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
+        >
+          [ERROR CLAIMING]
+        </button>
+      )}
+      {!isLoadingClaimStatus && !freeShipError && claimStatusError && (
+        <FreeShipClaimButton
+          isEligible={true}
+          className="px-6 py-3 rounded-none border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          onPress={markFreeShipClaimClickedForTutorial}
+          onSuccess={() => {
+            refetch();
+          }}
+        >
+          [TRY CLAIM FREE SHIPS]
+        </FreeShipClaimButton>
+      )}
+      {!isLoadingClaimStatus &&
+        !freeShipError &&
+        !claimStatusError &&
+        isEligible && (
+          <FreeShipClaimButton
+            isEligible={isEligible}
+            className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            onPress={markFreeShipClaimClickedForTutorial}
+            onSuccess={() => {
+              refetch();
+            }}
+          >
+            [CLAIM FREE SHIPS]
+          </FreeShipClaimButton>
+        )}
+      {!isLoadingClaimStatus &&
+        !freeShipError &&
+        !claimStatusError &&
+        !isEligible &&
+        nextClaimInFormatted != null && (
+          <div
+            className="px-6 py-3 rounded-none border-2 border-amber-400/80 text-amber-400 font-mono font-bold tracking-wider bg-amber-400/5"
+            title="Time until you can claim free ships again"
+          >
+            NEXT CLAIM IN: {nextClaimInFormatted}
+          </div>
+        )}
+    </div>
+  );
 
   return (
     <div
@@ -522,59 +923,254 @@ const ManageNavy: React.FC = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-4 mb-8 justify-center">
-        {fleetStats.unconstructedShips > 150 ? (
-          <ShipActionButton
-            action="constructShips"
-            shipIds={shipsByStatus.unconstructed
-              .slice(0, 150)
-              .map((ship: Ship) => ship.id)}
-            className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={fleetStats.unconstructedShips === 0}
-            onSuccess={() => {
-              // Show success toast
-              toast.success("150 ships construction started!");
-              // Clear image cache for all ships to force refresh
-              ships.forEach((ship) => {
-                clearShipImageCacheForShip(ship.id.toString());
-              });
-              // Refetch ships data after successful construction
-              refetch();
-            }}
-          >
-            [CONSTRUCT 150 SHIPS]
-          </ShipActionButton>
+      {/* Action Buttons: same three-button row with or without tutorial; brief is absolute (no layout shift). When tutorial is on, stack above ship grid so art does not cover the panel. */}
+      <div
+        className={`relative isolate mb-8 flex w-full flex-wrap items-center justify-center gap-4 overflow-visible ${
+          showManageNavyTutorialChrome ? "z-[200]" : ""
+        }`}
+      >
+        {showConstructDeliveryTutorial ? (
+          <div className="relative inline-flex items-start gap-4">
+            {/* Same pattern as claim tutorial: brief is absolute beside the highlighted control; here to the RIGHT of construct */}
+            <div className="relative z-[100] shrink-0">
+              <div
+                className="border border-yellow-400/90 bg-yellow-400/24 animate-pulse p-[3px]"
+                style={{ borderRadius: 0 }}
+              >
+                <div className="flex flex-nowrap items-center justify-center gap-4">
+                  {fleetStats.unconstructedShips > 150 ? (
+                    <ShipActionButton
+                      action="constructShips"
+                      shipIds={shipsByStatus.unconstructed
+                        .slice(0, 150)
+                        .map((ship: Ship) => ship.id)}
+                      className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={fleetStats.unconstructedShips === 0}
+                      onSuccess={() => {
+                        if (address) {
+                          persistConstructDeliveryTutorialCompleted(
+                            address,
+                            chainId,
+                          );
+                          setShowConstructDeliveryTutorial(false);
+                        }
+                        toast.success("150 ships construction started!");
+                        ships.forEach((ship) => {
+                          clearShipImageCacheForShip(ship.id.toString());
+                        });
+                        refetch();
+                      }}
+                    >
+                      [CONSTRUCT 150 SHIPS]
+                    </ShipActionButton>
+                  ) : (
+                    <ShipActionButton
+                      action="constructAll"
+                      className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={fleetStats.unconstructedShips === 0}
+                      onSuccess={() => {
+                        if (address) {
+                          persistConstructDeliveryTutorialCompleted(
+                            address,
+                            chainId,
+                          );
+                          setShowConstructDeliveryTutorial(false);
+                        }
+                        toast.success("Ships constructed successfully!");
+                        ships.forEach((ship) => {
+                          clearShipImageCacheForShip(ship.id.toString());
+                        });
+                        refetch();
+                      }}
+                    >
+                      [CONSTRUCT ALL SHIPS]
+                    </ShipActionButton>
+                  )}
+                </div>
+              </div>
+              <ManageNavyConstructDeliveryBrief
+                className="absolute left-full top-0 z-[110] ml-4"
+                constructButtonLabel={constructTutorialButtonLabel}
+                onNotNow={dismissConstructDeliveryTutorialNotNow}
+              />
+            </div>
+            <div className="relative z-10 flex shrink-0 items-start gap-4">
+              <button
+                type="button"
+                onClick={handleBuyNewShipsClick}
+                disabled={transactionState.isPending}
+                className="px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  borderRadius: 0,
+                }}
+              >
+                [BUY NEW SHIPS]
+              </button>
+              <div className="shrink-0">{claimFreeShipControls}</div>
+              <div
+                className="pointer-events-auto absolute inset-0 z-20 rounded-none bg-slate-950/85"
+                aria-hidden="true"
+              />
+            </div>
+          </div>
+        ) : showBuyShipsTutorial ? (
+          <div className="relative inline-flex items-start gap-4">
+            <div className="relative z-10 flex shrink-0 gap-4">
+              {fleetStats.unconstructedShips > 150 ? (
+                <ShipActionButton
+                  action="constructShips"
+                  shipIds={shipsByStatus.unconstructed
+                    .slice(0, 150)
+                    .map((ship: Ship) => ship.id)}
+                  className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={fleetStats.unconstructedShips === 0}
+                  onSuccess={() => {
+                    toast.success("150 ships construction started!");
+                    ships.forEach((ship) => {
+                      clearShipImageCacheForShip(ship.id.toString());
+                    });
+                    refetch();
+                  }}
+                >
+                  [CONSTRUCT 150 SHIPS]
+                </ShipActionButton>
+              ) : (
+                <ShipActionButton
+                  action="constructAll"
+                  className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={fleetStats.unconstructedShips === 0}
+                  onSuccess={() => {
+                    toast.success("Ships constructed successfully!");
+                    ships.forEach((ship) => {
+                      clearShipImageCacheForShip(ship.id.toString());
+                    });
+                    refetch();
+                  }}
+                >
+                  [CONSTRUCT ALL SHIPS]
+                </ShipActionButton>
+              )}
+              <div
+                className="pointer-events-auto absolute inset-0 z-20 rounded-none bg-slate-950/85"
+                aria-hidden="true"
+              />
+            </div>
+            <div className="relative z-[100] shrink-0">
+              <ManageNavyBuyShipsBrief
+                className="absolute right-full top-0 z-[110] mr-4"
+                onNotNow={dismissBuyShipsTutorialNotNow}
+              />
+              <div
+                className="border border-yellow-400/90 bg-yellow-400/24 animate-pulse p-[3px]"
+                style={{ borderRadius: 0 }}
+              >
+                <button
+                  type="button"
+                  onClick={handleBuyNewShipsClick}
+                  disabled={transactionState.isPending}
+                  className="px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    borderRadius: 0,
+                  }}
+                >
+                  [BUY NEW SHIPS]
+                </button>
+              </div>
+            </div>
+            <div className="relative z-10 shrink-0">
+              <div className="relative">
+                {claimFreeShipControls}
+                <div
+                  className="pointer-events-auto absolute inset-0 z-20 rounded-none bg-slate-950/85"
+                  aria-hidden="true"
+                />
+              </div>
+            </div>
+          </div>
         ) : (
-          <ShipActionButton
-            action="constructAll"
-            className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={fleetStats.unconstructedShips === 0}
-            onSuccess={() => {
-              // Show success toast
-              toast.success("Ships constructed successfully!");
-              // Clear image cache for all ships to force refresh
-              ships.forEach((ship) => {
-                clearShipImageCacheForShip(ship.id.toString());
-              });
-              // Refetch ships data after successful construction
-              refetch();
-            }}
-          >
-            [CONSTRUCT ALL SHIPS]
-          </ShipActionButton>
-        )}
+          <div className="relative inline-flex items-start gap-4">
+            <div className="relative z-10 flex shrink-0 gap-4">
+              {fleetStats.unconstructedShips > 150 ? (
+                <ShipActionButton
+                  action="constructShips"
+                  shipIds={shipsByStatus.unconstructed
+                    .slice(0, 150)
+                    .map((ship: Ship) => ship.id)}
+                  className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={fleetStats.unconstructedShips === 0}
+                  onSuccess={() => {
+                    toast.success("150 ships construction started!");
+                    ships.forEach((ship) => {
+                      clearShipImageCacheForShip(ship.id.toString());
+                    });
+                    refetch();
+                  }}
+                >
+                  [CONSTRUCT 150 SHIPS]
+                </ShipActionButton>
+              ) : (
+                <ShipActionButton
+                  action="constructAll"
+                  className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={fleetStats.unconstructedShips === 0}
+                  onSuccess={() => {
+                    toast.success("Ships constructed successfully!");
+                    ships.forEach((ship) => {
+                      clearShipImageCacheForShip(ship.id.toString());
+                    });
+                    refetch();
+                  }}
+                >
+                  [CONSTRUCT ALL SHIPS]
+                </ShipActionButton>
+              )}
 
-        <button
-          onClick={() => setShowShipPurchase(true)}
-          disabled={transactionState.isPending}
-          className="px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{
-            borderRadius: 0, // Square corners for industrial theme
-          }}
-        >
-          [BUY NEW SHIPS]
-        </button>
+              <button
+                type="button"
+                onClick={handleBuyNewShipsClick}
+                disabled={transactionState.isPending}
+                className="px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  borderRadius: 0,
+                }}
+              >
+                [BUY NEW SHIPS]
+              </button>
+
+              {showDroneFactoryTutorial && (
+                <div
+                  className="pointer-events-auto absolute inset-0 z-20 rounded-none bg-slate-950/85"
+                  aria-hidden="true"
+                />
+              )}
+            </div>
+
+            <div
+              className={
+                showDroneFactoryTutorial
+                  ? "relative z-[100] shrink-0"
+                  : "relative z-30 shrink-0"
+              }
+            >
+              {showDroneFactoryTutorial && (
+                <ManageNavyDroneFactoryBrief
+                  className="absolute right-full top-0 z-[110] mr-4"
+                  onNotNow={dismissDroneFactoryTutorialNotNow}
+                />
+              )}
+              <div
+                className={
+                  showDroneFactoryTutorial
+                    ? "border border-yellow-400/90 bg-yellow-400/24 animate-pulse p-[3px]"
+                    : "p-0"
+                }
+                style={{ borderRadius: 0 }}
+              >
+                {claimFreeShipControls}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Debug buttons - only show when debug mode is enabled */}
         {showDebugButtons && (
@@ -650,62 +1246,6 @@ const ManageNavy: React.FC = () => {
             </button>
           </>
         )}
-
-        {/* Free Ship Claiming Button */}
-        {isLoadingClaimStatus && (
-          <button
-            disabled
-            className="px-6 py-3 rounded-none border-2 border-gray-400 text-gray-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
-          >
-            [CHECKING ELIGIBILITY...]
-          </button>
-        )}
-        {!isLoadingClaimStatus && freeShipError && (
-          <button
-            disabled
-            className="px-6 py-3 rounded-none border-2 border-red-400 text-red-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
-          >
-            [ERROR CLAIMING]
-          </button>
-        )}
-        {!isLoadingClaimStatus && !freeShipError && claimStatusError && (
-          <FreeShipClaimButton
-            isEligible={true} // Allow trying even with read errors
-            className="px-6 py-3 rounded-none border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            onSuccess={() => {
-              // Refetch ships data after successful claim (toast is shown by hook on confirmation)
-              refetch();
-            }}
-          >
-            [TRY CLAIM FREE SHIPS]
-          </FreeShipClaimButton>
-        )}
-        {!isLoadingClaimStatus &&
-          !freeShipError &&
-          !claimStatusError &&
-          isEligible && (
-            <FreeShipClaimButton
-              isEligible={isEligible}
-              className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              onSuccess={() => {
-                refetch();
-              }}
-            >
-              [CLAIM FREE SHIPS]
-            </FreeShipClaimButton>
-          )}
-        {!isLoadingClaimStatus &&
-          !freeShipError &&
-          !claimStatusError &&
-          !isEligible &&
-          nextClaimInFormatted != null && (
-            <div
-              className="px-6 py-3 rounded-none border-2 border-amber-400/80 text-amber-400 font-mono font-bold tracking-wider bg-amber-400/5"
-              title="Time until you can claim free ships again"
-            >
-              NEXT CLAIM IN: {nextClaimInFormatted}
-            </div>
-          )}
 
         {selectedShips.size > 0 &&
           (() => {
@@ -962,7 +1502,11 @@ const ManageNavy: React.FC = () => {
           <p className="text-sm opacity-60">Purchase ships to get started</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div
+          className={`space-y-4 ${
+            showManageNavyTutorialChrome ? "relative z-0" : ""
+          }`}
+        >
           <div className="flex items-center justify-between mb-4">
             <h4
               className="text-xl font-bold"
