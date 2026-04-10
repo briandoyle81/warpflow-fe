@@ -1,6 +1,7 @@
 "use client";
 
 import Header from "../components/Header";
+import SiteFooter from "../components/SiteFooter";
 import GameDisplay from "../components/GameDisplay";
 import { useGetGame } from "../hooks/useGameContract";
 import { GameDataView } from "../types/types";
@@ -96,15 +97,7 @@ export default function SpectatorGamePage({
           </div>
         </div>
       </main>
-      <footer
-        className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center text-sm tracking-wider uppercase"
-        style={{
-          fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-          color: "var(--color-text-muted)",
-        }}
-      >
-        <span>VOID TACTICS ALPHA</span>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

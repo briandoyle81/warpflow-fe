@@ -3,6 +3,7 @@
 import { useState, useEffect, useLayoutEffect } from "react";
 import { useAccount } from "wagmi";
 import Header from "./components/Header";
+import SiteFooter from "./components/SiteFooter";
 import ManageNavy from "./components/ManageNavy";
 import Lobbies from "./components/Lobbies";
 import Games from "./components/Games";
@@ -231,15 +232,7 @@ export default function Home() {
             </div>
           </div>
         </main>
-        <footer
-          className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center text-sm tracking-wider uppercase"
-          style={{
-            fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-            color: "var(--color-text-muted)",
-          }}
-        >
-          <span>VOID TACTICS ALPHA</span>
-        </footer>
+        <SiteFooter />
       </div>
     );
   }
@@ -399,15 +392,7 @@ export default function Home() {
           )}
         </div>
       </main>
-      <footer
-        className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center text-sm tracking-wider uppercase"
-        style={{
-          fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-          color: "var(--color-text-muted)",
-        }}
-      >
-        <span>VOID TACTICS ALPHA</span>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

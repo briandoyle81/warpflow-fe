@@ -2687,7 +2687,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             const fromCol = currentPos?.position.col ?? 0;
             const toRow = previewPosition ? previewPosition.row : fromRow;
             const toCol = previewPosition ? previewPosition.col : fromCol;
-            return (
+  return (
               <div className="flex min-w-0 flex-col gap-0.5">
                 <div className="text-sm font-semibold text-white">{name}</div>
                 <div className="text-sm font-mono text-gray-300">
@@ -2916,29 +2916,29 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           <div className="flex w-full min-w-0 flex-col gap-2">
             <div className="flex w-full min-w-0 items-stretch gap-2">
               <div className="flex w-1/5 min-h-0 shrink-0 justify-start">
-                <button
-                  onClick={onBack}
+          <button
+            onClick={onBack}
                   className="flex min-h-0 w-full items-center justify-center px-4 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
-                  style={{
-                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                    borderColor: "var(--color-gunmetal)",
-                    color: "var(--color-text-secondary)",
-                    backgroundColor: "var(--color-steel)",
-                    borderRadius: 0,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "var(--color-slate)";
-                    e.currentTarget.style.borderColor = "var(--color-cyan)";
-                    e.currentTarget.style.color = "var(--color-cyan)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "var(--color-steel)";
-                    e.currentTarget.style.borderColor = "var(--color-gunmetal)";
-                    e.currentTarget.style.color = "var(--color-text-secondary)";
-                  }}
-                >
-                  ←
-                </button>
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderColor: "var(--color-gunmetal)",
+              color: "var(--color-text-secondary)",
+              backgroundColor: "var(--color-steel)",
+              borderRadius: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-slate)";
+              e.currentTarget.style.borderColor = "var(--color-cyan)";
+              e.currentTarget.style.color = "var(--color-cyan)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-steel)";
+              e.currentTarget.style.borderColor = "var(--color-gunmetal)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+          >
+            ←
+          </button>
               </div>
               <div className="flex min-h-0 w-4/5 min-w-0 flex-col justify-center">
                 {game.metadata.winner ===
@@ -3311,43 +3311,43 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   /{game.maxScore?.toString() || "0"}
                 </span>
               </div>
+              </div>
             </div>
-          </div>
           </div>
         </div>
 
         {/* Proposed move body lives in the left rail (side chrome), not between rail and map. */}
         {chromeOnSide && isShowingProposedMove && (
-          <div
+        <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto border border-solid p-3"
-            style={{
+          style={{
               backgroundColor: "var(--color-near-black)",
-              borderColor: "var(--color-gunmetal)",
-              borderTopColor: "var(--color-steel)",
-              borderLeftColor: "var(--color-steel)",
-              borderRadius: 0,
-            }}
-          >
+            borderColor: "var(--color-gunmetal)",
+            borderTopColor: "var(--color-steel)",
+            borderLeftColor: "var(--color-steel)",
+            borderRadius: 0,
+          }}
+        >
             {renderProposedMoveActivePanel()}
-          </div>
+                  </div>
         )}
-      </div>
+                </div>
 
         {/* Move confirmation: stacked layout (wide chrome), matches SimulatedGameDisplay. */}
         {!chromeOnSide && isShowingProposedMove && (
-          <div
+                    <div
             className="min-h-0 flex-1 border border-solid p-3"
-            style={{
-              backgroundColor: "var(--color-near-black)",
-              borderColor: "var(--color-gunmetal)",
-              borderTopColor: "var(--color-steel)",
-              borderLeftColor: "var(--color-steel)",
-              borderRadius: 0,
-            }}
-          >
+                      style={{
+                        backgroundColor: "var(--color-near-black)",
+                        borderColor: "var(--color-gunmetal)",
+                        borderTopColor: "var(--color-steel)",
+                        borderLeftColor: "var(--color-steel)",
+                        borderRadius: 0,
+                      }}
+                    >
             {renderProposedMoveActivePanel()}
-          </div>
-        )}
+                  </div>
+                )}
 
       {/* Game map: same stack as tutorial (GameBoardLayout + 17×11 aspect clip). */}
       <div
@@ -3367,57 +3367,57 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             style={{ aspectRatio: `${GRID_WIDTH} / ${GRID_HEIGHT}` }}
           >
             <div className="absolute inset-0 min-h-0 overflow-hidden">
-              <GameGrid
-                grid={grid}
+        <GameGrid
+          grid={grid}
                 allShipPositions={game.shipPositions}
-                shipMap={shipMap}
-                selectedShipId={selectedShipId}
-                previewPosition={previewPosition}
-                targetShipId={targetShipId}
-                selectedWeaponType={selectedWeaponType}
-                hoveredCell={hoveredCell}
-                draggedShipId={draggedShipId}
-                dragOverCell={dragOverCell}
-                movementRange={movementRange}
-                shootingRange={shootingRange}
-                validTargets={validTargets}
-                labelTargets={labelTargets}
-                assistableTargets={assistableTargets}
-                assistableTargetsFromStart={assistableTargetsFromStart}
-                dragShootingRange={dragShootingRange}
-                dragValidTargets={dragValidTargets}
+          shipMap={shipMap}
+          selectedShipId={selectedShipId}
+          previewPosition={previewPosition}
+          targetShipId={targetShipId}
+          selectedWeaponType={selectedWeaponType}
+          hoveredCell={hoveredCell}
+          draggedShipId={draggedShipId}
+          dragOverCell={dragOverCell}
+          movementRange={movementRange}
+          shootingRange={shootingRange}
+          validTargets={validTargets}
+          labelTargets={labelTargets}
+          assistableTargets={assistableTargets}
+          assistableTargetsFromStart={assistableTargetsFromStart}
+          dragShootingRange={dragShootingRange}
+          dragValidTargets={dragValidTargets}
                 isCurrentPlayerTurn={!readOnly && isMyTurnEffective}
-                isShipOwnedByCurrentPlayer={isShipOwnedByCurrentPlayer}
-                movedShipIdsSet={movedShipIdsSet}
-                specialType={specialType}
-                blockedGrid={blockedGrid}
-                scoringGrid={scoringGrid}
-                onlyOnceGrid={onlyOnceGrid}
-                calculateDamage={calculateDamage}
-                getShipAttributes={getShipAttributes}
-                disableTooltips={disableTooltips}
-                address={address}
-                currentTurn={game.turnState.currentTurn}
-                highlightedMovePosition={highlightedMovePosition}
-                lastMoveShipId={lastMoveShipId}
-                lastMoveOldPosition={lastMoveOldPosition}
+          isShipOwnedByCurrentPlayer={isShipOwnedByCurrentPlayer}
+          movedShipIdsSet={movedShipIdsSet}
+          specialType={specialType}
+          blockedGrid={blockedGrid}
+          scoringGrid={scoringGrid}
+          onlyOnceGrid={onlyOnceGrid}
+          calculateDamage={calculateDamage}
+          getShipAttributes={getShipAttributes}
+          disableTooltips={disableTooltips}
+          address={address}
+          currentTurn={game.turnState.currentTurn}
+          highlightedMovePosition={highlightedMovePosition}
+          lastMoveShipId={lastMoveShipId}
+          lastMoveOldPosition={lastMoveOldPosition}
                 lastMoveNewPosition={lastMoveNewPosition}
-                lastMoveActionType={lastMoveActionType}
-                lastMoveTargetShipId={lastMoveTargetShipId}
-                lastMoveIsCurrentPlayer={lastMoveIsCurrentPlayer}
-                retreatPrepShipId={retreatPrepShipId}
-                retreatPrepIsCreator={retreatPrepIsCreator}
-                setSelectedShipId={setSelectedShipId}
-                setPreviewPosition={setPreviewPosition}
-                setTargetShipId={setTargetShipId}
-                setSelectedWeaponType={setSelectedWeaponType}
-                setHoveredCell={setHoveredCell}
-                setDraggedShipId={setDraggedShipId}
-                setDragOverCell={setDragOverCell}
-              />
+          lastMoveActionType={lastMoveActionType}
+          lastMoveTargetShipId={lastMoveTargetShipId}
+          lastMoveIsCurrentPlayer={lastMoveIsCurrentPlayer}
+          retreatPrepShipId={retreatPrepShipId}
+          retreatPrepIsCreator={retreatPrepIsCreator}
+          setSelectedShipId={setSelectedShipId}
+          setPreviewPosition={setPreviewPosition}
+          setTargetShipId={setTargetShipId}
+          setSelectedWeaponType={setSelectedWeaponType}
+          setHoveredCell={setHoveredCell}
+          setDraggedShipId={setDraggedShipId}
+          setDragOverCell={setDragOverCell}
+        />
             </div>
-            {game.metadata.winner ===
-              "0x0000000000000000000000000000000000000000" && (
+          {game.metadata.winner ===
+            "0x0000000000000000000000000000000000000000" && (
               <div className="absolute bottom-0 left-0 z-[220] pointer-events-none">
                 <div className="pointer-events-auto">
                   {isDebugPanelMinimized ? (
@@ -3471,111 +3471,111 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
                           <label className="flex cursor-pointer items-center space-x-2 text-xs text-gray-400">
-                            <input
-                              type="checkbox"
-                              checked={showDebug}
+                <input
+                  type="checkbox"
+                  checked={showDebug}
                               onChange={(e) =>
                                 setShowDebug(e.target.checked)
                               }
                               className="h-4 w-4"
-                              style={{
-                                accentColor: "var(--color-cyan)",
-                                borderColor: "var(--color-cyan)",
-                                backgroundColor: "var(--color-near-black)",
-                                borderRadius: 0,
-                                appearance: "none",
-                                WebkitAppearance: "none",
-                                MozAppearance: "none",
-                                width: "16px",
-                                height: "16px",
-                                border: "2px solid",
-                              }}
-                            />
-                            <span>Show Debug</span>
-                          </label>
+                  style={{
+                    accentColor: "var(--color-cyan)",
+                    borderColor: "var(--color-cyan)",
+                    backgroundColor: "var(--color-near-black)",
+                    borderRadius: 0,
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    MozAppearance: "none",
+                    width: "16px",
+                    height: "16px",
+                    border: "2px solid",
+                  }}
+                />
+                <span>Show Debug</span>
+              </label>
                           <label className="flex cursor-pointer items-center space-x-2 text-xs text-gray-400">
-                            <input
-                              type="checkbox"
-                              checked={disableTooltips}
+                <input
+                  type="checkbox"
+                  checked={disableTooltips}
                               onChange={(e) =>
                                 setDisableTooltips(e.target.checked)
                               }
                               className="h-4 w-4"
-                              style={{
-                                accentColor: "var(--color-cyan)",
-                                borderColor: "var(--color-cyan)",
-                                backgroundColor: "var(--color-near-black)",
-                                borderRadius: 0,
-                                appearance: "none",
-                                WebkitAppearance: "none",
-                                MozAppearance: "none",
-                                width: "16px",
-                                height: "16px",
-                                border: "2px solid",
-                              }}
-                            />
-                            <span>Disable Tooltips</span>
-                          </label>
-                          <button
+                  style={{
+                    accentColor: "var(--color-cyan)",
+                    borderColor: "var(--color-cyan)",
+                    backgroundColor: "var(--color-near-black)",
+                    borderRadius: 0,
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    MozAppearance: "none",
+                    width: "16px",
+                    height: "16px",
+                    border: "2px solid",
+                  }}
+                />
+                <span>Disable Tooltips</span>
+              </label>
+              <button
                             type="button"
-                            onClick={() => {
-                              refetchGame();
-                            }}
+                onClick={() => {
+                  refetchGame();
+                }}
                             className="border-2 border-solid px-2 py-1 text-xs font-semibold uppercase tracking-wider transition-colors duration-150"
-                            style={{
+                style={{
                               fontFamily:
                                 "var(--font-rajdhani), 'Arial Black', sans-serif",
-                              borderColor: "var(--color-cyan)",
-                              color: "var(--color-cyan)",
-                              backgroundColor: "var(--color-steel)",
-                              borderRadius: 0,
-                            }}
-                            onMouseEnter={(e) => {
+                  borderColor: "var(--color-cyan)",
+                  color: "var(--color-cyan)",
+                  backgroundColor: "var(--color-steel)",
+                  borderRadius: 0,
+                }}
+                onMouseEnter={(e) => {
                               e.currentTarget.style.backgroundColor =
                                 "var(--color-slate)";
-                            }}
-                            onMouseLeave={(e) => {
+                }}
+                onMouseLeave={(e) => {
                               e.currentTarget.style.backgroundColor =
                                 "var(--color-steel)";
-                            }}
-                          >
-                            Test Refetch
-                          </button>
-                          <button
+                }}
+              >
+                Test Refetch
+              </button>
+              <button
                             type="button"
-                            onClick={() => {
+                onClick={() => {
                               globalGameRefetchFunctions.forEach(
                                 (refetchFn) => {
-                                  refetchFn();
+                    refetchFn();
                                 },
                               );
-                            }}
+                }}
                             className="border-2 border-solid px-2 py-1 text-xs font-semibold uppercase tracking-wider transition-colors duration-150"
-                            style={{
+                style={{
                               fontFamily:
                                 "var(--font-rajdhani), 'Arial Black', sans-serif",
-                              borderColor: "var(--color-phosphor-green)",
-                              color: "var(--color-phosphor-green)",
-                              backgroundColor: "var(--color-steel)",
-                              borderRadius: 0,
-                            }}
-                            onMouseEnter={(e) => {
+                  borderColor: "var(--color-phosphor-green)",
+                  color: "var(--color-phosphor-green)",
+                  backgroundColor: "var(--color-steel)",
+                  borderRadius: 0,
+                }}
+                onMouseEnter={(e) => {
                               e.currentTarget.style.backgroundColor =
                                 "var(--color-slate)";
-                            }}
-                            onMouseLeave={(e) => {
+                }}
+                onMouseLeave={(e) => {
                               e.currentTarget.style.backgroundColor =
                                 "var(--color-steel)";
-                            }}
-                          >
-                            Test Events
-                          </button>
+                }}
+              >
+                Test Events
+              </button>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+            </div>
+          )}
+        </div>
+      </div>
             )}
             <div className="absolute bottom-0 right-0 z-[220] pointer-events-none">
               <div className="pointer-events-auto">
@@ -3624,12 +3624,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         Minimize
                       </button>
                     </div>
-                    <GameEvents
+      <GameEvents
                       lastMove={
                         selectedShipId !== null ? undefined : displayedLastMove
                       }
-                      shipMap={shipMap}
-                      address={address}
+        shipMap={shipMap}
+        address={address}
                       appendDestroyedText={appendDestroyedTextToLastMove}
                       debugSuffix={lastMoveTargetPositionDebugSuffix}
                     />
@@ -3945,4 +3945,3 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 };
 
 export default GameDisplay;
-
