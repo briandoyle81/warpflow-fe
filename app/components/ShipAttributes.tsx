@@ -23,6 +23,104 @@ import { toast } from "react-hot-toast";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import type { Abi } from "viem";
 
+type CostArrayKey = Exclude<keyof Costs, "version" | "baseCost">;
+
+function SavedOnChainValue({
+  show,
+  children,
+  multiline = false,
+  title,
+}: {
+  show: boolean;
+  children: React.ReactNode;
+  multiline?: boolean;
+  title?: string;
+}) {
+  if (!show) return null;
+  const defaultTitle = multiline
+    ? "Snapshot when you opened edit (contract does not expose these arrays for read)"
+    : "On-chain until you submit";
+  return (
+    <span
+      className={
+        multiline
+          ? "text-amber-200/90 font-mono text-[10px] leading-tight text-left max-w-[min(12rem,42vw)] break-all shrink-0 border-l border-gray-600 pl-2"
+          : "text-amber-200/90 font-mono text-xs tabular-nums text-right min-w-[2.75rem] shrink-0 border-l border-gray-600 pl-2"
+      }
+      title={title ?? defaultTitle}
+    >
+      {children}
+    </span>
+  );
+}
+
+function CostsArrayCard({
+  title,
+  field,
+  costs,
+  newCosts,
+  setNewCosts,
+  editing,
+  getLabel,
+}: {
+  title: string;
+  field: CostArrayKey;
+  costs: Costs;
+  newCosts: Partial<Costs>;
+  setNewCosts: React.Dispatch<React.SetStateAction<Partial<Costs>>>;
+  editing: boolean;
+  getLabel: (index: number) => string;
+}) {
+  const values =
+    (newCosts[field] as number[] | undefined) ?? (costs[field] as number[]);
+
+  return (
+    <div className="bg-gray-800 rounded-none p-3">
+      <h4 className="text-white font-mono mb-2">{title}</h4>
+      <div className="space-y-1 text-sm">
+        {values.map((cost, index) => (
+          <div
+            key={index}
+            className="flex justify-between items-center gap-2 min-h-[2rem]"
+          >
+            <span className="text-gray-400 shrink-0">{getLabel(index)}:</span>
+            {editing ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <input
+                  type="number"
+                  min={0}
+                  max={255}
+                  value={cost}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const num = raw === "" ? 0 : Number(raw);
+                    const v = Number.isNaN(num)
+                      ? 0
+                      : Math.max(0, Math.min(255, num));
+                    setNewCosts((prev) => {
+                      const base =
+                        (prev[field] as number[] | undefined)?.slice() ??
+                        [...(costs[field] as number[])];
+                      base[index] = v;
+                      return { ...prev, [field]: base };
+                    });
+                  }}
+                  className="min-w-[5.5rem] w-[5.5rem] px-2 py-1 bg-gray-700 text-white rounded-none font-mono text-left"
+                />
+                <SavedOnChainValue show>
+                  {(costs[field] as number[])[index]}
+                </SavedOnChainValue>
+              </div>
+            ) : (
+              <span className="text-white">{cost}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const ShipAttributes: React.FC = () => {
   const { address, isConnected } = useAccount();
   const { owner, isOwner } = useShipAttributesOwner();
@@ -84,6 +182,12 @@ const ShipAttributes: React.FC = () => {
   const [newForeAccuracy, setNewForeAccuracy] = useState<number[] | null>(null);
   const [newHullBonuses, setNewHullBonuses] = useState<number[] | null>(null);
   const [newEngineSpeeds, setNewEngineSpeeds] = useState<number[] | null>(null);
+  /** Comma strings as shown when Edit Attributes was opened (no on-chain getter for these arrays). */
+  const [globalArraysAtEditStart, setGlobalArraysAtEditStart] = useState<{
+    fore: string;
+    hull: string;
+    engine: string;
+  } | null>(null);
 
   if (!isConnected) {
     return (
@@ -181,7 +285,12 @@ const ShipAttributes: React.FC = () => {
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-mono text-white">Costs Management</h3>
           <button
-            onClick={() => setEditingCosts(!editingCosts)}
+            onClick={() => {
+              if (editingCosts) {
+                setNewCosts({});
+              }
+              setEditingCosts(!editingCosts);
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded-none font-mono hover:bg-blue-700 transition-colors"
           >
             {editingCosts ? "Cancel" : "Edit Costs"}
@@ -190,111 +299,109 @@ const ShipAttributes: React.FC = () => {
 
         {costs && (
           <div className="space-y-4">
+            {editingCosts && (
+              <p className="text-xs text-gray-500 font-mono">
+                Right column: on-chain value until Update Costs succeeds.
+              </p>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gray-800 rounded-none p-3">
                 <h4 className="text-white font-mono mb-2">Base Cost</h4>
                 {editingCosts ? (
-                  <input
-                    type="number"
-                    value={newCosts.baseCost ?? costs.baseCost}
-                    onChange={(e) =>
-                      setNewCosts({
-                        ...newCosts,
-                        baseCost: Number(e.target.value),
-                      })
-                    }
-                    className="w-full px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={255}
+                      value={newCosts.baseCost ?? costs.baseCost}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const num = raw === "" ? 0 : Number(raw);
+                        const v = Number.isNaN(num)
+                          ? 0
+                          : Math.max(0, Math.min(255, num));
+                        setNewCosts((prev) => ({ ...prev, baseCost: v }));
+                      }}
+                      className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                    />
+                    <SavedOnChainValue show>{costs.baseCost}</SavedOnChainValue>
+                  </div>
                 ) : (
                   <span className="text-white">{costs.baseCost}</span>
                 )}
               </div>
 
-              <div className="bg-gray-800 rounded-none p-3">
-                <h4 className="text-white font-mono mb-2">Accuracy Costs</h4>
-                <div className="space-y-1 text-sm">
-                  {costs.accuracy.map((cost, index) => (
-                    <div key={index} className="flex justify-between">
-                      <span className="text-gray-400">Level {index}:</span>
-                      <span className="text-white">{cost}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <CostsArrayCard
+                title="Accuracy Costs"
+                field="accuracy"
+                costs={costs}
+                newCosts={newCosts}
+                setNewCosts={setNewCosts}
+                editing={editingCosts}
+                getLabel={(i) => `Level ${i}`}
+              />
 
-              <div className="bg-gray-800 rounded-none p-3">
-                <h4 className="text-white font-mono mb-2">Hull Costs</h4>
-                <div className="space-y-1 text-sm">
-                  {costs.hull.map((cost, index) => (
-                    <div key={index} className="flex justify-between">
-                      <span className="text-gray-400">Level {index}:</span>
-                      <span className="text-white">{cost}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <CostsArrayCard
+                title="Hull Costs"
+                field="hull"
+                costs={costs}
+                newCosts={newCosts}
+                setNewCosts={setNewCosts}
+                editing={editingCosts}
+                getLabel={(i) => `Level ${i}`}
+              />
 
-              <div className="bg-gray-800 rounded-none p-3">
-                <h4 className="text-white font-mono mb-2">Speed Costs</h4>
-                <div className="space-y-1 text-sm">
-                  {costs.speed.map((cost, index) => (
-                    <div key={index} className="flex justify-between">
-                      <span className="text-gray-400">Level {index}:</span>
-                      <span className="text-white">{cost}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <CostsArrayCard
+                title="Speed Costs"
+                field="speed"
+                costs={costs}
+                newCosts={newCosts}
+                setNewCosts={setNewCosts}
+                editing={editingCosts}
+                getLabel={(i) => `Level ${i}`}
+              />
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-gray-800 rounded-none p-3">
-                <h4 className="text-white font-mono mb-2">Main Weapon Costs</h4>
-                <div className="space-y-1 text-sm">
-                  {costs.mainWeapon.map((cost, index) => (
-                    <div key={index} className="flex justify-between">
-                      <span className="text-gray-400">Weapon {index}:</span>
-                      <span className="text-white">{cost}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <CostsArrayCard
+                title="Main Weapon Costs"
+                field="mainWeapon"
+                costs={costs}
+                newCosts={newCosts}
+                setNewCosts={setNewCosts}
+                editing={editingCosts}
+                getLabel={(i) => `Weapon ${i}`}
+              />
 
-              <div className="bg-gray-800 rounded-none p-3">
-                <h4 className="text-white font-mono mb-2">Armor Costs</h4>
-                <div className="space-y-1 text-sm">
-                  {costs.armor.map((cost, index) => (
-                    <div key={index} className="flex justify-between">
-                      <span className="text-gray-400">Armor {index}:</span>
-                      <span className="text-white">{cost}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <CostsArrayCard
+                title="Armor Costs"
+                field="armor"
+                costs={costs}
+                newCosts={newCosts}
+                setNewCosts={setNewCosts}
+                editing={editingCosts}
+                getLabel={(i) => `Armor ${i}`}
+              />
 
-              <div className="bg-gray-800 rounded-none p-3">
-                <h4 className="text-white font-mono mb-2">Shield Costs</h4>
-                <div className="space-y-1 text-sm">
-                  {costs.shields.map((cost, index) => (
-                    <div key={index} className="flex justify-between">
-                      <span className="text-gray-400">Shield {index}:</span>
-                      <span className="text-white">{cost}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <CostsArrayCard
+                title="Shield Costs"
+                field="shields"
+                costs={costs}
+                newCosts={newCosts}
+                setNewCosts={setNewCosts}
+                editing={editingCosts}
+                getLabel={(i) => `Shield ${i}`}
+              />
 
-              <div className="bg-gray-800 rounded-none p-3">
-                <h4 className="text-white font-mono mb-2">Special Costs</h4>
-                <div className="space-y-1 text-sm">
-                  {costs.special.map((cost, index) => (
-                    <div key={index} className="flex justify-between">
-                      <span className="text-gray-400">Special {index}:</span>
-                      <span className="text-white">{cost}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <CostsArrayCard
+                title="Special Costs"
+                field="special"
+                costs={costs}
+                newCosts={newCosts}
+                setNewCosts={setNewCosts}
+                editing={editingCosts}
+                getLabel={(i) => `Special ${i}`}
+              />
             </div>
 
             {editingCosts && (
@@ -348,7 +455,26 @@ const ShipAttributes: React.FC = () => {
             Attributes Management
           </h3>
           <button
-            onClick={() => setEditingAttributes(!editingAttributes)}
+            onClick={() => {
+              if (!editingAttributes) {
+                setGlobalArraysAtEditStart({
+                  fore: (newForeAccuracy ?? [0, 25, 50]).join(", "),
+                  hull: (newHullBonuses ?? [0, 10, 20]).join(", "),
+                  engine: (newEngineSpeeds ?? [0, 1, 2]).join(", "),
+                });
+              } else {
+                setGlobalArraysAtEditStart(null);
+                setNewAttributesVersion({});
+                setNewGunData([]);
+                setNewArmorData([]);
+                setNewShieldData([]);
+                setNewSpecialData([]);
+                setNewForeAccuracy(null);
+                setNewHullBonuses(null);
+                setNewEngineSpeeds(null);
+              }
+              setEditingAttributes(!editingAttributes);
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded-none font-mono hover:bg-blue-700 transition-colors"
           >
             {editingAttributes ? "Cancel" : "Edit Attributes"}
@@ -366,6 +492,13 @@ const ShipAttributes: React.FC = () => {
           const baseData = attributesBaseData as [number, number, number];
           return (
             <div className="space-y-4">
+              {editingAttributes && (
+                <p className="text-xs text-gray-500 font-mono">
+                  Right column: on-chain until submit. Comma-separated fields
+                  show the string when you opened edit (contract does not expose
+                  those arrays for read).
+                </p>
+              )}
               {/* Base Attributes */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gray-800 rounded-none p-3">
@@ -376,17 +509,24 @@ const ShipAttributes: React.FC = () => {
                         Base Hull:
                       </label>
                       {editingAttributes ? (
-                        <input
-                          type="number"
-                          value={newAttributesVersion.baseHull ?? baseData[1]}
-                          onChange={(e) =>
-                            setNewAttributesVersion({
-                              ...newAttributesVersion,
-                              baseHull: Number(e.target.value),
-                            })
-                          }
-                          className="w-full px-2 py-1 bg-gray-700 text-white rounded-none font-mono mt-1"
-                        />
+                        <div className="flex items-center gap-2 mt-1">
+                          <input
+                            type="number"
+                            value={
+                              newAttributesVersion.baseHull ?? baseData[1]
+                            }
+                            onChange={(e) =>
+                              setNewAttributesVersion({
+                                ...newAttributesVersion,
+                                baseHull: Number(e.target.value),
+                              })
+                            }
+                            className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                          />
+                          <SavedOnChainValue show>
+                            {baseData[1]}
+                          </SavedOnChainValue>
+                        </div>
                       ) : (
                         <div className="text-white">{baseData[1]}</div>
                       )}
@@ -396,17 +536,24 @@ const ShipAttributes: React.FC = () => {
                         Base Speed:
                       </label>
                       {editingAttributes ? (
-                        <input
-                          type="number"
-                          value={newAttributesVersion.baseSpeed ?? baseData[2]}
-                          onChange={(e) =>
-                            setNewAttributesVersion({
-                              ...newAttributesVersion,
-                              baseSpeed: Number(e.target.value),
-                            })
-                          }
-                          className="w-full px-2 py-1 bg-gray-700 text-white rounded-none font-mono mt-1"
-                        />
+                        <div className="flex items-center gap-2 mt-1">
+                          <input
+                            type="number"
+                            value={
+                              newAttributesVersion.baseSpeed ?? baseData[2]
+                            }
+                            onChange={(e) =>
+                              setNewAttributesVersion({
+                                ...newAttributesVersion,
+                                baseSpeed: Number(e.target.value),
+                              })
+                            }
+                            className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                          />
+                          <SavedOnChainValue show>
+                            {baseData[2]}
+                          </SavedOnChainValue>
+                        </div>
                       ) : (
                         <div className="text-white">{baseData[2]}</div>
                       )}
@@ -421,55 +568,70 @@ const ShipAttributes: React.FC = () => {
                         <label className="text-gray-400">
                           Fore Accuracy (comma-separated):
                         </label>
-                        <input
-                          type="text"
-                          value={(newForeAccuracy ?? [0, 25, 50]).join(",")}
-                          onChange={(e) => {
-                            const parts = e.target.value
-                              .split(",")
-                              .map((p) => p.trim())
-                              .filter((p) => p.length > 0)
-                              .map((p) => Number(p));
-                            setNewForeAccuracy(parts);
-                          }}
-                          className="w-full px-2 py-1 bg-gray-700 text-white rounded-none font-mono mt-1"
-                        />
+                        <div className="flex items-center gap-2 mt-1">
+                          <input
+                            type="text"
+                            value={(newForeAccuracy ?? [0, 25, 50]).join(",")}
+                            onChange={(e) => {
+                              const parts = e.target.value
+                                .split(",")
+                                .map((p) => p.trim())
+                                .filter((p) => p.length > 0)
+                                .map((p) => Number(p));
+                              setNewForeAccuracy(parts);
+                            }}
+                            className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                          />
+                          <SavedOnChainValue show multiline>
+                            {globalArraysAtEditStart?.fore ?? "—"}
+                          </SavedOnChainValue>
+                        </div>
                       </div>
                       <div>
                         <label className="text-gray-400">
                           Hull Bonuses (comma-separated):
                         </label>
-                        <input
-                          type="text"
-                          value={(newHullBonuses ?? [0, 10, 20]).join(",")}
-                          onChange={(e) => {
-                            const parts = e.target.value
-                              .split(",")
-                              .map((p) => p.trim())
-                              .filter((p) => p.length > 0)
-                              .map((p) => Number(p));
-                            setNewHullBonuses(parts);
-                          }}
-                          className="w-full px-2 py-1 bg-gray-700 text-white rounded-none font-mono mt-1"
-                        />
+                        <div className="flex items-center gap-2 mt-1">
+                          <input
+                            type="text"
+                            value={(newHullBonuses ?? [0, 10, 20]).join(",")}
+                            onChange={(e) => {
+                              const parts = e.target.value
+                                .split(",")
+                                .map((p) => p.trim())
+                                .filter((p) => p.length > 0)
+                                .map((p) => Number(p));
+                              setNewHullBonuses(parts);
+                            }}
+                            className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                          />
+                          <SavedOnChainValue show multiline>
+                            {globalArraysAtEditStart?.hull ?? "—"}
+                          </SavedOnChainValue>
+                        </div>
                       </div>
                       <div>
                         <label className="text-gray-400">
                           Engine Speeds (comma-separated):
                         </label>
-                        <input
-                          type="text"
-                          value={(newEngineSpeeds ?? [0, 1, 2]).join(",")}
-                          onChange={(e) => {
-                            const parts = e.target.value
-                              .split(",")
-                              .map((p) => p.trim())
-                              .filter((p) => p.length > 0)
-                              .map((p) => Number(p));
-                            setNewEngineSpeeds(parts);
-                          }}
-                          className="w-full px-2 py-1 bg-gray-700 text-white rounded-none font-mono mt-1"
-                        />
+                        <div className="flex items-center gap-2 mt-1">
+                          <input
+                            type="text"
+                            value={(newEngineSpeeds ?? [0, 1, 2]).join(",")}
+                            onChange={(e) => {
+                              const parts = e.target.value
+                                .split(",")
+                                .map((p) => p.trim())
+                                .filter((p) => p.length > 0)
+                                .map((p) => Number(p));
+                              setNewEngineSpeeds(parts);
+                            }}
+                            className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                          />
+                          <SavedOnChainValue show multiline>
+                            {globalArraysAtEditStart?.engine ?? "—"}
+                          </SavedOnChainValue>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -509,72 +671,96 @@ const ShipAttributes: React.FC = () => {
                         </h5>
                         {gunData && (
                           <div className="space-y-1 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Range:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 shrink-0">
+                                Range:
+                              </span>
                               {editingAttributes ? (
-                                <input
-                                  type="number"
-                                  value={currentGunData.range ?? gunData.range}
-                                  onChange={(e) => {
-                                    const updated = [...newGunData];
-                                    updated[index] = {
-                                      ...updated[index],
-                                      range: Number(e.target.value),
-                                    };
-                                    setNewGunData(updated);
-                                  }}
-                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
-                                />
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                  <input
+                                    type="number"
+                                    value={
+                                      currentGunData.range ?? gunData.range
+                                    }
+                                    onChange={(e) => {
+                                      const updated = [...newGunData];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        range: Number(e.target.value),
+                                      };
+                                      setNewGunData(updated);
+                                    }}
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                  />
+                                  <SavedOnChainValue show>
+                                    {gunData.range}
+                                  </SavedOnChainValue>
+                                </div>
                               ) : (
-                                <span className="text-white">
+                                <span className="text-white ml-auto">
                                   {gunData.range}
                                 </span>
                               )}
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Damage:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 shrink-0">
+                                Damage:
+                              </span>
                               {editingAttributes ? (
-                                <input
-                                  type="number"
-                                  value={
-                                    currentGunData.damage ?? gunData.damage
-                                  }
-                                  onChange={(e) => {
-                                    const updated = [...newGunData];
-                                    updated[index] = {
-                                      ...updated[index],
-                                      damage: Number(e.target.value),
-                                    };
-                                    setNewGunData(updated);
-                                  }}
-                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
-                                />
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                  <input
+                                    type="number"
+                                    value={
+                                      currentGunData.damage ?? gunData.damage
+                                    }
+                                    onChange={(e) => {
+                                      const updated = [...newGunData];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        damage: Number(e.target.value),
+                                      };
+                                      setNewGunData(updated);
+                                    }}
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                  />
+                                  <SavedOnChainValue show>
+                                    {gunData.damage}
+                                  </SavedOnChainValue>
+                                </div>
                               ) : (
-                                <span className="text-white">
+                                <span className="text-white ml-auto">
                                   {gunData.damage}
                                 </span>
                               )}
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Movement:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 shrink-0">
+                                Movement:
+                              </span>
                               {editingAttributes ? (
-                                <input
-                                  type="number"
-                                  value={
-                                    currentGunData.movement ?? gunData.movement
-                                  }
-                                  onChange={(e) => {
-                                    const updated = [...newGunData];
-                                    updated[index] = {
-                                      ...updated[index],
-                                      movement: Number(e.target.value),
-                                    };
-                                    setNewGunData(updated);
-                                  }}
-                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
-                                />
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                  <input
+                                    type="number"
+                                    value={
+                                      currentGunData.movement ??
+                                      gunData.movement
+                                    }
+                                    onChange={(e) => {
+                                      const updated = [...newGunData];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        movement: Number(e.target.value),
+                                      };
+                                      setNewGunData(updated);
+                                    }}
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                  />
+                                  <SavedOnChainValue show>
+                                    {gunData.movement}
+                                  </SavedOnChainValue>
+                                </div>
                               ) : (
-                                <span className="text-white">
+                                <span className="text-white ml-auto">
                                   {gunData.movement}
                                 </span>
                               )}
@@ -620,52 +806,68 @@ const ShipAttributes: React.FC = () => {
                         </h5>
                         {armorData && (
                           <div className="space-y-1 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">DR:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 shrink-0">
+                                DR:
+                              </span>
                               {editingAttributes ? (
-                                <input
-                                  type="number"
-                                  value={
-                                    currentArmorData.damageReduction ??
-                                    armorData.damageReduction
-                                  }
-                                  onChange={(e) => {
-                                    const updated = [...newArmorData];
-                                    updated[index] = {
-                                      ...updated[index],
-                                      damageReduction: Number(e.target.value),
-                                    };
-                                    setNewArmorData(updated);
-                                  }}
-                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
-                                />
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                  <input
+                                    type="number"
+                                    value={
+                                      currentArmorData.damageReduction ??
+                                      armorData.damageReduction
+                                    }
+                                    onChange={(e) => {
+                                      const updated = [...newArmorData];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        damageReduction: Number(
+                                          e.target.value,
+                                        ),
+                                      };
+                                      setNewArmorData(updated);
+                                    }}
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                  />
+                                  <SavedOnChainValue show>
+                                    {armorData.damageReduction}
+                                  </SavedOnChainValue>
+                                </div>
                               ) : (
-                                <span className="text-white">
+                                <span className="text-white ml-auto">
                                   {armorData.damageReduction}
                                 </span>
                               )}
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Movement:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 shrink-0">
+                                Movement:
+                              </span>
                               {editingAttributes ? (
-                                <input
-                                  type="number"
-                                  value={
-                                    currentArmorData.movement ??
-                                    armorData.movement
-                                  }
-                                  onChange={(e) => {
-                                    const updated = [...newArmorData];
-                                    updated[index] = {
-                                      ...updated[index],
-                                      movement: Number(e.target.value),
-                                    };
-                                    setNewArmorData(updated);
-                                  }}
-                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
-                                />
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                  <input
+                                    type="number"
+                                    value={
+                                      currentArmorData.movement ??
+                                      armorData.movement
+                                    }
+                                    onChange={(e) => {
+                                      const updated = [...newArmorData];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        movement: Number(e.target.value),
+                                      };
+                                      setNewArmorData(updated);
+                                    }}
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                  />
+                                  <SavedOnChainValue show>
+                                    {armorData.movement}
+                                  </SavedOnChainValue>
+                                </div>
                               ) : (
-                                <span className="text-white">
+                                <span className="text-white ml-auto">
                                   {armorData.movement}
                                 </span>
                               )}
@@ -711,52 +913,68 @@ const ShipAttributes: React.FC = () => {
                         </h5>
                         {shieldData && (
                           <div className="space-y-1 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">DR:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 shrink-0">
+                                DR:
+                              </span>
                               {editingAttributes ? (
-                                <input
-                                  type="number"
-                                  value={
-                                    currentShieldData.damageReduction ??
-                                    shieldData.damageReduction
-                                  }
-                                  onChange={(e) => {
-                                    const updated = [...newShieldData];
-                                    updated[index] = {
-                                      ...updated[index],
-                                      damageReduction: Number(e.target.value),
-                                    };
-                                    setNewShieldData(updated);
-                                  }}
-                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
-                                />
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                  <input
+                                    type="number"
+                                    value={
+                                      currentShieldData.damageReduction ??
+                                      shieldData.damageReduction
+                                    }
+                                    onChange={(e) => {
+                                      const updated = [...newShieldData];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        damageReduction: Number(
+                                          e.target.value,
+                                        ),
+                                      };
+                                      setNewShieldData(updated);
+                                    }}
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                  />
+                                  <SavedOnChainValue show>
+                                    {shieldData.damageReduction}
+                                  </SavedOnChainValue>
+                                </div>
                               ) : (
-                                <span className="text-white">
+                                <span className="text-white ml-auto">
                                   {shieldData.damageReduction}
                                 </span>
                               )}
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Movement:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 shrink-0">
+                                Movement:
+                              </span>
                               {editingAttributes ? (
-                                <input
-                                  type="number"
-                                  value={
-                                    currentShieldData.movement ??
-                                    shieldData.movement
-                                  }
-                                  onChange={(e) => {
-                                    const updated = [...newShieldData];
-                                    updated[index] = {
-                                      ...updated[index],
-                                      movement: Number(e.target.value),
-                                    };
-                                    setNewShieldData(updated);
-                                  }}
-                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
-                                />
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                  <input
+                                    type="number"
+                                    value={
+                                      currentShieldData.movement ??
+                                      shieldData.movement
+                                    }
+                                    onChange={(e) => {
+                                      const updated = [...newShieldData];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        movement: Number(e.target.value),
+                                      };
+                                      setNewShieldData(updated);
+                                    }}
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                  />
+                                  <SavedOnChainValue show>
+                                    {shieldData.movement}
+                                  </SavedOnChainValue>
+                                </div>
                               ) : (
-                                <span className="text-white">
+                                <span className="text-white ml-auto">
                                   {shieldData.movement}
                                 </span>
                               )}
@@ -802,95 +1020,116 @@ const ShipAttributes: React.FC = () => {
                         </h5>
                         {specialData && (
                           <div className="space-y-1 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Range:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 shrink-0">
+                                Range:
+                              </span>
                               {editingAttributes ? (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="255"
-                                  value={
-                                    currentSpecialData.range ??
-                                    specialData.range
-                                  }
-                                  onChange={(e) => {
-                                    const value = Math.max(
-                                      0,
-                                      Math.min(255, Number(e.target.value))
-                                    );
-                                    const updated = [...newSpecialData];
-                                    updated[index] = {
-                                      ...updated[index],
-                                      range: value,
-                                    };
-                                    setNewSpecialData(updated);
-                                  }}
-                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
-                                />
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="255"
+                                    value={
+                                      currentSpecialData.range ??
+                                      specialData.range
+                                    }
+                                    onChange={(e) => {
+                                      const value = Math.max(
+                                        0,
+                                        Math.min(255, Number(e.target.value)),
+                                      );
+                                      const updated = [...newSpecialData];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        range: value,
+                                      };
+                                      setNewSpecialData(updated);
+                                    }}
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                  />
+                                  <SavedOnChainValue show>
+                                    {specialData.range}
+                                  </SavedOnChainValue>
+                                </div>
                               ) : (
-                                <span className="text-white">
+                                <span className="text-white ml-auto">
                                   {specialData.range}
                                 </span>
                               )}
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Strength:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 shrink-0">
+                                Strength:
+                              </span>
                               {editingAttributes ? (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="255"
-                                  value={
-                                    currentSpecialData.strength ??
-                                    specialData.strength
-                                  }
-                                  onChange={(e) => {
-                                    const value = Math.max(
-                                      0,
-                                      Math.min(255, Number(e.target.value))
-                                    );
-                                    const updated = [...newSpecialData];
-                                    updated[index] = {
-                                      ...updated[index],
-                                      strength: value,
-                                    };
-                                    setNewSpecialData(updated);
-                                  }}
-                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
-                                />
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="255"
+                                    value={
+                                      currentSpecialData.strength ??
+                                      specialData.strength
+                                    }
+                                    onChange={(e) => {
+                                      const value = Math.max(
+                                        0,
+                                        Math.min(255, Number(e.target.value)),
+                                      );
+                                      const updated = [...newSpecialData];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        strength: value,
+                                      };
+                                      setNewSpecialData(updated);
+                                    }}
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                  />
+                                  <SavedOnChainValue show>
+                                    {specialData.strength}
+                                  </SavedOnChainValue>
+                                </div>
                               ) : (
-                                <span className="text-white">
+                                <span className="text-white ml-auto">
                                   {specialData.strength}
                                 </span>
                               )}
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Movement:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 shrink-0">
+                                Movement:
+                              </span>
                               {editingAttributes ? (
-                                <input
-                                  type="number"
-                                  min="-128"
-                                  max="127"
-                                  value={
-                                    currentSpecialData.movement ??
-                                    specialData.movement
-                                  }
-                                  onChange={(e) => {
-                                    const value = Math.max(
-                                      -128,
-                                      Math.min(127, Number(e.target.value))
-                                    );
-                                    const updated = [...newSpecialData];
-                                    updated[index] = {
-                                      ...updated[index],
-                                      movement: value,
-                                    };
-                                    setNewSpecialData(updated);
-                                  }}
-                                  className="w-16 px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
-                                />
+                                <div className="flex items-center gap-2 ml-auto shrink-0">
+                                  <input
+                                    type="number"
+                                    min="-128"
+                                    max="127"
+                                    value={
+                                      currentSpecialData.movement ??
+                                      specialData.movement
+                                    }
+                                    onChange={(e) => {
+                                      const value = Math.max(
+                                        -128,
+                                        Math.min(127, Number(e.target.value)),
+                                      );
+                                      const updated = [...newSpecialData];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        movement: value,
+                                      };
+                                      setNewSpecialData(updated);
+                                    }}
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                  />
+                                  <SavedOnChainValue show>
+                                    {specialData.movement}
+                                  </SavedOnChainValue>
+                                </div>
                               ) : (
-                                <span className="text-white">
+                                <span className="text-white ml-auto">
                                   {specialData.movement}
                                 </span>
                               )}
@@ -908,11 +1147,15 @@ const ShipAttributes: React.FC = () => {
                   <button
                     onClick={() => {
                       setEditingAttributes(false);
+                      setGlobalArraysAtEditStart(null);
                       setNewAttributesVersion({});
                       setNewGunData([]);
                       setNewArmorData([]);
                       setNewShieldData([]);
                       setNewSpecialData([]);
+                      setNewForeAccuracy(null);
+                      setNewHullBonuses(null);
+                      setNewEngineSpeeds(null);
                     }}
                     className="px-4 py-2 bg-gray-600 text-white rounded-none font-mono hover:bg-gray-700 transition-colors"
                   >
@@ -934,11 +1177,15 @@ const ShipAttributes: React.FC = () => {
                     onSuccess={() => {
                       toast.success("Base attributes updated successfully!");
                       setEditingAttributes(false);
+                      setGlobalArraysAtEditStart(null);
                       setNewAttributesVersion({});
                       setNewGunData([]);
                       setNewArmorData([]);
                       setNewShieldData([]);
                       setNewSpecialData([]);
+                      setNewForeAccuracy(null);
+                      setNewHullBonuses(null);
+                      setNewEngineSpeeds(null);
                     }}
                     onError={(error) => {
                       console.error("Failed to update base attributes:", error);
@@ -1209,11 +1456,15 @@ const ShipAttributes: React.FC = () => {
                       className="px-4 py-2 bg-green-600 text-white rounded-none font-mono hover:bg-green-700 transition-colors"
                       onSuccess={() => {
                         toast.success("All attributes updated successfully!");
+                        setGlobalArraysAtEditStart(null);
                         setNewGunData([]);
                         setNewArmorData([]);
                         setNewShieldData([]);
                         setNewSpecialData([]);
                         setNewAttributesVersion({});
+                        setNewForeAccuracy(null);
+                        setNewHullBonuses(null);
+                        setNewEngineSpeeds(null);
                       }}
                       onError={(error) => {
                         console.error(
