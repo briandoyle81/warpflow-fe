@@ -15,7 +15,7 @@ import {
   getQueueStatus,
   clearCacheOnLogout,
 } from "../hooks";
-import { useAccount, useChainId } from "wagmi";
+import { useAccount, useChainId, usePublicClient } from "wagmi";
 import { formatEther } from "viem";
 import { toast } from "react-hot-toast";
 import { Ship } from "../types/types";
@@ -26,8 +26,11 @@ import ShipCard from "./ShipCard";
 import { useTransaction } from "../providers/TransactionContext";
 import { useShipsRead } from "../hooks/useShipsContract";
 import { TransactionButton } from "./TransactionButton";
-import { CONTRACT_ADDRESSES } from "../config/contracts";
+import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
+import type { Abi } from "viem";
+import { useCurrentCostsVersion } from "../hooks/useShipAttributesContract";
 import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
+import { fetchAndPersistShipAttributesCaches } from "../utils/shipAttributesLocalCache";
 import {
   dismissBuyShipsTutorialForSession,
   dismissConstructDeliveryTutorialForSession,
@@ -47,6 +50,9 @@ import {
 const MANAGE_NAVY_TUTORIAL_MONO: React.CSSProperties = {
   fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
 };
+
+/** Matches construct-all UI: batch cap when there are more than this many targets. */
+const STALE_COST_SYNC_BATCH_CAP = 150;
 
 function ManageNavyDroneFactoryBrief({
   onNotNow,
@@ -209,6 +215,15 @@ Big orders make the drones happy. The more hulls you order in one go, the higher
 const ManageNavy: React.FC = () => {
   const { address, isConnected, status } = useAccount();
   const chainId = useChainId();
+  const shipsContractAddress = React.useMemo(
+    () => getContractAddresses(chainId).SHIPS as `0x${string}`,
+    [chainId],
+  );
+  const shipAttributesContractAddress = React.useMemo(
+    () => getContractAddresses(chainId).SHIP_ATTRIBUTES as `0x${string}`,
+    [chainId],
+  );
+  const publicClient = usePublicClient();
   const { transactionState } = useTransaction();
   const { ships, isLoading, error, hasShips, shipCount, refetch } =
     useOwnedShips();
@@ -216,6 +231,27 @@ const ManageNavy: React.FC = () => {
 
   // Read the recycle reward amount from the contract
   const { data: recycleReward } = useShipsRead("recycleReward");
+
+  const { data: currentCostsVersion } = useCurrentCostsVersion();
+  const globalCostsVersion =
+    currentCostsVersion !== undefined && currentCostsVersion !== null
+      ? Number(currentCostsVersion)
+      : null;
+
+  const staleCostSyncShipIds = React.useMemo(() => {
+    if (globalCostsVersion === null) return [] as bigint[];
+    return ships
+      .filter((ship) => {
+        const shipCv = Number(ship.shipData.costsVersion);
+        return (
+          ship.shipData.constructed &&
+          ship.shipData.timestampDestroyed === 0n &&
+          !ship.shipData.inFleet &&
+          shipCv !== globalCostsVersion
+        );
+      })
+      .map((s) => s.id);
+  }, [ships, globalCostsVersion]);
 
   // Read the user's purchase count
   const { data: amountPurchased } = useShipsRead(
@@ -225,6 +261,20 @@ const ManageNavy: React.FC = () => {
 
   // Get ship attributes for in-game properties
   const shipIds = ships.map((ship) => ship.id);
+  const shipIdsRef = React.useRef(shipIds);
+  React.useEffect(() => {
+    shipIdsRef.current = shipIds;
+  }, [shipIds]);
+
+  const afterShipCostSyncPersistCaches = React.useCallback(() => {
+    if (!publicClient) return;
+    void fetchAndPersistShipAttributesCaches(publicClient, {
+      chainId,
+      shipAttributesAddress: shipAttributesContractAddress,
+      shipIds: shipIdsRef.current,
+    });
+  }, [publicClient, chainId, shipAttributesContractAddress]);
+
   const {
     attributes: shipAttributes,
     isLoading: attributesLoading,
@@ -570,6 +620,107 @@ const ManageNavy: React.FC = () => {
     }
   };
 
+  const shipGridRef = React.useRef<HTMLDivElement>(null);
+  const [nameBlockMinHeights, setNameBlockMinHeights] = React.useState<
+    Record<string, number>
+  >({});
+
+  const shipsLayoutKey = React.useMemo(
+    () =>
+      [
+        filteredAndSortedShips.map((s) => s.id.toString()).join("\0"),
+        showInGameProperties ? "ig" : "nft",
+      ].join("|"),
+    [filteredAndSortedShips, showInGameProperties],
+  );
+
+  const measureShipNameRowHeights = React.useCallback(() => {
+    const grid = shipGridRef.current;
+    if (!grid) return;
+
+    const children = [...grid.children] as HTMLElement[];
+    const rowMap = new Map<number, { ids: string[]; heights: number[] }>();
+
+    for (const el of children) {
+      const id = el.dataset.shipId;
+      if (!id) continue;
+      const block = el.querySelector(
+        "[data-ship-name-block]",
+      ) as HTMLElement | null;
+      if (!block) continue;
+      const top = el.offsetTop;
+      if (!rowMap.has(top)) {
+        rowMap.set(top, { ids: [], heights: [] });
+      }
+      const g = rowMap.get(top)!;
+      g.ids.push(id);
+      g.heights.push(Math.round(block.getBoundingClientRect().height));
+    }
+
+    /** Name row is star + title; one line is typically under this (px). */
+    const singleLineBlockMaxPx = 52;
+    const next: Record<string, number> = {};
+
+    for (const { ids, heights } of rowMap.values()) {
+      if (ids.length === 0) continue;
+      const minH = Math.min(...heights);
+      const maxH = Math.max(...heights);
+      const rowHasMultilineOrMixed =
+        maxH > singleLineBlockMaxPx || maxH > minH + 8;
+      if (!rowHasMultilineOrMixed) continue;
+      for (const sid of ids) {
+        next[sid] = maxH;
+      }
+    }
+
+    setNameBlockMinHeights((prev) => {
+      const prevKeys = Object.keys(prev);
+      const nextKeys = Object.keys(next);
+      if (prevKeys.length !== nextKeys.length) return next;
+      for (const k of nextKeys) {
+        if (prev[k] !== next[k]) return next;
+      }
+      return prev;
+    });
+  }, []);
+
+  React.useLayoutEffect(() => {
+    if (!hasShips) {
+      setNameBlockMinHeights({});
+      return;
+    }
+    setNameBlockMinHeights({});
+    let raf1 = 0;
+    let raf2 = 0;
+    let cancelled = false;
+    raf1 = requestAnimationFrame(() => {
+      if (cancelled) return;
+      measureShipNameRowHeights();
+      raf2 = requestAnimationFrame(() => {
+        if (cancelled) return;
+        measureShipNameRowHeights();
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [hasShips, shipsLayoutKey, measureShipNameRowHeights]);
+
+  React.useEffect(() => {
+    if (!hasShips) return;
+    const grid = shipGridRef.current;
+    if (!grid) return;
+    const ro = new ResizeObserver(() => measureShipNameRowHeights());
+    ro.observe(grid);
+    window.addEventListener("resize", measureShipNameRowHeights);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measureShipNameRowHeights);
+    };
+  }, [hasShips, shipsLayoutKey, measureShipNameRowHeights]);
+
   if (!address || !isConnected) {
     return (
       <div className="text-cyan-300 font-mono text-center">
@@ -627,7 +778,7 @@ const ManageNavy: React.FC = () => {
   }
 
   const constructTutorialButtonLabel =
-    fleetStats.unconstructedShips > 150
+    fleetStats.unconstructedShips > STALE_COST_SYNC_BATCH_CAP
       ? ("[CONSTRUCT 150 SHIPS]" as const)
       : ("[CONSTRUCT ALL SHIPS]" as const);
 
@@ -690,6 +841,40 @@ const ManageNavy: React.FC = () => {
         )}
     </div>
   );
+
+  const staleCostBulkButton =
+    staleCostSyncShipIds.length === 0 ? null : (
+      <TransactionButton
+        transactionId="manage-navy-sync-stale-costs-bulk"
+        contractAddress={shipsContractAddress}
+        abi={CONTRACT_ABIS.SHIPS as Abi}
+        functionName="syncShipCosts"
+        args={[
+          staleCostSyncShipIds.length > STALE_COST_SYNC_BATCH_CAP
+            ? staleCostSyncShipIds.slice(0, STALE_COST_SYNC_BATCH_CAP)
+            : staleCostSyncShipIds,
+        ]}
+        disabled={transactionState.isPending}
+        className="px-6 py-3 rounded-none border-2 border-amber-400 text-amber-400 hover:border-amber-300 hover:text-amber-300 hover:bg-amber-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ borderRadius: 0 }}
+        onSuccess={() => {
+          toast.success(
+            staleCostSyncShipIds.length > STALE_COST_SYNC_BATCH_CAP
+              ? "150 ships cost version update started!"
+              : "Ship cost versions updated!",
+          );
+          afterShipCostSyncPersistCaches();
+          setTimeout(() => refetch(), 1000);
+        }}
+        onError={() => {
+          toast.error("Failed to update ship cost versions");
+        }}
+      >
+        {staleCostSyncShipIds.length > STALE_COST_SYNC_BATCH_CAP
+          ? "[UPDATE 150 SHIPS]"
+          : "[UPDATE ALL SHIPS]"}
+      </TransactionButton>
+    );
 
   return (
     <div
@@ -938,11 +1123,11 @@ const ManageNavy: React.FC = () => {
                 style={{ borderRadius: 0 }}
               >
                 <div className="flex flex-nowrap items-center justify-center gap-4">
-                  {fleetStats.unconstructedShips > 150 ? (
+                  {fleetStats.unconstructedShips > STALE_COST_SYNC_BATCH_CAP ? (
                     <ShipActionButton
                       action="constructShips"
                       shipIds={shipsByStatus.unconstructed
-                        .slice(0, 150)
+                        .slice(0, STALE_COST_SYNC_BATCH_CAP)
                         .map((ship: Ship) => ship.id)}
                       className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={fleetStats.unconstructedShips === 0}
@@ -986,6 +1171,7 @@ const ManageNavy: React.FC = () => {
                       [CONSTRUCT ALL SHIPS]
                     </ShipActionButton>
                   )}
+                  {staleCostBulkButton}
                 </div>
               </div>
               <ManageNavyConstructDeliveryBrief
@@ -1016,11 +1202,11 @@ const ManageNavy: React.FC = () => {
         ) : showBuyShipsTutorial ? (
           <div className="relative inline-flex items-start gap-4">
             <div className="relative z-10 flex shrink-0 gap-4">
-              {fleetStats.unconstructedShips > 150 ? (
+              {fleetStats.unconstructedShips > STALE_COST_SYNC_BATCH_CAP ? (
                 <ShipActionButton
                   action="constructShips"
                   shipIds={shipsByStatus.unconstructed
-                    .slice(0, 150)
+                    .slice(0, STALE_COST_SYNC_BATCH_CAP)
                     .map((ship: Ship) => ship.id)}
                   className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={fleetStats.unconstructedShips === 0}
@@ -1050,6 +1236,7 @@ const ManageNavy: React.FC = () => {
                   [CONSTRUCT ALL SHIPS]
                 </ShipActionButton>
               )}
+              {staleCostBulkButton}
               <div
                 className="pointer-events-auto absolute inset-0 z-20 rounded-none bg-slate-950/85"
                 aria-hidden="true"
@@ -1090,11 +1277,11 @@ const ManageNavy: React.FC = () => {
         ) : (
           <div className="relative inline-flex items-start gap-4">
             <div className="relative z-10 flex shrink-0 gap-4">
-              {fleetStats.unconstructedShips > 150 ? (
+              {fleetStats.unconstructedShips > STALE_COST_SYNC_BATCH_CAP ? (
                 <ShipActionButton
                   action="constructShips"
                   shipIds={shipsByStatus.unconstructed
-                    .slice(0, 150)
+                    .slice(0, STALE_COST_SYNC_BATCH_CAP)
                     .map((ship: Ship) => ship.id)}
                   className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={fleetStats.unconstructedShips === 0}
@@ -1124,6 +1311,7 @@ const ManageNavy: React.FC = () => {
                   [CONSTRUCT ALL SHIPS]
                 </ShipActionButton>
               )}
+              {staleCostBulkButton}
 
               <button
                 type="button"
@@ -1558,23 +1746,74 @@ const ManageNavy: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredAndSortedShips.map((ship: Ship) => (
-              <ShipCard
-                key={ship.id.toString()}
-                ship={ship}
-                isStarred={starredShips.has(ship.id.toString())}
-                onToggleStar={() => toggleStar(ship.id.toString())}
-                isSelected={selectedShips.has(ship.id.toString())}
-                onToggleSelection={() =>
-                  toggleShipSelection(ship.id.toString())
-                }
-                onRecycleClick={() => handleRecycleClick(ship)}
-                showInGameProperties={showInGameProperties}
-                inGameAttributes={attributesMap.get(ship.id)}
-                attributesLoading={attributesLoading}
-              />
-            ))}
+          <div
+            ref={shipGridRef}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          >
+            {filteredAndSortedShips.map((ship: Ship) => {
+              const shipCv = Number(ship.shipData.costsVersion);
+              const costsVersionStale =
+                globalCostsVersion !== null &&
+                ship.shipData.constructed &&
+                ship.shipData.timestampDestroyed === 0n &&
+                !ship.shipData.inFleet &&
+                shipCv !== globalCostsVersion;
+
+              return (
+                <ShipCard
+                  key={ship.id.toString()}
+                  ship={ship}
+                  isStarred={starredShips.has(ship.id.toString())}
+                  onToggleStar={() => toggleStar(ship.id.toString())}
+                  isSelected={selectedShips.has(ship.id.toString())}
+                  onToggleSelection={() =>
+                    toggleShipSelection(ship.id.toString())
+                  }
+                  onRecycleClick={() => handleRecycleClick(ship)}
+                  showInGameProperties={showInGameProperties}
+                  inGameAttributes={attributesMap.get(ship.id)}
+                  attributesLoading={attributesLoading}
+                  costsVersionStale={costsVersionStale}
+                  layoutShipId={ship.id.toString()}
+                  nameBlockMinHeightPx={
+                    nameBlockMinHeights[ship.id.toString()]
+                  }
+                  costVersionSyncButton={
+                    costsVersionStale ? (
+                      <TransactionButton
+                        transactionId={`sync-ship-costs-${ship.id.toString()}`}
+                        contractAddress={shipsContractAddress}
+                        abi={CONTRACT_ABIS.SHIPS as Abi}
+                        // Ships.syncShipCosts(uint256[]): permissionless; applies
+                        // getCurrentCostsVersion + calculateShipCost. Not setCostOfShip
+                        // (owner / game only). Reverts on-chain if ship is in fleet.
+                        functionName="syncShipCosts"
+                        args={[[ship.id]]}
+                        className="w-full px-2 py-1.5 border-2 border-solid text-xs font-bold uppercase tracking-wider transition-colors duration-150"
+                        style={{
+                          fontFamily:
+                            "var(--font-rajdhani), 'Arial Black', sans-serif",
+                          borderColor: "var(--color-amber)",
+                          color: "var(--color-amber)",
+                          backgroundColor: "var(--color-near-black)",
+                          borderRadius: 0,
+                        }}
+                        onSuccess={() => {
+                          toast.success("Ship cost version updated");
+                          afterShipCostSyncPersistCaches();
+                          setTimeout(() => refetch(), 1000);
+                        }}
+                        onError={() => {
+                          toast.error("Failed to update ship cost version");
+                        }}
+                      >
+                        Update Ship Version
+                      </TransactionButton>
+                    ) : undefined
+                  }
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -1653,7 +1892,7 @@ const ManageNavy: React.FC = () => {
                 {canRecycle && (
                   <TransactionButton
                     transactionId={`recycle-ship-${shipToRecycle.id}`}
-                    contractAddress={CONTRACT_ADDRESSES.SHIPS as `0x${string}`}
+                    contractAddress={shipsContractAddress}
                     abi={[
                       {
                         inputs: [

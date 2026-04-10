@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
 } from "react";
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
@@ -29,6 +30,7 @@ import { LobbyLeaveButton } from "./LobbyLeaveButton";
 import { LobbyAcceptButton } from "./LobbyAcceptButton";
 import { LobbyRejectButton } from "./LobbyRejectButton";
 import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
+import { useCurrentCostsVersion } from "../hooks/useShipAttributesContract";
 import { calculateShipRank, getRankColor } from "../utils/shipLevel";
 import { formatDestroyedDate } from "../utils/dateUtils";
 import { MapDisplay } from "./MapDisplay";
@@ -59,6 +61,11 @@ const Lobbies: React.FC = () => {
     });
 
   const { ships, isLoading: shipsLoading } = useOwnedShips();
+  const { data: currentCostsVersion } = useCurrentCostsVersion();
+  const globalCostsVersion =
+    currentCostsVersion !== undefined && currentCostsVersion !== null
+      ? Number(currentCostsVersion)
+      : null;
   const { games: playerGames, refetch: refetchGames } = usePlayerGames();
 
   // Calculate player state from lobby list instead of blockchain
@@ -246,6 +253,38 @@ const Lobbies: React.FC = () => {
         !!ship.owner,
     );
   }, [playerFleetShipsData]);
+
+  const resolveFleetPickerShip = useCallback(
+    (shipId: bigint): Ship | undefined =>
+      ships.find((s) => s.id === shipId) ??
+      playerFleetShips.find((s) => s.id === shipId),
+    [ships, playerFleetShips],
+  );
+
+  // Drop ships that are not on the current global costs version from selection
+  useEffect(() => {
+    if (globalCostsVersion === null) return;
+    setSelectedShips((prev) => {
+      const next = prev.filter((id) => {
+        const ship = resolveFleetPickerShip(id);
+        return (
+          ship !== undefined &&
+          Number(ship.shipData.costsVersion) === globalCostsVersion
+        );
+      });
+      return next.length === prev.length ? prev : next;
+    });
+    setShipPositions((prev) => {
+      const next = prev.filter((p) => {
+        const ship = resolveFleetPickerShip(p.shipId);
+        return (
+          ship !== undefined &&
+          Number(ship.shipData.costsVersion) === globalCostsVersion
+        );
+      });
+      return next.length === prev.length ? prev : next;
+    });
+  }, [globalCostsVersion, ships, playerFleetShips, resolveFleetPickerShip]);
 
   // Track the last loaded fleet ID to avoid reloading unnecessarily
   const lastLoadedFleetIdRef = useRef<bigint | null>(null);
@@ -714,8 +753,15 @@ const Lobbies: React.FC = () => {
 
   // Filter ships based on current filters
   const filteredShips = ships.filter((ship) => {
-    // Always show selected ships regardless of filters
-    if (selectedShips.includes(ship.id)) return true;
+    const costsVersionOk =
+      globalCostsVersion === null ||
+      Number(ship.shipData.costsVersion) === globalCostsVersion;
+
+    if (selectedShips.includes(ship.id)) {
+      return costsVersionOk;
+    }
+
+    if (!costsVersionOk) return false;
 
     // Filter out ships that are not available for fleet selection
     // Ships must be constructed, not destroyed, and not already in a fleet
@@ -780,6 +826,16 @@ const Lobbies: React.FC = () => {
     return true;
   });
 
+  const selectedFleetHasStaleCostsVersion = useMemo(() => {
+    if (globalCostsVersion === null) return false;
+    return selectedShips.some((id) => {
+      const ship = resolveFleetPickerShip(id);
+      return (
+        !ship || Number(ship.shipData.costsVersion) !== globalCostsVersion
+      );
+    });
+  }, [globalCostsVersion, selectedShips, resolveFleetPickerShip]);
+
   // Create lobby form state
   const [createForm, setCreateForm] = useState({
     costLimit: "1000", // Fixed cost limit
@@ -802,6 +858,13 @@ const Lobbies: React.FC = () => {
 
   const handleCreateFleet = async (lobbyId: bigint) => {
     if (!isConnected || selectedShips.length === 0) return;
+
+    if (selectedFleetHasStaleCostsVersion) {
+      toast.error(
+        "Remove or update ships that are not on the current cost version (Manage Navy) before creating a fleet.",
+      );
+      return;
+    }
 
     const currentLobby = lobbyList.lobbies.find(
       (lobby) => lobby.basic.id === lobbyId,
@@ -876,6 +939,13 @@ const Lobbies: React.FC = () => {
 
   const createFleetWithConfirmation = async (lobbyId: bigint) => {
     if (!isConnected || selectedShips.length === 0) return;
+
+    if (selectedFleetHasStaleCostsVersion) {
+      toast.error(
+        "Remove or update ships that are not on the current cost version (Manage Navy) before creating a fleet.",
+      );
+      return;
+    }
 
     setIsCreatingFleet(true);
     try {
@@ -2166,7 +2236,8 @@ const Lobbies: React.FC = () => {
                           selectedShips.length === 0 ||
                           isCreatingFleet ||
                           isUnder90Percent ||
-                          !hasMovedShip
+                          !hasMovedShip ||
+                          selectedFleetHasStaleCostsVersion
                         }
                         className="px-4 py-2 rounded-none border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -2176,7 +2247,9 @@ const Lobbies: React.FC = () => {
                             ? `NEED ${Math.round(costLimit * 0.9)} POINTS`
                             : !hasMovedShip
                               ? "MOVE AT LEAST ONE SHIP FORWARD"
-                              : `CREATE FLEET (${selectedShips.length})`}
+                              : selectedFleetHasStaleCostsVersion
+                                ? "COST VERSION OUT OF DATE (MANAGE NAVY)"
+                                : `CREATE FLEET (${selectedShips.length})`}
                       </button>
                       <button
                         onClick={() => {
@@ -3039,7 +3112,9 @@ const Lobbies: React.FC = () => {
                     </button>
                     <button
                       onClick={() => createFleetWithConfirmation(selectedLobby)}
-                      disabled={isCreatingFleet}
+                      disabled={
+                        isCreatingFleet || selectedFleetHasStaleCostsVersion
+                      }
                       className="flex-1 px-4 py-2 border border-yellow-400 text-yellow-400 rounded-none hover:bg-yellow-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isCreatingFleet ? "CREATING..." : "CONFIRM FLEET"}

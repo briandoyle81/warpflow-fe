@@ -2,50 +2,20 @@ import React from "react";
 import { useReadContract } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import { Attributes } from "../types/types";
-
-interface CachedAttributes {
-  data: Attributes[];
-  timestamp: number;
-  shipIds: string[];
-}
-
-const CACHE_KEY = "ship-attributes-cache-v2"; // v2: order-sensitive cache key
-const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
+import {
+  readValidShipAttributesByIdsCache,
+  shipIdsToCacheKeyString,
+  writeShipAttributesByIdsCache,
+} from "../utils/shipAttributesLocalCache";
 
 export function useShipAttributesByIds(shipIds: bigint[]) {
-  // Convert shipIds to strings for caching
   const shipIdsString = React.useMemo(
-    () => shipIds.map((id) => id.toString()).join(","),
-    [shipIds]
+    () => shipIdsToCacheKeyString(shipIds),
+    [shipIds],
   );
 
-  // Check cache first - memoized to prevent repeated calls
   const getCachedData = React.useCallback((): Attributes[] | null => {
-    if (typeof window === "undefined") return null;
-
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (!cached) return null;
-
-      const parsed: CachedAttributes = JSON.parse(cached);
-      const now = Date.now();
-
-      // Check if cache is still valid (within 1 week and same ship IDs in same order)
-      if (
-        now - parsed.timestamp < CACHE_DURATION &&
-        parsed.shipIds.join(",") === shipIdsString
-      ) {
-        return parsed.data;
-      }
-
-      // Cache expired or different ship IDs, remove it
-      localStorage.removeItem(CACHE_KEY);
-      return null;
-    } catch (error) {
-      console.warn("Failed to read ship attributes cache:", error);
-      localStorage.removeItem(CACHE_KEY);
-      return null;
-    }
+    return readValidShipAttributesByIdsCache(shipIdsString);
   }, [shipIdsString]);
 
   // Get cached data
@@ -66,19 +36,9 @@ export function useShipAttributesByIds(shipIds: bigint[]) {
     args: shouldCallContract ? [shipIds] : undefined,
   });
 
-  // Cache the contract data when it's received
   React.useEffect(() => {
-    if (contractData && typeof window !== "undefined") {
-      try {
-        const cacheData: CachedAttributes = {
-          data: contractData as Attributes[],
-          timestamp: Date.now(),
-          shipIds: shipIds.map((id) => id.toString()), // preserve order
-        };
-        localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-      } catch (error) {
-        console.warn("Failed to cache ship attributes:", error);
-      }
+    if (contractData) {
+      writeShipAttributesByIdsCache(shipIds, contractData as Attributes[]);
     }
   }, [contractData, shipIds]);
 

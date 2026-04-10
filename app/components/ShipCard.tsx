@@ -35,6 +35,14 @@ interface ShipCardProps {
   reactorCriticalStatus?: "none" | "warning" | "critical"; // Reactor critical status for game view borders
   hasMoved?: boolean; // Whether the ship has moved (for game view status display)
   gameViewMode?: boolean; // Explicitly mark this as game view for styling
+  /** Manage Navy: ship costsVersion behind global (shown only when not destroyed / not in fleet). */
+  costsVersionStale?: boolean;
+  /** Manage Navy: calls Ships.syncShipCosts (not setCostOfShip, which is owner/game). */
+  costVersionSyncButton?: React.ReactNode;
+  /** Manage Navy: enables row sync of name block height via data attributes */
+  layoutShipId?: string;
+  /** Manage Navy: min height (px) for the star+name row to align cards in a grid row */
+  nameBlockMinHeightPx?: number;
 }
 
 const ShipCard: React.FC<ShipCardProps> = ({
@@ -58,6 +66,10 @@ const ShipCard: React.FC<ShipCardProps> = ({
   reactorCriticalStatus = "none",
   hasMoved = false,
   gameViewMode = false,
+  costsVersionStale = false,
+  costVersionSyncButton,
+  layoutShipId,
+  nameBlockMinHeightPx,
 }) => {
   // Determine border class based on selection mode and ship state
   const getBorderClass = () => {
@@ -113,6 +125,16 @@ const ShipCard: React.FC<ShipCardProps> = ({
         : "border-red-400 bg-black/60";
     }
     if (ship.shipData.inFleet) {
+      return tooltipMode
+        ? "border-orange-400 bg-gray-900"
+        : "border-orange-400 bg-orange-400/20";
+    }
+    if (
+      costsVersionStale &&
+      ship.shipData.constructed &&
+      ship.shipData.timestampDestroyed === 0n &&
+      !ship.shipData.inFleet
+    ) {
       return tooltipMode
         ? "border-orange-400 bg-gray-900"
         : "border-orange-400 bg-orange-400/20";
@@ -217,6 +239,19 @@ const ShipCard: React.FC<ShipCardProps> = ({
         backgroundColor: tooltipMode ? "var(--color-slate)" : "var(--color-near-black)",
       };
     }
+    if (
+      costsVersionStale &&
+      ship.shipData.constructed &&
+      ship.shipData.timestampDestroyed === 0n &&
+      !ship.shipData.inFleet
+    ) {
+      return {
+        borderColor: "var(--color-amber)",
+        borderTopColor: "var(--color-amber)",
+        borderLeftColor: "var(--color-amber)",
+        backgroundColor: tooltipMode ? "var(--color-slate)" : "var(--color-near-black)",
+      };
+    }
     if (ship.shipData.constructed) {
       if (selectionMode) {
         return {
@@ -267,6 +302,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
           ? "cursor-pointer transition-colors duration-150"
           : ""
       }`}
+      {...(layoutShipId ? { "data-ship-id": layoutShipId } : {})}
       style={{
         ...borderStyle,
         borderRadius: 0, // Square corners
@@ -401,14 +437,22 @@ const ShipCard: React.FC<ShipCardProps> = ({
       </div>
 
       <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-2">
+        <div
+          className="flex items-start gap-2 min-w-0"
+          {...(layoutShipId ? { "data-ship-name-block": "" } : {})}
+          style={
+            nameBlockMinHeightPx && nameBlockMinHeightPx > 0
+              ? { minHeight: nameBlockMinHeightPx }
+              : undefined
+          }
+        >
           {/* Star icon where checkbox used to be */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               onToggleStar();
             }}
-            className="p-1 hover:bg-yellow-400/10 rounded-none transition-all duration-200"
+            className="p-1 shrink-0 mt-0.5 hover:bg-yellow-400/10 rounded-none transition-all duration-200"
           >
             <svg
               className={`w-4 h-4 ${
@@ -429,7 +473,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
               />
             </svg>
           </button>
-          <h5 className="font-bold text-lg">
+          <h5 className="font-bold text-lg min-w-0 break-words">
             {ship.name || `Ship #${ship.id}`}
           </h5>
         </div>
@@ -734,6 +778,15 @@ const ShipCard: React.FC<ShipCardProps> = ({
       {selectionMode && isSelected && (
         <div className="mt-2 text-center">
           <span className="text-green-400 text-sm font-bold">✓ SELECTED</span>
+        </div>
+      )}
+      {costsVersionStale && costVersionSyncButton && (
+        <div
+          className="mt-3 w-full"
+          onClick={(e) => e.stopPropagation()}
+          role="presentation"
+        >
+          {costVersionSyncButton}
         </div>
       )}
     </div>

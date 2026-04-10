@@ -54,4 +54,7 @@ export type ShipsWriteFunction =
   | "constructShips"
   | "constructAllMyShips"
   | "shipBreaker"
+  /** Permissionless: refreshes costsVersion + cost via ShipAttributes (reverts if ship in fleet). */
+  | "syncShipCosts"
+  /** Owner or game only; players should use syncShipCosts. */
   | "setCostOfShip";
