@@ -9,7 +9,7 @@ import {
   getArmorName,
   getShieldName,
 } from "../types/types";
-import { calculateShipRank, getRankProgressInfo, getRankColor } from "../utils/shipLevel";
+import { getRankProgressInfo, getRankColor } from "../utils/shipLevel";
 import { formatDestroyedDate } from "../utils/dateUtils";
 import { Attributes } from "../types/types";
 
@@ -580,14 +580,11 @@ const ShipCard: React.FC<ShipCardProps> = ({
           {ship.shipData.constructed && (
             <div className="relative group">
               <span
-                className="text-xs px-2 py-1 border border-solid uppercase font-semibold tracking-wider cursor-default"
+                className={`text-xs px-2 py-1 border border-solid uppercase font-semibold tracking-wider cursor-default ${getRankColor(
+                  rankInfo.rank,
+                )}`}
                 style={{
                   fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-                  backgroundColor: "var(--color-near-black)",
-                  color: "var(--color-text-primary)",
-                  borderColor: "var(--color-gunmetal)",
-                  borderTopColor: "var(--color-steel)",
-                  borderLeftColor: "var(--color-steel)",
                   borderRadius: 0, // Square corners
                 }}
               >
