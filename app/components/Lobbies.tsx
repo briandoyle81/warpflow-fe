@@ -1177,6 +1177,14 @@ const Lobbies: React.FC = () => {
       : 1000;
     const ninetyPercentThreshold = costLimit * 0.9;
     const isUnderNinetyPercent = totalCost < ninetyPercentThreshold;
+    const isOverCostLimit = totalCost > costLimit;
+
+    if (isOverCostLimit) {
+      toast.error(
+        `Fleet threat (${totalCost}) exceeds this lobby limit (${costLimit}). Remove ships or pick a different lobby.`,
+      );
+      return;
+    }
 
     if (isUnderNinetyPercent) {
       setShowFleetConfirmation(true);
@@ -1251,6 +1259,23 @@ const Lobbies: React.FC = () => {
     if (selectedFleetHasStaleCostsVersion) {
       toast.error(
         "Remove or update ships that are not on the current cost version (Manage Navy) before creating a fleet.",
+      );
+      return;
+    }
+
+    const currentLobbyForCost = lobbyList.lobbies.find(
+      (lobby) => lobby.basic.id === lobbyId,
+    );
+    const totalThreat = selectedShips.reduce((sum, shipId) => {
+      const ship = ships.find((s) => s.id === shipId);
+      return sum + (ship ? Number(ship.shipData.cost) : 0);
+    }, 0);
+    const lobbyCostLimit = currentLobbyForCost
+      ? Number(currentLobbyForCost.basic.costLimit)
+      : 1000;
+    if (totalThreat > lobbyCostLimit) {
+      toast.error(
+        `Fleet threat (${totalThreat}) exceeds this lobby limit (${lobbyCostLimit}). Remove ships before confirming.`,
       );
       return;
     }
@@ -2825,6 +2850,7 @@ const Lobbies: React.FC = () => {
                           selectedShips.length === 0 ||
                           isCreatingFleet ||
                           fleetExceedsMaxSize ||
+                          isOverLimit ||
                           isUnder90Percent ||
                           !hasMovedShip ||
                           selectedFleetHasStaleCostsVersion
@@ -2835,13 +2861,15 @@ const Lobbies: React.FC = () => {
                           ? "CREATING FLEET..."
                           : fleetExceedsMaxSize
                             ? `MAX ${MAX_SHIPS_PER_FLEET} SHIPS (${selectedShips.length} SELECTED)`
-                            : isUnder90Percent
-                              ? `NEED ${Math.round(costLimit * 0.9)} POINTS`
-                              : !hasMovedShip
-                                ? "MOVE AT LEAST ONE SHIP FORWARD"
-                                : selectedFleetHasStaleCostsVersion
-                                  ? "COST VERSION OUT OF DATE (MANAGE NAVY)"
-                                  : `CREATE FLEET (${selectedShips.length})`}
+                            : isOverLimit
+                              ? `OVER ${costLimit} THREAT LIMIT`
+                              : isUnder90Percent
+                                ? `NEED ${Math.round(costLimit * 0.9)} POINTS`
+                                : !hasMovedShip
+                                  ? "MOVE AT LEAST ONE SHIP FORWARD"
+                                  : selectedFleetHasStaleCostsVersion
+                                    ? "COST VERSION OUT OF DATE (MANAGE NAVY)"
+                                    : `CREATE FLEET (${selectedShips.length})`}
                       </button>
                       <button
                         onClick={() => {
@@ -3636,6 +3664,7 @@ const Lobbies: React.FC = () => {
           const costLimit = currentLobby
             ? Number(currentLobby.basic.costLimit)
             : 1000;
+          const confirmationOverLimit = totalCost > costLimit;
 
           return (
             <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[420]">
@@ -3666,6 +3695,7 @@ const Lobbies: React.FC = () => {
                       onClick={() => createFleetWithConfirmation(selectedLobby)}
                       disabled={
                         isCreatingFleet ||
+                        confirmationOverLimit ||
                         selectedFleetHasStaleCostsVersion ||
                         selectedShips.length > MAX_SHIPS_PER_FLEET
                       }
