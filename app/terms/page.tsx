@@ -175,7 +175,7 @@ export default function TermsOfServicePage() {
             <p style={{ color: "var(--color-text-secondary)" }}>
               You are solely responsible for your wallet, private keys, seed phrases,
               and any transactions you sign or submit. We do not custody your assets
-              and cannot recover lost keys, reverse on-chain transactions, or undo
+              and cannot recover lost keys, reverse onchain transactions, or undo
               mistaken transfers. If you lose access to your wallet, we cannot
               restore it.
             </p>

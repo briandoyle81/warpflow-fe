@@ -1527,8 +1527,9 @@ const ManageNavy: React.FC = () => {
       {/* Ships Display */}
       {!hasShips ? (
         <div className="text-center">
-          <p className="text-lg opacity-80 mb-4">No ships found in your navy</p>
-          <p className="text-sm opacity-60">Purchase ships to get started</p>
+          <p className="text-lg opacity-80 mb-4">
+            Claim free ships to get started
+          </p>
         </div>
       ) : (
         <div
@@ -1627,7 +1628,7 @@ const ManageNavy: React.FC = () => {
                         abi={CONTRACT_ABIS.SHIPS as Abi}
                         // Ships.syncShipCosts(uint256[]): permissionless; applies
                         // getCurrentCostsVersion + calculateShipCost. Not setCostOfShip
-                        // (owner / game only). Reverts on-chain if ship is in fleet.
+                        // (owner / game only). Reverts onchain if ship is in fleet.
                         functionName="syncShipCosts"
                         args={[[ship.id]]}
                         className="w-full px-2 py-1.5 border-2 border-solid text-xs font-bold uppercase tracking-wider transition-colors duration-150"

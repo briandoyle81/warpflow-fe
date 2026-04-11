@@ -1,13 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAccount, useBlockNumber } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLobbiesRead } from "./useLobbiesContract";
+import { getSelectedChainId } from "../config/networks";
 import { Lobby } from "../types/types";
 
 export function useLobbyList() {
-  const { address } = useAccount();
+  const { address, chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
   const queryClient = useQueryClient();
-  const { data: blockNumber } = useBlockNumber({ watch: true });
+  const { data: blockNumber } = useBlockNumber({
+    watch: true,
+    chainId: activeChainId,
+  });
 
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +22,15 @@ export function useLobbyList() {
   const lobbiesData = useLobbiesRead("getAllLobbiesForPlayerWithDupes", [
     address || "0x0",
   ]);
+
+  const prevChainIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = prevChainIdRef.current;
+    prevChainIdRef.current = activeChainId;
+    if (prev === null || prev === activeChainId) return;
+    setLobbies([]);
+    setError(null);
+  }, [activeChainId]);
 
   // Invalidate queries when block number changes (Wagmi v2 approach)
   useEffect(() => {
@@ -36,7 +50,7 @@ export function useLobbyList() {
     }, 5000); // 5 seconds
 
     return () => clearInterval(interval);
-  }, [queryClient, lobbiesData.queryKey, address]);
+  }, [queryClient, lobbiesData.queryKey, address, activeChainId]);
 
   // Process the lobby data when it changes
   useEffect(() => {
@@ -76,7 +90,13 @@ export function useLobbyList() {
     setLobbies(fetchedLobbies);
     setIsLoading(lobbiesData.isLoading);
     setError(lobbiesData.error?.message || null);
-  }, [lobbiesData.data, lobbiesData.isLoading, lobbiesData.error, address]);
+  }, [
+    lobbiesData.data,
+    lobbiesData.isLoading,
+    lobbiesData.error,
+    address,
+    activeChainId,
+  ]);
 
   const processLobbyData = (data: unknown): Lobby[] => {
     if (!data || !Array.isArray(data)) return [];

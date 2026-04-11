@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect } from "react";
+import { useState, useEffect, useLayoutEffect, type CSSProperties } from "react";
 import { useAccount } from "wagmi";
 import Header from "./components/Header";
+import AlphaDiscordNoticeBar from "./components/AlphaDiscordNoticeBar";
 import SiteFooter from "./components/SiteFooter";
 import ManageNavy from "./components/ManageNavy";
 import Lobbies from "./components/Lobbies";
@@ -184,31 +185,39 @@ export default function Home() {
   /** Hide site header (0px row) during Info onboarding tutorial or Games detail; not tied to wallet state. */
   const hideGlobalChrome = isInfoTutorialActive || isGamesDetailActive;
 
+  const topChromeRowStyle: CSSProperties = hideGlobalChrome
+    ? {
+        height: "0px",
+        minHeight: 0,
+        maxHeight: "0px",
+        overflow: "hidden",
+        pointerEvents: "none",
+      }
+    : {};
+
   // Show loading state while wallet is connecting
   if (status === "connecting" || status === "reconnecting") {
     return (
       <div
-        className={`grid min-h-screen ${
-          hideGlobalChrome
-            ? "grid-rows-[0px_1fr_20px]"
-            : "grid-rows-[auto_1fr_20px]"
-        }`}
+        className="flex min-h-screen flex-col"
         style={{ backgroundColor: "var(--color-near-black)" }}
       >
         <div
-          style={{
-            height: hideGlobalChrome ? "0px" : "auto",
-            minHeight: hideGlobalChrome ? 0 : undefined,
-            maxHeight: hideGlobalChrome ? "0px" : undefined,
-            overflow: hideGlobalChrome ? "hidden" : "visible",
-            pointerEvents: hideGlobalChrome ? "none" : "auto",
-          }}
+          className="shrink-0"
+          style={topChromeRowStyle}
+          aria-hidden={hideGlobalChrome}
+        >
+          <AlphaDiscordNoticeBar suppressed={hideGlobalChrome} />
+        </div>
+        <div
+          className="shrink-0"
+          style={topChromeRowStyle}
           aria-hidden={hideGlobalChrome}
         >
           <Header />
         </div>
         <main
-          className={`flex flex-col gap-8 row-start-2 pb-20 px-8 sm:px-20 w-full max-w-7xl mx-auto ${
+          className={`flex min-h-0 flex-1 flex-col gap-8 px-8 pb-20 sm:px-20 w-full max-w-7xl mx-auto ${
             hideGlobalChrome ? "pt-0" : "pt-4"
           }`}
         >
@@ -236,34 +245,34 @@ export default function Home() {
             </div>
           </div>
         </main>
-        <SiteFooter />
+        <div className="shrink-0">
+          <SiteFooter />
+        </div>
       </div>
     );
   }
 
   return (
     <div
-      className={`grid min-h-screen ${
-        hideGlobalChrome
-          ? "grid-rows-[0px_1fr_20px]"
-          : "grid-rows-[auto_1fr_20px]"
-      }`}
+      className="flex min-h-screen flex-col"
       style={{ backgroundColor: "var(--color-near-black)" }}
     >
       <div
-        style={{
-          height: hideGlobalChrome ? "0px" : "auto",
-          minHeight: hideGlobalChrome ? 0 : undefined,
-          maxHeight: hideGlobalChrome ? "0px" : undefined,
-          overflow: hideGlobalChrome ? "hidden" : "visible",
-          pointerEvents: hideGlobalChrome ? "none" : "auto",
-        }}
+        className="shrink-0"
+        style={topChromeRowStyle}
+        aria-hidden={hideGlobalChrome}
+      >
+        <AlphaDiscordNoticeBar suppressed={hideGlobalChrome} />
+      </div>
+      <div
+        className="shrink-0"
+        style={topChromeRowStyle}
         aria-hidden={hideGlobalChrome}
       >
         <Header />
       </div>
       <main
-        className={`flex flex-col gap-8 row-start-2 pb-20 w-full ${
+        className={`flex min-h-0 flex-1 flex-col gap-8 pb-20 w-full ${
           hideGlobalChrome ? "pt-0" : "pt-4"
         } ${
           activeTab === "Games" || isInfoTutorialActive ? "px-0" : "px-8 sm:px-20"
@@ -403,7 +412,9 @@ export default function Home() {
           )}
         </div>
       </main>
-      <SiteFooter />
+      <div className="shrink-0">
+        <SiteFooter />
+      </div>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { MusicPlayerProvider } from "./providers/MusicPlayerContext";
 import { TransactionProvider } from "./providers/TransactionContext";
 import { type ReactNode, useState, useMemo } from "react";
 import { xaiTestnet } from "./config/networks";
+import MobileAlphaNoticeModal from "./components/MobileAlphaNoticeModal";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -36,7 +37,10 @@ export function Providers({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
           <TransactionProvider>
-            <MusicPlayerProvider>{children}</MusicPlayerProvider>
+            <MusicPlayerProvider>
+              {children}
+              <MobileAlphaNoticeModal />
+            </MusicPlayerProvider>
           </TransactionProvider>
         </RainbowKitProvider>
       </QueryClientProvider>

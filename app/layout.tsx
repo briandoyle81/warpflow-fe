@@ -18,9 +18,52 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://voidtactics.xyz";
+
 export const metadata: Metadata = {
-  title: "Void Tactics",
-  description: "Don't play to earn, play to win",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Void Tactics",
+    template: "%s | Void Tactics",
+  },
+  description:
+    "A fully onchain strategic PvP fleet game: turn-based battles on a tactical grid where positioning, weapons range, and target priority decide the fight. Build and mint ships, draft fleets, join lobbies, and settle matches onchain. Don't play to earn, play to win.",
+  applicationName: "Void Tactics",
+  keywords: [
+    "Void Tactics",
+    "voidtactics",
+    "Web3",
+    "onchain game",
+    "fully onchain",
+    "PvP",
+    "turn-based",
+    "tactical grid",
+    "strategy",
+    "fleet combat",
+  ],
+  authors: [{ name: "Void Tactics", url: siteUrl }],
+  openGraph: {
+    title: "Void Tactics",
+    description:
+      "Fully onchain turn-based PvP fleet tactics on a grid. Maneuver ships, control range, and fight for resources. Fleets and match outcomes settle onchain. Don't play to earn, play to win.",
+    url: siteUrl,
+    siteName: "Void Tactics",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Void Tactics",
+    description:
+      "Fully onchain turn-based PvP fleet tactics on a grid. Maneuver ships, control range, and fight for resources. Fleets and match outcomes settle onchain. Don't play to earn, play to win.",
+    creator: "@voidtacticsxyz",
+    site: "@voidtacticsxyz",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   // Talent App domain / project verification (public token, non-executable).
   other: {
     "talentapp:project_verification":

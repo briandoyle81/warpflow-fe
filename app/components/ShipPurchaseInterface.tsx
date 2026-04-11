@@ -296,6 +296,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
                         <ShipImage
                           ship={previewShips[0]!}
                           showLoadingState={false}
+                          rankStarsSize="large"
                         />
                       </div>
                     </div>
@@ -305,6 +306,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
                         <ShipImage
                           ship={previewShips[0]!}
                           showLoadingState={false}
+                          rankStarsSize="large"
                         />
                       </div>
                       <div className="flex shrink-0 flex-col items-start justify-end gap-0.5 pb-0.5">
@@ -331,6 +333,30 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
             </ShipPurchaseButton>
           );
         })}
+
+        <aside
+          className="flex min-h-[420px] flex-col justify-center gap-5 border-2 border-solid border-cyan-400/45 bg-black/25 px-5 py-5 text-left"
+          style={{
+            fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+          }}
+        >
+          <h4 className="text-2xl font-bold leading-tight tracking-wide text-cyan-300 sm:text-3xl">
+            One mint.{" "}
+            <span className="font-semibold text-yellow-300">Full fleet</span>.
+          </h4>
+          <p className="text-base font-medium leading-snug text-slate-100 sm:text-lg">
+            Higher tiers stack more{" "}
+            <span className="font-semibold text-yellow-300">
+              guaranteed veterans
+            </span>{" "}
+            and a bigger fleet in one mint.
+          </p>
+          <p className="text-sm font-medium leading-relaxed text-cyan-200/90 sm:text-base">
+            <span className="md:hidden">Tap the tier you want</span>
+            <span className="hidden md:inline">Click the tier you want</span>
+            {" and mint the whole roster."}
+          </p>
+        </aside>
       </div>
       <p
         className="mt-4 text-[11px] uppercase tracking-[0.08em] text-slate-400"

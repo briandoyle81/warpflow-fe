@@ -997,7 +997,7 @@ export function SimulatedGameDisplay({
     gameState.turnState.currentTurn.toLowerCase() ===
     TUTORIAL_PLAYER_ADDRESS.toLowerCase();
 
-  // Map of on-chain ship ID (bigint) to ship object. Tutorial IDs are strings;
+  // Map of onchain ship ID (bigint) to ship object. Tutorial IDs are strings;
   // when we need a ship we convert TutorialShipId -> bigint for this map only.
   // Fingerprint `tutorialShips.ts` content so HMR updates ship objects; `useMemo([])`
   // previously froze the first snapshot and hid equipment changes in ShipImage.
@@ -1823,7 +1823,7 @@ export function SimulatedGameDisplay({
     };
   }, [tutorialDisplayLastMove, shipMap, selectedShipId]);
 
-  // Last move object for GameEvents panel (adapt tutorial lastMove to on-chain LastMove shape).
+  // Last move object for GameEvents panel (adapt tutorial lastMove to onchain LastMove shape).
   // Hidden while any ship is selected (matches live game); proposed moves use the submit panel.
   const lastMoveForEvents: LastMove | undefined = useMemo(() => {
     if (selectedShipId !== null) {

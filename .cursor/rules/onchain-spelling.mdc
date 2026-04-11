@@ -1,0 +1,19 @@
+---
+description: Spell onchain as one word, never hyphenated
+alwaysApply: true
+---
+
+# Onchain spelling
+
+- Always write **onchain** (one word, no hyphen).
+- Do **not** write **on-chain** in UI copy, comments, docs, metadata, or strings.
+
+## Examples
+
+- ❌ `On-chain tactical fleet combat`
+- ✅ `Onchain tactical fleet combat`
+
+- ❌ `on-chain game`
+- ✅ `onchain game`
+
+Apply in SEO metadata, Open Graph text, and in-app strings the same way.

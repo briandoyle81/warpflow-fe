@@ -1,14 +1,19 @@
-import { useAccount } from "wagmi";
+import { useAccount, useConfig } from "wagmi";
+import { waitForTransactionReceipt } from "wagmi/actions";
 import { useShipsWrite } from "./useShipsContract";
 import { useOwnedShips } from "./useOwnedShips";
 import { toast } from "react-hot-toast";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
 import { useEffect } from "react";
+import { getSelectedChainId } from "../config/networks";
+import { clearShipImageCacheForShip } from "./useShipImageCache";
 
 export function useShipActions() {
-  const { address } = useAccount();
+  const { address, chainId: walletChainId } = useAccount();
+  const config = useConfig();
+  const activeChainId = walletChainId ?? getSelectedChainId();
   const { refetch } = useOwnedShips();
-  const { writeContract, isPending, error } = useShipsWrite();
+  const { writeContractAsync, isPending, error } = useShipsWrite();
 
   // Handle write contract errors (including user rejection)
   useEffect(() => {
@@ -37,7 +42,7 @@ export function useShipActions() {
     }
 
     try {
-      await writeContract({
+      const hash = await writeContractAsync({
         address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: [
           {
@@ -50,11 +55,20 @@ export function useShipActions() {
         ],
         functionName: "constructShip",
         args: [shipId],
+        chainId: activeChainId,
       });
 
-      toast.success("Ship construction started!");
-      // Refetch ships data after successful transaction
-      setTimeout(() => refetch(), 2000);
+      await waitForTransactionReceipt(config, {
+        hash,
+        chainId: activeChainId,
+      });
+
+      clearShipImageCacheForShip(shipId.toString());
+      toast.success("Ship constructed!");
+      await refetch();
+      setTimeout(() => {
+        void refetch();
+      }, 1500);
     } catch (err: unknown) {
       console.error("Error constructing ship:", err);
 
@@ -80,7 +94,7 @@ export function useShipActions() {
     }
 
     try {
-      await writeContract({
+      const hash = await writeContractAsync({
         address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: [
           {
@@ -93,10 +107,19 @@ export function useShipActions() {
         ],
         functionName: "constructAllMyShips",
         args: [],
+        chainId: activeChainId,
       });
 
-      toast.success("Bulk ship construction started!");
-      setTimeout(() => refetch(), 2000);
+      await waitForTransactionReceipt(config, {
+        hash,
+        chainId: activeChainId,
+      });
+
+      toast.success("Ships constructed!");
+      await refetch();
+      setTimeout(() => {
+        void refetch();
+      }, 1500);
     } catch (err: unknown) {
       console.error("Error constructing all ships:", err);
 
@@ -127,7 +150,7 @@ export function useShipActions() {
     }
 
     try {
-      await writeContract({
+      const hash = await writeContractAsync({
         address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
         abi: [
           {
@@ -146,10 +169,19 @@ export function useShipActions() {
         ],
         functionName: "shipBreaker",
         args: [shipIds],
+        chainId: activeChainId,
       });
 
-      toast.success(`Recycling ${shipIds.length} ships for UC tokens!`);
-      setTimeout(() => refetch(), 2000);
+      await waitForTransactionReceipt(config, {
+        hash,
+        chainId: activeChainId,
+      });
+
+      toast.success(`Recycled ${shipIds.length} ships for UC tokens!`);
+      await refetch();
+      setTimeout(() => {
+        void refetch();
+      }, 1500);
     } catch (err: unknown) {
       console.error("Error recycling ships:", err);
 

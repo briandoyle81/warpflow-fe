@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAccount } from "wagmi";
+import { getSelectedChainId } from "../config/networks";
 import { useGetGamesForPlayer } from "./useGameContract";
 import { GameDataView } from "../types/types";
 
 export function usePlayerGames() {
-  const { address } = useAccount();
+  const { address, chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
   const [games, setGames] = useState<GameDataView[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,6 +18,15 @@ export function usePlayerGames() {
     error: gamesError,
     refetch: refetchGames,
   } = useGetGamesForPlayer(address || "0x0");
+
+  const prevChainIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = prevChainIdRef.current;
+    prevChainIdRef.current = activeChainId;
+    if (prev === null || prev === activeChainId) return;
+    setGames([]);
+    setError(null);
+  }, [activeChainId]);
 
   // Process the game data when it changes
   useEffect(() => {
@@ -43,7 +54,7 @@ export function usePlayerGames() {
     });
 
     setGames(fetchedGames);
-  }, [gamesData, isLoadingGames, gamesError, address]);
+  }, [gamesData, isLoadingGames, gamesError, address, activeChainId]);
 
   return {
     games,

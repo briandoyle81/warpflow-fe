@@ -1,6 +1,7 @@
 "use client";
 
 import Header from "../components/Header";
+import AlphaDiscordNoticeBar from "../components/AlphaDiscordNoticeBar";
 import SiteFooter from "../components/SiteFooter";
 import GameDisplay from "../components/GameDisplay";
 import { useGetGame } from "../hooks/useGameContract";
@@ -28,11 +29,16 @@ export default function SpectatorGamePage({
 
   return (
     <div
-      className="grid grid-rows-[auto_1fr_20px] min-h-screen"
+      className="flex min-h-screen flex-col"
       style={{ backgroundColor: "var(--color-near-black)" }}
     >
-      <Header />
-      <main className="flex flex-col gap-8 row-start-2 pt-4 pb-20 w-full px-0">
+      <div className="shrink-0">
+        <AlphaDiscordNoticeBar />
+      </div>
+      <div className="shrink-0">
+        <Header />
+      </div>
+      <main className="flex min-h-0 flex-1 flex-col gap-8 px-0 pb-20 pt-4 w-full">
         <div className="w-full px-2 sm:px-4">
           <div
             className="border border-solid p-4"
@@ -97,7 +103,9 @@ export default function SpectatorGamePage({
           </div>
         </div>
       </main>
-      <SiteFooter />
+      <div className="shrink-0">
+        <SiteFooter />
+      </div>
     </div>
   );
 }

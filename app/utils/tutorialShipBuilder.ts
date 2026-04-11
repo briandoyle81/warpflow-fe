@@ -18,7 +18,7 @@ const COST_SHIELDS = [0, 10, 20, 30];
 const COST_SPECIAL = [0, 10, 20, 15];
 
 /**
- * Threat points for UI (same formula as `ShipAttributes.calculateShipCost` on-chain).
+ * Threat points for UI (same formula as `ShipAttributes.calculateShipCost` onchain).
  */
 export function calculateTutorialThreatPoints(
   equipment: ShipEquipment,
@@ -63,7 +63,7 @@ function assertContractTraitTiers(
 
 /**
  * Build a tutorial `Ship`. **Canon:** `equipment` and `traits` (accuracy, hull,
- * speed as 0–2) match the on-chain `Ship` shape. Combat attributes are always
+ * speed as 0–2) match the onchain `Ship` shape. Combat attributes are always
  * `calculateAttributesFromContracts(ship)` elsewhere (e.g. tutorial game state),
  * same math as `ShipAttributes.calculateShipAttributes`.
  */
@@ -79,7 +79,7 @@ export function buildTutorialShip(input: {
   const { visual, traits, ...rest } = input;
   if (rest.equipment.armor > 0 && rest.equipment.shields > 0) {
     throw new Error(
-      `${rest.name}: armor and shields cannot both be non-zero (on-chain / ShipConstructor rule).`,
+      `${rest.name}: armor and shields cannot both be non-zero (onchain / ShipConstructor rule).`,
     );
   }
   assertContractTraitTiers(rest.name, traits);

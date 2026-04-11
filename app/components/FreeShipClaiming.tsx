@@ -69,7 +69,7 @@ const FreeShipClaiming: React.FC = () => {
             ✨ WHAT YOU GET:
           </h4>
           <ul className="text-sm text-green-300 space-y-1 text-left max-w-md mx-auto">
-            <li>• Ships generated on-chain</li>
+            <li>• Ships generated onchain</li>
             <li>• Unique stats and equipment combinations</li>
             <li>• Ships start unconstructed (need to be built)</li>
             <li>• Great way to expand your navy</li>

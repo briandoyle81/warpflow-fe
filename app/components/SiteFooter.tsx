@@ -5,7 +5,7 @@ import Link from "next/link";
 export default function SiteFooter() {
   return (
     <footer
-      className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center text-sm tracking-wider uppercase"
+      className="flex shrink-0 flex-wrap items-center justify-center gap-[24px] text-sm uppercase tracking-wider"
       style={{
         fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
         color: "var(--color-text-muted)",

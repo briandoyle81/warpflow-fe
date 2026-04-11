@@ -1,6 +1,6 @@
 import { Attributes, Ship } from "../types/types";
 
-// ShipAttributes v1 constants (mirroring on-chain ShipAttributes module)
+// ShipAttributes v1 constants (mirroring onchain ShipAttributes module)
 
 const ATTR_BASE_HULL = 100;
 const ATTR_BASE_SPEED = 3;
@@ -57,7 +57,7 @@ function getRankMultiplier(rank: number): number {
   return 0; // rank 1
 }
 
-// Pure helpers mirroring on-chain _calculateHullPoints / _calculateMovement / _calculateDamageReduction
+// Pure helpers mirroring onchain _calculateHullPoints / _calculateMovement / _calculateDamageReduction
 function calcBaseHullPoints(ship: Ship): number {
   const traitIdx = Math.max(
     0,
@@ -84,7 +84,7 @@ function calcBaseMovement(ship: Ship): number {
   baseMovement += armor.movement;
   baseMovement += shield.movement;
 
-  // Specials can also modify movement on-chain; current v1 specials all have 0 movement.
+  // Specials can also modify movement onchain; current v1 specials all have 0 movement.
   return Math.max(0, baseMovement);
 }
 
@@ -96,7 +96,7 @@ function calcBaseDamageReduction(ship: Ship): number {
 
 // Attribute calculation for a ship based directly on the ShipAttributes
 // contract tables (guns/armors/shields) including the same rank and
-// fore-accuracy scaling that the on-chain contract applies:
+// fore-accuracy scaling that the onchain contract applies:
 // - Base values from the Gun/Armor/Shield tables
 // - Rank multiplier applied as a percentage to range, damage, hull,
 //   movement, and damageReduction

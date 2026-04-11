@@ -28,7 +28,6 @@ const renderedImageAccessOrder: string[] = [];
  * Get cache key for rendered image
  */
 function getRenderedImageKey(ship: Ship): string {
-  // Create a key based on ship properties that affect rendering
   const key = `${ship.id.toString()}-${ship.equipment.mainWeapon}-${ship.equipment.armor}-${ship.equipment.shields}-${ship.equipment.special}-${ship.traits.accuracy}-${ship.traits.hull}-${ship.traits.speed}-${ship.traits.colors.h1}-${ship.traits.colors.s1}-${ship.traits.colors.l1}-${ship.shipData.shiny}-${ship.shipData.constructed}`;
   return key;
 }
@@ -40,7 +39,6 @@ function getCachedRenderedImage(ship: Ship): string | null {
   const key = getRenderedImageKey(ship);
   const cached = renderedImageCache.get(key);
   if (cached) {
-    // Update access order
     const index = renderedImageAccessOrder.indexOf(key);
     if (index > -1) {
       renderedImageAccessOrder.splice(index, 1);
@@ -58,7 +56,6 @@ function getCachedRenderedImage(ship: Ship): string | null {
 function cacheRenderedImage(ship: Ship, dataUrl: string): void {
   const key = getRenderedImageKey(ship);
 
-  // If cache is full, remove oldest entry
   if (renderedImageCache.size >= MAX_RENDERED_CACHE_SIZE) {
     const oldestKey = renderedImageAccessOrder.shift();
     if (oldestKey) {
@@ -80,6 +77,13 @@ interface ShipImageState {
 }
 
 /**
+ * Stable identity for render + cache. Must match {@link getRenderedImageKey} inputs.
+ */
+function getShipRenderEffectKey(ship: Ship): string {
+  return getRenderedImageKey(ship);
+}
+
+/**
  * Hook for rendering ship images using local TypeScript renderer
  * This replaces useShipImageCache and eliminates the need for tokenURI contract calls
  */
@@ -92,18 +96,13 @@ export function useShipRenderer(ship: Ship): ShipImageState {
   const [renderKey, setRenderKey] = useState(0);
   const shipId = ship?.id?.toString() || "unknown";
 
-  // Use ref to track if we've already processed this ship to prevent infinite loops
-  const processedKeyRef = useRef<string | null>(null);
-  const isProcessingRef = useRef(false);
   const shipRef = useRef<Ship>(ship);
 
-  // Validate ship structure early - set error state if invalid
   const isValidShip = ship && ship.equipment && ship.traits && ship.shipData;
 
-  // Create a stable key for this ship based on its properties
   const shipKey = useMemo(() => {
     if (!isValidShip) return "invalid";
-    return `${ship.id.toString()}-${ship.equipment.mainWeapon}-${ship.equipment.armor}-${ship.equipment.shields}-${ship.equipment.special}-${ship.traits.accuracy}-${ship.traits.hull}-${ship.traits.speed}-${ship.shipData.constructed}-${ship.shipData.timestampDestroyed.toString()}`;
+    return getShipRenderEffectKey(ship);
   }, [
     isValidShip,
     ship?.id,
@@ -114,21 +113,22 @@ export function useShipRenderer(ship: Ship): ShipImageState {
     ship?.traits?.accuracy,
     ship?.traits?.hull,
     ship?.traits?.speed,
+    ship?.traits?.colors?.h1,
+    ship?.traits?.colors?.s1,
+    ship?.traits?.colors?.l1,
+    ship?.shipData?.shiny,
     ship?.shipData?.constructed,
     ship?.shipData?.timestampDestroyed,
   ]);
 
-  // Update ship ref immediately when ship changes
-  // We update it inline to avoid dependency array issues
   shipRef.current = ship;
 
-  // Check ship state
   const isDestroyed = isValidShip && ship.shipData.timestampDestroyed > BigInt(0);
   const isNotConstructed = isValidShip && !ship.shipData.constructed;
 
-  // Load and render image
   useEffect(() => {
-    // If ship is invalid, set error state and return
+    let cancelled = false;
+
     if (!isValidShip) {
       setImageState({
         dataUrl: null,
@@ -138,23 +138,15 @@ export function useShipRenderer(ship: Ship): ShipImageState {
       return;
     }
 
-    // Prevent infinite loops by checking if we've already processed this exact ship
-    if (processedKeyRef.current === shipKey && !isProcessingRef.current) {
-      return;
-    }
-
-    // If we're already processing, don't start another render
-    if (isProcessingRef.current) {
-      return;
-    }
-
     const currentShipForLog = shipRef.current;
-    debugLog(`🔍 Rendering ship ${shipId}, constructed: ${currentShipForLog.shipData.constructed}, destroyed: ${isDestroyed}`);
+    debugLog(
+      `🔍 Rendering ship ${shipId}, constructed: ${currentShipForLog.shipData.constructed}, destroyed: ${isDestroyed}`,
+    );
 
-    // For unconstructed or destroyed ships, don't try to render
     if (isNotConstructed || isDestroyed) {
-      debugLog(`🚫 Ship ${shipId} is ${isNotConstructed ? "not constructed" : "destroyed"}, skipping render`);
-      processedKeyRef.current = shipKey;
+      debugLog(
+        `🚫 Ship ${shipId} is ${isNotConstructed ? "not constructed" : "destroyed"}, skipping render`,
+      );
       setImageState({
         dataUrl: null,
         isLoading: false,
@@ -163,17 +155,10 @@ export function useShipRenderer(ship: Ship): ShipImageState {
       return;
     }
 
-    // Mark as processing
-    isProcessingRef.current = true;
-
-    // Use ship from ref - safe because we track by shipKey and update ref when key changes
     const currentShip = shipRef.current;
 
-    // Check in-memory cache first
     const cachedImage = getCachedRenderedImage(currentShip);
     if (cachedImage) {
-      processedKeyRef.current = shipKey;
-      isProcessingRef.current = false;
       setImageState({
         dataUrl: cachedImage,
         isLoading: false,
@@ -182,77 +167,65 @@ export function useShipRenderer(ship: Ship): ShipImageState {
       return;
     }
 
-    // Check if ship data is cached (for validation)
     const cachedShipData = getCachedShipData(currentShip.id);
     if (cachedShipData) {
       debugLog(`📦 Found cached ship data for ${shipId}, using it for validation`);
     }
 
-    // Always cache the current ship data
     cacheShipData(currentShip);
 
-    // Generate image
-    setImageState((prev) => ({ ...prev, isLoading: true }));
+    setImageState({ dataUrl: null, isLoading: true, error: null });
 
     try {
-      // Always use local renderer when ship data is available
       const dataUrl = renderShip(currentShip);
 
-      if (!dataUrl || typeof dataUrl !== 'string') {
+      if (!dataUrl || typeof dataUrl !== "string") {
         throw new Error(`renderShip returned invalid result: ${dataUrl}`);
       }
 
-      // Cache the rendered image
       cacheRenderedImage(currentShip, dataUrl);
 
-      if (dataUrl) {
-        // Test the image before using it
-        const testImg = new Image();
-        testImg.onload = () => {
-          debugLog(`✅ Image for ship ${shipId} is valid`);
-          processedKeyRef.current = shipKey;
-          isProcessingRef.current = false;
-          setImageState({
-            dataUrl,
-            isLoading: false,
-            error: null,
-          });
-          setRenderKey((prev) => prev + 1);
-        };
-        testImg.onerror = () => {
-          debugLog(`❌ Image for ship ${shipId} is invalid`);
-          processedKeyRef.current = shipKey;
-          isProcessingRef.current = false;
-          setImageState({
-            dataUrl: null,
-            isLoading: false,
-            error: "Failed to generate valid image",
-          });
-        };
-        testImg.src = dataUrl;
-      } else {
-        processedKeyRef.current = shipKey;
-        isProcessingRef.current = false;
-        const errorMsg = `Failed to generate image for ship ${shipId}. Check console for details.`;
-        console.error(errorMsg, currentShip);
+      const testImg = new Image();
+      testImg.onload = () => {
+        if (cancelled) return;
+        debugLog(`✅ Image for ship ${shipId} is valid`);
+        setImageState({
+          dataUrl,
+          isLoading: false,
+          error: null,
+        });
+        setRenderKey((prev) => prev + 1);
+      };
+      testImg.onerror = () => {
+        if (cancelled) return;
+        debugLog(`❌ Image for ship ${shipId} is invalid`);
         setImageState({
           dataUrl: null,
           isLoading: false,
-          error: errorMsg,
+          error: "Failed to generate valid image",
         });
-      }
+      };
+      testImg.src = dataUrl;
     } catch (error) {
-      processedKeyRef.current = shipKey;
-      isProcessingRef.current = false;
+      if (cancelled) return;
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
-      console.error(`❌ Error generating image for ship ${shipId}:`, errorMessage, errorStack, error);
+      console.error(
+        `❌ Error generating image for ship ${shipId}:`,
+        errorMessage,
+        errorStack,
+        error,
+      );
       setImageState({
         dataUrl: null,
         isLoading: false,
         error: errorMessage,
       });
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [shipKey, shipId, isNotConstructed, isDestroyed, isValidShip]);
 
   return { ...imageState, renderKey };

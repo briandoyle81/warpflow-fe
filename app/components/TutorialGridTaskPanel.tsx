@@ -49,7 +49,7 @@ export interface TutorialGridTaskPanelProps {
   panelVerticalAnchor?: "top" | "bottom";
   /**
    * Completion steps only: small debug control next to the Debug checkbox to clear
-   * localStorage for tutorial claim / reward state (e.g. after changing rewards on-chain).
+   * localStorage for tutorial claim / reward state (e.g. after changing rewards onchain).
    */
   tutorialRewardCacheDebug?: {
     onClear: () => void;

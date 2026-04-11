@@ -1,11 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useAccount } from "wagmi";
+import { getSelectedChainId } from "../config/networks";
 import { useShipsRead } from "./useShipsContract";
 import { Ship } from "../types/types";
 import { cacheShipsData } from "./useShipDataCache";
 
 export function useOwnedShips() {
-  const { address } = useAccount();
+  const { address, chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+
+  const baselineOwnedIdsKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    baselineOwnedIdsKeyRef.current = null;
+  }, [address, activeChainId]);
 
   // Get ship IDs owned by the user
   const shipIdsResult = useShipsRead(
@@ -18,6 +25,47 @@ export function useOwnedShips() {
     "getShipsByIds",
     shipIdsResult.data ? [shipIdsResult.data] : undefined,
   );
+
+  const prevChainIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = prevChainIdRef.current;
+    prevChainIdRef.current = activeChainId;
+    if (prev === null || prev === activeChainId) return;
+    void shipIdsResult.refetch();
+    void shipsDataResult.refetch();
+  }, [activeChainId, shipIdsResult.refetch, shipsDataResult.refetch]);
+
+  const ownedIdsKey = useMemo(() => {
+    const raw = shipIdsResult.data as bigint[] | undefined;
+    if (!raw?.length) return "";
+    return [...raw]
+      .map((id) => id.toString())
+      .sort((a, b) => a.localeCompare(b))
+      .join(",");
+  }, [shipIdsResult.data]);
+
+  // When owned ship IDs change (claim, recycle, purchase), `getShipsByIds` often
+  // still has the previous ID list in its query key until React re-renders. Refetch
+  // ship details after the ID list key changes so new hulls always load.
+  const refetchShipsByIds = shipsDataResult.refetch;
+  useEffect(() => {
+    if (!ownedIdsKey) return;
+    const prev = baselineOwnedIdsKeyRef.current;
+    if (prev === null) {
+      baselineOwnedIdsKeyRef.current = ownedIdsKey;
+      return;
+    }
+    if (prev === ownedIdsKey) return;
+    baselineOwnedIdsKeyRef.current = ownedIdsKey;
+    let cancelled = false;
+    const id = requestAnimationFrame(() => {
+      if (!cancelled) void refetchShipsByIds();
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, [ownedIdsKey, refetchShipsByIds]);
 
   // Cache ship data when it's fetched
   useEffect(() => {
@@ -35,25 +83,17 @@ export function useOwnedShips() {
   // Combine errors
   const error = shipIdsResult.error || shipsDataResult.error;
 
-  // Refetch IDs first, then ship data.
-  // This avoids a race where getShipsByIds refetches with stale IDs.
+  // Refetch IDs first, then ship rows. Same-ID updates (construct, attribute sync)
+  // are served by the second refetch. New IDs rely on `ownedIdsKey` effect above.
   const refetch = async () => {
-    const idsResult = await shipIdsResult.refetch();
-
-    // First pass: refetch ship data immediately.
+    await shipIdsResult.refetch();
     await shipsDataResult.refetch();
-
-    // Second pass: after React applies updated shipIds args, refetch again
-    // so newly claimed/constructed IDs are definitely included.
-    const latestIds =
-      (idsResult.data as bigint[] | undefined) ??
-      (shipIdsResult.data as bigint[] | undefined) ??
-      [];
-    if (latestIds.length > 0) {
-      setTimeout(() => {
-        shipsDataResult.refetch();
-      }, 250);
-    }
+    setTimeout(() => {
+      void shipsDataResult.refetch();
+    }, 400);
+    setTimeout(() => {
+      void shipsDataResult.refetch();
+    }, 2000);
   };
 
   return {

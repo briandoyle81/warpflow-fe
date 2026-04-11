@@ -1,20 +1,24 @@
-import { useReadContract, useWriteContract } from "wagmi";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
 import type { Abi } from "viem";
+import { getSelectedChainId } from "../config/networks";
 import { Lobby, PlayerLobbyState } from "../types/types";
 
-// Contract instance configuration
-export const lobbiesContractConfig = {
-  address: CONTRACT_ADDRESSES.LOBBIES as `0x${string}`,
-  abi: CONTRACT_ABIS.LOBBIES as Abi,
-} as const;
+/** Lobbies contract target for the wallet chain, or app-selected chain when disconnected. */
+export function useLobbiesChainParams() {
+  const { chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const contractAddresses = getContractAddresses(activeChainId);
+  return {
+    address: contractAddresses.LOBBIES as `0x${string}`,
+    abi: CONTRACT_ABIS.LOBBIES as Abi,
+    chainId: activeChainId,
+  } as const;
+}
 
 // Hook for reading contract data
 export function useLobbiesContract() {
-  return {
-    address: lobbiesContractConfig.address,
-    abi: lobbiesContractConfig.abi,
-  };
+  return useLobbiesChainParams();
 }
 
 // Hook for reading contract data with proper typing
@@ -25,8 +29,11 @@ export function useLobbiesRead(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   options?: any
 ) {
+  const { address, abi, chainId } = useLobbiesChainParams();
   return useReadContract({
-    ...lobbiesContractConfig,
+    address,
+    abi,
+    chainId,
     functionName,
     args,
     ...(options || {}),

@@ -67,13 +67,13 @@ export default function PrivacyPolicyPage() {
                 fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
               }}
             >
-              Wallet and on-chain data
+              Wallet and onchain data
             </h2>
             <p style={{ color: "var(--color-text-secondary)" }}>
               Connecting a wallet is voluntary. Your public wallet address and
-              on-chain activity may be visible to us, to blockchain indexers, and to
+              onchain activity may be visible to us, to blockchain indexers, and to
               anyone else observing the networks you use. We do not control public
-              blockchains and cannot remove data that is already on chain.
+              blockchains and cannot remove data that is already onchain.
             </p>
           </section>
 

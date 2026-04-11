@@ -23,7 +23,7 @@ function createColors(
   return { h1, s1, l1, h2, s2, l2 };
 }
 
-// Helper to create ship data (shipsDestroyed drives rank like on-chain)
+// Helper to create ship data (shipsDestroyed drives rank like onchain)
 function createShipData(
   cost: number,
   inFleet: boolean = true,

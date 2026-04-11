@@ -3,10 +3,10 @@ import { useAccount } from "wagmi";
 import type { Address } from "viem";
 import {
   useLobbiesWrite,
+  useLobbiesChainParams,
   useLobbyCount,
   usePlayerLobbyState,
   useLobbySettings,
-  lobbiesContractConfig,
 } from "./useLobbiesContract";
 import { useLobbyList } from "./useLobbyList";
 import { Lobby } from "../types/types";
@@ -28,6 +28,7 @@ export interface LobbyListState {
 
 export function useLobbies() {
   const { address } = useAccount();
+  const lobbiesRpc = useLobbiesChainParams();
   const { writeContract, data: hash } = useLobbiesWrite();
   const { data: lobbyCount } = useLobbyCount();
   const { playerState } = usePlayerLobbyState(address || "");
@@ -71,7 +72,7 @@ export function useLobbies() {
         : 0n;
 
       await writeContract({
-        ...lobbiesContractConfig,
+        ...lobbiesRpc,
         functionName: "createLobby",
         args: [
           params.costLimit,
@@ -98,7 +99,7 @@ export function useLobbies() {
 
     try {
       await writeContract({
-        ...lobbiesContractConfig,
+        ...lobbiesRpc,
         functionName: "joinLobby",
         args: [lobbyId],
       });
@@ -117,7 +118,7 @@ export function useLobbies() {
 
     try {
       await writeContract({
-        ...lobbiesContractConfig,
+        ...lobbiesRpc,
         functionName: "leaveLobby",
         args: [lobbyId],
       });
@@ -133,7 +134,7 @@ export function useLobbies() {
 
     try {
       await writeContract({
-        ...lobbiesContractConfig,
+        ...lobbiesRpc,
         functionName: "timeoutJoiner",
         args: [lobbyId],
       });
@@ -153,7 +154,7 @@ export function useLobbies() {
 
     try {
       await writeContract({
-        ...lobbiesContractConfig,
+        ...lobbiesRpc,
         functionName: "createFleet",
         args: [lobbyId, shipIds, startingPositions],
       });
@@ -170,7 +171,7 @@ export function useLobbies() {
 
     try {
       await writeContract({
-        ...lobbiesContractConfig,
+        ...lobbiesRpc,
         functionName: "quitWithPenalty",
         args: [lobbyId],
       });
@@ -186,7 +187,7 @@ export function useLobbies() {
 
     try {
       await writeContract({
-        ...lobbiesContractConfig,
+        ...lobbiesRpc,
         functionName: "acceptGame",
         args: [lobbyId],
       });
@@ -205,7 +206,7 @@ export function useLobbies() {
 
     try {
       await writeContract({
-        ...lobbiesContractConfig,
+        ...lobbiesRpc,
         functionName: "rejectGame",
         args: [lobbyId],
       });

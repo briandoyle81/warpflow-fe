@@ -2027,7 +2027,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     if (!awaitingTurnSyncAfterSubmit) return;
     if (!isMyTurn) {
       setAwaitingTurnSyncAfterSubmit(false);
-      // Turn advanced on-chain; clear any locally held proposal state.
+      // Turn advanced onchain; clear any locally held proposal state.
       setPreviewPosition(null);
       setSelectedShipId(null);
       setTargetShipId(null);

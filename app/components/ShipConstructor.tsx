@@ -181,7 +181,7 @@ const ShipConstructor: React.FC = () => {
     if (!selectedShipId || !originalShip) return null;
 
     // Colors and extra fields may not be present in the TypeScript type,
-    // but they exist on-chain and in the ABI, so we read them defensively.
+    // but they exist onchain and in the ABI, so we read them defensively.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const colorsAny = originalShip.traits.colors as any;
     const h3 = typeof colorsAny?.h3 === "number" ? colorsAny.h3 : 0;
@@ -258,7 +258,7 @@ const ShipConstructor: React.FC = () => {
     variant,
   ]);
 
-  // Read the on-chain UTC cost to modify this ship via DroneYard
+  // Read the onchain UTC cost to modify this ship via DroneYard
   const { data: modificationCost, refetch: refetchModificationCost } =
     useReadContract({
       address: CONTRACT_ADDRESSES.DRONE_YARD as `0x${string}`,

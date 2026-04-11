@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Ship } from "../types/types";
-import { ShipImage } from "./ShipImage";
+import { ShipImage, SHIP_IMAGE_RANK_STAR_BOX } from "./ShipImage";
 import {
   getMainWeaponName,
   getSpecialName,
@@ -327,7 +327,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
     >
       {/* Ship Image - Bigger */}
       <div
-        className="mb-3 relative"
+        className="relative mb-3 h-48 w-full min-h-0 [container-type:size]"
         style={flipShip ? { transform: "scaleX(-1)" } : undefined}
       >
         <ShipImage
@@ -335,7 +335,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
             ship.shipData.constructed ? "constructed" : "unconstructed"
           }`}
           ship={ship}
-          className="w-full h-48 border border-solid"
+          className="h-full w-full border border-solid"
           style={{
             borderColor: "var(--color-gunmetal)",
             borderRadius: 0, // Square corners
@@ -404,9 +404,21 @@ const ShipCard: React.FC<ShipCardProps> = ({
                 ).map((level) => (
                   <div
                     key={level}
-                    className="w-4 h-4 rounded-full bg-red-500/90 flex items-center justify-center"
+                    className="flex shrink-0 items-center justify-center rounded-full bg-red-500/90"
+                    style={{
+                      width: SHIP_IMAGE_RANK_STAR_BOX,
+                      height: SHIP_IMAGE_RANK_STAR_BOX,
+                      // Reference em size for the skull (calc(0.85 * clamp(...)) is often dropped by engines).
+                      fontSize: SHIP_IMAGE_RANK_STAR_BOX,
+                      lineHeight: 1,
+                    }}
                   >
-                    <span className="text-[8px] leading-none font-mono">💀</span>
+                    <span
+                      className="font-mono block text-center leading-none"
+                      style={{ fontSize: "0.85em", lineHeight: 1 }}
+                    >
+                      💀
+                    </span>
                   </div>
                 ))}
               </div>

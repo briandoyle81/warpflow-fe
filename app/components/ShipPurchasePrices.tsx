@@ -315,7 +315,7 @@ const ShipPurchasePrices: React.FC = () => {
 
       {renderSection({
         title: "Native token packs",
-        subtitle: `Prices are paid in ${nativeSymbol} (18 decimals on-chain).`,
+        subtitle: `Prices are paid in ${nativeSymbol} (18 decimals onchain).`,
         canEdit: isShipsOwner,
         tierIndices: shipsInfo.tiers,
         ships: nativeShips,

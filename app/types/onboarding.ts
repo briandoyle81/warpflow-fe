@@ -8,7 +8,7 @@ import { Position, Attributes, ActionType } from "./types";
  *
  * They intentionally avoid using bigint so that tutorial state and
  * steps remain JSON-serializable and safe under React dev tools,
- * analytics SDKs, and SES. Do NOT reuse these types for on-chain
+ * analytics SDKs, and SES. Do NOT reuse these types for onchain
  * game data or lobby state; use the bigint-based types in
  * `types.ts` for that.
  *
@@ -65,7 +65,7 @@ export interface TutorialShipPosition {
   position: Position;
   isCreator: boolean;
   isPreview?: boolean;
-  /** Matches on-chain ShipPosition when present. */
+  /** Matches onchain ShipPosition when present. */
   status?: 0 | 1 | 2;
 }
 

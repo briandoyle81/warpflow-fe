@@ -39,7 +39,7 @@ function SavedOnChainValue({
   if (!show) return null;
   const defaultTitle = multiline
     ? "Snapshot when you opened edit (contract does not expose these arrays for read)"
-    : "On-chain until you submit";
+    : "Onchain until you submit";
   return (
     <span
       className={
@@ -182,7 +182,7 @@ const ShipAttributes: React.FC = () => {
   const [newForeAccuracy, setNewForeAccuracy] = useState<number[] | null>(null);
   const [newHullBonuses, setNewHullBonuses] = useState<number[] | null>(null);
   const [newEngineSpeeds, setNewEngineSpeeds] = useState<number[] | null>(null);
-  /** Comma strings as shown when Edit Attributes was opened (no on-chain getter for these arrays). */
+    /** Comma strings as shown when Edit Attributes was opened (no onchain getter for these arrays). */
   const [globalArraysAtEditStart, setGlobalArraysAtEditStart] = useState<{
     fore: string;
     hull: string;
@@ -301,7 +301,7 @@ const ShipAttributes: React.FC = () => {
           <div className="space-y-4">
             {editingCosts && (
               <p className="text-xs text-gray-500 font-mono">
-                Right column: on-chain value until Update Costs succeeds.
+                Right column: onchain value until Update Costs succeeds.
               </p>
             )}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -494,7 +494,7 @@ const ShipAttributes: React.FC = () => {
             <div className="space-y-4">
               {editingAttributes && (
                 <p className="text-xs text-gray-500 font-mono">
-                  Right column: on-chain until submit. Comma-separated fields
+                  Right column: onchain until submit. Comma-separated fields
                   show the string when you opened edit (contract does not expose
                   those arrays for read).
                 </p>

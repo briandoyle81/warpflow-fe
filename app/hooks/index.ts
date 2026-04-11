@@ -5,6 +5,7 @@ export {
   useShipsWrite,
 } from "./useShipsContract";
 export {
+  useLobbiesChainParams,
   useLobbiesContract,
   useLobbiesRead,
   useLobbiesWrite,

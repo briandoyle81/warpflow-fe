@@ -37,6 +37,63 @@ import { MapDisplay } from "./MapDisplay";
 import { usePlayerGames } from "../hooks/usePlayerGames";
 import { useLobby } from "../hooks/useLobbiesContract";
 
+/** Onchain turn timer when creating an Immediate game lobby. */
+const IMMEDIATE_GAME_TURN_SECONDS = 5 * 60;
+/** Onchain turn timer when creating a Correspondence game lobby. */
+const CORRESPONDENCE_GAME_TURN_SECONDS = 24 * 60 * 60;
+
+function formatLobbyTurnTimeDisplay(seconds: bigint): string {
+  const s = Number(seconds);
+  if (s === IMMEDIATE_GAME_TURN_SECONDS) {
+    return "Immediate game, 5 minutes per turn";
+  }
+  if (s === CORRESPONDENCE_GAME_TURN_SECONDS) {
+    return "Correspondence game, 24 hours per turn";
+  }
+  return `${s.toLocaleString()} s`;
+}
+
+const SKIRMISH_THREAT_LIMIT = 1000;
+const BATTLE_THREAT_LIMIT = 2000;
+
+function formatLobbyCostLimitDisplay(costLimit: bigint): string {
+  const n = Number(costLimit);
+  if (n === SKIRMISH_THREAT_LIMIT) {
+    return "Skirmish, 1000 threat per fleet";
+  }
+  if (n === BATTLE_THREAT_LIMIT) {
+    return "Battle, 2000 threat per fleet";
+  }
+  return n.toLocaleString();
+}
+
+const SHORT_MAX_SCORE = 50;
+const MEDIUM_MAX_SCORE = 100;
+const LONG_MAX_SCORE = 200;
+
+function formatLobbyMaxScoreDisplay(maxScore: bigint): string {
+  const n = Number(maxScore);
+  if (n === SHORT_MAX_SCORE) {
+    return "Short, 50 points to win";
+  }
+  if (n === MEDIUM_MAX_SCORE) {
+    return "Medium, 100 points to win";
+  }
+  if (n === LONG_MAX_SCORE) {
+    return "Long, 200 points to win";
+  }
+  return n.toLocaleString();
+}
+
+const VOID_TACTICS_ALPHA_ACCESS_TWEET =
+  "Hi @voidtacticsxyz, I'm interested in the Void Tactics Alpha at https://voidtactics.xyz!\n\nPlease add me to the Discord!";
+const VOID_TACTICS_ALPHA_TWITTER_INTENT = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+  VOID_TACTICS_ALPHA_ACCESS_TWEET,
+)}`;
+
+/** Minimum owned and constructed ships required to use lobbies. */
+const MIN_SHIPS_FOR_LOBBIES = 10;
+
 const Lobbies: React.FC = () => {
   const { address, isConnected } = useAccount();
   const {
@@ -60,7 +117,40 @@ const Lobbies: React.FC = () => {
       hash: lastTransactionHash,
     });
 
-  const { ships, isLoading: shipsLoading } = useOwnedShips();
+  const { ships, isLoading: shipsLoading, shipCount } = useOwnedShips();
+
+  const constructedReadyCount = useMemo(
+    () =>
+      ships.filter(
+        (s) =>
+          Boolean(s.shipData?.constructed) &&
+          s.shipData?.timestampDestroyed === 0n,
+      ).length,
+    [ships],
+  );
+
+  const navigateToManageNavyForShips = useCallback(() => {
+    window.dispatchEvent(
+      new CustomEvent("void-tactics-navigate-to-manage-navy", {
+        bubbles: true,
+      }),
+    );
+    document.dispatchEvent(
+      new CustomEvent("void-tactics-navigate-to-manage-navy", {
+        bubbles: true,
+      }),
+    );
+  }, []);
+
+  const needsShipsForLobbyUi =
+    isConnected && !shipsLoading && shipCount < MIN_SHIPS_FOR_LOBBIES;
+  const needsConstructForLobbyUi =
+    isConnected &&
+    !shipsLoading &&
+    shipCount >= MIN_SHIPS_FOR_LOBBIES &&
+    constructedReadyCount < MIN_SHIPS_FOR_LOBBIES;
+  const lobbyUiLoadingShips = isConnected && shipsLoading;
+
   const { data: currentCostsVersion } = useCurrentCostsVersion();
   const globalCostsVersion =
     currentCostsVersion !== undefined && currentCostsVersion !== null
@@ -82,6 +172,12 @@ const Lobbies: React.FC = () => {
     activeLobbiesCount >= Number(freeGamesPerAddress || 0n);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  useEffect(() => {
+    if ((needsShipsForLobbyUi || needsConstructForLobbyUi) && showCreateForm) {
+      setShowCreateForm(false);
+    }
+  }, [needsShipsForLobbyUi, needsConstructForLobbyUi, showCreateForm]);
   const [selectedLobby, setSelectedLobby] = useState<bigint | null>(null);
   const [selectedShips, setSelectedShips] = useState<bigint[]>([]);
   const [shipPositions, setShipPositions] = useState<
@@ -611,8 +707,7 @@ const Lobbies: React.FC = () => {
     );
   }, []);
 
-  // Close fleet selection modal (if open) and switch to Games tab
-  const closeFleetModalAndGoToGames = useCallback(() => {
+  const resetFleetSelectionModalState = useCallback(() => {
     setSelectedLobby(null);
     setSelectedShips([]);
     setShipPositions([]);
@@ -636,8 +731,13 @@ const Lobbies: React.FC = () => {
       defenseType: "all",
       specialType: "all",
     });
+  }, []);
+
+  // Close fleet selection modal (if open) and switch to Games tab
+  const closeFleetModalAndGoToGames = useCallback(() => {
+    resetFleetSelectionModalState();
     navigateToGamesTab();
-  }, [navigateToGamesTab]);
+  }, [resetFleetSelectionModalState, navigateToGamesTab]);
 
   // Create a map of ship ID to attributes for quick lookup
   const attributesMap = React.useMemo(() => {
@@ -838,13 +938,40 @@ const Lobbies: React.FC = () => {
 
   // Create lobby form state
   const [createForm, setCreateForm] = useState({
-    costLimit: "1000", // Fixed cost limit
-    turnTime: "300", // 5 minutes
+    threatScale: "skirmish" as "skirmish" | "battle",
+    turnPace: "immediate" as "immediate" | "correspondence",
     selectedMapId: "1",
-    maxScore: "100",
+    scoreLength: "medium" as "short" | "medium" | "long",
     creatorGoesFirst: false,
     reservedJoiner: "", // Optional: address to reserve for (empty for open lobby)
   });
+
+  const createFormMaxScore = useMemo(() => {
+    switch (createForm.scoreLength) {
+      case "short":
+        return SHORT_MAX_SCORE;
+      case "long":
+        return LONG_MAX_SCORE;
+      default:
+        return MEDIUM_MAX_SCORE;
+    }
+  }, [createForm.scoreLength]);
+
+  const createFormCostLimit = useMemo(
+    () =>
+      createForm.threatScale === "skirmish"
+        ? SKIRMISH_THREAT_LIMIT
+        : BATTLE_THREAT_LIMIT,
+    [createForm.threatScale],
+  );
+
+  const createFormTurnTimeSeconds = useMemo(
+    () =>
+      createForm.turnPace === "immediate"
+        ? IMMEDIATE_GAME_TURN_SECONDS
+        : CORRESPONDENCE_GAME_TURN_SECONDS,
+    [createForm.turnPace],
+  );
 
   // const handleLeaveLobby = async (lobbyId: bigint) => {
   //   if (!isConnected) return;
@@ -917,6 +1044,7 @@ const Lobbies: React.FC = () => {
         currentLobby.players.creatorFleetId > 0n &&
         currentLobby.players.joinerFleetId > 0n
       ) {
+        resetFleetSelectionModalState();
         navigateToGamesTab();
       }
     })();
@@ -924,6 +1052,7 @@ const Lobbies: React.FC = () => {
     isFleetCreated,
     loadLobbies,
     navigateToGamesTab,
+    resetFleetSelectionModalState,
     refetchSelectedLobby,
     refetchGames,
   ]);
@@ -1389,23 +1518,149 @@ const Lobbies: React.FC = () => {
         [CREATE AND JOIN NEW GAMES]
       </h3>
 
-      {/* Player Status */}
-      {playerState && (
+      {lobbyUiLoadingShips && (
         <div
-          className="mb-6 p-4 border border-cyan-400 bg-black/40"
+          className="mb-8 flex flex-col items-center justify-center border border-cyan-400/50 bg-black/50 px-6 py-16 text-center"
+          style={{ borderRadius: 0 }}
+        >
+          <p className="text-sm font-bold uppercase tracking-wider text-cyan-400/90">
+            Loading your navy...
+          </p>
+          <p className="mt-2 text-xs text-gray-500">
+            Checking on-chain ship ownership
+          </p>
+        </div>
+      )}
+
+      {needsShipsForLobbyUi && (
+        <div
+          className="mb-8 border-2 border-cyan-500/35 bg-black/55 px-6 py-12 text-center sm:px-12"
+          style={{ borderRadius: 0 }}
+        >
+          <p
+            className="text-xl font-black uppercase tracking-wide text-cyan-200 sm:text-2xl"
+            style={{
+              fontFamily:
+                "var(--font-rajdhani), 'Arial Black', sans-serif",
+            }}
+          >
+            You must own at least {MIN_SHIPS_FOR_LOBBIES} ships to join a game
+          </p>
+          <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-gray-400">
+            Open Manage Navy to claim ships and grow your navy. You need at least{" "}
+            {MIN_SHIPS_FOR_LOBBIES} hulls on chain, all constructed and ready,
+            before lobbies appear here.
+          </p>
+          <button
+            type="button"
+            onClick={navigateToManageNavyForShips}
+            className="mt-8 border-2 border-yellow-400 bg-yellow-400/5 px-6 py-3 text-sm font-bold uppercase tracking-wider text-yellow-400 transition-colors hover:border-yellow-300 hover:bg-yellow-400/15 hover:text-yellow-300"
+            style={{ borderRadius: 0 }}
+          >
+            Click here to claim free ships
+          </button>
+        </div>
+      )}
+
+      {needsConstructForLobbyUi && (
+        <div
+          className="mb-8 border-2 border-amber-500/35 bg-black/55 px-6 py-12 text-center sm:px-12"
+          style={{ borderRadius: 0 }}
+        >
+          <p
+            className="text-xl font-black uppercase tracking-wide text-amber-200 sm:text-2xl"
+            style={{
+              fontFamily:
+                "var(--font-rajdhani), 'Arial Black', sans-serif",
+            }}
+          >
+            You must construct at least {MIN_SHIPS_FOR_LOBBIES} ships before you
+            can join a game.
+          </p>
+          <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-gray-400">
+            You have at least {MIN_SHIPS_FOR_LOBBIES} hulls, but only{" "}
+            {constructedReadyCount} constructed and ready. Open Manage Navy and
+            finish construction until you have {MIN_SHIPS_FOR_LOBBIES} active
+            ships.
+          </p>
+          <button
+            type="button"
+            onClick={navigateToManageNavyForShips}
+            className="mt-8 border-2 border-cyan-400 bg-cyan-400/5 px-6 py-3 text-sm font-bold uppercase tracking-wider text-cyan-400 transition-colors hover:border-cyan-300 hover:bg-cyan-400/15 hover:text-cyan-300"
+            style={{ borderRadius: 0 }}
+          >
+            Open Manage Navy
+          </button>
+        </div>
+      )}
+
+      {!lobbyUiLoadingShips &&
+        !needsShipsForLobbyUi &&
+        !needsConstructForLobbyUi && (
+        <>
+      {/* Player Status + create lobby */}
+      {isConnected && (
+        <div
+          className="mb-6 border border-cyan-400 bg-black/40 p-4"
           style={{
             borderRadius: 0, // Square corners for industrial theme
           }}
         >
-          <h4 className="text-lg font-bold text-cyan-400 mb-2">
-            PLAYER STATUS
-          </h4>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
+          <h4 className="mb-3 text-lg font-bold text-cyan-400">PLAYER STATUS</h4>
+          <div
+            className={`grid grid-cols-1 gap-4 text-sm ${
+              showCreateForm
+                ? "sm:grid-cols-2"
+                : "sm:grid-cols-3 sm:grid-rows-2"
+            }`}
+          >
+            <div
+              className={
+                showCreateForm ? "" : "sm:col-start-1 sm:row-start-1"
+              }
+            >
               <span className="text-gray-400">Active Lobbies:</span>
               <span className="ml-2">{activeLobbiesCount.toString()}</span>
             </div>
-            <div>
+            <div
+              className={
+                showCreateForm ? "" : "sm:col-start-2 sm:row-start-1"
+              }
+            >
+              <span className="text-gray-400">Kick Count:</span>
+              <span className="ml-2">
+                {playerState?.kickCount?.toString() || "0"}
+              </span>
+            </div>
+            {!showCreateForm && (
+              <div className="flex flex-col justify-center gap-2 sm:col-start-3 sm:row-span-2 sm:row-start-1">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateForm(true)}
+                  disabled={!canCreateLobby || !!paused}
+                  className="w-full border-2 border-cyan-400 px-4 py-3 font-mono font-bold tracking-wider text-cyan-400 transition-all duration-200 hover:border-cyan-300 hover:bg-cyan-400/10 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{
+                    borderRadius: 0,
+                  }}
+                >
+                  {paused ? "LOBBIES PAUSED" : "CREATE LOBBY"}
+                </button>
+                {needsPaymentForLobby && (
+                  <p className="text-center text-xs text-yellow-400">
+                    Additional lobby fee:{" "}
+                    {additionalLobbyFee
+                      ? formatEther(additionalLobbyFee as bigint)
+                      : "0"}{" "}
+                    FLOW
+                  </p>
+                )}
+              </div>
+            )}
+            <div
+              className={
+                showCreateForm ? "" : "sm:col-start-1 sm:row-start-2"
+              }
+            >
               <span className="text-gray-400">Has Active Lobby:</span>
               <span
                 className={`ml-2 ${
@@ -1415,13 +1670,11 @@ const Lobbies: React.FC = () => {
                 {hasActiveLobby ? "YES" : "NO"}
               </span>
             </div>
-            <div>
-              <span className="text-gray-400">Kick Count:</span>
-              <span className="ml-2">
-                {playerState?.kickCount?.toString() || "0"}
-              </span>
-            </div>
-            <div>
+            <div
+              className={
+                showCreateForm ? "" : "sm:col-start-2 sm:row-start-2"
+              }
+            >
               <span className="text-gray-400">Free Games:</span>
               <span className="ml-2">
                 {freeGamesPerAddress?.toString() || "0"}
@@ -1431,27 +1684,40 @@ const Lobbies: React.FC = () => {
         </div>
       )}
 
-      {/* Create Lobby Button */}
-      <div className="mb-6">
-        <button
-          onClick={() => setShowCreateForm(true)}
-          disabled={!canCreateLobby || !!paused}
-          className="w-full px-6 py-3 border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+      <div
+        className="mb-6 border border-amber-400/80 bg-black/40 p-4"
+        style={{
+          borderRadius: 0,
+        }}
+      >
+        <p
+          className="text-sm leading-relaxed text-amber-100/95"
           style={{
-            borderRadius: 0, // Square corners for industrial theme
+            fontFamily:
+              "var(--font-jetbrains-mono), 'Courier New', monospace",
           }}
         >
-          {paused ? "LOBBIES PAUSED" : "CREATE LOBBY"}
-        </button>
-        {needsPaymentForLobby && (
-          <p className="text-sm text-yellow-400 mt-2 text-center">
-            Additional lobby fee:{" "}
-            {additionalLobbyFee
-              ? formatEther(additionalLobbyFee as bigint)
-              : "0"}{" "}
-            FLOW
-          </p>
-        )}
+          During alpha testing, we recommend coordinating games on Discord
+          before creating a lobby.
+        </p>
+        <p
+          className="mt-3 text-sm leading-relaxed text-amber-100/95"
+          style={{
+            fontFamily:
+              "var(--font-jetbrains-mono), 'Courier New', monospace",
+          }}
+        >
+          Click{" "}
+          <a
+            href={VOID_TACTICS_ALPHA_TWITTER_INTENT}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-amber-300 underline decoration-amber-400/70 underline-offset-2 transition-colors hover:text-amber-200"
+          >
+            here
+          </a>{" "}
+          to request access.
+        </p>
       </div>
 
       {/* Create Lobby Form */}
@@ -1467,84 +1733,247 @@ const Lobbies: React.FC = () => {
           </h4>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                Fleet Threat Limit
-              </label>
-              <input
-                type="number"
-                value={createForm.costLimit}
-                disabled
-                className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded-none text-gray-400 cursor-not-allowed"
-                readOnly
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Maximum total threat (points) for each player&apos;s fleet (fixed at 1000)
-              </p>
+              <span className="block text-sm text-gray-400 mb-2">
+                Fleet threat limit
+              </span>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <label className="flex min-w-0 cursor-pointer items-start gap-3 rounded-none border border-gray-600 bg-black/40 p-3 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-cyan-400">
+                  <input
+                    type="checkbox"
+                    checked={createForm.threatScale === "skirmish"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          threatScale: "skirmish",
+                        }));
+                      } else {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          threatScale: "battle",
+                        }));
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 shrink-0 accent-cyan-400"
+                    style={{
+                      borderRadius: 0,
+                    }}
+                  />
+                  <span>
+                    <span className="block font-mono font-bold text-cyan-300">
+                      Skirmish
+                    </span>
+                    <span className="mt-0.5 block text-xs text-gray-400">
+                      1000 threat per fleet
+                    </span>
+                  </span>
+                </label>
+                <label className="flex min-w-0 cursor-pointer items-start gap-3 rounded-none border border-gray-600 bg-black/40 p-3 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-cyan-400">
+                  <input
+                    type="checkbox"
+                    checked={createForm.threatScale === "battle"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          threatScale: "battle",
+                        }));
+                      } else {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          threatScale: "skirmish",
+                        }));
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 shrink-0 accent-cyan-400"
+                    style={{
+                      borderRadius: 0,
+                    }}
+                  />
+                  <span>
+                    <span className="block font-mono font-bold text-cyan-300">
+                      Battle
+                    </span>
+                    <span className="mt-0.5 block text-xs text-gray-400">
+                      2000 threat per fleet
+                    </span>
+                  </span>
+                </label>
+              </div>
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                Turn Time (seconds)
-              </label>
-              <input
-                type="number"
-                value={createForm.turnTime}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (
-                    value === "" ||
-                    (parseInt(value) >= 60 && parseInt(value) <= 86400)
-                  ) {
-                    setCreateForm((prev) => ({
-                      ...prev,
-                      turnTime: value,
-                    }));
-                  }
-                }}
-                className="w-full px-3 py-2 bg-black/60 border border-cyan-400 rounded-none text-cyan-300"
-                placeholder="300"
-                min="60"
-                max="86400"
-              />
+              <span className="block text-sm text-gray-400 mb-2">
+                Turn timer
+              </span>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <label className="flex min-w-0 cursor-pointer items-start gap-3 rounded-none border border-gray-600 bg-black/40 p-3 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-cyan-400">
+                  <input
+                    type="checkbox"
+                    checked={createForm.turnPace === "immediate"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          turnPace: "immediate",
+                        }));
+                      } else {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          turnPace: "correspondence",
+                        }));
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 shrink-0 accent-cyan-400"
+                    style={{
+                      borderRadius: 0,
+                    }}
+                  />
+                  <span>
+                    <span className="block font-mono font-bold text-cyan-300">
+                      Immediate game
+                    </span>
+                    <span className="mt-0.5 block text-xs text-gray-400">
+                      5 minutes per turn
+                    </span>
+                  </span>
+                </label>
+                <label className="flex min-w-0 cursor-pointer items-start gap-3 rounded-none border border-gray-600 bg-black/40 p-3 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-cyan-400">
+                  <input
+                    type="checkbox"
+                    checked={createForm.turnPace === "correspondence"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          turnPace: "correspondence",
+                        }));
+                      } else {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          turnPace: "immediate",
+                        }));
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 shrink-0 accent-cyan-400"
+                    style={{
+                      borderRadius: 0,
+                    }}
+                  />
+                  <span>
+                    <span className="block font-mono font-bold text-cyan-300">
+                      Correspondence game
+                    </span>
+                    <span className="mt-0.5 block text-xs text-gray-400">
+                      24 hours per turn
+                    </span>
+                  </span>
+                </label>
+              </div>
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Map ID</label>
+              <label className="block text-sm text-gray-400 mb-1">Map</label>
               <input
                 type="number"
                 value={createForm.selectedMapId}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === "" || parseInt(value) > 0) {
-                    setCreateForm((prev) => ({
-                      ...prev,
-                      selectedMapId: value,
-                    }));
-                  }
-                }}
-                className="w-full px-3 py-2 bg-black/60 border border-cyan-400 rounded-none text-cyan-300"
-                placeholder="1"
-                min="1"
+                disabled
+                readOnly
+                className="w-full cursor-not-allowed rounded-none border border-gray-600 bg-black/60 px-3 py-2 text-gray-400"
+                aria-readonly
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                Max Score
-              </label>
-              <input
-                type="number"
-                value={createForm.maxScore}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === "" || parseInt(value) > 0) {
-                    setCreateForm((prev) => ({
-                      ...prev,
-                      maxScore: value,
-                    }));
-                  }
-                }}
-                className="w-full px-3 py-2 bg-black/60 border border-cyan-400 rounded-none text-cyan-300"
-                placeholder="100"
-                min="1"
-              />
+              <span className="block text-sm text-gray-400 mb-2">
+                Max score (points to win)
+              </span>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <label className="flex min-w-0 cursor-pointer items-start gap-2 rounded-none border border-gray-600 bg-black/40 p-2.5 sm:gap-3 sm:p-3 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-cyan-400">
+                  <input
+                    type="checkbox"
+                    checked={createForm.scoreLength === "short"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          scoreLength: "short",
+                        }));
+                      } else if (createForm.scoreLength === "short") {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          scoreLength: "medium",
+                        }));
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 shrink-0 accent-cyan-400"
+                    style={{ borderRadius: 0 }}
+                  />
+                  <span>
+                    <span className="block font-mono font-bold text-cyan-300">
+                      Short
+                    </span>
+                    <span className="mt-0.5 block text-xs text-gray-400">
+                      50 points
+                    </span>
+                  </span>
+                </label>
+                <label className="flex min-w-0 cursor-pointer items-start gap-2 rounded-none border border-gray-600 bg-black/40 p-2.5 sm:gap-3 sm:p-3 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-cyan-400">
+                  <input
+                    type="checkbox"
+                    checked={createForm.scoreLength === "medium"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          scoreLength: "medium",
+                        }));
+                      } else if (createForm.scoreLength === "medium") {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          scoreLength: "short",
+                        }));
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 shrink-0 accent-cyan-400"
+                    style={{ borderRadius: 0 }}
+                  />
+                  <span>
+                    <span className="block font-mono font-bold text-cyan-300">
+                      Medium
+                    </span>
+                    <span className="mt-0.5 block text-xs text-gray-400">
+                      100 points
+                    </span>
+                  </span>
+                </label>
+                <label className="flex min-w-0 cursor-pointer items-start gap-2 rounded-none border border-gray-600 bg-black/40 p-2.5 sm:gap-3 sm:p-3 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-cyan-400">
+                  <input
+                    type="checkbox"
+                    checked={createForm.scoreLength === "long"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          scoreLength: "long",
+                        }));
+                      } else if (createForm.scoreLength === "long") {
+                        setCreateForm((prev) => ({
+                          ...prev,
+                          scoreLength: "medium",
+                        }));
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 shrink-0 accent-cyan-400"
+                    style={{ borderRadius: 0 }}
+                  />
+                  <span>
+                    <span className="block font-mono font-bold text-cyan-300">
+                      Long
+                    </span>
+                    <span className="mt-0.5 block text-xs text-gray-400">
+                      200 points
+                    </span>
+                  </span>
+                </label>
+              </div>
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">
@@ -1596,11 +2025,11 @@ const Lobbies: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <LobbyCreateButton
-                costLimit={BigInt(createForm.costLimit)}
-                turnTime={BigInt(createForm.turnTime)}
+                costLimit={BigInt(createFormCostLimit)}
+                turnTime={BigInt(createFormTurnTimeSeconds)}
                 creatorGoesFirst={createForm.creatorGoesFirst}
                 selectedMapId={BigInt(createForm.selectedMapId)}
-                maxScore={BigInt(createForm.maxScore)}
+                maxScore={BigInt(createFormMaxScore)}
                 value={
                   needsPaymentForLobby
                     ? (additionalLobbyFee as bigint) || 0n
@@ -1626,10 +2055,10 @@ const Lobbies: React.FC = () => {
                   setShowCreateForm(false);
                   // Reset form
                   setCreateForm({
-                    costLimit: "1000",
-                    turnTime: "300",
+                    threatScale: "skirmish",
+                    turnPace: "immediate",
                     selectedMapId: "1",
-                    maxScore: "100",
+                    scoreLength: "medium",
                     creatorGoesFirst: false,
                     reservedJoiner: "",
                   });
@@ -1825,13 +2254,13 @@ const Lobbies: React.FC = () => {
                 <div>
                   <span className="text-gray-400">Fleet Threat Limit:</span>
                   <span className="ml-2">
-                    {lobby.basic.costLimit.toString()}
+                    {formatLobbyCostLimitDisplay(lobby.basic.costLimit)}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-400">Turn Time:</span>
                   <span className="ml-2">
-                    {lobby.gameConfig.turnTime.toString()}s
+                    {formatLobbyTurnTimeDisplay(lobby.gameConfig.turnTime)}
                   </span>
                 </div>
                 <div>
@@ -1843,7 +2272,7 @@ const Lobbies: React.FC = () => {
                 <div>
                   <span className="text-gray-400">Max Score:</span>
                   <span className="ml-2">
-                    {lobby.gameConfig.maxScore.toString()}
+                    {formatLobbyMaxScoreDisplay(lobby.gameConfig.maxScore)}
                   </span>
                 </div>
               </div>
@@ -1993,15 +2422,26 @@ const Lobbies: React.FC = () => {
                       </button>
                     )}
 
-                  {/* View Fleet Selection button - show if fleet is selected but other player hasn't */}
+                  {/* View fleet while waiting for opponent; Games only after both fleets */}
                   {lobby.players.creatorFleetId > 0n &&
                     lobby.players.joinerFleetId === 0n && (
-                      <button
-                        onClick={() => setSelectedLobby(lobby.basic.id)}
-                        className="flex-1 px-4 py-2 rounded-none border border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200"
-                      >
-                        VIEW FLEET SELECTION
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLobby(lobby.basic.id)}
+                          className="flex-1 px-4 py-2 rounded-none border border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200"
+                        >
+                          VIEW FLEET SELECTION
+                        </button>
+                        <button
+                          type="button"
+                          disabled
+                          aria-disabled="true"
+                          className="flex-1 cursor-not-allowed px-4 py-2 rounded-none border border-gray-600 bg-gray-900/40 text-gray-500 font-mono font-bold text-sm tracking-wider"
+                        >
+                          WAITING FOR OPPOSING ADMIRAL
+                        </button>
+                      </>
                     )}
 
                   {/* Show waiting message if no joiner has joined yet */}
@@ -2084,15 +2524,26 @@ const Lobbies: React.FC = () => {
                     </button>
                   )}
 
-                  {/* View Fleet Selection button - when joiner has selected fleet but creator hasn't */}
+                  {/* View fleet while waiting for opponent; Games only after both fleets */}
                   {lobby.players.joinerFleetId > 0n &&
                     lobby.players.creatorFleetId === 0n && (
-                      <button
-                        onClick={() => setSelectedLobby(lobby.basic.id)}
-                        className="flex-1 px-4 py-2 rounded-none border border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200"
-                      >
-                        VIEW FLEET SELECTION
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLobby(lobby.basic.id)}
+                          className="flex-1 px-4 py-2 rounded-none border border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200"
+                        >
+                          VIEW FLEET SELECTION
+                        </button>
+                        <button
+                          type="button"
+                          disabled
+                          aria-disabled="true"
+                          className="flex-1 cursor-not-allowed px-4 py-2 rounded-none border border-gray-600 bg-gray-900/40 text-gray-500 font-mono font-bold text-sm tracking-wider"
+                        >
+                          WAITING FOR OPPOSING ADMIRAL
+                        </button>
+                      </>
                     )}
 
                   {/* Leave button - show as long as game hasn't started */}
@@ -2160,6 +2611,8 @@ const Lobbies: React.FC = () => {
           ))
         )}
       </div>
+        </>
+      )}
 
       {/* Fleet Selection Modal */}
       {selectedLobby &&
@@ -2209,7 +2662,7 @@ const Lobbies: React.FC = () => {
             });
 
           return (
-            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[400]">
               <div className="bg-black border border-cyan-400 rounded-none p-6 w-[100vw] h-[100vh] flex flex-col">
                 <div className="relative flex justify-between items-center mb-2">
                   <div className="flex items-center gap-3">
@@ -2223,7 +2676,7 @@ const Lobbies: React.FC = () => {
                     )}
                     {playerFleetId && !opponentHasFleet && (
                       <span className="px-3 py-1 text-xs font-bold text-yellow-400 bg-yellow-400/10 border border-yellow-400/40 rounded-none">
-                        WAITING FOR OPPONENT
+                        WAITING FOR OPPOSING ADMIRAL
                       </span>
                     )}
                   </div>
@@ -2285,16 +2738,27 @@ const Lobbies: React.FC = () => {
                       </button>
                     </div>
                   )}
-                  {/* After a fleet is selected, replace Cancel/Need points with Go To Games */}
+                  {/* After a fleet is selected: Games only when both admirals have fleets */}
                   {isParticipant && playerFleetId && (
-                    <div className="absolute left-1/2 transform -translate-x-1/2">
-                      <button
-                        type="button"
-                        onClick={closeFleetModalAndGoToGames}
-                        className="px-4 py-2 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200"
-                      >
-                        GO TO GAMES
-                      </button>
+                    <div className="pointer-events-auto absolute left-1/2 z-20 -translate-x-1/2 transform">
+                      {opponentHasFleet ? (
+                        <button
+                          type="button"
+                          onClick={closeFleetModalAndGoToGames}
+                          className="px-4 py-2 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200"
+                        >
+                          GO TO GAMES
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          aria-disabled="true"
+                          className="cursor-not-allowed px-4 py-2 rounded-none border-2 border-gray-600 bg-gray-900/40 text-gray-500 font-mono font-bold text-sm tracking-wider"
+                        >
+                          WAITING FOR OPPOSING ADMIRAL
+                        </button>
+                      )}
                     </div>
                   )}
                   <div className="flex items-center gap-3">
@@ -2399,7 +2863,7 @@ const Lobbies: React.FC = () => {
                 {/* Filter Overlay */}
                 {filtersExpanded && (
                   <div
-                    className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]"
+                    className="fixed inset-0 bg-black/80 flex items-center justify-center z-[410]"
                     onClick={() => setFiltersExpanded(false)}
                   >
                     <div
@@ -3086,7 +3550,7 @@ const Lobbies: React.FC = () => {
             : 1000;
 
           return (
-            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-60">
+            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[420]">
               <div className="bg-black border border-yellow-400 rounded-none p-6 max-w-md w-full mx-4">
                 <div className="text-center">
                   <div className="text-yellow-400 text-4xl mb-4">⚠️</div>
@@ -3128,7 +3592,7 @@ const Lobbies: React.FC = () => {
 
       {/* Fleet View Modal */}
       {showFleetView && viewingFleetId && viewingFleetOwner && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-60">
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[400]">
           <div className="bg-black border border-cyan-400 rounded-none p-6 max-w-4xl w-full mx-4 h-[80vh] flex flex-col">
             <div className="flex justify-between items-start mb-4">
               <h4 className="text-lg font-bold text-cyan-400">
@@ -3177,7 +3641,7 @@ const Lobbies: React.FC = () => {
                         className="border rounded-none p-4 bg-black/40 border-gray-600"
                       >
                         {/* Ship Image */}
-                        <div className="mb-3">
+                        <div className="relative mb-3 h-32 w-full min-h-0 [container-type:size]">
                           <ShipImage
                             key={`fleet-${shipData.id?.toString() || index}-${
                               shipData.shipData?.constructed
@@ -3185,7 +3649,7 @@ const Lobbies: React.FC = () => {
                                 : "unconstructed"
                             }`}
                             ship={shipData}
-                            className="w-full h-32 rounded-none border border-gray-600"
+                            className="h-full w-full rounded-none border border-gray-600"
                             showLoadingState={true}
                           />
                         </div>

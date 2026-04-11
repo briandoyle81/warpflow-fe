@@ -423,7 +423,7 @@ export function MapDisplay({
                   {/* Score value display */}
                   {mapState.scoringTiles[row][col] > 0 && (
                     <div
-                      className={`flex items-center justify-center text-lg font-bold text-black w-full h-full`}
+                      className={`relative z-0 flex items-center justify-center text-lg font-bold text-black w-full h-full`}
                     >
                       {mapState.scoringTiles[row][col]}
                     </div>
@@ -439,11 +439,11 @@ export function MapDisplay({
                       flippedShipIds.some((id) => id === ship.id);
 
                     return (
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="absolute inset-0 z-[1] pointer-events-none">
                         {"equipment" in ship ? (
                           <ShipImage
                             ship={ship as Ship}
-                            className={`max-w-full max-h-full object-contain ${
+                            className={`h-full w-full min-h-0 ${
                               flipThis ? "scale-x-[-1]" : ""
                             }`}
                           />

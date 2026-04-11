@@ -302,20 +302,23 @@ export function useFreeShipClaiming() {
       return newCache;
     });
 
-    // Refetch data after a short delay
-    const timer = setTimeout(() => {
-      // Refetch the ships data to show the newly claimed ships
-      refetch();
-      // Refetch the claim status to update the contract data
-      refetchClaimStatus();
-      // One extra delayed pass to cover eventual consistency on some RPCs.
-      setTimeout(() => {
-        refetch();
-        refetchClaimStatus();
-      }, 2000);
-    }, 2000);
+    void refetch();
+    void refetchClaimStatus();
 
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => {
+      void refetch();
+      void refetchClaimStatus();
+    }, 800);
+
+    const timer2 = setTimeout(() => {
+      void refetch();
+      void refetchClaimStatus();
+    }, 3000);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+    };
   }, [isConfirmed, hash, address, refetch, refetchClaimStatus, saveCacheToStorage]);
 
   // Handle receipt errors
