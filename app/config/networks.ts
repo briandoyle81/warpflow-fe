@@ -27,8 +27,11 @@ export type SupportedChain = (typeof SUPPORTED_CHAINS)[number];
 
 export const DEFAULT_CHAIN_ID: number = flowTestnet.id;
 
-/** Temporary: only Flow Testnet can be selected in the app network UI. */
-const CHAIN_IDS_SELECTABLE_IN_UI = new Set<number>([flowTestnet.id]);
+/** Chains the in-app network picker may select (must match wallet / wagmi). */
+const CHAIN_IDS_SELECTABLE_IN_UI = new Set<number>([
+  flowTestnet.id,
+  baseSepolia.id,
+]);
 
 export function isChainSelectableInUi(chainId: number): boolean {
   return CHAIN_IDS_SELECTABLE_IN_UI.has(chainId);

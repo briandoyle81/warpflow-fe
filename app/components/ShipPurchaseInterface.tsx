@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { useShipPurchasing } from "../hooks";
 import { useOwnedShips } from "../hooks/useOwnedShips";
+import { useShipsPurchaseInfo } from "../hooks/useShipsPurchaseInfo";
+import { useShipPurchaserPurchaseInfo } from "../hooks/useShipPurchaserPurchaseInfo";
 import { ShipPurchaseButton } from "./ShipPurchaseButton";
 import { ShipImage } from "./ShipImage";
 import type { Ship } from "../types/types";
@@ -13,106 +14,102 @@ interface ShipPurchaseInterfaceProps {
   onPaymentMethodChange?: (method: "FLOW" | "UTC") => void;
 }
 
+const TIER_COLOR_SCHEMES = [
+  {
+    border: "border-amber-400",
+    text: "text-amber-400",
+    hoverBorder: "hover:border-amber-300",
+    hoverText: "hover:text-amber-300",
+    hoverBg: "hover:bg-amber-400/10",
+  },
+  {
+    border: "border-gray-400",
+    text: "text-gray-400",
+    hoverBorder: "hover:border-gray-300",
+    hoverText: "hover:text-gray-300",
+    hoverBg: "hover:bg-gray-400/10",
+  },
+  {
+    border: "border-green-400",
+    text: "text-green-400",
+    hoverBorder: "hover:border-green-300",
+    hoverText: "hover:text-green-300",
+    hoverBg: "hover:bg-green-400/10",
+  },
+  {
+    border: "border-blue-400",
+    text: "text-blue-400",
+    hoverBorder: "hover:border-blue-300",
+    hoverText: "hover:text-blue-300",
+    hoverBg: "hover:bg-blue-400/10",
+  },
+  {
+    border: "border-purple-400",
+    text: "text-purple-400",
+    hoverBorder: "hover:border-purple-300",
+    hoverText: "hover:text-purple-300",
+    hoverBg: "hover:bg-purple-400/10",
+  },
+] as const;
+
+const TIER_CALLOUTS = [
+  "ENTRY PACK",
+  "STARTER BOOST",
+  "BALANCED VALUE",
+  "VETERAN CORE",
+  "FLAGSHIP PACK",
+] as const;
+
 const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
   paymentMethod: externalPaymentMethod,
 }) => {
-  const { tiers, prices, maxPerTier } = useShipPurchasing();
+  const shipsPack = useShipsPurchaseInfo();
+  const utcPack = useShipPurchaserPurchaseInfo();
   const { refetch } = useOwnedShips();
   const previewSeed = useMemo(() => Math.floor(Math.random() * 1_000_000), []);
 
-  // Use external payment method if provided, otherwise default to FLOW.
   const paymentMethod = externalPaymentMethod ?? "FLOW";
   const paymentMethodLabel = paymentMethod === "FLOW" ? "TOKENS" : "UTC";
 
-  // Get color classes based on tier (0-based: 0-4)
-  const getTierColors = (tier: number) => {
-    switch (tier) {
-      case 0:
-        return {
-          border: "border-amber-400",
-          text: "text-amber-400",
-          hoverBorder: "hover:border-amber-300",
-          hoverText: "hover:text-amber-300",
-          hoverBg: "hover:bg-amber-400/10",
-        };
-      case 1:
-        return {
-          border: "border-gray-400",
-          text: "text-gray-400",
-          hoverBorder: "hover:border-gray-300",
-          hoverText: "hover:text-gray-300",
-          hoverBg: "hover:bg-gray-400/10",
-        };
-      case 2:
-        return {
-          border: "border-green-400",
-          text: "text-green-400",
-          hoverBorder: "hover:border-green-300",
-          hoverText: "hover:text-green-300",
-          hoverBg: "hover:bg-green-400/10",
-        };
-      case 3:
-        return {
-          border: "border-blue-400",
-          text: "text-blue-400",
-          hoverBorder: "hover:border-blue-300",
-          hoverText: "hover:text-blue-300",
-          hoverBg: "hover:bg-blue-400/10",
-        };
-      case 4:
-        return {
-          border: "border-purple-400",
-          text: "text-purple-400",
-          hoverBorder: "hover:border-purple-300",
-          hoverText: "hover:text-purple-300",
-          hoverBg: "hover:bg-purple-400/10",
-        };
-      default:
-        return {
-          border: "border-amber-400",
-          text: "text-amber-400",
-          hoverBorder: "hover:border-amber-300",
-          hoverText: "hover:text-amber-300",
-          hoverBg: "hover:bg-amber-400/10",
-        };
-    }
-  };
+  if (paymentMethod === "UTC" && !utcPack.purchaserDeployed) {
+    return (
+      <div className="w-full py-8 text-center">
+        <p className="text-red-400 font-mono">
+          UTC ship packs are not available on this network (ShipPurchaser not
+          deployed).
+        </p>
+      </div>
+    );
+  }
+
+  const pack = paymentMethod === "FLOW" ? shipsPack : utcPack;
+  const {
+    tiers,
+    shipsPerTier: maxPerTier,
+    pricesWei: prices,
+    isLoading,
+    tierCount,
+  } = pack;
+
+  const getTierColors = (tier: number) =>
+    TIER_COLOR_SCHEMES[tier % TIER_COLOR_SCHEMES.length]!;
 
   const getGuaranteedRanks = (tier: number): string[] => {
-    switch (tier) {
-      case 0:
-        return ["R1"];
-      case 1:
-        return ["R2", "R1"];
-      case 2:
-        return ["R3", "R2", "R1"];
-      case 3:
-        return ["R4", "R3", "R2", "R1"];
-      case 4:
-        return ["R5", "R4", "R3", "R2", "R1"];
-      default:
-        return ["R1"];
-    }
+    const n = maxPerTier[tier] ?? 1;
+    const startRank = Math.min(tier + 1, 5);
+    return Array.from({ length: n }, (_, i) => {
+      const r = startRank - i;
+      return `R${Math.max(1, r)}`;
+    });
   };
 
-  const getTierCallout = (tier: number): string => {
-    switch (tier) {
-      case 4:
-        return "FLAGSHIP PACK";
-      case 3:
-        return "VETERAN CORE";
-      case 2:
-        return "BALANCED VALUE";
-      case 1:
-        return "STARTER BOOST";
-      default:
-        return "ENTRY PACK";
-    }
-  };
+  const getTierCallout = (tier: number): string =>
+    TIER_CALLOUTS[tier] ?? `TIER ${tier} PACK`;
 
   const getTierBadge = (tier: number): string | null => {
-    if (tier === 4) return "BEST VALUE";
-    if (tier === 3) return "MOST POPULAR";
+    if (tierCount <= 0) return null;
+    if (tier === tierCount - 1) return "BEST VALUE";
+    if (tierCount >= 2 && tier === tierCount - 2) return "MOST POPULAR";
     return null;
   };
 
@@ -169,18 +166,33 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
 
   const getPreviewShipsForTier = (tier: number): Ship[] => {
     const base = previewSeed + tier * 20 + 1;
-    const rankStacks: Record<number, number[]> = {
-      0: [1],
-      1: [2, 1],
-      2: [3, 2, 1],
-      3: [4, 3, 2, 1],
-      4: [5, 4, 3, 2, 1],
-    };
-    const ranks = rankStacks[tier] ?? [1];
-    return ranks.map((rank, idx) =>
-      createPreviewShip(base + idx, shipsDestroyedForRank(rank))
-    );
+    const rankLabels = getGuaranteedRanks(tier);
+    return rankLabels.map((label, idx) => {
+      const rank = parseInt(label.replace(/\D/g, ""), 10) || 1;
+      return createPreviewShip(
+        base + idx,
+        shipsDestroyedForRank(Math.min(5, rank)),
+      );
+    });
   };
+
+  if (isLoading && tierCount === 0) {
+    return (
+      <div className="w-full py-8 text-center">
+        <p className="text-gray-400 font-mono">Loading pack configuration…</p>
+      </div>
+    );
+  }
+
+  if (tierCount === 0) {
+    return (
+      <div className="w-full py-8 text-center">
+        <p className="text-red-400 font-mono">
+          No purchase tiers returned from the contract.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -216,12 +228,13 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
           const tierCallout = getTierCallout(tier);
           const badge = getTierBadge(tier);
           const previewShips = getPreviewShipsForTier(tier);
+          const singleColumn = (shipsCount ?? 1) <= 1;
 
           return (
             <ShipPurchaseButton
               key={index}
               tier={tier}
-              price={price || BigInt(0)}
+              price={price ?? BigInt(0)}
               paymentMethod={paymentMethod}
               className={`relative min-h-[420px] px-4 py-3 border-2 ${colors.border} ${colors.text} ${colors.hoverBorder} ${colors.hoverText} ${colors.hoverBg} font-mono tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
               refetch={refetch}
@@ -255,7 +268,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
                   <div className="mb-1 text-[10px] opacity-75">
                     Pack preview
                   </div>
-                  {tier === 0 ? (
+                  {singleColumn ? (
                     <div className="flex justify-center">
                       <div className="h-64 w-64 shrink-0">
                         <ShipImage

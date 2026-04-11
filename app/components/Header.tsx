@@ -103,7 +103,7 @@ const Header: React.FC = () => {
 
     pendingSwitchChainIdRef.current = null;
     if (selectedChainId !== account.chainId) {
-      // Temporary: do not adopt a connected wallet chain unless it is selectable in the UI.
+      // Only sync app selection to the wallet chain when that chain is enabled in the UI picker.
       if (!isChainSelectableInUi(account.chainId)) return;
       setSelectedChainId(account.chainId);
       setSelectedChainIdState(account.chainId);

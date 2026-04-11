@@ -27,6 +27,8 @@ export { useNavyOptimization } from "./useNavyOptimization";
 
 // Phase 4: Ship Purchasing with FLOW
 export { useShipPurchasing } from "./useShipPurchasing";
+export { useShipsPurchaseInfo } from "./useShipsPurchaseInfo";
+export { useShipPurchaserPurchaseInfo } from "./useShipPurchaserPurchaseInfo";
 export { useFreeShipClaiming } from "./useFreeShipClaiming";
 
 // Ship Image Caching (legacy - kept for backward compatibility)

@@ -3,8 +3,9 @@
 import React from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { UTCPurchaseButton } from "./UTCPurchaseButton";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS, SHIP_PURCHASE_TIERS } from "../config/contracts";
+import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import { getNativeTokenSymbol, getSelectedChainId } from "../config/networks";
+import { useShipPurchaserPurchaseInfo } from "../hooks/useShipPurchaserPurchaseInfo";
 import type { Abi } from "viem";
 import { formatEther } from "viem";
 
@@ -16,6 +17,14 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
   const { address, chainId: walletChainId } = useAccount();
   const activeChainId = walletChainId ?? getSelectedChainId();
   const nativeTokenSymbol = getNativeTokenSymbol(activeChainId);
+
+  const {
+    tiers,
+    pricesWei,
+    tierCount,
+    isLoading: isLoadingTiers,
+    purchaserDeployed,
+  } = useShipPurchaserPurchaseInfo();
 
   const { data: utcBalance, refetch: refetchUTCBalance } = useReadContract({
     address: CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`,
@@ -113,9 +122,6 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
             check out ship packs elsewhere. This purchase only adds UTC to your
             wallet.
           </p>
-          <p className="mt-2 text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-red-400">
-            Prices not yet adjusted for all chains
-          </p>
         </div>
 
         <header className="mb-5 border-b border-cyan-400/25 pb-4">
@@ -134,11 +140,24 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
           </p>
         </header>
 
+        {!purchaserDeployed ? (
+          <p className="text-center text-red-400 font-mono py-6">
+            ShipPurchaser is not deployed on this network.
+          </p>
+        ) : isLoadingTiers && tierCount === 0 ? (
+          <p className="text-center text-gray-400 font-mono py-6">
+            Loading UTC purchase options…
+          </p>
+        ) : tierCount === 0 ? (
+          <p className="text-center text-red-400 font-mono py-6">
+            No UTC purchase tiers from ShipPurchaser.
+          </p>
+        ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {SHIP_PURCHASE_TIERS.prices.map((flowCost, index) => {
+          {tiers.map((tier, index) => {
+            const flowCost = pricesWei[index] ?? 0n;
             const flowCostFormatted = formatEther(flowCost);
             const flowNum = parseFloat(flowCostFormatted);
-            const tier = index;
             const colors = getTierColors(tier);
             const utcDisplay = flowNum.toFixed(2);
 
@@ -180,6 +199,7 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
             );
           })}
         </div>
+        )}
       </div>
     </div>
   );

@@ -12,12 +12,28 @@ import Info from "./components/Info";
 import Maps from "./components/Maps";
 import ShipAttributes from "./components/ShipAttributes";
 import ShipConstructor from "./components/ShipConstructor";
+import ShipPurchasePrices from "./components/ShipPurchasePrices";
 import { useShipAttributesOwner } from "./hooks/useShipAttributesContract";
+import { useShipPurchasePricesAccess } from "./hooks/useShipPurchasePricesAccess";
 import { TUTORIAL_STEP_STORAGE_KEY } from "./types/onboarding";
+
+/** Tabs we may persist; includes owner-only names so refresh works before contract reads resolve. */
+const KNOWN_TAB_NAMES = new Set<string>([
+  "Info",
+  "Manage Navy",
+  "Lobbies",
+  "Games",
+  "Profile",
+  "Maps",
+  "Customize Ship",
+  "Ship Attributes",
+  "Purchase Prices",
+]);
 
 export default function Home() {
   const { status } = useAccount();
   const { isOwner } = useShipAttributesOwner();
+  const { canAdminShipPurchasePrices } = useShipPurchasePricesAccess();
 
   // Initialize with default tab to prevent hydration mismatch
   const [activeTab, setActiveTab] = useState("Info");
@@ -44,7 +60,8 @@ export default function Home() {
     };
   }, []);
 
-  // Restore tab and tutorial chrome from localStorage before first paint (avoids nav flash on refresh).
+  // Restore tab from localStorage once on mount. Owner tabs are not gated on
+  // isOwner / canAdminShipPurchasePrices (those are false until reads finish).
   useLayoutEffect(() => {
     setIsHydrated(true);
     const savedTab = localStorage.getItem("void-tactics-active-tab");
@@ -52,26 +69,13 @@ export default function Home() {
     const forceGamesTab =
       localStorage.getItem("void-tactics-force-games-tab") === "true";
 
-    const validTabs = [
-      "Info",
-      "Manage Navy",
-      "Lobbies",
-      "Games",
-      "Profile",
-      "Maps",
-      "Customize Ship",
-    ];
-    if (isOwner) {
-      validTabs.push("Ship Attributes");
-    }
-
     let nextTab = "Info";
     if (forceGamesTab) {
       nextTab = "Games";
       localStorage.removeItem("void-tactics-force-games-tab");
     } else if (savedGameId) {
       nextTab = "Games";
-    } else if (savedTab && validTabs.includes(savedTab)) {
+    } else if (savedTab && KNOWN_TAB_NAMES.has(savedTab)) {
       nextTab = savedTab;
     }
 
@@ -80,7 +84,7 @@ export default function Home() {
     const tutorialInProgress =
       localStorage.getItem(TUTORIAL_STEP_STORAGE_KEY) !== null;
     setIsInfoTutorialActive(tutorialInProgress && nextTab === "Info");
-  }, [isOwner]);
+  }, []);
 
   // Leaving Info must drop tutorial chrome (tabs are hidden while it is on).
   useLayoutEffect(() => {
@@ -287,8 +291,14 @@ export default function Home() {
                   "Maps",
                   "Customize Ship",
                 ];
-                if (isOwner) {
+                if (isOwner || activeTab === "Ship Attributes") {
                   tabs.push("Ship Attributes");
+                }
+                if (
+                  canAdminShipPurchasePrices ||
+                  activeTab === "Purchase Prices"
+                ) {
+                  tabs.push("Purchase Prices");
                 }
                 return tabs;
               })().map((tab) => {
@@ -387,6 +397,7 @@ export default function Home() {
               {activeTab === "Profile" && <Profile />}
               {activeTab === "Info" && <Info />}
               {activeTab === "Ship Attributes" && <ShipAttributes />}
+              {activeTab === "Purchase Prices" && <ShipPurchasePrices />}
               {activeTab === "Customize Ship" && <ShipConstructor />}
             </div>
           )}

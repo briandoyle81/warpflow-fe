@@ -7,6 +7,7 @@ import MapsContract from "../contracts/DeployModule#Maps.json";
 import ShipAttributesContract from "../contracts/DeployModule#ShipAttributes.json";
 import DroneYardContract from "../contracts/DeployModule#DroneYard.json";
 import TutorialClaimContract from "../contracts/DeployModule#TutorialClaim.json";
+import ShipPurchaserContract from "../contracts/DeployModule#ShipPurchaser.json";
 import { baseSepolia, flowTestnet, saigon } from "viem/chains";
 import { getSelectedChainId, xaiTestnet } from "./networks";
 import flowTestnetDeployedAddresses from "../contracts/flow-testnet/deployed_addresses.json";
@@ -165,20 +166,7 @@ export const CONTRACT_ABIS = {
   SHIP_ATTRIBUTES: ShipAttributesContract.abi,
   DRONE_YARD: DroneYardContract.abi,
   TUTORIAL_CLAIM: TutorialClaimContract.abi,
-} as const;
-
-// Hard-coded ship purchase tiers (from Ships contract)
-// Tiers are now 0-based (0-4) instead of 1-based (1-5)
-export const SHIP_PURCHASE_TIERS = {
-  tiers: [0, 1, 2, 3, 4],
-  shipsPerTier: [5, 11, 22, 40, 60],
-  prices: [
-    BigInt("4990000000000000000"), // 4.99 FLOW - Tier 0
-    BigInt("9990000000000000000"), // 9.99 FLOW - Tier 1
-    BigInt("19990000000000000000"), // 19.99 FLOW - Tier 2
-    BigInt("34990000000000000000"), // 34.99 FLOW - Tier 3
-    BigInt("49990000000000000000"), // 49.99 FLOW - Tier 4
-  ],
+  SHIP_PURCHASER: ShipPurchaserContract.abi,
 } as const;
 
 // Contract types for wagmi

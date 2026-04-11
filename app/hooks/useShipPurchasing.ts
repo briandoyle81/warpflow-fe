@@ -4,14 +4,12 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import {
-  SHIP_PURCHASE_TIERS,
-  getContractAddresses,
-} from "../config/contracts";
+import { getContractAddresses } from "../config/contracts";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
 import { useEffect } from "react";
 import { getSelectedChainId, getVariantForChainId } from "../config/networks";
+import { useShipsPurchaseInfo } from "./useShipsPurchaseInfo";
 
 // Ships contract ABI for purchasing with FLOW
 const shipsContractABI = [
@@ -36,16 +34,20 @@ export function useShipPurchasing() {
   const contractAddresses = getContractAddresses(activeChainId);
   const chainVariant = getVariantForChainId(activeChainId);
 
-  // Get user's FLOW balance
+  const {
+    tiers,
+    shipsPerTier,
+    pricesWei,
+    isLoading: isLoadingPurchaseInfo,
+  } = useShipsPurchaseInfo();
+
   const { data: flowBalance, isLoading: isLoadingFlowBalance } = useBalance({
     address,
     chainId: activeChainId,
   });
 
-  // Write contract for purchasing
   const { writeContract, isPending, error, data: hash } = useWriteContract();
 
-  // Wait for transaction receipt
   const {
     isLoading: isConfirming,
     isSuccess: isConfirmed,
@@ -54,12 +56,10 @@ export function useShipPurchasing() {
     hash,
   });
 
-  // Handle write contract errors (including user rejection) - only for immediate errors
   useEffect(() => {
     if (error) {
       console.error("Write contract error:", error);
 
-      // Check if the error is due to user rejection
       const errorMessage = error.message || "";
       if (
         errorMessage.includes("User rejected") ||
@@ -73,16 +73,13 @@ export function useShipPurchasing() {
     }
   }, [error]);
 
-  // Show toast when receipt is received
   useEffect(() => {
     if (isConfirmed && hash) {
       toast.success("Ships purchased successfully!");
-      // Refetch ships data after successful purchase
       setTimeout(() => refetch(), 2000);
     }
   }, [isConfirmed, hash, refetch]);
 
-  // Handle receipt errors
   useEffect(() => {
     if (receiptError) {
       const errorMessage = receiptError.message || "Transaction failed";
@@ -98,26 +95,19 @@ export function useShipPurchasing() {
     }
   }, [receiptError]);
 
-  // Use hard-coded tier information
-  const { tiers, shipsPerTier, prices } = SHIP_PURCHASE_TIERS;
-
-  // Purchase ships function - note: contract handles count internally
-  // Tiers are now 0-based (0-4) instead of 1-based (1-5)
   const purchaseShips = async (tier: number) => {
     if (!address) {
       toast.error("Please connect your wallet");
       return;
     }
 
-    // Validate 0-based tier (0-4)
     if (tier < 0 || tier >= tiers.length) {
       toast.error("Invalid tier selected");
       return;
     }
 
-    // Tier is already 0-based, use directly as index
-    const tierPrice = prices[tier] || BigInt(0);
-    if (tierPrice === BigInt(0)) {
+    const tierPrice = pricesWei[tier] ?? 0n;
+    if (tierPrice === 0n) {
       toast.error("Invalid tier price");
       return;
     }
@@ -127,7 +117,6 @@ export function useShipPurchasing() {
       return;
     }
 
-    // Fixed referral address
     const referralAddress =
       "0xac5b774D7a700AcDb528048B6052bc1549cd73B9" as `0x${string}`;
 
@@ -136,15 +125,12 @@ export function useShipPurchasing() {
         address: contractAddresses.SHIPS as `0x${string}`,
         abi: shipsContractABI,
         functionName: "purchaseWithFlow",
-        args: [address, tier as number, referralAddress, chainVariant], // tier is 0-based uint8
+        args: [address, tier as number, referralAddress, chainVariant],
         value: tierPrice,
       });
-
-      // Toast will be shown when receipt is received (in useEffect above)
     } catch (err: unknown) {
       console.error("Error purchasing ships:", err);
 
-      // Check if the error is due to user rejection
       const errorMessage = err instanceof Error ? err.message : String(err);
       if (
         errorMessage.includes("User rejected") ||
@@ -158,63 +144,50 @@ export function useShipPurchasing() {
     }
   };
 
-  // Quick purchase functions
   const purchaseSingleShip = (tier: number) => purchaseShips(tier);
   const purchaseMultipleShips = (tier: number) => purchaseShips(tier);
 
-  // Calculate costs for different quantities in a tier
-  // Tiers are now 0-based (0-4)
   const getPurchaseCosts = (tier: number, maxCount: number = 10) => {
-    // Tier is already 0-based, use directly as index
-    if (!prices[tier]) return [];
+    const p = pricesWei[tier];
+    if (p === undefined) return [];
 
-    const tierPrice = prices[tier];
     const shipsInTier = Number(shipsPerTier[tier] || 1);
     const costs = [];
 
     for (let i = 1; i <= Math.min(maxCount, shipsInTier); i++) {
       costs.push({
         count: i,
-        cost: tierPrice * BigInt(i),
-        costFormatted: `${(Number(tierPrice * BigInt(i)) / 1e18).toFixed(
-          2
-        )} FLOW`,
+        cost: p * BigInt(i),
+        costFormatted: `${(Number(p * BigInt(i)) / 1e18).toFixed(2)} FLOW`,
       });
     }
     return costs;
   };
 
-  // Check if user can afford a certain quantity in a tier
-  // Tiers are now 0-based (0-4)
   const canAfford = (tier: number, count: number) => {
-    // Tier is already 0-based, use directly as index
-    if (!prices[tier] || !flowBalance) return false;
-    const tierPrice = prices[tier];
-    const totalCost = tierPrice * BigInt(count);
+    const p = pricesWei[tier];
+    if (p === undefined || !flowBalance) return false;
+    const totalCost = p * BigInt(count);
     return flowBalance.value >= totalCost;
   };
 
   return {
-    // Data
     tiers,
-    prices,
+    prices: pricesWei,
     maxPerTier: shipsPerTier,
     flowBalance,
 
-    // Loading states
     isLoadingFlowBalance,
+    isLoadingPurchaseInfo,
 
-    // Actions
     purchaseShips,
     purchaseSingleShip,
     purchaseMultipleShips,
 
-    // Utilities
     getPurchaseCosts,
     canAfford,
 
-    // Contract state
-    isPending: isPending || isConfirming, // Include confirmation state
+    isPending: isPending || isConfirming,
     error: error || receiptError,
   };
 }
