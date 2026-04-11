@@ -103,6 +103,11 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
     });
   };
 
+  const getGuaranteedRankNumbers = (tier: number): number[] =>
+    getGuaranteedRanks(tier).map(
+      (label) => parseInt(label.replace(/\D/g, ""), 10) || 1,
+    );
+
   const getTierCallout = (tier: number): string =>
     TIER_CALLOUTS[tier] ?? `TIER ${tier} PACK`;
 
@@ -164,16 +169,27 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
     }
   };
 
+  /**
+   * Pack preview art only (not full fleet count). Entry pack: single R1. Other
+   * tiers: veterans only (rank greater than 1), no R1 filler in the strip.
+   */
+  const getPreviewDisplayRanks = (tier: number): number[] => {
+    const ranks = getGuaranteedRankNumbers(tier);
+    if (tier === 0) {
+      return [1];
+    }
+    return ranks.filter((r) => r > 1);
+  };
+
   const getPreviewShipsForTier = (tier: number): Ship[] => {
     const base = previewSeed + tier * 20 + 1;
-    const rankLabels = getGuaranteedRanks(tier);
-    return rankLabels.map((label, idx) => {
-      const rank = parseInt(label.replace(/\D/g, ""), 10) || 1;
-      return createPreviewShip(
+    const ranksToShow = getPreviewDisplayRanks(tier);
+    return ranksToShow.map((rank, idx) =>
+      createPreviewShip(
         base + idx,
         shipsDestroyedForRank(Math.min(5, rank)),
-      );
-    });
+      ),
+    );
   };
 
   if (isLoading && tierCount === 0) {
@@ -224,11 +240,13 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
             ? (Number(price) / 1e18).toFixed(2)
             : "0.00";
           const colors = getTierColors(tier);
-          const guaranteedRanks = getGuaranteedRanks(tier);
+          const guaranteedRanksDisplay = getGuaranteedRankNumbers(tier)
+            .filter((r) => r > 1)
+            .map((r) => `R${r}`);
           const tierCallout = getTierCallout(tier);
           const badge = getTierBadge(tier);
           const previewShips = getPreviewShipsForTier(tier);
-          const singleColumn = (shipsCount ?? 1) <= 1;
+          const previewSingleColumn = previewShips.length <= 1;
 
           return (
             <ShipPurchaseButton
@@ -268,11 +286,15 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
                   <div className="mb-1 text-[10px] opacity-75">
                     Pack preview
                   </div>
-                  {singleColumn ? (
+                  {previewShips.length === 0 ? (
+                    <div className="py-6 text-center text-[10px] opacity-60">
+                      No veteran preview for this pack.
+                    </div>
+                  ) : previewSingleColumn ? (
                     <div className="flex justify-center">
                       <div className="h-64 w-64 shrink-0">
                         <ShipImage
-                          ship={previewShips[0]}
+                          ship={previewShips[0]!}
                           showLoadingState={false}
                         />
                       </div>
@@ -281,7 +303,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
                     <div className="flex items-end justify-center gap-2">
                       <div className="h-64 w-64 shrink-0">
                         <ShipImage
-                          ship={previewShips[0]}
+                          ship={previewShips[0]!}
                           showLoadingState={false}
                         />
                       </div>
@@ -300,7 +322,10 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
                 </div>
 
                 <div className="text-[11px] leading-tight opacity-90">
-                  Guaranteed ranks: {guaranteedRanks.join(" + ")}
+                  Guaranteed ranks:{" "}
+                  {guaranteedRanksDisplay.length > 0
+                    ? guaranteedRanksDisplay.join(" + ")
+                    : "—"}
                 </div>
               </div>
             </ShipPurchaseButton>
