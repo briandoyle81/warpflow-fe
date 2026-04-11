@@ -38,18 +38,52 @@ export function useShipAttributesByIds(shipIds: bigint[]) {
 
   React.useEffect(() => {
     if (contractData) {
-      writeShipAttributesByIdsCache(shipIds, contractData as Attributes[]);
+      const rows = contractData as Attributes[];
+      if (rows.length === shipIds.length) {
+        writeShipAttributesByIdsCache(shipIds, rows);
+      }
     }
   }, [contractData, shipIds]);
 
-  // Return cached data if available, otherwise contract data
-  const data = cachedData || (contractData as Attributes[]);
+  // Only use rows that match the current id list. Otherwise wagmi can briefly
+  // keep the previous query's array while `shipIds` has already updated, which
+  // mis-attributes stats (wrong damage reduction, etc.) when keyed by index.
+  const attributes = React.useMemo((): Attributes[] => {
+    const n = shipIds.length;
+    if (n === 0) return [];
+
+    if (cachedData && cachedData.length === n) {
+      return cachedData;
+    }
+
+    const fromContract = contractData as Attributes[] | undefined;
+    // Do not trust `contractData` while this query is still loading: wagmi can
+    // keep the previous successful result until the new `args` resolve, and
+    // lengths can match while rows belong to an older `shipIds` list.
+    if (
+      shouldCallContract &&
+      fromContract &&
+      fromContract.length === n &&
+      !isLoading
+    ) {
+      return fromContract;
+    }
+
+    return [];
+  }, [
+    cachedData,
+    contractData,
+    shipIds.length,
+    shipIdsString,
+    shouldCallContract,
+    isLoading,
+  ]);
 
   return {
-    attributes: data || [],
-    isLoading: shouldCallContract ? isLoading : false,
+    attributes,
+    isLoading: shouldCallContract && isLoading,
     error,
     refetch,
-    isFromCache: !!cachedData,
+    isFromCache: !!cachedData && cachedData.length === shipIds.length,
   };
 }

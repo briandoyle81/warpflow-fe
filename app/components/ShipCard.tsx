@@ -655,7 +655,11 @@ const ShipCard: React.FC<ShipCardProps> = ({
                       <span className="ml-2">{inGameAttributes.movement}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="opacity-60">Armor:</span>
+                      <span className="opacity-60">
+                        {ship.equipment.shields > 0
+                          ? "Shields:"
+                          : "Armor:"}
+                      </span>
                       <span className="ml-2">
                         {inGameAttributes.damageReduction}%
                       </span>

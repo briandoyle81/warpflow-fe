@@ -7,7 +7,11 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { useAccount, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useAccount,
+  useChainId,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { formatEther } from "viem";
 import { useLobbies } from "../hooks/useLobbies";
 import { useOwnedShips } from "../hooks/useOwnedShips";
@@ -36,6 +40,11 @@ import { formatDestroyedDate } from "../utils/dateUtils";
 import { MapDisplay } from "./MapDisplay";
 import { usePlayerGames } from "../hooks/usePlayerGames";
 import { useLobby } from "../hooks/useLobbiesContract";
+import {
+  readFleetDrafts,
+  writeFleetDraft,
+  removeFleetDraft,
+} from "../utils/fleetSelectionDraftStorage";
 
 /** Onchain turn timer when creating an Immediate game lobby. */
 const IMMEDIATE_GAME_TURN_SECONDS = 5 * 60;
@@ -94,8 +103,14 @@ const VOID_TACTICS_ALPHA_TWITTER_INTENT = `https://twitter.com/intent/tweet?text
 /** Minimum owned and constructed ships required to use lobbies. */
 const MIN_SHIPS_FOR_LOBBIES = 10;
 
+/** Matches `findNextPosition`: 4 deployment columns per side × grid height. */
+const FLEET_DEPLOY_ZONE_COLUMNS = 4;
+const MAX_SHIPS_PER_FLEET =
+  FLEET_DEPLOY_ZONE_COLUMNS * GRID_DIMENSIONS.HEIGHT;
+
 const Lobbies: React.FC = () => {
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
   const {
     lobbyList,
     playerState,
@@ -179,6 +194,10 @@ const Lobbies: React.FC = () => {
     }
   }, [needsShipsForLobbyUi, needsConstructForLobbyUi, showCreateForm]);
   const [selectedLobby, setSelectedLobby] = useState<bigint | null>(null);
+  const selectedLobbyRef = useRef<bigint | null>(null);
+  useEffect(() => {
+    selectedLobbyRef.current = selectedLobby;
+  }, [selectedLobby]);
   const [selectedShips, setSelectedShips] = useState<bigint[]>([]);
   const [shipPositions, setShipPositions] = useState<
     Array<{ shipId: bigint; row: number; col: number }>
@@ -211,10 +230,13 @@ const Lobbies: React.FC = () => {
           (l.basic.creator === address || l.players.joiner === address),
       );
       if (!lobby) {
+        if (chainId && address) {
+          removeFleetDraft(chainId, address, selectedLobby);
+        }
         setSelectedLobby(null);
       }
     }
-  }, [selectedLobby, address, lobbyList.lobbies]);
+  }, [selectedLobby, address, lobbyList.lobbies, chainId]);
 
   const [isCreatingFleet, setIsCreatingFleet] = useState(false);
   const [showFleetView, setShowFleetView] = useState(false);
@@ -302,6 +324,26 @@ const Lobbies: React.FC = () => {
         : null;
   }, [selectedLobby, address, lobbyList.lobbies, selectedLobbyLive]);
 
+  const resolvedLobbyForSelected = React.useMemo(() => {
+    if (!selectedLobby) return null;
+    return (
+      selectedLobbyLive ??
+      lobbyList.lobbies.find((l) => l.basic.id === selectedLobby) ??
+      null
+    );
+  }, [selectedLobby, selectedLobbyLive, lobbyList.lobbies]);
+
+  const selectedLobbyPlayerHasFleetOnChain = React.useMemo(() => {
+    if (!resolvedLobbyForSelected || !address) return false;
+    const normalizedAddress = address.toLowerCase();
+    const isCreator =
+      resolvedLobbyForSelected.basic.creator.toLowerCase() ===
+      normalizedAddress;
+    return isCreator
+      ? resolvedLobbyForSelected.players.creatorFleetId > 0n
+      : resolvedLobbyForSelected.players.joinerFleetId > 0n;
+  }, [resolvedLobbyForSelected, address]);
+
   // Fetch the player's existing fleet data when viewing their own fleet
   const { data: playerFleetIdsAndPositions } = useFleetsRead(
     "getFleetShipIdsAndPositions",
@@ -384,6 +426,100 @@ const Lobbies: React.FC = () => {
 
   // Track the last loaded fleet ID to avoid reloading unnecessarily
   const lastLoadedFleetIdRef = useRef<bigint | null>(null);
+  /** Avoid re-applying localStorage draft on every render while a lobby stays open. */
+  const lastHydratedDraftLobbyRef = useRef<bigint | null>(null);
+  /**
+   * Hydrate updates ship state asynchronously; skip one persist pass so we do not
+   * write stale (pre-hydrate) selection over the saved draft.
+   */
+  const skipNextDraftPersistRef = useRef(false);
+
+  useEffect(() => {
+    if (!selectedLobby) {
+      lastHydratedDraftLobbyRef.current = null;
+    }
+  }, [selectedLobby]);
+
+  // Load saved draft when opening fleet picker (no on-chain fleet yet for this lobby)
+  useEffect(() => {
+    if (
+      !selectedLobby ||
+      !address ||
+      !chainId ||
+      !resolvedLobbyForSelected ||
+      selectedLobbyPlayerHasFleetOnChain
+    ) {
+      if (selectedLobby && selectedLobbyPlayerHasFleetOnChain) {
+        lastHydratedDraftLobbyRef.current = selectedLobby;
+      }
+      return;
+    }
+    if (lastHydratedDraftLobbyRef.current === selectedLobby) return;
+
+    const drafts = readFleetDrafts(chainId, address);
+    const raw = drafts[selectedLobby.toString()];
+    skipNextDraftPersistRef.current = true;
+    if (raw?.shipIds?.length) {
+      try {
+        const ids = raw.shipIds.map((s) => BigInt(s));
+        const pos = (raw.positions || []).map((p) => ({
+          shipId: BigInt(p.shipId),
+          row: p.row,
+          col: p.col,
+        }));
+        setSelectedShips(ids);
+        setShipPositions(pos);
+      } catch {
+        setSelectedShips([]);
+        setShipPositions([]);
+      }
+    } else {
+      setSelectedShips([]);
+      setShipPositions([]);
+    }
+    setSelectedShipId(null);
+    lastHydratedDraftLobbyRef.current = selectedLobby;
+  }, [
+    selectedLobby,
+    address,
+    chainId,
+    resolvedLobbyForSelected,
+    selectedLobbyPlayerHasFleetOnChain,
+  ]);
+
+  // Persist draft while picking a fleet (not after fleet exists on-chain)
+  useEffect(() => {
+    if (
+      !selectedLobby ||
+      !address ||
+      !chainId ||
+      !resolvedLobbyForSelected ||
+      selectedLobbyPlayerHasFleetOnChain
+    ) {
+      if (
+        selectedLobby &&
+        address &&
+        chainId &&
+        selectedLobbyPlayerHasFleetOnChain
+      ) {
+        removeFleetDraft(chainId, address, selectedLobby);
+      }
+      return;
+    }
+    if (skipNextDraftPersistRef.current) {
+      skipNextDraftPersistRef.current = false;
+      return;
+    }
+    writeFleetDraft(chainId, address, selectedLobby, selectedShips, shipPositions);
+  }, [
+    selectedLobby,
+    address,
+    chainId,
+    resolvedLobbyForSelected,
+    selectedLobbyPlayerHasFleetOnChain,
+    selectedShips,
+    shipPositions,
+  ]);
 
   // Load player's existing fleet into selection state when modal opens
   useEffect(() => {
@@ -708,6 +844,10 @@ const Lobbies: React.FC = () => {
   }, []);
 
   const resetFleetSelectionModalState = useCallback(() => {
+    const lid = selectedLobbyRef.current;
+    if (lid != null && address && chainId) {
+      removeFleetDraft(chainId, address, lid);
+    }
     setSelectedLobby(null);
     setSelectedShips([]);
     setShipPositions([]);
@@ -731,7 +871,24 @@ const Lobbies: React.FC = () => {
       defenseType: "all",
       specialType: "all",
     });
+  }, [address, chainId]);
+
+  /** Close the fleet modal but keep in-memory and saved draft selection. */
+  const closeFleetModalOnly = useCallback(() => {
+    setSelectedLobby(null);
+    setFiltersExpanded(false);
+    setShowFleetConfirmation(false);
   }, []);
+
+  const clearFleetDraftSelection = useCallback(() => {
+    if (!selectedLobby || !address) return;
+    if (chainId) {
+      removeFleetDraft(chainId, address, selectedLobby);
+    }
+    setSelectedShips([]);
+    setShipPositions([]);
+    setSelectedShipId(null);
+  }, [selectedLobby, address, chainId]);
 
   // Close fleet selection modal (if open) and switch to Games tab
   const closeFleetModalAndGoToGames = useCallback(() => {
@@ -739,16 +896,24 @@ const Lobbies: React.FC = () => {
     navigateToGamesTab();
   }, [resetFleetSelectionModalState, navigateToGamesTab]);
 
-  // Create a map of ship ID to attributes for quick lookup
+  // Create a map of ship ID to attributes for quick lookup (only when rows align
+  // with shipIds so we never show another ship's stats on the wrong card).
+  const attributesAlignedWithShipIds =
+    shipIds.length === 0 ||
+    shipAttributes.length === shipIds.length;
   const attributesMap = React.useMemo(() => {
     const map = new Map<bigint, (typeof shipAttributes)[0]>();
+    if (!attributesAlignedWithShipIds) return map;
     shipIds.forEach((shipId, index) => {
       if (shipAttributes[index]) {
         map.set(shipId, shipAttributes[index]);
       }
     });
     return map;
-  }, [shipIds, shipAttributes]);
+  }, [shipIds, shipAttributes, attributesAlignedWithShipIds]);
+
+  const fleetSelectionAttributesLoading =
+    attributesLoading || !attributesAlignedWithShipIds;
 
   const [dragging, setDragging] = useState<{
     type:
@@ -986,6 +1151,13 @@ const Lobbies: React.FC = () => {
   const handleCreateFleet = async (lobbyId: bigint) => {
     if (!isConnected || selectedShips.length === 0) return;
 
+    if (selectedShips.length > MAX_SHIPS_PER_FLEET) {
+      toast.error(
+        `A fleet can have at most ${MAX_SHIPS_PER_FLEET} ships for this map. Remove ships until you are at or below the limit.`,
+      );
+      return;
+    }
+
     if (selectedFleetHasStaleCostsVersion) {
       toast.error(
         "Remove or update ships that are not on the current cost version (Manage Navy) before creating a fleet.",
@@ -1068,6 +1240,13 @@ const Lobbies: React.FC = () => {
 
   const createFleetWithConfirmation = async (lobbyId: bigint) => {
     if (!isConnected || selectedShips.length === 0) return;
+
+    if (selectedShips.length > MAX_SHIPS_PER_FLEET) {
+      toast.error(
+        `A fleet can have at most ${MAX_SHIPS_PER_FLEET} ships for this map.`,
+      );
+      return;
+    }
 
     if (selectedFleetHasStaleCostsVersion) {
       toast.error(
@@ -2460,33 +2639,9 @@ const Lobbies: React.FC = () => {
                       allowWhenOtherPending
                       className="flex-1 px-4 py-2 rounded-none border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200"
                       onSuccess={() => {
-                        // If leaving from fleet selection modal, close it
                         if (selectedLobby === lobby.basic.id) {
-                          setSelectedLobby(null);
-                          setSelectedShips([]);
-                          setShipPositions([]);
-                          setSelectedShipId(null);
-                          setFiltersExpanded(false);
-                          setShowFleetConfirmation(false);
-                          lastLoadedFleetIdRef.current = null;
-                          setFleetFilters({
-                            showShiny: true,
-                            showCommon: true,
-                            showUnavailable: false,
-                            minCost: 0,
-                            maxCost: 10000,
-                            minAccuracy: 0,
-                            maxAccuracy: 2,
-                            minHull: 0,
-                            maxHull: 2,
-                            minSpeed: 0,
-                            maxSpeed: 2,
-                            weaponType: "all",
-                            defenseType: "all",
-                            specialType: "all",
-                          });
+                          resetFleetSelectionModalState();
                         }
-                        // Refresh lobby list
                         loadLobbies();
                       }}
                       onError={(error) => {
@@ -2554,29 +2709,7 @@ const Lobbies: React.FC = () => {
                       className="flex-1 px-4 py-2 rounded-none border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200"
                       onSuccess={() => {
                         if (selectedLobby === lobby.basic.id) {
-                          setSelectedLobby(null);
-                          setSelectedShips([]);
-                          setShipPositions([]);
-                          setSelectedShipId(null);
-                          setFiltersExpanded(false);
-                          setShowFleetConfirmation(false);
-                          lastLoadedFleetIdRef.current = null;
-                          setFleetFilters({
-                            showShiny: true,
-                            showCommon: true,
-                            showUnavailable: false,
-                            minCost: 0,
-                            maxCost: 10000,
-                            minAccuracy: 0,
-                            maxAccuracy: 2,
-                            minHull: 0,
-                            maxHull: 2,
-                            minSpeed: 0,
-                            maxSpeed: 2,
-                            weaponType: "all",
-                            defenseType: "all",
-                            specialType: "all",
-                          });
+                          resetFleetSelectionModalState();
                         }
                         loadLobbies();
                       }}
@@ -2661,6 +2794,9 @@ const Lobbies: React.FC = () => {
               }
             });
 
+          const fleetExceedsMaxSize =
+            selectedShips.length > MAX_SHIPS_PER_FLEET;
+
           return (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[400]">
               <div className="bg-black border border-cyan-400 rounded-none p-6 w-[100vw] h-[100vh] flex flex-col">
@@ -2688,6 +2824,7 @@ const Lobbies: React.FC = () => {
                         disabled={
                           selectedShips.length === 0 ||
                           isCreatingFleet ||
+                          fleetExceedsMaxSize ||
                           isUnder90Percent ||
                           !hasMovedShip ||
                           selectedFleetHasStaleCostsVersion
@@ -2696,40 +2833,20 @@ const Lobbies: React.FC = () => {
                       >
                         {isCreatingFleet
                           ? "CREATING FLEET..."
-                          : isUnder90Percent
-                            ? `NEED ${Math.round(costLimit * 0.9)} POINTS`
-                            : !hasMovedShip
-                              ? "MOVE AT LEAST ONE SHIP FORWARD"
-                              : selectedFleetHasStaleCostsVersion
-                                ? "COST VERSION OUT OF DATE (MANAGE NAVY)"
-                                : `CREATE FLEET (${selectedShips.length})`}
+                          : fleetExceedsMaxSize
+                            ? `MAX ${MAX_SHIPS_PER_FLEET} SHIPS (${selectedShips.length} SELECTED)`
+                            : isUnder90Percent
+                              ? `NEED ${Math.round(costLimit * 0.9)} POINTS`
+                              : !hasMovedShip
+                                ? "MOVE AT LEAST ONE SHIP FORWARD"
+                                : selectedFleetHasStaleCostsVersion
+                                  ? "COST VERSION OUT OF DATE (MANAGE NAVY)"
+                                  : `CREATE FLEET (${selectedShips.length})`}
                       </button>
                       <button
                         onClick={() => {
-                          if (isCreatingFleet) return; // Prevent closing during transaction
-                          setSelectedLobby(null);
-                          setSelectedShips([]);
-                          setShipPositions([]);
-                          setSelectedShipId(null);
-                          setFiltersExpanded(false);
-                          setShowFleetConfirmation(false);
-                          lastLoadedFleetIdRef.current = null;
-                          setFleetFilters({
-                            showShiny: true,
-                            showCommon: true,
-                            showUnavailable: false,
-                            minCost: 0,
-                            maxCost: 10000,
-                            minAccuracy: 0,
-                            maxAccuracy: 2,
-                            minHull: 0,
-                            maxHull: 2,
-                            minSpeed: 0,
-                            maxSpeed: 2,
-                            weaponType: "all",
-                            defenseType: "all",
-                            specialType: "all",
-                          });
+                          if (isCreatingFleet) return;
+                          closeFleetModalOnly();
                         }}
                         disabled={isCreatingFleet}
                         className="px-4 py-2 border border-red-400 text-red-400 rounded-none hover:bg-red-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -2769,6 +2886,18 @@ const Lobbies: React.FC = () => {
                     >
                       FILTERS ▼
                     </button>
+                    {!playerFleetId &&
+                      (selectedShips.length > 0 ||
+                        shipPositions.length > 0) && (
+                        <button
+                          type="button"
+                          onClick={clearFleetDraftSelection}
+                          disabled={isCreatingFleet}
+                          className="px-2 py-1 text-xs font-bold text-gray-400 border border-gray-500 rounded-none hover:text-gray-300 hover:border-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          CLEAR SELECTION
+                        </button>
+                      )}
                     {/* Total Points Display */}
                     <div
                       className={`text-lg font-bold px-3 py-1 rounded-none ${
@@ -2788,29 +2917,7 @@ const Lobbies: React.FC = () => {
                         allowWhenOtherPending
                         className="px-3 py-1 text-sm font-bold text-red-400 border border-red-400 rounded-none hover:text-red-300 hover:border-red-300 transition-colors"
                         onSuccess={() => {
-                          setSelectedLobby(null);
-                          setSelectedShips([]);
-                          setShipPositions([]);
-                          setSelectedShipId(null);
-                          setFiltersExpanded(false);
-                          setShowFleetConfirmation(false);
-                          lastLoadedFleetIdRef.current = null;
-                          setFleetFilters({
-                            showShiny: true,
-                            showCommon: true,
-                            showUnavailable: false,
-                            minCost: 0,
-                            maxCost: 10000,
-                            minAccuracy: 0,
-                            maxAccuracy: 2,
-                            minHull: 0,
-                            maxHull: 2,
-                            minSpeed: 0,
-                            maxSpeed: 2,
-                            weaponType: "all",
-                            defenseType: "all",
-                            specialType: "all",
-                          });
+                          resetFleetSelectionModalState();
                           loadLobbies();
                         }}
                         onError={(error) => {
@@ -2822,31 +2929,8 @@ const Lobbies: React.FC = () => {
                     )}
                     {/* Close Button */}
                     <button
-                      onClick={() => {
-                        setSelectedLobby(null);
-                        setSelectedShips([]);
-                        setShipPositions([]);
-                        setSelectedShipId(null);
-                        setFiltersExpanded(false);
-                        setShowFleetConfirmation(false);
-                        lastLoadedFleetIdRef.current = null;
-                        setFleetFilters({
-                          showShiny: true,
-                          showCommon: true,
-                          showUnavailable: false,
-                          minCost: 0,
-                          maxCost: 10000,
-                          minAccuracy: 0,
-                          maxAccuracy: 2,
-                          minHull: 0,
-                          maxHull: 2,
-                          minSpeed: 0,
-                          maxSpeed: 2,
-                          weaponType: "all",
-                          defenseType: "all",
-                          specialType: "all",
-                        });
-                      }}
+                      type="button"
+                      onClick={closeFleetModalOnly}
                       className="px-3 py-1 text-sm font-bold text-gray-400 border border-gray-400 rounded-none hover:text-gray-300 hover:border-gray-300 transition-colors"
                     >
                       ✕
@@ -3291,7 +3375,9 @@ const Lobbies: React.FC = () => {
                                         inGameAttributes={attributesMap.get(
                                           ship.id,
                                         )}
-                                        attributesLoading={attributesLoading}
+                                        attributesLoading={
+                                          fleetSelectionAttributesLoading
+                                        }
                                         selectionMode={true}
                                         hideRecycle={true}
                                         hideCheckbox={true}
@@ -3511,7 +3597,9 @@ const Lobbies: React.FC = () => {
                                         inGameAttributes={attributesMap.get(
                                           ship.id,
                                         )}
-                                        attributesLoading={attributesLoading}
+                                        attributesLoading={
+                                          fleetSelectionAttributesLoading
+                                        }
                                         selectionMode={true}
                                         hideRecycle={true}
                                         hideCheckbox={true}
@@ -3577,7 +3665,9 @@ const Lobbies: React.FC = () => {
                     <button
                       onClick={() => createFleetWithConfirmation(selectedLobby)}
                       disabled={
-                        isCreatingFleet || selectedFleetHasStaleCostsVersion
+                        isCreatingFleet ||
+                        selectedFleetHasStaleCostsVersion ||
+                        selectedShips.length > MAX_SHIPS_PER_FLEET
                       }
                       className="flex-1 px-4 py-2 border border-yellow-400 text-yellow-400 rounded-none hover:bg-yellow-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
