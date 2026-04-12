@@ -128,6 +128,150 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     [game.shipPositions],
   );
 
+  /** Matches fleet card grids `grid-cols-1 sm:grid-cols-2` (Tailwind sm = 640px). */
+  const [shipCardGridTwoCols, setShipCardGridTwoCols] = React.useState(false);
+  React.useLayoutEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    const sync = () => setShipCardGridTwoCols(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  const gameShipGridsContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const [gameViewNameBlockMinHeights, setGameViewNameBlockMinHeights] =
+    React.useState<Record<string, number>>({});
+
+  const gameShipCardsLayoutKey = React.useMemo(
+    () =>
+      [
+        game.creatorActiveShipIds.map((id) => id.toString()).join("\0"),
+        game.joinerActiveShipIds.map((id) => id.toString()).join("\0"),
+        shipCardGridTwoCols ? "2c" : "1c",
+        readOnly ? "ro" : "rw",
+      ].join("|"),
+    [
+      game.creatorActiveShipIds,
+      game.joinerActiveShipIds,
+      shipCardGridTwoCols,
+      readOnly,
+    ],
+  );
+
+  const measureGameViewShipNameHeights = React.useCallback(() => {
+    const root = gameShipGridsContainerRef.current;
+    if (!root) return;
+
+    const cells = [
+      ...root.querySelectorAll("[data-game-fleet-ship-cell]"),
+    ] as HTMLElement[];
+    const rowMap = new Map<number, { ids: string[]; heights: number[] }>();
+
+    for (const el of cells) {
+      const id = el.dataset.shipId;
+      if (!id) continue;
+      const rowAttr = el.dataset.rowIndex;
+      if (rowAttr === undefined) continue;
+      const row = parseInt(rowAttr, 10);
+      if (Number.isNaN(row)) continue;
+      const block = el.querySelector(
+        "[data-ship-name-block]",
+      ) as HTMLElement | null;
+      if (!block) continue;
+      const h = Math.round(block.getBoundingClientRect().height);
+      if (!rowMap.has(row)) {
+        rowMap.set(row, { ids: [], heights: [] });
+      }
+      const g = rowMap.get(row)!;
+      g.ids.push(id);
+      g.heights.push(h);
+    }
+
+    const singleLineBlockMaxPx = 52;
+    const next: Record<string, number> = {};
+
+    for (const { ids, heights } of rowMap.values()) {
+      if (ids.length === 0) continue;
+      const minH = Math.min(...heights);
+      const maxH = Math.max(...heights);
+      const rowHasMultilineOrMixed =
+        maxH > singleLineBlockMaxPx || maxH > minH + 8;
+      if (!rowHasMultilineOrMixed) continue;
+      for (const sid of ids) {
+        next[sid] = maxH;
+      }
+    }
+
+    setGameViewNameBlockMinHeights((prev) => {
+      const prevKeys = Object.keys(prev);
+      const nextKeys = Object.keys(next);
+      if (prevKeys.length !== nextKeys.length) return next;
+      for (const k of nextKeys) {
+        if (prev[k] !== next[k]) return next;
+      }
+      return prev;
+    });
+  }, []);
+
+  React.useLayoutEffect(() => {
+    const hasShips =
+      game.creatorActiveShipIds.length > 0 ||
+      game.joinerActiveShipIds.length > 0;
+    if (!hasShips) {
+      setGameViewNameBlockMinHeights({});
+      return;
+    }
+    setGameViewNameBlockMinHeights({});
+    let raf1 = 0;
+    let raf2 = 0;
+    let cancelled = false;
+    raf1 = requestAnimationFrame(() => {
+      if (cancelled) return;
+      measureGameViewShipNameHeights();
+      raf2 = requestAnimationFrame(() => {
+        if (cancelled) return;
+        measureGameViewShipNameHeights();
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [
+    gameShipCardsLayoutKey,
+    measureGameViewShipNameHeights,
+    game.creatorActiveShipIds.length,
+    game.joinerActiveShipIds.length,
+  ]);
+
+  React.useEffect(() => {
+    const hasShips =
+      game.creatorActiveShipIds.length > 0 ||
+      game.joinerActiveShipIds.length > 0;
+    if (!hasShips) return;
+    const root = gameShipGridsContainerRef.current;
+    if (!root) return;
+    const ro = new ResizeObserver(() => measureGameViewShipNameHeights());
+    ro.observe(root);
+    window.addEventListener("resize", measureGameViewShipNameHeights);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measureGameViewShipNameHeights);
+    };
+  }, [
+    gameShipCardsLayoutKey,
+    measureGameViewShipNameHeights,
+    game.creatorActiveShipIds.length,
+    game.joinerActiveShipIds.length,
+  ]);
+
+  const gameViewShipRowIndex = React.useCallback(
+    (listIndex: number) =>
+      shipCardGridTwoCols ? Math.floor(listIndex / 2) : listIndex,
+    [shipCardGridTwoCols],
+  );
+
   // Optimistic last-move handling:
   // When a tx is confirmed, there can be a short delay before the
   // blockchain/refetch updates `game.lastMove`. During that gap we want
@@ -3653,7 +3797,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           borderRadius: 0,
         }}
       >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div
+          ref={gameShipGridsContainerRef}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+        >
           {/* Determine order based on player: creator has My Fleet left, joiner has Opponent's Fleet left */}
           {game.metadata.creator === address ? (
             <>
@@ -3683,7 +3830,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   </span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {game.creatorActiveShipIds.map((shipId) => {
+                  {game.creatorActiveShipIds.map((shipId, index) => {
                     const shipPosition = game.shipPositions.find(
                       (sp) => sp.shipId === shipId,
                     );
@@ -3702,7 +3849,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           : "none";
 
                     return (
-                      <div key={shipId.toString()}>
+                      <div
+                        key={shipId.toString()}
+                        data-game-fleet-ship-cell=""
+                        data-ship-id={shipId.toString()}
+                        data-row-index={gameViewShipRowIndex(index)}
+                      >
                         <ShipCard
                           ship={ship}
                           isStarred={false}
@@ -3720,6 +3872,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           reactorCriticalStatus={reactorCriticalStatus}
                           hasMoved={movedShipIdsSet.has(shipId)}
                           gameViewMode={true}
+                          layoutShipId={shipId.toString()}
+                          nameBlockMinHeightPx={
+                            gameViewNameBlockMinHeights[shipId.toString()]
+                          }
                         />
                       </div>
                     );
@@ -3752,7 +3908,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   </span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {game.joinerActiveShipIds.map((shipId) => {
+                  {game.joinerActiveShipIds.map((shipId, index) => {
                     const shipPosition = game.shipPositions.find(
                       (sp) => sp.shipId === shipId,
                     );
@@ -3771,7 +3927,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           : "none";
 
                     return (
-                      <div key={shipId.toString()}>
+                      <div
+                        key={shipId.toString()}
+                        data-game-fleet-ship-cell=""
+                        data-ship-id={shipId.toString()}
+                        data-row-index={gameViewShipRowIndex(index)}
+                      >
                         <ShipCard
                           ship={ship}
                           isStarred={false}
@@ -3789,6 +3950,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           reactorCriticalStatus={reactorCriticalStatus}
                           hasMoved={movedShipIdsSet.has(shipId)}
                           gameViewMode={true}
+                          layoutShipId={shipId.toString()}
+                          nameBlockMinHeightPx={
+                            gameViewNameBlockMinHeights[shipId.toString()]
+                          }
                         />
                       </div>
                     );
@@ -3824,7 +3989,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   </span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {game.creatorActiveShipIds.map((shipId) => {
+                  {game.creatorActiveShipIds.map((shipId, index) => {
                     const shipPosition = game.shipPositions.find(
                       (sp) => sp.shipId === shipId,
                     );
@@ -3843,7 +4008,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           : "none";
 
                     return (
-                      <div key={shipId.toString()}>
+                      <div
+                        key={shipId.toString()}
+                        data-game-fleet-ship-cell=""
+                        data-ship-id={shipId.toString()}
+                        data-row-index={gameViewShipRowIndex(index)}
+                      >
                         <ShipCard
                           ship={ship}
                           isStarred={false}
@@ -3861,6 +4031,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           reactorCriticalStatus={reactorCriticalStatus}
                           hasMoved={movedShipIdsSet.has(shipId)}
                           gameViewMode={true}
+                          layoutShipId={shipId.toString()}
+                          nameBlockMinHeightPx={
+                            gameViewNameBlockMinHeights[shipId.toString()]
+                          }
                         />
                       </div>
                     );
@@ -3893,7 +4067,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   </span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {game.joinerActiveShipIds.map((shipId) => {
+                  {game.joinerActiveShipIds.map((shipId, index) => {
                     const shipPosition = game.shipPositions.find(
                       (sp) => sp.shipId === shipId,
                     );
@@ -3912,7 +4086,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           : "none";
 
                     return (
-                      <div key={shipId.toString()}>
+                      <div
+                        key={shipId.toString()}
+                        data-game-fleet-ship-cell=""
+                        data-ship-id={shipId.toString()}
+                        data-row-index={gameViewShipRowIndex(index)}
+                      >
                         <ShipCard
                           ship={ship}
                           isStarred={false}
@@ -3930,6 +4109,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           reactorCriticalStatus={reactorCriticalStatus}
                           hasMoved={movedShipIdsSet.has(shipId)}
                           gameViewMode={true}
+                          layoutShipId={shipId.toString()}
+                          nameBlockMinHeightPx={
+                            gameViewNameBlockMinHeights[shipId.toString()]
+                          }
                         />
                       </div>
                     );
