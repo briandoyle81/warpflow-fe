@@ -889,6 +889,27 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           }
         }
 
+        // Ghost at the previous square while selection + chain state lag behind the receipt
+        // (same gap as last-move replay; without this the "from" cell is empty).
+        const oR = optimisticLastMove.oldRow;
+        const oC = optimisticLastMove.oldCol;
+        const nR = optimisticLastMove.newRow;
+        const nC = optimisticLastMove.newCol;
+        if (
+          (oR !== nR || oC !== nC) &&
+          oR >= 0 &&
+          oR < GRID_HEIGHT &&
+          oC >= 0 &&
+          oC < GRID_WIDTH &&
+          !newGrid[oR][oC]
+        ) {
+          newGrid[oR][oC] = {
+            ...shipPosition,
+            position: { row: oR, col: oC },
+            isPreview: true,
+          };
+        }
+
         // Skip the original placement (we rendered the optimistic position).
         return;
       }
@@ -2516,10 +2537,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       );
                     } else if (errorMessage.includes("execution reverted")) {
                       toast.error(
-                        "Transaction reverted - check if it&apos;s your turn and ship is valid",
+                        "Transaction reverted - check if it's your turn and ship is valid",
                       );
                     } else if (errorMessage.includes("NotYourTurn")) {
-                      toast.error("It&apos;s not your turn to move");
+                      toast.error("It's not your turn to move");
                     } else if (errorMessage.includes("ShipNotFound")) {
                       toast.error("Ship not found in this game");
                     } else if (errorMessage.includes("InvalidMove")) {
@@ -3893,7 +3914,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     fontSize: "18px",
                   }}
                 >
-                  {readOnly ? "Joiner Fleet" : "Opponent&apos;s Fleet"}
+                  {readOnly ? "Joiner Fleet" : "Opponent's Fleet"}
                   <span
                     className="ml-2"
                     style={{
@@ -3974,7 +3995,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     fontSize: "18px",
                   }}
                 >
-                  {readOnly ? "Creator Fleet" : "Opponent&apos;s Fleet"}
+                  {readOnly ? "Creator Fleet" : "Opponent's Fleet"}
                   <span
                     className="ml-2"
                     style={{

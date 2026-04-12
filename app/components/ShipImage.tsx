@@ -28,6 +28,8 @@ interface ShipImageProps {
   style?: React.CSSProperties;
   /** Use on large preview tiles only (e.g. pack hero `h-64`); keep default on small thumbnails. */
   rankStarsSize?: "default" | "large";
+  /** Game grid draws rank stars below the team dot; hide here to avoid overlap with mirrored art. */
+  hideRankStars?: boolean;
 }
 
 export function ShipImage({
@@ -36,6 +38,7 @@ export function ShipImage({
   showLoadingState = true,
   style,
   rankStarsSize = "default",
+  hideRankStars = false,
 }: ShipImageProps) {
   const { dataUrl, isLoading, error, renderKey } = useShipRenderer(ship);
 
@@ -60,18 +63,19 @@ export function ShipImage({
   const isDestroyed = ship.shipData.timestampDestroyed > BigInt(0);
   const isNotConstructed = !ship.shipData.constructed;
 
-  const rankStarsOverlay = ship.shipData.constructed ? (
-    <div
-      className="pointer-events-none absolute right-[2.5%] top-[5%] z-10 leading-none text-yellow-400"
-      style={{
-        fontSize: rankStarBox,
-      }}
-    >
-      {Array.from({ length: calculateShipRank(ship).rank }, (_, i) => (
-        <span key={i}>⭐</span>
-      ))}
-    </div>
-  ) : null;
+  const rankStarsOverlay =
+    ship.shipData.constructed && !hideRankStars ? (
+      <div
+        className="pointer-events-none absolute right-[2.5%] top-[5%] z-10 leading-none text-yellow-400"
+        style={{
+          fontSize: rankStarBox,
+        }}
+      >
+        {Array.from({ length: calculateShipRank(ship).rank }, (_, i) => (
+          <span key={i}>⭐</span>
+        ))}
+      </div>
+    ) : null;
 
   // Handle destroyed ships
   if (isDestroyed) {

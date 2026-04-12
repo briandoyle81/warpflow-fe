@@ -3970,7 +3970,7 @@ export function SimulatedGameDisplay({
                 fontSize: "18px",
               }}
             >
-              Opponent&apos;s Fleet
+              Opponent's Fleet
               <span
                 className="ml-2"
                 style={{

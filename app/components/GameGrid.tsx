@@ -3,7 +3,8 @@
 import React, { useRef } from "react";
 import Image from "next/image";
 import { ShipPosition, Attributes, Ship, ActionType } from "../types/types";
-import { ShipImage } from "./ShipImage";
+import { ShipImage, SHIP_IMAGE_RANK_STAR_BOX } from "./ShipImage";
+import { calculateShipRank } from "../utils/shipLevel";
 import ShipCard from "./ShipCard";
 import { LaserShootingAnimation } from "./weapon-animations/LaserShootingAnimation";
 import { MissileShootingAnimation } from "./weapon-animations/MissileShootingAnimation";
@@ -283,28 +284,19 @@ export function GameGrid({
 
     const ids = new Set<bigint>();
 
-    // Selected target
+    // Selected target (locked shot)
     if (targetShipId != null && targetShipId !== 0n) {
       ids.add(targetShipId);
     }
 
-    // Drag/preview target sets
+    // Same ships that get floating damage labels: labelTargets (GameDisplay threat range)
+    // when not dragging / not only preview-origin, else drag or preview valid targets.
     if (draggedShipId && dragOverCell) {
       dragValidTargets.forEach((t) => ids.add(t.shipId));
-    }
-    if (previewPosition) {
+    } else if (previewPosition) {
       validTargets.forEach((t) => ids.add(t.shipId));
-    }
-
-    // Flak: show previews across all ships in range even when no specific target is selected
-    if (
-      selectedWeaponType === "special" &&
-      specialType === 3 &&
-      targetShipId === 0n
-    ) {
-      (draggedShipId && dragOverCell ? dragValidTargets : validTargets).forEach(
-        (t) => ids.add(t.shipId),
-      );
+    } else {
+      (labelTargets ?? validTargets).forEach((t) => ids.add(t.shipId));
     }
 
     const showReducedDamage =
@@ -332,6 +324,7 @@ export function GameGrid({
     dragValidTargets,
     validTargets,
     previewPosition,
+    labelTargets,
     calculateDamage,
   ]);
 
@@ -1130,88 +1123,6 @@ export function GameGrid({
                             </div>
                           );
                         })()}
-                        {/* Health bar inside cell top, adjacent to team dot */}
-                        {(() => {
-                          const attributes = getShipAttributes(cell.shipId);
-                          if (!attributes) return null;
-                          if (attributes.hullPoints <= 0) return null; // skull shown above
-                          const previewDamage =
-                            projectedDamageByShipId.get(cell.shipId) ?? 0;
-                          const showDamagePreview = previewDamage > 0;
-                          if (
-                            attributes.hullPoints >= attributes.maxHullPoints &&
-                            !showDamagePreview
-                          ) {
-                            return null; // full health - no bar (unless showing preview)
-                          }
-
-                          const healthPercentage =
-                            (attributes.hullPoints / attributes.maxHullPoints) *
-                            100;
-                          const isLowHealth = healthPercentage <= 25;
-
-                          const currentHp = attributes.hullPoints;
-                          const maxHp = attributes.maxHullPoints;
-                          const remainingHp = showDamagePreview
-                            ? Math.max(0, currentHp - previewDamage)
-                            : currentHp;
-                          const remainingPct = showDamagePreview
-                            ? (remainingHp / maxHp) * 100
-                            : healthPercentage;
-                          const damagePct = showDamagePreview
-                            ? Math.max(0, healthPercentage - remainingPct)
-                            : 0;
-
-                          // Position: fill the top edge excluding the team dot side
-                          // Dot is w-2 (0.5rem) with m-0.5 (0.125rem). Add an extra 0.125rem gap.
-                          const dotOffset = "0.75rem"; // 0.5 + 0.125 + 0.125
-                          const topOffset = "0.125rem"; // align with dot's margin
-
-                          const style = cell.isCreator
-                            ? { top: topOffset, left: dotOffset, right: 0 }
-                            : { top: topOffset, left: 0, right: dotOffset };
-
-                          return (
-                            <div className="absolute z-20" style={style}>
-                              <div className="w-full h-1 bg-gray-700 rounded-sm overflow-hidden relative">
-                                <div
-                                  className={`h-full transition-all duration-300 ${
-                                    // For damage previews, always keep the remaining-health segment green
-                                    // so the projected damage is clearly red on the right.
-                                    showDamagePreview
-                                      ? "bg-green-500"
-                                      : isLowHealth
-                                        ? "bg-red-500"
-                                        : "bg-green-500"
-                                  }`}
-                                  style={{
-                                    // Always render health left-to-right (no mirroring).
-                                    // Damage preview overlays the right-side portion.
-                                    width: `${healthPercentage}%`,
-                                    left: 0,
-                                    right: "auto",
-                                    position: "absolute",
-                                  }}
-                                />
-                                {showDamagePreview && damagePct > 0 && (
-                                  <div
-                                    className="absolute top-0 bottom-0 bg-red-500/80 animate-damage-flash"
-                                    style={{
-                                      // Remaining HP on the left, projected damage flashing on the right.
-                                      left: `${remainingPct}%`,
-                                      width: `${damagePct}%`,
-                                    }}
-                                  />
-                                )}
-                                {showDamagePreview && (
-                                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-mono text-red-400 animate-damage-flash whitespace-nowrap">
-                                    -{Math.floor(previewDamage)}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
 
                         {/* Retreat prep: flip + engine glow when player selected Retreat (before tx) */}
                         {retreatPrepShipId === cell.shipId &&
@@ -1268,10 +1179,14 @@ export function GameGrid({
                               return ""; // No opacity class = 100% opacity
                             }
 
-                            // "From" position: 50% opacity, no animation
+                            // Staging a move: dim only the ship's current tile, not the preview/destination tile
+                            // (and not a non-preview ship already at the destination after optimistic placement).
                             if (
                               selectedShipId === cell.shipId &&
-                              previewPosition
+                              previewPosition &&
+                              !cell.isPreview &&
+                              (rowIndex !== previewPosition.row ||
+                                colIndex !== previewPosition.col)
                             ) {
                               return "opacity-50";
                             }
@@ -1310,7 +1225,87 @@ export function GameGrid({
                                   : ""
                               }`}
                               showLoadingState={true}
+                              hideRankStars
                             />
+                          );
+                        })()}
+                        {/* Hull strip: same anchor as ShipCard game bar (-top-2, full width of ship frame) */}
+                        {(() => {
+                          const attributes = getShipAttributes(cell.shipId);
+                          if (!attributes) return null;
+                          if (attributes.hullPoints <= 0) return null;
+                          const previewDamage =
+                            projectedDamageByShipId.get(cell.shipId) ?? 0;
+                          const showDamagePreview = previewDamage > 0;
+                          if (
+                            attributes.hullPoints >= attributes.maxHullPoints &&
+                            !showDamagePreview
+                          ) {
+                            return null;
+                          }
+
+                          const healthPercentage =
+                            (attributes.hullPoints / attributes.maxHullPoints) *
+                            100;
+                          const isLowHealth = healthPercentage <= 25;
+
+                          const currentHp = attributes.hullPoints;
+                          const maxHp = attributes.maxHullPoints;
+                          const remainingHp = showDamagePreview
+                            ? Math.max(0, currentHp - previewDamage)
+                            : currentHp;
+                          const remainingPct = showDamagePreview
+                            ? (remainingHp / maxHp) * 100
+                            : healthPercentage;
+                          const damagePct = showDamagePreview
+                            ? Math.max(0, healthPercentage - remainingPct)
+                            : 0;
+
+                          const trackStyle: React.CSSProperties = {
+                            backgroundColor: "var(--color-gunmetal)",
+                            borderRadius: 0,
+                          };
+                          const fillGreen = "var(--color-phosphor-green)";
+                          const fillRed = "var(--color-warning-red)";
+
+                          return (
+                            <div className="pointer-events-none absolute -top-2 left-0 right-0 z-[30]">
+                              <div
+                                className="relative h-1 w-full overflow-hidden"
+                                style={trackStyle}
+                              >
+                                {showDamagePreview && damagePct > 0 ? (
+                                  <>
+                                    <div
+                                      className="absolute left-0 top-0 h-full transition-all duration-300"
+                                      style={{
+                                        width: `${remainingPct}%`,
+                                        backgroundColor: fillGreen,
+                                      }}
+                                      title={`${remainingHp} HP after hit`}
+                                    />
+                                    <div
+                                      className="absolute top-0 h-full animate-damage-preview-red"
+                                      style={{
+                                        left: `${remainingPct}%`,
+                                        width: `${damagePct}%`,
+                                      }}
+                                      title={`-${Math.floor(previewDamage)} damage`}
+                                    />
+                                  </>
+                                ) : (
+                                  <div
+                                    className="absolute left-0 top-0 h-full transition-all duration-300"
+                                    style={{
+                                      width: `${healthPercentage}%`,
+                                      backgroundColor: isLowHealth
+                                        ? fillRed
+                                        : fillGreen,
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            </div>
                           );
                         })()}
                         {/* Moved badge */}
@@ -1368,63 +1363,104 @@ export function GameGrid({
                             </div>
                           );
                         })()}
-                        {/* Team indicator overlay */}
-                        <div
-                          className={`absolute z-20 top-0 ${
-                            cell.isCreator ? "left-0" : "right-0"
-                          } w-2 h-2 rounded-full ${
-                            isShipOwnedByCurrentPlayer(cell.shipId)
-                              ? "bg-blue-500"
-                              : "bg-red-500"
-                          } ${(() => {
-                            // Check if this is the "from" position (original position when proposing a move)
-                            const isProposedMoveOriginal =
-                              selectedShipId === cell.shipId && previewPosition;
+                        {/* Team dot + rank stars: same top row, opposite corners (not inside mirrored ShipImage) */}
+                        {(() => {
+                          const isProposedMoveOriginal =
+                            selectedShipId === cell.shipId &&
+                            previewPosition &&
+                            !cell.isPreview &&
+                            (rowIndex !== previewPosition.row ||
+                              colIndex !== previewPosition.col);
 
-                            // Check if this is a proposed move preview (to position)
-                            const isProposedMovePreview =
-                              cell.isPreview &&
-                              previewPosition !== null &&
-                              selectedShipId !== null &&
-                              !(
-                                lastMoveShipId === cell.shipId &&
-                                lastMoveOldPosition &&
-                                rowIndex === lastMoveOldPosition.row &&
-                                colIndex === lastMoveOldPosition.col
-                              );
-
-                            // "From" position: 50% opacity, no animation
-                            if (isProposedMoveOriginal) {
-                              return "opacity-50";
-                            }
-
-                            // Don't animate proposed move previews
-                            if (isProposedMovePreview) {
-                              return "";
-                            }
-
-                            // Last move old position: 50% opacity, no animation
-                            if (
+                          const isProposedMovePreview =
+                            cell.isPreview &&
+                            previewPosition !== null &&
+                            selectedShipId !== null &&
+                            !(
                               lastMoveShipId === cell.shipId &&
                               lastMoveOldPosition &&
                               rowIndex === lastMoveOldPosition.row &&
                               colIndex === lastMoveOldPosition.col
-                            ) {
-                              return "opacity-50";
-                            }
+                            );
 
-                            // Apply animation for other cases
-                            if (cell.isPreview) {
-                              return "animate-pulse-preview";
-                            }
-                            return "";
-                          })()}`}
-                        />
+                          let teamPulseClasses = "";
+                          if (isProposedMoveOriginal) {
+                            teamPulseClasses = "opacity-50";
+                          } else if (isProposedMovePreview) {
+                            teamPulseClasses = "";
+                          } else if (
+                            lastMoveShipId === cell.shipId &&
+                            lastMoveOldPosition &&
+                            rowIndex === lastMoveOldPosition.row &&
+                            colIndex === lastMoveOldPosition.col
+                          ) {
+                            teamPulseClasses = "opacity-50";
+                          } else if (cell.isPreview) {
+                            teamPulseClasses = "animate-pulse-preview";
+                          }
+
+                          const rank = ship.shipData.constructed
+                            ? calculateShipRank(ship).rank
+                            : 0;
+
+                          const dot = (
+                            <div
+                              className={`h-2 w-2 shrink-0 rounded-full ${
+                                isShipOwnedByCurrentPlayer(cell.shipId)
+                                  ? "bg-blue-500"
+                                  : "bg-red-500"
+                              }`}
+                            />
+                          );
+
+                          const stars =
+                            rank > 0 ? (
+                              <div
+                                className="flex shrink-0 flex-row items-center gap-px leading-none text-yellow-400"
+                                style={{
+                                  fontSize: SHIP_IMAGE_RANK_STAR_BOX,
+                                }}
+                              >
+                                {Array.from({ length: rank }, (_, i) => (
+                                  <span key={i}>⭐</span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span
+                                className="inline-block h-2 w-0 shrink-0"
+                                aria-hidden
+                              />
+                            );
+
+                          return (
+                            <div className="pointer-events-none absolute inset-0 z-20 min-h-0 [container-type:size]">
+                              <div
+                                className={`absolute left-1 right-1 top-1 flex flex-row items-start justify-between gap-0.5 ${teamPulseClasses}`}
+                              >
+                                {cell.isCreator ? (
+                                  <>
+                                    {dot}
+                                    {stars}
+                                  </>
+                                ) : (
+                                  <>
+                                    {stars}
+                                    {dot}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
                         {/* Movement path borders */}
                         {(() => {
                           const isPreviewCell = cell.isPreview;
                           const isProposedMoveOriginal =
-                            selectedShipId === cell.shipId && previewPosition;
+                            selectedShipId === cell.shipId &&
+                            previewPosition &&
+                            !isPreviewCell &&
+                            (rowIndex !== previewPosition.row ||
+                              colIndex !== previewPosition.col);
                           const isLastMoveOldPosition =
                             lastMoveShipId === cell.shipId &&
                             lastMoveOldPosition &&
