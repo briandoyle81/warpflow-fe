@@ -539,6 +539,28 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     }
   }, [gameData, address]);
 
+  const prevCurrentTurnForSelectionRef = React.useRef<string | undefined>(
+    undefined,
+  );
+  // Clear grid selection whenever the acting player changes (turn passes).
+  React.useEffect(() => {
+    const t = game.turnState.currentTurn;
+    if (t == null) return;
+    const key = t.toLowerCase();
+    const prev = prevCurrentTurnForSelectionRef.current;
+    prevCurrentTurnForSelectionRef.current = key;
+    if (prev === undefined) return;
+    if (prev === key) return;
+    setSelectedShipId(null);
+    setPreviewPosition(null);
+    setTargetShipId(null);
+    setActionOverride(null);
+    setDraggedShipId(null);
+    setDragOverCell(null);
+    setHoveredCell(null);
+    setSelectedWeaponType("weapon");
+  }, [game.turnState.currentTurn]);
+
   // Initialize previous state on mount
   React.useEffect(() => {
     if (gameData && !prevGameStateRef.current) {

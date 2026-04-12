@@ -997,6 +997,23 @@ export function SimulatedGameDisplay({
     gameState.turnState.currentTurn.toLowerCase() ===
     TUTORIAL_PLAYER_ADDRESS.toLowerCase();
 
+  const prevTutorialCurrentTurnRef = React.useRef<string | undefined>(undefined);
+  React.useEffect(() => {
+    const key = gameState.turnState.currentTurn.toLowerCase();
+    const prev = prevTutorialCurrentTurnRef.current;
+    prevTutorialCurrentTurnRef.current = key;
+    if (prev === undefined) return;
+    if (prev === key) return;
+    setSelectedShipId(null);
+    setPreviewPosition(null);
+    setTargetShipId(null);
+    setActionOverride(null);
+    setDraggedShipId(null);
+    setDragOverCell(null);
+    setHoveredCell(null);
+    setSelectedWeaponType("weapon");
+  }, [gameState.turnState.currentTurn]);
+
   // Map of onchain ship ID (bigint) to ship object. Tutorial IDs are strings;
   // when we need a ship we convert TutorialShipId -> bigint for this map only.
   // Fingerprint `tutorialShips.ts` content so HMR updates ship objects; `useMemo([])`

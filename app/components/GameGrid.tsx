@@ -328,6 +328,54 @@ export function GameGrid({
     calculateDamage,
   ]);
 
+  const projectedRepairByShipId = React.useMemo(() => {
+    const map = new Map<bigint, number>();
+
+    const shouldShowRepairPreview =
+      selectedShipId != null &&
+      isCurrentPlayerTurn &&
+      isShipOwnedByCurrentPlayer(selectedShipId) &&
+      selectedWeaponType === "special" &&
+      specialType === 2;
+
+    if (!shouldShowRepairPreview) return map;
+
+    const ids = new Set<bigint>();
+
+    if (targetShipId != null && targetShipId !== 0n) {
+      ids.add(targetShipId);
+    }
+
+    if (draggedShipId && dragOverCell) {
+      dragValidTargets.forEach((t) => ids.add(t.shipId));
+    } else if (previewPosition) {
+      validTargets.forEach((t) => ids.add(t.shipId));
+    } else {
+      (labelTargets ?? validTargets).forEach((t) => ids.add(t.shipId));
+    }
+
+    ids.forEach((id) => {
+      const heal = calculateDamage(id, "special").reducedDamage;
+      if (heal > 0) map.set(id, heal);
+    });
+
+    return map;
+  }, [
+    selectedShipId,
+    isCurrentPlayerTurn,
+    isShipOwnedByCurrentPlayer,
+    selectedWeaponType,
+    specialType,
+    targetShipId,
+    draggedShipId,
+    dragOverCell,
+    dragValidTargets,
+    validTargets,
+    previewPosition,
+    labelTargets,
+    calculateDamage,
+  ]);
+
   const destroyPreviewShipIds = React.useMemo(() => {
     const ids = new Set<bigint>();
 
@@ -1233,24 +1281,40 @@ export function GameGrid({
                         {(() => {
                           const attributes = getShipAttributes(cell.shipId);
                           if (!attributes) return null;
-                          if (attributes.hullPoints <= 0) return null;
+
                           const previewDamage =
                             projectedDamageByShipId.get(cell.shipId) ?? 0;
+                          const previewRepair =
+                            projectedRepairByShipId.get(cell.shipId) ?? 0;
                           const showDamagePreview = previewDamage > 0;
+                          const showRepairPreview = previewRepair > 0;
+
+                          const maxHp = attributes.maxHullPoints;
+                          const currentHp = attributes.hullPoints;
+                          const healthPercentage =
+                            maxHp > 0 ? (currentHp / maxHp) * 100 : 0;
+                          const healedHp = Math.min(
+                            maxHp,
+                            Math.max(0, currentHp) + previewRepair,
+                          );
+                          const healedPct =
+                            maxHp > 0 ? (healedHp / maxHp) * 100 : 0;
+                          const healPct = Math.max(
+                            0,
+                            healedPct - healthPercentage,
+                          );
+
+                          if (currentHp <= 0 && !showRepairPreview) return null;
                           if (
-                            attributes.hullPoints >= attributes.maxHullPoints &&
-                            !showDamagePreview
+                            currentHp >= maxHp &&
+                            !showDamagePreview &&
+                            !(showRepairPreview && healPct > 0)
                           ) {
                             return null;
                           }
 
-                          const healthPercentage =
-                            (attributes.hullPoints / attributes.maxHullPoints) *
-                            100;
                           const isLowHealth = healthPercentage <= 25;
 
-                          const currentHp = attributes.hullPoints;
-                          const maxHp = attributes.maxHullPoints;
                           const remainingHp = showDamagePreview
                             ? Math.max(0, currentHp - previewDamage)
                             : currentHp;
@@ -1291,6 +1355,28 @@ export function GameGrid({
                                         width: `${damagePct}%`,
                                       }}
                                       title={`-${Math.floor(previewDamage)} damage`}
+                                    />
+                                  </>
+                                ) : showRepairPreview && healPct > 0 ? (
+                                  <>
+                                    <div
+                                      className="absolute left-0 top-0 h-full transition-all duration-300"
+                                      style={{
+                                        width: `${healthPercentage}%`,
+                                        backgroundColor:
+                                          currentHp > 0 && isLowHealth
+                                            ? fillRed
+                                            : fillGreen,
+                                      }}
+                                      title={`${currentHp} HP now`}
+                                    />
+                                    <div
+                                      className="absolute top-0 h-full animate-damage-preview-blue"
+                                      style={{
+                                        left: `${healthPercentage}%`,
+                                        width: `${healPct}%`,
+                                      }}
+                                      title={`+${Math.floor(previewRepair)} repair`}
                                     />
                                   </>
                                 ) : (
