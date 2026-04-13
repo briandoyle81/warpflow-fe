@@ -1207,7 +1207,7 @@ export function SimulatedGameDisplay({
     [selectedShipId],
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (selectedShipId === null) {
       if (!tutorialLastMoveGhostVisible) {
         setSelectedWeaponType("weapon");

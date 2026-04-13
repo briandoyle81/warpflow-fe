@@ -784,6 +784,53 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     [game.shipAttributes, game.shipIds],
   );
 
+  const draggedShipForSpecialRange =
+    draggedShipId != null ? shipMap.get(draggedShipId) : null;
+  const draggedSpecialEquipmentType =
+    draggedShipForSpecialRange?.equipment.special ?? 0;
+  const { specialRange: draggedSpecialRange } = useSpecialRange(
+    draggedShipId != null ? draggedSpecialEquipmentType : 0,
+  );
+
+  /** Drag overlays must use the dragged ship's prefs and on-chain special range, not the prior selection. */
+  const dragWeaponPlan = React.useMemo(() => {
+    if (!draggedShipId) {
+      return {
+        mode: "weapon" as const,
+        specialEquipmentType: 0,
+        specialRange: undefined as number | undefined,
+      };
+    }
+    const ship = shipMap.get(draggedShipId);
+    const attrs = getShipAttributes(draggedShipId);
+    if (attrs && attrs.hullPoints === 0) {
+      return {
+        mode: "weapon" as const,
+        specialEquipmentType: draggedSpecialEquipmentType,
+        specialRange: draggedSpecialRange,
+      };
+    }
+    const canSpecial = !!(ship && ship.equipment.special > 0);
+    const saved =
+      weaponPreferenceByShipId[draggedShipId.toString()] ?? "weapon";
+    const mode =
+      saved === "special" && canSpecial
+        ? ("special" as const)
+        : ("weapon" as const);
+    return {
+      mode,
+      specialEquipmentType: draggedSpecialEquipmentType,
+      specialRange: draggedSpecialRange,
+    };
+  }, [
+    draggedShipId,
+    shipMap,
+    getShipAttributes,
+    weaponPreferenceByShipId,
+    draggedSpecialEquipmentType,
+    draggedSpecialRange,
+  ]);
+
   // Build a set of shipIds that have already moved this round (from game data)
   const movedShipIdsSet = React.useMemo(() => {
     const set = new Set<bigint>();
@@ -1727,10 +1774,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     const attributes = getShipAttributes(draggedShipId);
     if (!attributes) return [];
 
-    // Use special range if special is selected, otherwise use weapon range
     const shootingRange =
-      selectedWeaponType === "special" && specialRange !== undefined
-        ? specialRange
+      dragWeaponPlan.mode === "special" &&
+      dragWeaponPlan.specialRange !== undefined
+        ? dragWeaponPlan.specialRange
         : attributes.range || 1;
 
     const startRow = dragOverCell.row;
@@ -1741,18 +1788,20 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       position: { row: number; col: number };
     }[] = [];
 
+    const spec = dragWeaponPlan.specialEquipmentType;
+
     // Check all ships within shooting range
     game.shipPositions.forEach((shipPosition) => {
       const ship = shipMap.get(shipPosition.shipId);
       if (!ship) return;
 
       // Filter targets based on weapon type
-      if (selectedWeaponType === "special") {
+      if (dragWeaponPlan.mode === "special") {
         // Flak targets ALL ships in range (friendly and enemy) except itself
-        if (specialType === 3) {
+        if (spec === 3) {
           // Flak hits everything except the ship using flak
           if (shipPosition.shipId === draggedShipId) return; // Don't target self
-        } else if (specialType === 1) {
+        } else if (spec === 1) {
           // EMP targets enemy ships
           if (ship.owner === address) return; // Don't target friendly ships
         } else {
@@ -1779,8 +1828,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         // OR regular weapons need line of sight
         const shouldCheckLineOfSight =
           distance > 1 && // Not adjacent
-          (selectedWeaponType !== "special" ||
-            (specialType !== 1 && specialType !== 2 && specialType !== 3)); // Not EMP, Repair, or Flak
+          (dragWeaponPlan.mode !== "special" ||
+            (spec !== 1 && spec !== 2 && spec !== 3)); // Not EMP, Repair, or Flak
 
         if (
           !shouldCheckLineOfSight ||
@@ -1802,9 +1851,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     shipMap,
     address,
     getShipAttributes,
-    selectedWeaponType,
-    specialRange,
-    specialType,
+    dragWeaponPlan,
     game.shipPositions,
     blockedGrid,
     hasLineOfSight,
@@ -1820,14 +1867,15 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     const attributes = getShipAttributes(draggedShipId);
     if (!attributes) return [];
 
-    // Use special range if special is selected, otherwise use weapon range
     const shootingRange =
-      selectedWeaponType === "special" && specialRange !== undefined
-        ? specialRange
+      dragWeaponPlan.mode === "special" &&
+      dragWeaponPlan.specialRange !== undefined
+        ? dragWeaponPlan.specialRange
         : attributes.range || 1;
 
     const startRow = dragOverCell.row;
     const startCol = dragOverCell.col;
+    const spec = dragWeaponPlan.specialEquipmentType;
 
     const validShootingPositions: { row: number; col: number }[] = [];
 
@@ -1873,8 +1921,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           if (!isOccupied) {
             const shouldCheckLineOfSight =
               distance > 1 &&
-              (selectedWeaponType !== "special" ||
-                (specialType !== 1 && specialType !== 2 && specialType !== 3));
+              (dragWeaponPlan.mode !== "special" ||
+                (spec !== 1 && spec !== 2 && spec !== 3));
 
             if (
               !shouldCheckLineOfSight ||
@@ -1894,9 +1942,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     gameShips,
     shipMap,
     getShipAttributes,
-    selectedWeaponType,
-    specialRange,
-    specialType,
+    dragWeaponPlan,
     game.shipPositions,
     blockedGrid,
     hasLineOfSight,
@@ -2210,7 +2256,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     [selectedShipId],
   );
 
-  React.useEffect(() => {
+  // Layout effect: apply per-ship weapon mode before paint so range highlights match the selected ship.
+  React.useLayoutEffect(() => {
     if (selectedShipId === null) {
       if (!shouldShowLastMove) {
         setSelectedWeaponType("weapon");

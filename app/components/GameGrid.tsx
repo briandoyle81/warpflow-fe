@@ -92,6 +92,139 @@ function measureGridCellViewportBounds(
   };
 }
 
+type DamageLabelTarget = { shipId: bigint; row: number; col: number };
+
+/** Same target list as the floating damage-label overlay (keeps destroy-preview art in sync). */
+function collectDamageLabelTargets(params: {
+  grid: (ShipPosition | null)[][];
+  allShipPositions?: readonly ShipPosition[];
+  selectedShipId: bigint | null;
+  targetShipId: bigint | null;
+  draggedShipId: bigint | null;
+  dragOverCell: { row: number; col: number } | null;
+  dragValidTargets: Array<{
+    shipId: bigint;
+    position: { row: number; col: number };
+  }>;
+  validTargets: Array<{
+    shipId: bigint;
+    position: { row: number; col: number };
+  }>;
+  labelTargets?: Array<{
+    shipId: bigint;
+    position: { row: number; col: number };
+  }>;
+  selectedWeaponType: "weapon" | "special";
+  specialType: number;
+}): DamageLabelTarget[] {
+  const {
+    grid,
+    allShipPositions,
+    selectedShipId,
+    targetShipId,
+    draggedShipId,
+    dragOverCell,
+    dragValidTargets,
+    validTargets,
+    labelTargets,
+    selectedWeaponType,
+    specialType,
+  } = params;
+
+  const targetsToShow: DamageLabelTarget[] = [];
+  const selectedShipSide =
+    selectedShipId != null
+      ? (() => {
+          for (let r = 0; r < grid.length; r++) {
+            const row = grid[r];
+            for (let c = 0; c < row.length; c++) {
+              const cell = row[c];
+              if (cell?.shipId === selectedShipId) {
+                return cell.isCreator;
+              }
+            }
+          }
+          const fallback = allShipPositions?.find(
+            (sp) => sp.shipId === selectedShipId,
+          );
+          return fallback?.isCreator ?? null;
+        })()
+      : null;
+
+  const shouldShowTargetLabel = (
+    shipId: bigint,
+    fallbackIsCreator?: boolean,
+  ) => {
+    if (selectedShipSide == null) return true;
+    const targetSide =
+      fallbackIsCreator ??
+      (() => {
+        for (let r = 0; r < grid.length; r++) {
+          const row = grid[r];
+          for (let c = 0; c < row.length; c++) {
+            const cell = row[c];
+            if (cell?.shipId === shipId) return cell.isCreator;
+          }
+        }
+        const fallback = allShipPositions?.find((sp) => sp.shipId === shipId);
+        return fallback?.isCreator;
+      })();
+    if (targetSide == null) return true;
+
+    if (selectedWeaponType === "special" && specialType === 2) {
+      return targetSide === selectedShipSide;
+    }
+    return targetSide !== selectedShipSide;
+  };
+
+  const pushTargetIfAllowed = (
+    shipId: bigint,
+    row: number,
+    col: number,
+    fallbackIsCreator?: boolean,
+  ) => {
+    if (!shouldShowTargetLabel(shipId, fallbackIsCreator)) return;
+    if (targetsToShow.some((t) => t.shipId === shipId)) return;
+    targetsToShow.push({ shipId, row, col });
+  };
+
+  if (targetShipId) {
+    grid.forEach((row, r) => {
+      row.forEach((cell, c) => {
+        if (cell && cell.shipId === targetShipId) {
+          pushTargetIfAllowed(cell.shipId, r, c, cell.isCreator);
+        }
+      });
+    });
+  }
+
+  if (draggedShipId && dragOverCell) {
+    dragValidTargets.forEach((target) => {
+      pushTargetIfAllowed(
+        target.shipId,
+        target.position.row,
+        target.position.col,
+      );
+    });
+  }
+
+  const targetsForLabels = labelTargets ?? validTargets;
+  const hasSingleSelectedTarget =
+    targetShipId != null && targetShipId !== 0n;
+
+  if (selectedShipId && !hasSingleSelectedTarget) {
+    targetsForLabels.forEach((target) => {
+      pushTargetIfAllowed(
+        target.shipId,
+        target.position.row,
+        target.position.col,
+      );
+    });
+  }
+
+  return targetsToShow;
+}
+
 interface GameGridProps {
   grid: (ShipPosition | null)[][];
   allShipPositions?: readonly ShipPosition[];
@@ -436,56 +569,54 @@ export function GameGrid({
 
   const destroyPreviewShipIds = React.useMemo(() => {
     const ids = new Set<bigint>();
+    const targetsToShow = collectDamageLabelTargets({
+      grid,
+      allShipPositions,
+      selectedShipId,
+      targetShipId,
+      draggedShipId,
+      dragOverCell,
+      dragValidTargets,
+      validTargets,
+      labelTargets,
+      selectedWeaponType,
+      specialType,
+    });
 
-    if (
-      selectedShipId == null ||
-      !isCurrentPlayerTurn ||
-      !isShipOwnedByCurrentPlayer(selectedShipId)
-    ) {
-      return ids;
-    }
-
-    // Destroyed-ship art is only for EMP reactor-kill preview. Main weapon
-    // (plasma) should show numeric damage preview, not destroyed art. Require a
-    // locked target so we do not preview destruction on every in-range ship
-    // before the player selects one.
-    if (
-      selectedWeaponType !== "special" ||
-      specialType !== 1 ||
-      targetShipId == null ||
-      targetShipId === 0n
-    ) {
-      return ids;
-    }
-
-    const previewTargets = validTargets.filter(
-      (target) => target.shipId === targetShipId,
-    );
-
-    previewTargets.forEach((target) => {
+    for (const target of targetsToShow) {
+      const damage = calculateDamage(
+        target.shipId,
+        selectedWeaponType,
+        selectedWeaponType === "special" && specialType === 3
+          ? true
+          : undefined,
+      );
       const targetAttributes = getShipAttributes(target.shipId);
-      if (!targetAttributes) return;
-
-      const damage = calculateDamage(target.shipId, selectedWeaponType);
       const willDestroyByReactor =
-        damage.reactorCritical && targetAttributes.reactorCriticalTimer + 1 >= 3;
-
+        damage.reactorCritical &&
+        !!targetAttributes &&
+        targetAttributes.reactorCriticalTimer + 1 >= 3;
+      // Same condition as label text "💀 Destroy Ship" (main gun, flak, EMP reactor stack).
       if (willDestroyByReactor) {
         ids.add(target.shipId);
       }
-    });
+    }
 
     return ids;
   }, [
+    grid,
+    allShipPositions,
     selectedShipId,
-    isCurrentPlayerTurn,
-    isShipOwnedByCurrentPlayer,
     targetShipId,
+    draggedShipId,
+    dragOverCell,
+    dragValidTargets,
     validTargets,
-    getShipAttributes,
-    calculateDamage,
+    labelTargets,
     selectedWeaponType,
     specialType,
+    calculateDamage,
+    getShipAttributes,
   ]);
 
   const findShipPositionById = React.useCallback(
@@ -2681,108 +2812,19 @@ export function GameGrid({
             {/* Damage Labels - grid level; z-40 so tutorial "Click here" overlay (z-[60]) can sit above */}
             {gridContainerRef.current &&
               (() => {
-                const targetsToShow: Array<{
-                  shipId: bigint;
-                  row: number;
-                  col: number;
-                }> = [];
-                const selectedShipSide =
-                  selectedShipId != null
-                    ? (() => {
-                        for (let r = 0; r < grid.length; r++) {
-                          const row = grid[r];
-                          for (let c = 0; c < row.length; c++) {
-                            const cell = row[c];
-                            if (cell?.shipId === selectedShipId) {
-                              return cell.isCreator;
-                            }
-                          }
-                        }
-                        const fallback = allShipPositions?.find(
-                          (sp) => sp.shipId === selectedShipId,
-                        );
-                        return fallback?.isCreator ?? null;
-                      })()
-                    : null;
-                const shouldShowTargetLabel = (
-                  shipId: bigint,
-                  fallbackIsCreator?: boolean,
-                ) => {
-                  if (selectedShipSide == null) return true;
-                  const targetSide =
-                    fallbackIsCreator ??
-                    (() => {
-                      for (let r = 0; r < grid.length; r++) {
-                        const row = grid[r];
-                        for (let c = 0; c < row.length; c++) {
-                          const cell = row[c];
-                          if (cell?.shipId === shipId) return cell.isCreator;
-                        }
-                      }
-                      const fallback = allShipPositions?.find(
-                        (sp) => sp.shipId === shipId,
-                      );
-                      return fallback?.isCreator;
-                    })();
-                  if (targetSide == null) return true;
-
-                  // Repair labels should stay on allies; attacks should stay on enemies.
-                  if (selectedWeaponType === "special" && specialType === 2) {
-                    return targetSide === selectedShipSide;
-                  }
-                  return targetSide !== selectedShipSide;
-                };
-                const pushTargetIfAllowed = (
-                  shipId: bigint,
-                  row: number,
-                  col: number,
-                  fallbackIsCreator?: boolean,
-                ) => {
-                  if (!shouldShowTargetLabel(shipId, fallbackIsCreator)) return;
-                  if (targetsToShow.some((t) => t.shipId === shipId)) return;
-                  targetsToShow.push({ shipId, row, col });
-                };
-
-                // Collect selected target
-                if (targetShipId) {
-                  grid.forEach((row, r) => {
-                    row.forEach((cell, c) => {
-                      if (cell && cell.shipId === targetShipId) {
-                        pushTargetIfAllowed(cell.shipId, r, c, cell.isCreator);
-                      }
-                    });
-                  });
-                }
-
-                // Collect drag targets
-                if (draggedShipId && dragOverCell) {
-                  dragValidTargets.forEach((target) => {
-                    pushTargetIfAllowed(
-                      target.shipId,
-                      target.position.row,
-                      target.position.col,
-                    );
-                  });
-                }
-
-                // Collect targets for damage labels:
-                // - When labelTargets provided (GameDisplay): move+gun = threat range, only gun = from preview.
-                // - When not provided (e.g. SimulatedGameDisplay): use validTargets.
-                const targetsForLabels = labelTargets ?? validTargets;
-                const hasSingleSelectedTarget =
-                  targetShipId != null && targetShipId !== 0n;
-
-                // If a specific target is selected, only keep that target's label.
-                // Otherwise (no target or AOE target 0n), show labels for all valid targets.
-                if (selectedShipId && !hasSingleSelectedTarget) {
-                  targetsForLabels.forEach((target) => {
-                    pushTargetIfAllowed(
-                      target.shipId,
-                      target.position.row,
-                      target.position.col,
-                    );
-                  });
-                }
+                const targetsToShow = collectDamageLabelTargets({
+                  grid,
+                  allShipPositions,
+                  selectedShipId,
+                  targetShipId,
+                  draggedShipId,
+                  dragOverCell,
+                  dragValidTargets,
+                  validTargets,
+                  labelTargets,
+                  selectedWeaponType,
+                  specialType,
+                });
 
                 if (targetsToShow.length === 0) return null;
 
