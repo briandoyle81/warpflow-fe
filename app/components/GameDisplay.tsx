@@ -68,10 +68,17 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   const [targetShipId, setTargetShipId] = useState<bigint | null>(null);
   // Explicit per-ship action override (e.g. Retreat/Flee)
   const [actionOverride, setActionOverride] = useState<ActionType | null>(null);
+  /** Player clicked Retreat for this ship (healthy ships); not set for auto-retreat on 0 HP. */
+  const [retreatExplicitByShipId, setRetreatExplicitByShipId] = useState<
+    Record<string, true>
+  >({});
 
   const [selectedWeaponType, setSelectedWeaponType] = useState<
     "weapon" | "special"
   >("weapon");
+  const [weaponPreferenceByShipId, setWeaponPreferenceByShipId] = useState<
+    Record<string, "weapon" | "special">
+  >({});
   const [hoveredCell, setHoveredCell] = useState<{
     shipId: bigint;
     row: number;
@@ -105,13 +112,27 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     ? "h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex w-full shrink-0 items-center justify-center"
     : "h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0";
 
-  // If the user starts targeting or moving, clear any explicit "retreat" override.
+  // If the user starts targeting or moving, clear retreat mode and per-ship retreat choice.
   React.useEffect(() => {
     if (actionOverride !== ActionType.Retreat) return;
     if (targetShipId !== null || previewPosition !== null) {
       setActionOverride(null);
+      if (selectedShipId != null) {
+        const k = selectedShipId.toString();
+        setRetreatExplicitByShipId((prev) => {
+          if (!prev[k]) return prev;
+          const next = { ...prev };
+          delete next[k];
+          return next;
+        });
+      }
     }
-  }, [actionOverride, targetShipId, previewPosition]);
+  }, [
+    actionOverride,
+    targetShipId,
+    previewPosition,
+    selectedShipId,
+  ]);
 
   // Fetch the current game data to get real-time updates
   const {
@@ -558,7 +579,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     setDraggedShipId(null);
     setDragOverCell(null);
     setHoveredCell(null);
-    setSelectedWeaponType("weapon");
+    setRetreatExplicitByShipId({});
   }, [game.turnState.currentTurn]);
 
   // Initialize previous state on mount
@@ -2091,7 +2112,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     return !!attrs && attrs.hullPoints === 0;
   }, [selectedShipId, getShipAttributes]);
 
-  // When selecting a disabled ship (0 HP), default to Retreat and clear move/target.
+  // Disabled ships: always Retreat. Healthy ships: Retreat only if the player chose it for that ship.
   React.useEffect(() => {
     if (selectedShipId === null) return;
     const attrs = getShipAttributes(selectedShipId);
@@ -2099,8 +2120,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       setActionOverride(ActionType.Retreat);
       setTargetShipId(null);
       setPreviewPosition(null);
+      return;
     }
-  }, [selectedShipId, getShipAttributes]);
+    setActionOverride(
+      retreatExplicitByShipId[selectedShipId.toString()]
+        ? ActionType.Retreat
+        : null,
+    );
+  }, [selectedShipId, getShipAttributes, retreatExplicitByShipId]);
 
   // When showing last move, set up the preview state to display it
   // This should NOT interfere with proposed moves
@@ -2170,6 +2197,53 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     isShowingProposedMove,
     shipMap,
     selectedShipId,
+  ]);
+
+  const setWeaponTypeFromGrid = React.useCallback(
+    (type: "weapon" | "special") => {
+      if (selectedShipId != null) {
+        const idKey = selectedShipId.toString();
+        setWeaponPreferenceByShipId((prev) => ({ ...prev, [idKey]: type }));
+      }
+      setSelectedWeaponType(type);
+    },
+    [selectedShipId],
+  );
+
+  React.useEffect(() => {
+    if (selectedShipId === null) {
+      if (!shouldShowLastMove) {
+        setSelectedWeaponType("weapon");
+      }
+      return;
+    }
+
+    const idKey = selectedShipId.toString();
+    const ship = shipMap.get(selectedShipId);
+    const attrs = getShipAttributes(selectedShipId);
+    if (attrs && attrs.hullPoints === 0) {
+      setWeaponPreferenceByShipId((prev) => {
+        if (prev[idKey] === "weapon") return prev;
+        return { ...prev, [idKey]: "weapon" };
+      });
+      setSelectedWeaponType("weapon");
+      return;
+    }
+
+    const canSpecial = !!(ship && ship.equipment.special > 0);
+    const saved = weaponPreferenceByShipId[idKey] ?? "weapon";
+    if (saved === "special" && !canSpecial) {
+      setWeaponPreferenceByShipId((prev) => ({ ...prev, [idKey]: "weapon" }));
+      setSelectedWeaponType("weapon");
+      return;
+    }
+    setSelectedWeaponType(saved);
+  }, [
+    selectedShipId,
+    weaponPreferenceByShipId,
+    shipMap,
+    getShipAttributes,
+    shouldShowLastMove,
   ]);
 
   // Clear optimistic last move once the contract state catches up.
@@ -2411,6 +2485,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     setTargetShipId(null);
     // Keep selectedWeaponType so it only changes when player uses the dropdown
   };
+
+  /** Right-click on the map clears selection in GameGrid; sync last-move replay + retreat override here. */
+  const handleGridRightClickDeselect = React.useCallback(() => {
+    isDisplayingLastMoveRef.current = false;
+    lastDisplayedMoveRef.current = null;
+    setActionOverride(null);
+  }, []);
 
   /** Tutorial parity: pulse is driven by tutorial steps in SimulatedGameDisplay; live game leaves it off. */
   const shouldPulseSubmitMoveButton = React.useMemo(() => false, []);
@@ -2896,7 +2977,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     const newWeaponType = e.target.value as
                       | "weapon"
                       | "special";
-                    setSelectedWeaponType(newWeaponType);
+                    setWeaponTypeFromGrid(newWeaponType);
                     if (newWeaponType === "special" && specialType === 3) {
                       setTargetShipId(0n);
                     } else {
@@ -3009,7 +3090,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           <button
             type="button"
             onClick={() => {
-              setActionOverride(ActionType.Retreat);
+              if (selectedShipId != null) {
+                setRetreatExplicitByShipId((prev) => ({
+                  ...prev,
+                  [selectedShipId.toString()]: true,
+                }));
+              }
               setTargetShipId(null);
               setPreviewPosition(null);
             }}
@@ -3550,7 +3636,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           onBoardChromeMouseDown={handleCancelMove}
         >
           <div
-            className="relative w-full"
+            className="relative w-full [contain:layout]"
             style={{ aspectRatio: `${GRID_WIDTH} / ${GRID_HEIGHT}` }}
           >
             <div className="absolute inset-0 min-h-0 overflow-hidden">
@@ -3594,10 +3680,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           lastMoveIsCurrentPlayer={lastMoveIsCurrentPlayer}
           retreatPrepShipId={retreatPrepShipId}
           retreatPrepIsCreator={retreatPrepIsCreator}
+          onGridRightClickDeselect={handleGridRightClickDeselect}
           setSelectedShipId={setSelectedShipId}
           setPreviewPosition={setPreviewPosition}
           setTargetShipId={setTargetShipId}
-          setSelectedWeaponType={setSelectedWeaponType}
+          setSelectedWeaponType={setWeaponTypeFromGrid}
           setHoveredCell={setHoveredCell}
           setDraggedShipId={setDraggedShipId}
           setDragOverCell={setDragOverCell}

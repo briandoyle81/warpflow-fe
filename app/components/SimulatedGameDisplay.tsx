@@ -942,7 +942,13 @@ export function SimulatedGameDisplay({
   const [selectedWeaponType, setSelectedWeaponType] = useState<
     "weapon" | "special"
   >("weapon");
+  const [weaponPreferenceByShipId, setWeaponPreferenceByShipId] = useState<
+    Record<string, "weapon" | "special">
+  >({});
   const [actionOverride, setActionOverride] = useState<ActionType | null>(null);
+  const [retreatExplicitByShipId, setRetreatExplicitByShipId] = useState<
+    Record<string, true>
+  >({});
 
   // Deselect all ships when moving between steps. Use layout effect so that
   // selection and previews are cleared before the new step is painted, which
@@ -951,7 +957,8 @@ export function SimulatedGameDisplay({
     setSelectedShipId(null);
     setPreviewPosition(null);
     setTargetShipId(null);
-    setSelectedWeaponType("weapon");
+    setWeaponPreferenceByShipId({});
+    setRetreatExplicitByShipId({});
     setActionOverride(null);
   }, [currentStepIndex]);
   const [hoveredCell, setHoveredCell] = useState<{
@@ -988,8 +995,22 @@ export function SimulatedGameDisplay({
     if (actionOverride !== ActionType.Retreat) return;
     if (targetShipId !== null || previewPosition !== null) {
       setActionOverride(null);
+      if (selectedShipId != null) {
+        const k = selectedShipId.toString();
+        setRetreatExplicitByShipId((prev) => {
+          if (!prev[k]) return prev;
+          const next = { ...prev };
+          delete next[k];
+          return next;
+        });
+      }
     }
-  }, [actionOverride, targetShipId, previewPosition]);
+  }, [
+    actionOverride,
+    targetShipId,
+    previewPosition,
+    selectedShipId,
+  ]);
 
   // Mirror live game: whose turn it is comes from simulated state (e.g. after
   // end of round, opponent may go first).
@@ -1011,7 +1032,7 @@ export function SimulatedGameDisplay({
     setDraggedShipId(null);
     setDragOverCell(null);
     setHoveredCell(null);
-    setSelectedWeaponType("weapon");
+    setRetreatExplicitByShipId({});
   }, [gameState.turnState.currentTurn]);
 
   // Map of onchain ship ID (bigint) to ship object. Tutorial IDs are strings;
@@ -1167,6 +1188,61 @@ export function SimulatedGameDisplay({
     return !!attrs && attrs.hullPoints === 0;
   }, [selectedShipId, getShipAttributes]);
 
+  const tutorialLastMoveGhostVisible = useMemo(
+    () =>
+      selectedShipId === null &&
+      tutorialDisplayLastMove != null &&
+      tutorialDisplayLastMove.shipId !== undefined,
+    [selectedShipId, tutorialDisplayLastMove],
+  );
+
+  const setWeaponTypeFromGrid = useCallback(
+    (type: "weapon" | "special") => {
+      if (selectedShipId != null) {
+        const idKey = selectedShipId.toString();
+        setWeaponPreferenceByShipId((prev) => ({ ...prev, [idKey]: type }));
+      }
+      setSelectedWeaponType(type);
+    },
+    [selectedShipId],
+  );
+
+  useEffect(() => {
+    if (selectedShipId === null) {
+      if (!tutorialLastMoveGhostVisible) {
+        setSelectedWeaponType("weapon");
+      }
+      return;
+    }
+
+    const idKey = selectedShipId.toString();
+    const ship = shipMap.get(selectedShipId);
+    const attrs = getShipAttributes(selectedShipId);
+    if (attrs && attrs.hullPoints === 0) {
+      setWeaponPreferenceByShipId((prev) => {
+        if (prev[idKey] === "weapon") return prev;
+        return { ...prev, [idKey]: "weapon" };
+      });
+      setSelectedWeaponType("weapon");
+      return;
+    }
+
+    const canSpecial = !!(ship && ship.equipment.special > 0);
+    const saved = weaponPreferenceByShipId[idKey] ?? "weapon";
+    if (saved === "special" && !canSpecial) {
+      setWeaponPreferenceByShipId((prev) => ({ ...prev, [idKey]: "weapon" }));
+      setSelectedWeaponType("weapon");
+      return;
+    }
+    setSelectedWeaponType(saved);
+  }, [
+    selectedShipId,
+    weaponPreferenceByShipId,
+    shipMap,
+    getShipAttributes,
+    tutorialLastMoveGhostVisible,
+  ]);
+
   /**
    * Pulse the Submit / Submit Retreat button (same idea as tutorial highlight)
    * when a tx step is ready to confirm: staged inputs present, dialog not open.
@@ -1262,13 +1338,22 @@ export function SimulatedGameDisplay({
     return ship ? ship.owner === TUTORIAL_PLAYER_ADDRESS : null;
   }, [retreatPrepShipId, shipMap]);
 
-  // Match live-game behavior: selecting a disabled ship enters retreat-only mode.
+  // Disabled ships: always Retreat. Healthy ships: Retreat only if the player chose it for that ship.
   useEffect(() => {
-    if (!selectedShipId || !isSelectedShipDisabled) return;
-    setTargetShipId(null);
-    setPreviewPosition(null);
-    setSelectedWeaponType("weapon");
-  }, [selectedShipId, isSelectedShipDisabled]);
+    if (selectedShipId === null) return;
+    const attrs = getShipAttributes(selectedShipId);
+    if (attrs && attrs.hullPoints === 0) {
+      setActionOverride(ActionType.Retreat);
+      setTargetShipId(null);
+      setPreviewPosition(null);
+      return;
+    }
+    setActionOverride(
+      retreatExplicitByShipId[selectedShipId.toString()]
+        ? ActionType.Retreat
+        : null,
+    );
+  }, [selectedShipId, getShipAttributes, retreatExplicitByShipId]);
 
   // Check line of sight between two positions
   const hasLineOfSight = useCallback(
@@ -2532,7 +2617,6 @@ export function SimulatedGameDisplay({
       setPreviewPosition(null);
       executeAction({ type: "selectShip", shipId: idString });
       setTargetShipId(null);
-      setSelectedWeaponType("weapon");
     },
     [
       currentStep,
@@ -2557,6 +2641,11 @@ export function SimulatedGameDisplay({
     setDraggedShipId(null);
     setDragOverCell(null);
   }, [wrappedSetSelectedShipId]);
+
+  /** GameGrid clears selection on context menu; clear retreat override here (matches handleCancelMove). */
+  const handleGridRightClickDeselect = useCallback(() => {
+    setActionOverride(null);
+  }, []);
 
   const wrappedSetPreviewPosition = useCallback(
     (position: { row: number; col: number } | null) => {
@@ -3497,7 +3586,7 @@ export function SimulatedGameDisplay({
                                   const newWeaponType = e.target.value as
                                     | "weapon"
                                     | "special";
-                                  setSelectedWeaponType(newWeaponType);
+                                  setWeaponTypeFromGrid(newWeaponType);
                                   // In tutorial we do not have a boarding special; keep target as-is.
                                 }}
                                 className="w-full px-3 py-1.5 text-sm uppercase font-semibold tracking-wider"
@@ -3642,7 +3731,12 @@ export function SimulatedGameDisplay({
                   <button
                     type="button"
                     onClick={() => {
-                      setActionOverride(ActionType.Retreat);
+                      if (selectedShipId != null) {
+                        setRetreatExplicitByShipId((prev) => ({
+                          ...prev,
+                          [selectedShipId.toString()]: true,
+                        }));
+                      }
                       setTargetShipId(null);
                       setPreviewPosition(null);
                     }}
@@ -3716,7 +3810,7 @@ export function SimulatedGameDisplay({
             {/* Fixed 17×11 aspect so the board does not resize between tutorial steps
               while state hydrates; overlay blocks interaction until ready. */}
             <div
-              className="relative w-full"
+              className="relative w-full [contain:layout]"
               style={{ aspectRatio: `${GRID_WIDTH} / ${GRID_HEIGHT}` }}
             >
               {!isStepHydrated && (
@@ -3778,10 +3872,11 @@ export function SimulatedGameDisplay({
                   retreatPrepShipId={retreatPrepShipId}
                   retreatPrepIsCreator={retreatPrepIsCreator}
                   tutorialHighlightCells={tutorialHighlightCells}
+                  onGridRightClickDeselect={handleGridRightClickDeselect}
                   setSelectedShipId={wrappedSetSelectedShipId}
                   setPreviewPosition={wrappedSetPreviewPosition}
                   setTargetShipId={wrappedSetTargetShipId}
-                  setSelectedWeaponType={setSelectedWeaponType}
+                  setSelectedWeaponType={setWeaponTypeFromGrid}
                   setHoveredCell={setHoveredCell}
                   setDraggedShipId={setDraggedShipId}
                   setDragOverCell={setDragOverCell}

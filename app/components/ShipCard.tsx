@@ -43,6 +43,8 @@ interface ShipCardProps {
   layoutShipId?: string;
   /** Manage Navy: min height (px) for the star+name row to align cards in a grid row */
   nameBlockMinHeightPx?: number;
+  /** Grid hover tooltip: tile row/col under the cursor (ghost / preview / live). */
+  tooltipGridPosition?: { row: number; col: number };
 }
 
 const ShipCard: React.FC<ShipCardProps> = ({
@@ -70,6 +72,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
   costVersionSyncButton,
   layoutShipId,
   nameBlockMinHeightPx,
+  tooltipGridPosition,
 }) => {
   // Determine border class based on selection mode and ship state
   const getBorderClass = () => {
@@ -348,16 +351,24 @@ const ShipCard: React.FC<ShipCardProps> = ({
           <>
             {/* Health bar for damaged ships */}
             {inGameAttributes.hullPoints < inGameAttributes.maxHullPoints && (
-              <div className="absolute -top-2 left-0 right-0 z-10">
+              <div
+                className="absolute -top-2 left-0 right-0 z-10"
+                dir="ltr"
+                style={
+                  flipShip
+                    ? { transform: "scaleX(-1)" }
+                    : undefined
+                }
+              >
                 <div
-                  className="w-full h-1 transition-all duration-300"
+                  className="relative h-1 w-full overflow-hidden transition-all duration-300"
                   style={{
                     backgroundColor: "var(--color-gunmetal)",
-                    borderRadius: 0, // Square corners
+                    borderRadius: 0,
                   }}
                 >
                   <div
-                    className="h-full transition-all duration-300"
+                    className="absolute left-0 top-0 h-full transition-all duration-300"
                     style={{
                       backgroundColor:
                         (inGameAttributes.hullPoints /
@@ -366,7 +377,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                         25
                           ? "var(--color-warning-red)"
                           : "var(--color-phosphor-green)",
-                      borderRadius: 0, // Square corners
+                      borderRadius: 0,
                       width: `${
                         (inGameAttributes.hullPoints /
                           inGameAttributes.maxHullPoints) *
@@ -629,6 +640,15 @@ const ShipCard: React.FC<ShipCardProps> = ({
                 }
                 return (
                   <>
+                    {tooltipMode && tooltipGridPosition != null && (
+                      <div className="flex justify-between col-span-3 border-b border-gray-600/80 pb-1 mb-0.5">
+                        <span className="opacity-60">Position:</span>
+                        <span className="ml-2 font-mono">
+                          ({tooltipGridPosition.row},{" "}
+                          {tooltipGridPosition.col})
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="opacity-60">Weapon:</span>
                       <span className="ml-2">

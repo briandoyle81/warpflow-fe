@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+} from "react";
+import Image from "next/image";
 import {
   GRID_DIMENSIONS,
   MapPosition,
@@ -53,6 +59,16 @@ export function MapDisplay({
   onDrop,
   dragOverPosition = null,
 }: MapDisplayProps) {
+  const mapGridRef = useRef<HTMLDivElement>(null);
+  const [, setMapGridLayoutVersion] = useState(0);
+  useLayoutEffect(() => {
+    const el = mapGridRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setMapGridLayoutVersion((v) => v + 1));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Only fetch map data if mapId is valid
   const { data: blockedPositions } = useGetPresetMap(mapId);
   const { data: scoringPositions } = useGetPresetScoringMap(mapId);
@@ -259,9 +275,11 @@ export function MapDisplay({
     col: number,
     e: React.MouseEvent<HTMLDivElement>
   ) => {
-    if (hoveredCell && hoveredCell.row === row && hoveredCell.col === col) {
+    if (hoveredCell && hoveredCell.shipId === getShipAtPosition(row, col)?.id) {
       setHoveredCell({
         ...hoveredCell,
+        row,
+        col,
         mouseX: e.clientX,
         mouseY: e.clientY,
       });
@@ -304,9 +322,9 @@ export function MapDisplay({
       // Subtle gold wash for visibility + strong inset gold border
       baseClass += " bg-yellow-400/10 shadow-[inset_0_0_0_3px_rgb(250,204,21)]"; // yellow-400
     } else {
-      // Set border thickness based on blocking status when not selected
+      // Blocked LOS: nebula art (see cell content), same grid outline as empty tiles
       if (isBlocked) {
-        baseClass += " border-0 shadow-[inset_0_0_0_2px_rgb(168,85,247)]"; // purple-500
+        baseClass += " border-0 outline outline-1 outline-gray-600 overflow-hidden";
       } else {
         baseClass += " border-0 outline outline-1 outline-gray-600";
       }
@@ -314,7 +332,12 @@ export function MapDisplay({
 
     // Set background color based on scoring status
     if (scoreValue > 0) {
-      if (isOnlyOnce) {
+      if (ship) {
+        // Occupied scoring: gold wash for reusable, blue-teal for active single-claim crystal
+        baseClass += isOnlyOnce
+          ? " bg-gradient-to-b from-sky-400/65 via-cyan-500/78 to-teal-700/86"
+          : " bg-amber-600";
+      } else if (isOnlyOnce) {
         baseClass += " bg-blue-400"; // Cornflower blue for once-only
       } else {
         baseClass += " bg-yellow-400"; // Gold for reusable
@@ -350,6 +373,7 @@ export function MapDisplay({
         }}
       >
         <div
+          ref={mapGridRef}
           key={`map-display-${mapId}-${mapState.blockedTiles.length}-${mapState.scoringTiles.length}`}
           className="grid relative gap-0 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full h-full"
         >
@@ -420,10 +444,27 @@ export function MapDisplay({
                     }
                   }}
                 >
+                  {mapState.blockedTiles[row][col] && (
+                    <div className="pointer-events-none absolute inset-0 z-0">
+                      <Image
+                        src="/img/nebula-tile.png"
+                        alt=""
+                        fill
+                        className="object-cover opacity-30"
+                        sizes="(max-width: 768px) 5vw, 3vw"
+                      />
+                    </div>
+                  )}
                   {/* Score value display */}
                   {mapState.scoringTiles[row][col] > 0 && (
                     <div
-                      className={`relative z-0 flex items-center justify-center text-lg font-bold text-black w-full h-full`}
+                      className={`relative z-0 flex items-center justify-center text-lg font-bold w-full h-full ${
+                        ship
+                          ? mapState.onlyOnceTiles[row][col]
+                            ? "text-cyan-50"
+                            : "text-amber-100"
+                          : "text-black"
+                      }`}
                     >
                       {mapState.scoringTiles[row][col]}
                     </div>
@@ -583,66 +624,159 @@ export function MapDisplay({
               />
             ))}
           </div>
+
+          {/* Ship tooltip: absolute in map grid so it tracks aspect / resize */}
+          {hoveredCell &&
+            (() => {
+              const ship = shipMap.get(hoveredCell.shipId);
+              if (!ship || !("equipment" in ship)) return null;
+
+              const gridEl = mapGridRef.current;
+              if (!gridEl) return null;
+
+              const tooltipWidth = 320;
+              const tooltipHeight = 400;
+              const offset = 15;
+
+              const cr = gridEl.getBoundingClientRect();
+              const cw = cr.width / GRID_DIMENSIONS.WIDTH;
+              const ch = cr.height / GRID_DIMENSIONS.HEIGHT;
+
+              const shipLeft = hoveredCell.col * cw;
+              const shipTop = hoveredCell.row * ch;
+              const shipRight = shipLeft + cw;
+              const shipBottom = shipTop + ch;
+
+              const mouseX = hoveredCell.mouseX - cr.left;
+              const mouseY = hoveredCell.mouseY - cr.top;
+
+              let tooltipLeft = mouseX + offset;
+              let tooltipTop = mouseY + offset;
+
+              const tooltipRight = tooltipLeft + tooltipWidth;
+              const wouldCoverHorizontally =
+                tooltipLeft < shipRight && tooltipRight > shipLeft;
+
+              const tooltipBottom = tooltipTop + tooltipHeight;
+              const wouldCoverVertically =
+                tooltipTop < shipBottom && tooltipBottom > shipTop;
+
+              const isCreatorShip = hoveredCell.isCreatorShip;
+              const maxLeft = Math.max(0, cr.width - tooltipWidth);
+              const maxTop = Math.max(0, cr.height - tooltipHeight);
+
+              if (wouldCoverHorizontally && wouldCoverVertically) {
+                if (isCreatorShip) {
+                  if (shipLeft - tooltipWidth - offset >= 0) {
+                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                  } else if (shipRight + tooltipWidth + offset <= cr.width) {
+                    tooltipLeft = shipRight + offset;
+                  } else if (shipTop - tooltipHeight - offset >= 0) {
+                    tooltipTop = shipTop - tooltipHeight - offset;
+                    tooltipLeft = mouseX;
+                  } else if (
+                    shipBottom + tooltipHeight + offset <=
+                    cr.height
+                  ) {
+                    tooltipTop = shipBottom + offset;
+                    tooltipLeft = mouseX;
+                  }
+                } else {
+                  if (shipRight + tooltipWidth + offset <= cr.width) {
+                    tooltipLeft = shipRight + offset;
+                  } else if (shipLeft - tooltipWidth - offset >= 0) {
+                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                  } else if (shipTop - tooltipHeight - offset >= 0) {
+                    tooltipTop = shipTop - tooltipHeight - offset;
+                    tooltipLeft = mouseX;
+                  } else if (
+                    shipBottom + tooltipHeight + offset <=
+                    cr.height
+                  ) {
+                    tooltipTop = shipBottom + offset;
+                    tooltipLeft = mouseX;
+                  }
+                }
+              } else if (wouldCoverHorizontally) {
+                if (isCreatorShip) {
+                  if (shipLeft - tooltipWidth - offset >= 0) {
+                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                  } else {
+                    tooltipLeft = shipRight + offset;
+                  }
+                } else {
+                  if (shipRight + tooltipWidth + offset <= cr.width) {
+                    tooltipLeft = shipRight + offset;
+                  } else {
+                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                  }
+                }
+              } else if (wouldCoverVertically) {
+                if (shipTop - tooltipHeight - offset >= 0) {
+                  tooltipTop = shipTop - tooltipHeight - offset;
+                } else {
+                  tooltipTop = shipBottom + offset;
+                }
+              }
+
+              tooltipLeft = Math.max(0, Math.min(tooltipLeft, maxLeft));
+              tooltipTop = Math.max(0, Math.min(tooltipTop, maxTop));
+
+              const attributes = attributesMap.get(hoveredCell.shipId);
+              const isCurrentPlayerShip =
+                selectableShipIds?.some((id) => id === hoveredCell.shipId) ??
+                false;
+
+              return (
+                <div
+                  className="absolute z-[10000] pointer-events-none opacity-100"
+                  style={{
+                    left: `${tooltipLeft}px`,
+                    top: `${tooltipTop}px`,
+                  }}
+                >
+                  <div className="w-80 opacity-100">
+                    <ShipCard
+                      ship={ship as Ship}
+                      isStarred={false}
+                      onToggleStar={() => {}}
+                      isSelected={false}
+                      onToggleSelection={() => {}}
+                      onRecycleClick={() => {}}
+                      showInGameProperties={true}
+                      inGameAttributes={attributes || undefined}
+                      attributesLoading={attributesLoading && !attributes}
+                      hideRecycle={true}
+                      hideCheckbox={true}
+                      tooltipMode={true}
+                      isCurrentPlayerShip={isCurrentPlayerShip}
+                      flipShip={hoveredCell.isCreatorShip}
+                      tooltipGridPosition={{
+                        row: hoveredCell.row,
+                        col: hoveredCell.col,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
         </div>
       </div>
-
-      {/* Ship Tooltip */}
-      {hoveredCell &&
-        (() => {
-          const ship = shipMap.get(hoveredCell.shipId);
-          // Only show tooltip for full Ship objects
-          if (!ship || !("equipment" in ship)) return null;
-
-          const attributes = attributesMap.get(hoveredCell.shipId);
-          const isCurrentPlayerShip =
-            selectableShipIds?.some((id) => id === hoveredCell.shipId) ?? false;
-
-          return (
-            <div
-              className="fixed z-[100] pointer-events-none opacity-100"
-              style={{
-                left: `${Math.min(
-                  hoveredCell.mouseX + 15,
-                  typeof window !== "undefined"
-                    ? window.innerWidth - 400
-                    : hoveredCell.mouseX + 15
-                )}px`,
-                top: `${Math.min(
-                  hoveredCell.mouseY + 15,
-                  typeof window !== "undefined"
-                    ? window.innerHeight - 500
-                    : hoveredCell.mouseY + 15
-                )}px`,
-              }}
-            >
-              <div className="w-80 opacity-100">
-                <ShipCard
-                  ship={ship as Ship}
-                  isStarred={false}
-                  onToggleStar={() => {}}
-                  isSelected={false}
-                  onToggleSelection={() => {}}
-                  onRecycleClick={() => {}}
-                  showInGameProperties={true}
-                  inGameAttributes={attributes || undefined}
-                  attributesLoading={attributesLoading && !attributes}
-                  hideRecycle={true}
-                  hideCheckbox={true}
-                  tooltipMode={true}
-                  isCurrentPlayerShip={isCurrentPlayerShip}
-                  flipShip={hoveredCell.isCreatorShip}
-                />
-              </div>
-            </div>
-          );
-        })()}
 
       {/* Key/Legend */}
       <div className="mt-4 w-full">
         <div className="flex flex-wrap gap-4 text-xs text-gray-300">
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-gray-900 border-2 border-purple-400"></div>
-            <span>Blocked (LOS) - Thick purple border</span>
+            <div className="relative h-5 w-5 shrink-0 overflow-hidden border border-gray-600 bg-gray-900">
+              <Image
+                src="/img/nebula-tile.png"
+                alt=""
+                fill
+                className="object-cover opacity-30"
+                sizes="20px"
+              />
+            </div>
+            <span>Blocked (LOS) - Nebula</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-[20px] h-[20px] bg-blue-400 border border-gray-600"></div>
@@ -653,7 +787,15 @@ export function MapDisplay({
             <span>Scoring (once only)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-blue-400 border-2 border-purple-400"></div>
+            <div className="relative h-5 w-5 shrink-0 overflow-hidden border border-gray-600 bg-blue-400">
+              <Image
+                src="/img/nebula-tile.png"
+                alt=""
+                fill
+                className="object-cover opacity-30"
+                sizes="20px"
+              />
+            </div>
             <span>Blocked + Scoring</span>
           </div>
           <div className="flex items-center gap-2">
