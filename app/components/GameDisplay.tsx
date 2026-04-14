@@ -784,6 +784,18 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     [game.shipAttributes, game.shipIds],
   );
 
+  const isEnemyDisabledShipId = React.useCallback(
+    (shipId: bigint): boolean => {
+      const ship = shipMap.get(shipId);
+      if (!ship || !address) return false;
+      if (ship.owner === address) return false;
+      const attrs = getShipAttributes(shipId);
+      if (!attrs) return false;
+      return attrs.hullPoints === 0;
+    },
+    [shipMap, address, getShipAttributes],
+  );
+
   const draggedShipForSpecialRange =
     draggedShipId != null ? shipMap.get(draggedShipId) : null;
   const draggedSpecialEquipmentType =
@@ -1136,6 +1148,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         getShipAttributes,
         shipPositions: aliveShipPositions,
         previewPosition,
+        canEnterOccupiedCell: (_row, _col, occupyingShipId) =>
+          occupyingShipId !== selectedShipId &&
+          isEnemyDisabledShipId(occupyingShipId),
       }),
     [
       selectedShipId,
@@ -1144,8 +1159,32 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       aliveShipPositions,
       getShipAttributes,
       previewPosition,
+      isEnemyDisabledShipId,
     ],
   );
+
+  const isRammingMovePreview = React.useMemo(() => {
+    if (!selectedShipId || !previewPosition) return false;
+    const occupyingShip = aliveShipPositions.find(
+      (pos) =>
+        pos.position.row === previewPosition.row &&
+        pos.position.col === previewPosition.col &&
+        pos.shipId !== selectedShipId,
+    );
+    if (!occupyingShip) return false;
+    return isEnemyDisabledShipId(occupyingShip.shipId);
+  }, [
+    selectedShipId,
+    previewPosition,
+    aliveShipPositions,
+    isEnemyDisabledShipId,
+  ]);
+
+  React.useEffect(() => {
+    if (!isRammingMovePreview) return;
+    if (targetShipId === null) return;
+    setTargetShipId(null);
+  }, [isRammingMovePreview, targetShipId]);
 
   // Calculate damage for a target ship (shooterShipIdOverride used for last-move display when no ship selected)
   const calculateDamage = React.useCallback(
@@ -1252,6 +1291,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Valid targets: only ships in range from current position (or from preview position when move is set). Used for selection logic.
   const validTargets = React.useMemo(() => {
     if (!selectedShipId || !gameShips) return [];
+    if (isRammingMovePreview) return [];
 
     const attributes = getShipAttributes(selectedShipId);
     // Disabled ships (0 HP) cannot shoot; only retreat is available
@@ -1334,6 +1374,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     selectedWeaponType,
     specialRange,
     specialType,
+    isRammingMovePreview,
   ]);
 
   // Targets for damage labels:
@@ -1342,6 +1383,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // - When showing only gun range (preview set), include only targets in range from the preview position.
   const labelTargets = React.useMemo(() => {
     if (!selectedShipId || !gameShips) return [];
+    if (isRammingMovePreview) return [];
 
     const attributes = getShipAttributes(selectedShipId);
     if (attributes && attributes.hullPoints === 0) return [];
@@ -1476,6 +1518,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     selectedWeaponType,
     specialRange,
     specialType,
+    isRammingMovePreview,
   ]);
 
   // Assist action removed from contract; keep empty arrays for API compatibility
@@ -1485,6 +1528,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Calculate shooting range for selected ship (where it could shoot from any valid move position)
   const shootingRange = React.useMemo(() => {
     if (!selectedShipId || !gameShips) return [];
+    if (isRammingMovePreview) return [];
 
     const ship = shipMap.get(selectedShipId);
     if (!ship) return [];
@@ -1765,6 +1809,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     selectedWeaponType,
     specialRange,
     specialType,
+    isRammingMovePreview,
   ]);
 
   // Calculate valid targets from drag position (when dragging a ship)
@@ -2559,6 +2604,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             const computedActionType =
               actionOverride != null
                 ? actionOverride
+                : isRammingMovePreview
+                  ? ActionType.Pass
                 : targetShipId !== null && targetShipId !== 0n
                   ? selectedWeaponType === "special"
                     ? ActionType.Special
@@ -2614,7 +2661,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     computedRow,
                     computedCol,
                     computedActionType,
-                    targetShipId || 0n,
+                    computedActionType === ActionType.Pass
+                      ? 0n
+                      : targetShipId || 0n,
                   ]}
                   style={submitMoveButtonStyle}
                   className={`px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 ${

@@ -9,6 +9,11 @@ interface MovementRangeParams {
   getShipAttributes: (shipId: bigint) => Attributes | null;
   shipPositions: readonly ShipPosition[];
   previewPosition: { row: number; col: number } | null;
+  canEnterOccupiedCell?: (
+    row: number,
+    col: number,
+    occupyingShipId: bigint,
+  ) => boolean;
 }
 
 interface ShootingRangeParams {
@@ -40,6 +45,7 @@ export function computeMovementRange({
   getShipAttributes,
   shipPositions,
   previewPosition,
+  canEnterOccupiedCell,
 }: MovementRangeParams): { row: number; col: number }[] {
   if (!selectedShipId || !hasShips) return [];
 
@@ -86,8 +92,14 @@ export function computeMovementRange({
         const isOccupied = shipPositions.some(
           (pos) => pos.position.row === row && pos.position.col === col,
         );
+        const occupyingShip = shipPositions.find(
+          (pos) => pos.position.row === row && pos.position.col === col,
+        );
+        const canEnterOccupied =
+          occupyingShip != null &&
+          canEnterOccupiedCell?.(row, col, occupyingShip.shipId) === true;
 
-        if (!isOccupied) {
+        if (!isOccupied || canEnterOccupied) {
           validMoves.push({ row, col });
         }
       }

@@ -1325,6 +1325,18 @@ export function SimulatedGameDisplay({
     [gameState.shipPositions],
   );
 
+  const isEnemyDisabledTutorialShipId = useCallback(
+    (shipId: TutorialShipId): boolean => {
+      const ship = shipMap.get(BigInt(shipId));
+      if (!ship) return false;
+      if (ship.owner === TUTORIAL_PLAYER_ADDRESS) return false;
+      const attrs = getShipAttributes(shipId);
+      if (!attrs) return false;
+      return attrs.hullPoints === 0;
+    },
+    [shipMap, getShipAttributes],
+  );
+
   // Mirror live-game retreat prep visual: when a disabled ship is selected on
   // the player's turn, show the in-cell retreat effect (flip + engine glow).
   const retreatPrepShipId = useMemo(() => {
@@ -1572,9 +1584,18 @@ export function SimulatedGameDisplay({
       ) {
         const distance = Math.abs(row - startRow) + Math.abs(col - startCol);
         if (distance <= movementRangeValue && distance > 0) {
-          const isOccupied = isCellOccupiedByAliveShip(row, col);
+          const occupyingShip = gameState.shipPositions.find(
+            (pos) =>
+              (pos.status ?? 0) === 0 &&
+              pos.position.row === row &&
+              pos.position.col === col,
+          );
+          const canRamDisabledEnemy =
+            occupyingShip != null &&
+            occupyingShip.shipId !== selectedShipId.toString() &&
+            isEnemyDisabledTutorialShipId(occupyingShip.shipId);
 
-          if (!isOccupied) {
+          if (!occupyingShip || canRamDisabledEnemy) {
             baseMoves.push({ row, col });
           }
         }
@@ -1590,7 +1611,32 @@ export function SimulatedGameDisplay({
     shipMap,
     getShipAttributes,
     previewPosition,
+    isEnemyDisabledTutorialShipId,
   ]);
+
+  const isRammingMovePreview = useMemo(() => {
+    if (!selectedShipId || !previewPosition) return false;
+    const occupyingShip = gameState.shipPositions.find(
+      (pos) =>
+        (pos.status ?? 0) === 0 &&
+        pos.position.row === previewPosition.row &&
+        pos.position.col === previewPosition.col &&
+        pos.shipId !== selectedShipId.toString(),
+    );
+    if (!occupyingShip) return false;
+    return isEnemyDisabledTutorialShipId(occupyingShip.shipId);
+  }, [
+    selectedShipId,
+    previewPosition,
+    gameState.shipPositions,
+    isEnemyDisabledTutorialShipId,
+  ]);
+
+  useEffect(() => {
+    if (!isRammingMovePreview) return;
+    if (targetShipId === null) return;
+    setTargetShipId(null);
+  }, [isRammingMovePreview, targetShipId]);
 
   // Last-move new position pulse on the grid when no ship is selected (in-game parity).
   const highlightedMovePosition = useMemo(() => {
@@ -2026,6 +2072,7 @@ export function SimulatedGameDisplay({
   // Show full range for viewing, but filter by tutorial constraints if step requires specific targets
   const validTargets = useMemo(() => {
     if (!selectedShipId) return [];
+    if (isRammingMovePreview) return [];
     const selectedAttrs = getShipAttributes(selectedShipId);
     // Match live game: disabled ships are retreat-only, no targeting UI.
     if (selectedAttrs && selectedAttrs.hullPoints === 0) return [];
@@ -2145,6 +2192,7 @@ export function SimulatedGameDisplay({
     selectedWeaponType,
     specialRange,
     specialType,
+    isRammingMovePreview,
   ]);
 
   // Get assistable targets
@@ -2251,6 +2299,7 @@ export function SimulatedGameDisplay({
   // Calculate shooting range positions (exact same logic as GameDisplay)
   const shootingRange = useMemo(() => {
     if (!selectedShipId) return [];
+    if (isRammingMovePreview) return [];
 
     const attributes = getShipAttributes(selectedShipId);
     // Disabled ships (0 HP) have no move or threat range; only retreat/assist are relevant
@@ -2516,6 +2565,7 @@ export function SimulatedGameDisplay({
     selectedWeaponType,
     specialRange,
     specialType,
+    isRammingMovePreview,
   ]);
 
   // Drag shooting range and valid targets (simplified for tutorial)

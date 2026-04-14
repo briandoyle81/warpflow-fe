@@ -775,6 +775,21 @@ export function GameGrid({
                     if (isCellDestroyed) {
                       return;
                     }
+                    const canRamDisabledEnemy =
+                      !!selectedShipId &&
+                      isCurrentPlayerTurn &&
+                      isShipOwnedByCurrentPlayer(selectedShipId) &&
+                      isMovementTile &&
+                      !isShipOwnedByCurrentPlayer(cell.shipId) &&
+                      (() => {
+                        const targetAttrs = getShipAttributes(cell.shipId);
+                        return !!targetAttrs && targetAttrs.hullPoints === 0;
+                      })();
+                    if (canRamDisabledEnemy) {
+                      setPreviewPosition({ row: rowIndex, col: colIndex });
+                      setTargetShipId(null);
+                      return;
+                    }
                     // Check for repair drone auto-switch FIRST (before any other logic)
                     if (
                       selectedShipId &&
