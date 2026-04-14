@@ -1,9 +1,18 @@
 import { Ship } from "../types/types";
+import { CONTRACT_ADDRESSES } from "../config/contracts";
 
 // Cache configuration
 const CACHE_EXPIRY_TIME = 7 * 24 * 60 * 60 * 1000; // 7 days
 const MAX_CACHE_SIZE = 1000; // Can cache many more ships since data is smaller
 const CACHE_KEY_PREFIX = "void-tactics-ship-data-";
+function currentShipsContractAddress(): string {
+  return String(CONTRACT_ADDRESSES.SHIPS ?? "").toLowerCase();
+}
+
+function cacheNamespacePrefix(): string {
+  return `${CACHE_KEY_PREFIX}${currentShipsContractAddress()}:`;
+}
+
 const MAX_CACHE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB limit (larger since data is smaller)
 
 // Debug flag
@@ -56,7 +65,7 @@ function calculateShipDataHash(ship: Ship): string {
  * Get cache key for a ship ID
  */
 function getCacheKey(shipId: bigint): string {
-  return `${CACHE_KEY_PREFIX}${shipId.toString()}`;
+  return `${cacheNamespacePrefix()}${shipId.toString()}`;
 }
 
 /**
@@ -208,7 +217,7 @@ function cleanupOldCacheEntries(): void {
 
   try {
     const keys = Object.keys(localStorage).filter((key) =>
-      key.startsWith(CACHE_KEY_PREFIX)
+      key.startsWith(cacheNamespacePrefix())
     );
 
     if (keys.length === 0) return;
@@ -257,7 +266,7 @@ export function clearAllShipDataCache(): void {
   if (typeof window === "undefined") return;
 
   const keys = Object.keys(localStorage).filter((key) =>
-    key.startsWith(CACHE_KEY_PREFIX)
+    key.startsWith(cacheNamespacePrefix())
   );
 
   keys.forEach((key) => localStorage.removeItem(key));
@@ -277,7 +286,7 @@ export function getShipDataCacheStats(): {
   }
 
   const keys = Object.keys(localStorage).filter((key) =>
-    key.startsWith(CACHE_KEY_PREFIX)
+    key.startsWith(cacheNamespacePrefix())
   );
 
   let totalSize = 0;

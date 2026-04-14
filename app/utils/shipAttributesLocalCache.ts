@@ -2,8 +2,12 @@ import type { Abi, PublicClient } from "viem";
 import { CONTRACT_ABIS } from "../config/contracts";
 import type { Attributes } from "../types/types";
 
-export const SHIP_ATTRIBUTES_BY_IDS_CACHE_KEY =
+const SHIP_ATTRIBUTES_BY_IDS_CACHE_KEY_PREFIX =
   "ship-attributes-cache-v2" as const;
+
+function shipAttributesByIdsCacheKey(chainId: number): string {
+  return `${SHIP_ATTRIBUTES_BY_IDS_CACHE_KEY_PREFIX}:${chainId}`;
+}
 
 const CONTRACT_SNAPSHOT_KEY = (chainId: number) =>
   `warpflow-ship-attributes-contract-v1-${chainId}`;
@@ -35,11 +39,13 @@ export type ShipAttributesContractSnapshotV1 = {
 };
 
 export function readValidShipAttributesByIdsCache(
+  chainId: number,
   shipIdsString: string,
 ): Attributes[] | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(SHIP_ATTRIBUTES_BY_IDS_CACHE_KEY);
+    const key = shipAttributesByIdsCacheKey(chainId);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedAttributesByIds;
     if (
@@ -48,29 +54,28 @@ export function readValidShipAttributesByIdsCache(
     ) {
       return parsed.data;
     }
-    localStorage.removeItem(SHIP_ATTRIBUTES_BY_IDS_CACHE_KEY);
+    localStorage.removeItem(key);
     return null;
   } catch {
-    localStorage.removeItem(SHIP_ATTRIBUTES_BY_IDS_CACHE_KEY);
+    localStorage.removeItem(shipAttributesByIdsCacheKey(chainId));
     return null;
   }
 }
 
 export function writeShipAttributesByIdsCache(
+  chainId: number,
   shipIds: bigint[],
   data: Attributes[],
 ): void {
   if (typeof window === "undefined") return;
   try {
+    const key = shipAttributesByIdsCacheKey(chainId);
     const payload: CachedAttributesByIds = {
       data,
       timestamp: Date.now(),
       shipIds: shipIds.map((id) => id.toString()),
     };
-    localStorage.setItem(
-      SHIP_ATTRIBUTES_BY_IDS_CACHE_KEY,
-      JSON.stringify(payload),
-    );
+    localStorage.setItem(key, JSON.stringify(payload));
   } catch (e) {
     console.warn("Failed to write ship attributes by-ids cache:", e);
   }
@@ -151,7 +156,7 @@ export async function fetchAndPersistShipAttributesCaches(
       functionName: "calculateShipAttributesByIds",
       args: [shipIds],
     });
-    writeShipAttributesByIdsCache(shipIds, attrs as Attributes[]);
+    writeShipAttributesByIdsCache(chainId, shipIds, attrs as Attributes[]);
   } catch (e) {
     console.warn("fetchAndPersistShipAttributesCaches failed:", e);
   }

@@ -22,6 +22,14 @@ const DEBUG_CACHE = false;
 // Local storage key for rendering mode
 const USE_LOCAL_RENDERING_KEY = "void-tactics-use-local-rendering";
 
+function currentShipsContractAddress(): string {
+  return String(CONTRACT_ADDRESSES.SHIPS ?? "").toLowerCase();
+}
+
+function imageCachePrefix(): string {
+  return `${CACHE_KEY_PREFIX}${currentShipsContractAddress()}:`;
+}
+
 // Get rendering mode from localStorage
 export function getUseLocalRendering(): boolean {
   if (typeof window === "undefined") return false;
@@ -148,12 +156,11 @@ export function useShipImageCache(ship: Ship) {
   const [renderKey, setRenderKey] = useState(0);
 
   const publicClient = usePublicClient();
-  const cacheKey = `${CACHE_KEY_PREFIX}${
-    CONTRACT_ADDRESSES.SHIPS
-  }:${ship.id.toString()}`;
+  const cacheKey = `${imageCachePrefix()}${ship.id.toString()}`;
   const abortControllerRef = useRef<AbortController | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shipId = ship.id.toString();
+  const shipRequestKey = `${currentShipsContractAddress()}:${shipId}`;
 
   // Get cached image from localStorage
   const getCachedImage = useCallback((): string | null => {
@@ -347,7 +354,7 @@ export function useShipImageCache(ship: Ship) {
             debugLog(`🔄 Updated state for ship ${ship.id.toString()}`);
 
             // Clear the request state since we successfully loaded the image
-            shipRequestStates.delete(shipId);
+            shipRequestStates.delete(shipRequestKey);
             debugLog(
               `✅ Cleared request state for successfully loaded ship ${shipId}`
             );
@@ -380,7 +387,7 @@ export function useShipImageCache(ship: Ship) {
             retryCount: retryCount,
           }));
           // Clear the request state to allow re-fetching in the future
-          shipRequestStates.delete(shipId);
+          shipRequestStates.delete(shipRequestKey);
           return;
         }
 
@@ -418,13 +425,13 @@ export function useShipImageCache(ship: Ship) {
     };
 
     attemptFetch(0);
-  }, [publicClient, ship.id, saveToCache, shipId]);
+  }, [publicClient, ship.id, saveToCache, shipId, shipRequestKey]);
 
   // Load cached image on mount
   useEffect(() => {
     debugLog(
       `🔍 Checking cache for ship ${shipId}, hasRequested: ${shipRequestStates.get(
-        shipId
+        shipRequestKey
       )}, constructed: ${ship.shipData.constructed}`
     );
 
@@ -463,8 +470,8 @@ export function useShipImageCache(ship: Ship) {
         localStorage.removeItem(cacheKey);
         // Reset retry count and add to queue to refetch
         setImageState((prev) => ({ ...prev, retryCount: 0 }));
-        if (!shipRequestStates.get(shipId)) {
-          shipRequestStates.set(shipId, true);
+        if (!shipRequestStates.get(shipRequestKey)) {
+          shipRequestStates.set(shipRequestKey, true);
           debugLog(`🔄 Adding ship ${shipId} to request queue for refetch`);
           requestQueue.push(fetchImageFromContract);
           processQueue();
@@ -473,7 +480,7 @@ export function useShipImageCache(ship: Ship) {
         }
       };
       testImg.src = cached;
-    } else if (!shipRequestStates.get(shipId)) {
+    } else if (!shipRequestStates.get(shipRequestKey)) {
       // Check if we should use local rendering
       const useLocalRendering = getUseLocalRendering();
 
@@ -488,7 +495,7 @@ export function useShipImageCache(ship: Ship) {
       } else {
         // Add to queue if not cached and not already requested
         debugLog(`📤 No cache for ship ${shipId}, adding to request queue`);
-        shipRequestStates.set(shipId, true);
+        shipRequestStates.set(shipRequestKey, true);
         requestQueue.push(fetchImageFromContract);
         processQueue();
       }
@@ -507,6 +514,7 @@ export function useShipImageCache(ship: Ship) {
     generateImageLocally,
     cacheKey,
     shipId,
+    shipRequestKey,
     ship.shipData.constructed,
   ]);
 
@@ -532,7 +540,7 @@ export function clearShipImageCache() {
   if (typeof window === "undefined") return;
 
   const keys = Object.keys(localStorage).filter((key) =>
-    key.startsWith(CACHE_KEY_PREFIX)
+    key.startsWith(imageCachePrefix())
   );
 
   keys.forEach((key) => localStorage.removeItem(key));
@@ -543,7 +551,7 @@ export function getShipImageCacheStats() {
   if (typeof window === "undefined") return { count: 0, size: 0 };
 
   const keys = Object.keys(localStorage).filter((key) =>
-    key.startsWith(CACHE_KEY_PREFIX)
+    key.startsWith(imageCachePrefix())
   );
 
   let totalSize = 0;
@@ -565,7 +573,7 @@ export function getShipImageCacheStats() {
 export function clearShipImageCacheForShip(shipId: string) {
   if (typeof window === "undefined") return;
 
-  const cacheKey = `${CACHE_KEY_PREFIX}${shipId}`;
+  const cacheKey = `${imageCachePrefix()}${shipId}`;
   localStorage.removeItem(cacheKey);
   debugLog(`Cleared cache for ship ${shipId}`);
 }
@@ -575,7 +583,7 @@ export function clearBrokenImageCache() {
   if (typeof window === "undefined") return;
 
   const keys = Object.keys(localStorage).filter((key) =>
-    key.startsWith(CACHE_KEY_PREFIX)
+    key.startsWith(imageCachePrefix())
   );
 
   let clearedCount = 0;
@@ -612,7 +620,7 @@ export function clearAllShipImageCache() {
   if (typeof window === "undefined") return;
 
   const keys = Object.keys(localStorage).filter((key) =>
-    key.startsWith(CACHE_KEY_PREFIX)
+    key.startsWith(imageCachePrefix())
   );
 
   keys.forEach((key) => localStorage.removeItem(key));
@@ -639,7 +647,7 @@ const checkAndCleanupCache = () => {
     const keys = Object.keys(localStorage);
 
     keys.forEach((key) => {
-      if (key.startsWith(CACHE_KEY_PREFIX)) {
+      if (key.startsWith(imageCachePrefix())) {
         const data = localStorage.getItem(key);
         if (data) {
           totalSize += data.length;
@@ -654,12 +662,13 @@ const checkAndCleanupCache = () => {
     // If we're over the limit, clean up old entries
     if (
       totalSize > MAX_CACHE_SIZE_BYTES ||
-      keys.filter((k) => k.startsWith(CACHE_KEY_PREFIX)).length > MAX_CACHE_SIZE
+      keys.filter((k) => k.startsWith(imageCachePrefix())).length >
+        MAX_CACHE_SIZE
     ) {
       debugLog(`🧹 Cache cleanup needed, removing oldest entries...`);
 
       const cacheEntries = keys
-        .filter((key) => key.startsWith(CACHE_KEY_PREFIX))
+        .filter((key) => key.startsWith(imageCachePrefix()))
         .map((key) => {
           const data = localStorage.getItem(key);
           if (!data) return { key, timestamp: 0, size: 0 };
@@ -691,7 +700,7 @@ const checkAndCleanupCache = () => {
 
 // Utility function to reset request state for a specific ship
 export function resetShipRequestState(shipId: string) {
-  shipRequestStates.delete(shipId);
+  shipRequestStates.delete(`${currentShipsContractAddress()}:${shipId}`);
   debugLog(`Reset request state for ship ${shipId}`);
 }
 

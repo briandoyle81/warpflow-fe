@@ -150,3 +150,42 @@ export function dismissBuyShipsTutorialForSession(): void {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(BUY_SHIPS_TUTORIAL_SESSION_DISMISS_KEY, "1");
 }
+
+function removeScopedBooleanKey(
+  storageKeyName: string,
+  walletAddress: string,
+  chainId: number,
+): void {
+  const raw = localStorage.getItem(storageKeyName);
+  if (!raw) return;
+  const parsed = JSON.parse(raw) as Record<string, boolean>;
+  delete parsed[storageKey(chainId, walletAddress)];
+  if (Object.keys(parsed).length === 0) {
+    localStorage.removeItem(storageKeyName);
+    return;
+  }
+  localStorage.setItem(storageKeyName, JSON.stringify(parsed));
+}
+
+/** Debug utility: clear all Manage Navy tutorial progress for a wallet/chain. */
+export function clearManageNavyTutorialCache(
+  walletAddress: string,
+  chainId: number,
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    removeScopedBooleanKey(FREE_SHIP_CLAIM_CLICKED_KEY, walletAddress, chainId);
+    removeScopedBooleanKey(
+      CONSTRUCT_DELIVERY_TUTORIAL_DONE_KEY,
+      walletAddress,
+      chainId,
+    );
+    removeScopedBooleanKey(BUY_SHIPS_TUTORIAL_DONE_KEY, walletAddress, chainId);
+  } catch {
+    // Ignore storage parse failures and still clear session dismiss flags.
+  }
+
+  sessionStorage.removeItem(DRONE_TUTORIAL_SESSION_DISMISS_KEY);
+  sessionStorage.removeItem(CONSTRUCT_DELIVERY_TUTORIAL_SESSION_DISMISS_KEY);
+  sessionStorage.removeItem(BUY_SHIPS_TUTORIAL_SESSION_DISMISS_KEY);
+}

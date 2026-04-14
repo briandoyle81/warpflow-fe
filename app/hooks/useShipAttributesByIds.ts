@@ -1,5 +1,5 @@
 import React from "react";
-import { useReadContract } from "wagmi";
+import { useChainId, useReadContract } from "wagmi";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import { Attributes } from "../types/types";
 import {
@@ -9,14 +9,15 @@ import {
 } from "../utils/shipAttributesLocalCache";
 
 export function useShipAttributesByIds(shipIds: bigint[]) {
+  const chainId = useChainId();
   const shipIdsString = React.useMemo(
     () => shipIdsToCacheKeyString(shipIds),
     [shipIds],
   );
 
   const getCachedData = React.useCallback((): Attributes[] | null => {
-    return readValidShipAttributesByIdsCache(shipIdsString);
-  }, [shipIdsString]);
+    return readValidShipAttributesByIdsCache(chainId, shipIdsString);
+  }, [chainId, shipIdsString]);
 
   // Get cached data
   const cachedData = React.useMemo(() => getCachedData(), [getCachedData]);
@@ -40,10 +41,10 @@ export function useShipAttributesByIds(shipIds: bigint[]) {
     if (contractData) {
       const rows = contractData as Attributes[];
       if (rows.length === shipIds.length) {
-        writeShipAttributesByIdsCache(shipIds, rows);
+        writeShipAttributesByIdsCache(chainId, shipIds, rows);
       }
     }
-  }, [contractData, shipIds]);
+  }, [chainId, contractData, shipIds]);
 
   // Only use rows that match the current id list. Otherwise wagmi can briefly
   // keep the previous query's array while `shipIds` has already updated, which

@@ -128,32 +128,30 @@ const Header: React.FC = () => {
     );
   }, [isHydrated, maxVariant, selectedChainId, selectedChainVariant]);
 
-  // When connected, ensure wallet is on the selected chain.
+  // Resolve an explicit user-initiated network switch request.
   useEffect(() => {
     if (!isHydrated) return;
+    const pending = pendingSwitchChainIdRef.current;
+    if (pending == null) return;
     if (account.status !== "connected") return;
-    if (!isSupportedChainId(selectedChainId)) return;
-    if (account.chainId === selectedChainId) {
+    if (!isSupportedChainId(pending)) return;
+    if (account.chainId === pending) {
       pendingSwitchChainIdRef.current = null;
       return;
     }
 
-    // Track that we're attempting a switch (prevents "sync from wallet" effect fighting us)
-    pendingSwitchChainIdRef.current = selectedChainId;
-
     // Avoid spamming switch requests while a wallet prompt is pending
     const now = Date.now();
     const last = lastSwitchRequestRef.current;
-    if (last && last.chainId === selectedChainId && now - last.at < 2000) {
+    if (last && last.chainId === pending && now - last.at < 2000) {
       return;
     }
-    lastSwitchRequestRef.current = { chainId: selectedChainId, at: now };
-    switchChain({ chainId: selectedChainId });
+    lastSwitchRequestRef.current = { chainId: pending, at: now };
+    switchChain({ chainId: pending });
   }, [
     account.status,
     account.chainId,
     isHydrated,
-    selectedChainId,
     switchChain,
   ]);
 
@@ -165,6 +163,14 @@ const Header: React.FC = () => {
     setSelectedChainId(nextId);
     setSelectedChainIdState(nextId);
     pendingSwitchChainIdRef.current = nextId;
+    lastSwitchRequestRef.current = { chainId: nextId, at: Date.now() };
+    if (
+      isHydrated &&
+      account.status === "connected" &&
+      account.chainId !== nextId
+    ) {
+      switchChain({ chainId: nextId });
+    }
     setIsNetworkMenuOpen(false);
   };
 

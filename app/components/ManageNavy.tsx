@@ -32,6 +32,7 @@ import { useCurrentCostsVersion } from "../hooks/useShipAttributesContract";
 import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
 import { fetchAndPersistShipAttributesCaches } from "../utils/shipAttributesLocalCache";
 import {
+  clearManageNavyTutorialCache,
   dismissBuyShipsTutorialForSession,
   dismissConstructDeliveryTutorialForSession,
   dismissDroneFactoryTutorialForSession,
@@ -309,6 +310,9 @@ const ManageNavy: React.FC = () => {
     nextClaimInFormatted,
   } = useFreeShipClaiming();
 
+  const shouldForceDroneFactoryTutorial =
+    !hasShips || (shipCount > 0 && shipCount <= 3);
+
   const [showDroneFactoryTutorial, setShowDroneFactoryTutorial] =
     React.useState(false);
 
@@ -328,7 +332,10 @@ const ManageNavy: React.FC = () => {
       setShowDroneFactoryTutorial(false);
       return;
     }
-    if (hasEverClickedFreeShipClaim(address, chainId)) {
+    if (
+      hasEverClickedFreeShipClaim(address, chainId) &&
+      !shouldForceDroneFactoryTutorial
+    ) {
       setShowDroneFactoryTutorial(false);
       return;
     }
@@ -337,7 +344,7 @@ const ManageNavy: React.FC = () => {
       return;
     }
     setShowDroneFactoryTutorial(true);
-  }, [address, chainId, isConnected]);
+  }, [address, chainId, isConnected, shouldForceDroneFactoryTutorial]);
 
   const [showConstructDeliveryTutorial, setShowConstructDeliveryTutorial] =
     React.useState(false);
@@ -1250,6 +1257,23 @@ const ManageNavy: React.FC = () => {
               className="px-4 py-2 rounded-none border border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm transition-all duration-200"
             >
               [RESTART QUEUE]
+            </button>
+
+            <button
+              onClick={() => {
+                if (!address) {
+                  toast.error("Connect wallet to clear tutorial cache");
+                  return;
+                }
+                clearManageNavyTutorialCache(address, chainId);
+                setShowDroneFactoryTutorial(true);
+                setShowConstructDeliveryTutorial(false);
+                setShowBuyShipsTutorial(false);
+                toast.success("Cleared Manage Navy tutorial cache");
+              }}
+              className="px-4 py-2 rounded-none border border-amber-400 text-amber-400 hover:border-amber-300 hover:text-amber-300 hover:bg-amber-400/10 font-mono font-bold text-sm transition-all duration-200"
+            >
+              [CLEAR TUTORIAL CACHE]
             </button>
 
             <button
