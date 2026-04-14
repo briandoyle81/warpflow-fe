@@ -564,7 +564,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
             />
           )}
           <span
-            className="text-xs px-2 py-1 border border-solid uppercase font-semibold tracking-wider"
+            className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-xs px-2 py-1 border border-solid uppercase font-semibold tracking-wider"
             style={{
               fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
               backgroundColor: ship.shipData.shiny

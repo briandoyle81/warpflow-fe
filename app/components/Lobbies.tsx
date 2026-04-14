@@ -3778,7 +3778,7 @@ const Lobbies: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <span
-                              className={`text-xs px-2 py-1 rounded-none ${
+                              className={`inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-xs px-2 py-1 rounded-none ${
                                 shipData.shipData?.shiny
                                   ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
                                   : "bg-gray-400/20 text-gray-400 border border-gray-400/30"
