@@ -45,6 +45,8 @@ interface ShipCardProps {
   nameBlockMinHeightPx?: number;
   /** Grid hover tooltip: tile row/col under the cursor (ghost / preview / live). */
   tooltipGridPosition?: { row: number; col: number };
+  /** Manage Navy: optional fleet composition add/remove controls below stats. */
+  fleetCompositionControls?: React.ReactNode;
 }
 
 const ShipCard: React.FC<ShipCardProps> = ({
@@ -73,6 +75,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
   layoutShipId,
   nameBlockMinHeightPx,
   tooltipGridPosition,
+  fleetCompositionControls,
 }) => {
   // Determine border class based on selection mode and ship state
   const getBorderClass = () => {
@@ -807,6 +810,11 @@ const ShipCard: React.FC<ShipCardProps> = ({
           </div>
         )}
       </div>
+      {fleetCompositionControls != null && (
+        <div className="mt-2" onClick={(e) => e.stopPropagation()} role="presentation">
+          {fleetCompositionControls}
+        </div>
+      )}
       {/* Selection Indicator */}
       {selectionMode && isSelected && (
         <div className="mt-2 text-center">

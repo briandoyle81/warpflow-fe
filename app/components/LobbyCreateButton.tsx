@@ -27,6 +27,7 @@ interface LobbyCreateButtonProps {
   disabled?: boolean;
   onSuccess?: () => void;
   onError?: (error: Error) => void;
+  onTransactionSent?: (hash: `0x${string}`) => void;
 }
 
 const LOBBY_CREATE_ABI = [
@@ -72,6 +73,7 @@ export function LobbyCreateButton({
   disabled = false,
   onSuccess,
   onError,
+  onTransactionSent,
 }: LobbyCreateButtonProps) {
   const { address } = useAccount();
   const [isApprovingUTC, setIsApprovingUTC] = useState(false);
@@ -298,6 +300,7 @@ export function LobbyCreateButton({
       errorText="[ERROR CREATING]"
       onSuccess={onSuccess}
       onError={onError}
+      onTransactionSent={onTransactionSent}
       validateBeforeTransaction={validateBeforeTransaction}
     >
       {children}
