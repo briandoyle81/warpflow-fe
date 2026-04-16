@@ -2937,6 +2937,17 @@ const Lobbies: React.FC = () => {
                 ? currentLobby.players.joinerFleetId > 0n
                 : currentLobby.players.creatorFleetId > 0n
               : false;
+          const participantHasFleet =
+            currentLobby != null
+              ? isCreator
+                ? currentLobby.players.creatorFleetId > 0n
+                : currentLobby.players.joinerFleetId > 0n
+              : false;
+          const bothPlayersHaveFleets =
+            currentLobby != null
+              ? currentLobby.players.creatorFleetId > 0n &&
+                currentLobby.players.joinerFleetId > 0n
+              : false;
           const totalCost = selectedShips.reduce((sum, shipId) => {
             const ship = ships.find((s) => s.id === shipId);
             return sum + (ship ? Number(ship.shipData.cost) : 0);
@@ -2970,14 +2981,14 @@ const Lobbies: React.FC = () => {
                 <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <h4 className="text-lg font-bold text-cyan-400 whitespace-nowrap">
-                      {playerFleetId ? "VIEW FLEET" : "SELECT FLEET"}
+                      {participantHasFleet ? "VIEW FLEET" : "SELECT FLEET"}
                     </h4>
-                    {playerFleetId && (
+                    {participantHasFleet && (
                       <span className="px-3 py-1 text-xs font-bold text-green-400 bg-green-400/20 border border-green-400 rounded-none whitespace-nowrap">
                         FLEET SELECTED
                       </span>
                     )}
-                    {playerFleetId && !opponentHasFleet && (
+                    {participantHasFleet && !opponentHasFleet && (
                       <span className="px-3 py-1 text-xs font-bold text-yellow-400 bg-yellow-400/10 border border-yellow-400/40 rounded-none whitespace-nowrap">
                         WAITING FOR OPPOSING ADMIRAL
                       </span>
@@ -2985,7 +2996,7 @@ const Lobbies: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-center gap-2">
-                    {!playerFleetId ? (
+                    {!participantHasFleet ? (
                       <>
                         <button
                           onClick={() => handleCreateFleet(selectedLobby)}
@@ -3025,7 +3036,7 @@ const Lobbies: React.FC = () => {
                           CANCEL
                         </button>
                       </>
-                    ) : isParticipant && opponentHasFleet ? (
+                    ) : isParticipant && bothPlayersHaveFleets ? (
                       <button
                         type="button"
                         onClick={closeFleetModalAndGoToGames}
@@ -3053,7 +3064,7 @@ const Lobbies: React.FC = () => {
                     >
                       FILTERS ▼
                     </button>
-                    {!playerFleetId && (
+                    {!participantHasFleet && (
                       <>
                         <button
                           type="button"
@@ -3073,7 +3084,7 @@ const Lobbies: React.FC = () => {
                         </button>
                       </>
                     )}
-                    {!playerFleetId && showLoadFleetMenu && (
+                    {!participantHasFleet && showLoadFleetMenu && (
                       <div className="absolute right-0 top-full z-[450] mt-2 w-[28rem] max-w-[80vw] border border-cyan-500 bg-[#050a12] p-3 shadow-lg shadow-cyan-500/20">
                         <div className="mb-2 flex items-center justify-between">
                           <div className="text-xs font-bold tracking-wider text-cyan-300">
@@ -3133,7 +3144,7 @@ const Lobbies: React.FC = () => {
                       {totalCost}/{costLimit}
                     </div>
                     {/* Leave Lobby Button (in fleet selection modal) - only show if no fleet is selected */}
-                    {!playerFleetId && (
+                    {!participantHasFleet && (
                       <LobbyLeaveButton
                         lobbyId={selectedLobby}
                         allowWhenOtherPending

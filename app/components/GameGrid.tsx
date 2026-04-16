@@ -297,6 +297,10 @@ interface GameGridProps {
   lastMoveActionType?: ActionType | null; // When Retreat, show warp collapse at old position
   lastMoveTargetShipId?: bigint | null; // When last move was Special (e.g. repair), target ship for animation
   lastMoveIsCurrentPlayer?: boolean | undefined; // true = blue outline, false = red outline
+  /** Ramming preview destination tile. */
+  rammingPreviewPosition?: { row: number; col: number } | null;
+  /** True when the staged move is a ramming move. */
+  isRammingMovePreview?: boolean;
   /** When set, last-move EMP replay still shows while a ship is selected (e.g. tutorial ship-destruction). */
   showLastMoveEmpReplayWhenSelected?: boolean;
   retreatPrepShipId?: bigint | null; // When set, this ship shows flip + engine glow (Retreat selected)
@@ -371,6 +375,8 @@ export function GameGrid({
   lastMoveActionType,
   lastMoveTargetShipId,
   lastMoveIsCurrentPlayer,
+  rammingPreviewPosition = null,
+  isRammingMovePreview = false,
   showLastMoveEmpReplayWhenSelected = false,
   retreatPrepShipId,
   retreatPrepIsCreator,
@@ -401,6 +407,26 @@ export function GameGrid({
   }, []);
 
   const isMyTurn = currentTurn === address;
+  const selectedShipCreatorSide = React.useMemo(() => {
+    if (selectedShipId == null) return null as boolean | null;
+    for (let r = 0; r < grid.length; r++) {
+      const row = grid[r];
+      for (let c = 0; c < row.length; c++) {
+        const cell = row[c];
+        if (!cell || cell.shipId !== selectedShipId) continue;
+        if (!cell.isPreview) return cell.isCreator;
+      }
+    }
+    for (let r = 0; r < grid.length; r++) {
+      const row = grid[r];
+      for (let c = 0; c < row.length; c++) {
+        const cell = row[c];
+        if (!cell || cell.shipId !== selectedShipId) continue;
+        return cell.isCreator;
+      }
+    }
+    return null;
+  }, [grid, selectedShipId]);
 
   const lastMoveActionNum =
     lastMoveActionType != null ? Number(lastMoveActionType) : NaN;
@@ -1712,25 +1738,30 @@ export function GameGrid({
                         {/* Reactor damage skulls */}
                         {(() => {
                           const attributes = getShipAttributes(cell.shipId);
-                          if (
-                            !attributes ||
-                            attributes.reactorCriticalTimer === 0
-                          )
-                            return null;
+                          if (!attributes) return null;
 
-                          const skullCount = Math.min(
-                            attributes.reactorCriticalTimer,
-                            3,
-                          );
+                          const isRammingToCell =
+                            isRammingMovePreview &&
+                            rammingPreviewPosition != null &&
+                            rowIndex === rammingPreviewPosition.row &&
+                            colIndex === rammingPreviewPosition.col;
+                          const previewReactorLevel =
+                            attributes.reactorCriticalTimer +
+                            (isRammingToCell ? 1 : 0);
+                          if (previewReactorLevel <= 0) return null;
+                          const skullCount = Math.min(previewReactorLevel, 3);
                           const skullLevels = Array.from(
                             { length: skullCount },
                             (_, index) => index,
                           );
 
+                          const skullAnchorIsCreator = isRammingToCell
+                            ? (selectedShipCreatorSide ?? cell.isCreator)
+                            : cell.isCreator;
                           return (
                             <div
                               className={`absolute z-20 ${
-                                cell.isCreator
+                                skullAnchorIsCreator
                                   ? "bottom-0 left-0"
                                   : "bottom-0 right-0"
                               } m-0.5 flex items-center gap-0.5`}
@@ -2841,7 +2872,10 @@ export function GameGrid({
                   specialType,
                 });
 
-                if (targetsToShow.length === 0) return null;
+                const shouldShowRammingLabels =
+                  isRammingMovePreview && rammingPreviewPosition != null;
+                if (targetsToShow.length === 0 && !shouldShowRammingLabels)
+                  return null;
 
                 const containerRect =
                   gridContainerRef.current.getBoundingClientRect();
@@ -2976,6 +3010,55 @@ export function GameGrid({
                         </div>
                       );
                     })}
+                    {(() => {
+                      if (!isRammingMovePreview || !rammingPreviewPosition) {
+                        return null;
+                      }
+                      const { cx: cellX, cellTop, cellBottom } =
+                        measureGridCellLabelAnchor(
+                          containerRect,
+                          gridLayoutRef.current,
+                          rammingPreviewPosition.row,
+                          rammingPreviewPosition.col,
+                          {
+                            originX,
+                            originY,
+                            cellWidth,
+                            cellHeight,
+                          },
+                        );
+                      const isTopGridRow = rammingPreviewPosition.row === 0;
+                      const labelTopPx = isTopGridRow ? cellBottom : cellTop;
+                      const labelTransform = isTopGridRow
+                        ? "translate(-50%, 0)"
+                        : "translate(-50%, -100%)";
+                      return (
+                        <>
+                          <div
+                            className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-cyan-100 whitespace-nowrap border border-cyan-500 bg-cyan-900"
+                            style={{
+                              left: `${cellX}px`,
+                              top: `${labelTopPx}px`,
+                              transform: `${labelTransform} translateY(${
+                                isTopGridRow ? 0 : -22
+                              }px)`,
+                            }}
+                          >
+                            Ramming Speed
+                          </div>
+                          <div
+                            className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-white whitespace-nowrap border border-red-500 bg-red-900"
+                            style={{
+                              left: `${cellX}px`,
+                              top: `${labelTopPx}px`,
+                              transform: labelTransform,
+                            }}
+                          >
+                            ⚡ Reactor Critical +1
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 );
               })()}

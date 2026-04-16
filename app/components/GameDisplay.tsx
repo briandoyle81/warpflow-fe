@@ -3774,6 +3774,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           lastMoveActionType={lastMoveActionType}
           lastMoveTargetShipId={lastMoveTargetShipId}
           lastMoveIsCurrentPlayer={lastMoveIsCurrentPlayer}
+          rammingPreviewPosition={
+            isRammingMovePreview && previewPosition ? previewPosition : null
+          }
+          isRammingMovePreview={isRammingMovePreview}
           retreatPrepShipId={retreatPrepShipId}
           retreatPrepIsCreator={retreatPrepIsCreator}
           onGridRightClickDeselect={handleGridRightClickDeselect}

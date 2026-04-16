@@ -1,9 +1,14 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { ALPHA_DISCORD_INVITE_URL } from "../config/alpha";
 
 const STORAGE_KEY = "void-tactics-alpha-discord-notice-dismissed";
+
+const VOID_TACTICS_ALPHA_ACCESS_TWEET =
+  "Hi @voidtacticsxyz, I'm interested in the Void Tactics Alpha at https://voidtactics.xyz!\n\nPlease add me to the Discord!";
+const VOID_TACTICS_ALPHA_TWITTER_INTENT = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+  VOID_TACTICS_ALPHA_ACCESS_TWEET,
+)}`;
 
 function persistDismissed() {
   try {
@@ -79,7 +84,7 @@ export default function AlphaDiscordNoticeBar({
           <span className="font-black">Alpha:</span>{" "}
           coordinate matches and get updates on Discord.{" "}
           <a
-            href={ALPHA_DISCORD_INVITE_URL}
+            href={VOID_TACTICS_ALPHA_TWITTER_INTENT}
             target="_blank"
             rel="noopener noreferrer"
             onClick={handleLinkClick}
