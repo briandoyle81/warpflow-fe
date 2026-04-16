@@ -3209,7 +3209,7 @@ export function GameGrid({
                     top: `${tooltipTop}px`,
                   }}
                 >
-                  <div className="w-80 opacity-100">
+                  <div className="min-w-[22rem] w-[24rem] opacity-100">
                     <ShipCard
                       ship={ship}
                       isStarred={false}

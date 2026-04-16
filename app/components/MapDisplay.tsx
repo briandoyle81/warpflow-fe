@@ -735,7 +735,7 @@ export function MapDisplay({
                     top: `${tooltipTop}px`,
                   }}
                 >
-                  <div className="w-80 opacity-100">
+                  <div className="min-w-[22rem] w-[24rem] opacity-100">
                     <ShipCard
                       ship={ship as Ship}
                       isStarred={false}
@@ -779,11 +779,11 @@ export function MapDisplay({
             <span>Blocked (LOS) - Nebula</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-blue-400 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-yellow-400 border border-gray-600"></div>
             <span>Scoring (reusable)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-yellow-400 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-blue-400 border border-gray-600"></div>
             <span>Scoring (once only)</span>
           </div>
           <div className="flex items-center gap-2">
