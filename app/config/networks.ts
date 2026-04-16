@@ -30,7 +30,9 @@ export const DEFAULT_CHAIN_ID: number = flowTestnet.id;
 /** Chains the in-app network picker may select (must match wallet / wagmi). */
 const CHAIN_IDS_SELECTABLE_IN_UI = new Set<number>([
   flowTestnet.id,
+  saigon.id,
   baseSepolia.id,
+  xaiTestnet.id,
 ]);
 
 export function isChainSelectableInUi(chainId: number): boolean {
