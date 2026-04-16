@@ -39,7 +39,8 @@ export function isChainSelectableInUi(chainId: number): boolean {
   return CHAIN_IDS_SELECTABLE_IN_UI.has(chainId);
 }
 
-const STORAGE_KEY = "void-tactics.selectedChainId";
+/** localStorage key for the in-app network picker (must match `setSelectedChainId`). */
+export const SELECTED_CHAIN_ID_STORAGE_KEY = "void-tactics.selectedChainId";
 
 /** Dispatched when the app-selected chain id in localStorage changes (see `setSelectedChainId`). */
 export const VOID_TACTICS_CHAIN_CHANGED_EVENT = "void-tactics-chain-changed";
@@ -51,7 +52,7 @@ export function isSupportedChainId(chainId: number | undefined | null): boolean 
 
 export function getSelectedChainId(): number {
   if (typeof window === "undefined") return DEFAULT_CHAIN_ID;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const raw = window.localStorage.getItem(SELECTED_CHAIN_ID_STORAGE_KEY);
   const parsed = raw ? Number(raw) : NaN;
   if (!Number.isFinite(parsed)) return DEFAULT_CHAIN_ID;
   if (!isSupportedChainId(parsed)) return DEFAULT_CHAIN_ID;
@@ -62,10 +63,10 @@ export function getSelectedChainId(): number {
 export function setSelectedChainId(chainId: number) {
   if (typeof window === "undefined") return;
   const next = isChainSelectableInUi(chainId) ? chainId : DEFAULT_CHAIN_ID;
-  const prevRaw = window.localStorage.getItem(STORAGE_KEY);
+  const prevRaw = window.localStorage.getItem(SELECTED_CHAIN_ID_STORAGE_KEY);
   const prevParsed = prevRaw ? Number(prevRaw) : NaN;
   const prev = Number.isFinite(prevParsed) ? prevParsed : null;
-  window.localStorage.setItem(STORAGE_KEY, String(next));
+  window.localStorage.setItem(SELECTED_CHAIN_ID_STORAGE_KEY, String(next));
   if (prev !== next) {
     window.dispatchEvent(
       new CustomEvent(VOID_TACTICS_CHAIN_CHANGED_EVENT, {

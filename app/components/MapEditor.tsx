@@ -31,8 +31,12 @@ export function MapEditor({
   const mapsContract = useMapsContract();
 
   // Load map data when editing
-  const { data: blockedPositions } = useGetPresetMap(mapId || 0);
-  const { data: scoringPositions } = useGetPresetScoringMap(mapId || 0);
+  const { data: blockedPositions } = useGetPresetMap(mapId || 0, {
+    chainSource: "picker",
+  });
+  const { data: scoringPositions } = useGetPresetScoringMap(mapId || 0, {
+    chainSource: "picker",
+  });
 
   // Initialize editor state
   const [editorState, setEditorState] = useState<MapEditorState>(() => {

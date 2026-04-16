@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAccount } from "wagmi";
 import { useGetAllPresetMaps, useMapCount } from "../hooks/useMapsContract";
 import { MapEditor } from "./MapEditor";
@@ -15,32 +15,23 @@ export default function Maps() {
   const [editingMapId, setEditingMapId] = useState<number | undefined>(
     undefined
   );
-  const [maps, setMaps] = useState<PresetMap[]>([]);
+
+  const maps = useMemo((): PresetMap[] => {
+    if (!allMapsData || !Array.isArray(allMapsData) || allMapsData.length !== 3) {
+      return [];
+    }
+    const [mapIds, blockedPositionsArray, scoringPositionsArray] = allMapsData;
+    return mapIds.map((mapId: bigint, index: number) => ({
+      id: Number(mapId),
+      blockedPositions: blockedPositionsArray[index] || [],
+      scoringPositions: scoringPositionsArray[index] || [],
+    }));
+  }, [allMapsData]);
 
   // Temporary restriction - only allow specific address to create maps
   const ALLOWED_ADDRESS = "0x69a5B3aE8598fC5A5419eaa1f2A59Db2D052e346";
   const canCreateMaps =
     address?.toLowerCase() === ALLOWED_ADDRESS.toLowerCase();
-
-  // Load all maps from the new getAllPresetMaps function
-  useEffect(() => {
-    if (!allMapsData || !Array.isArray(allMapsData) || allMapsData.length !== 3)
-      return;
-
-    const [mapIds, blockedPositionsArray, scoringPositionsArray] = allMapsData;
-
-    const mapsList: PresetMap[] = mapIds.map((mapId: bigint, index: number) => {
-      const blockedPositions = blockedPositionsArray[index] || [];
-      const scoringPositions = scoringPositionsArray[index] || [];
-      return {
-        id: Number(mapId),
-        blockedPositions,
-        scoringPositions,
-      };
-    });
-
-    setMaps(mapsList);
-  }, [allMapsData]);
 
   useEffect(() => {
     const onChainChanged = () => {
