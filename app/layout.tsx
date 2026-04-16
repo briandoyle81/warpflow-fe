@@ -21,6 +21,9 @@ const jetbrainsMono = JetBrains_Mono({
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://voidtactics.xyz";
 
+const defaultPageTitle =
+  "Void Tactics | Fully Onchain Turn-Based PvP Fleet Game";
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   manifest: "/favicon/site.webmanifest",
@@ -40,7 +43,7 @@ export const metadata: Metadata = {
     ],
   },
   title: {
-    default: "Void Tactics",
+    default: defaultPageTitle,
     template: "%s | Void Tactics",
   },
   description:
@@ -60,9 +63,9 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Void Tactics", url: siteUrl }],
   openGraph: {
-    title: "Void Tactics",
+    title: defaultPageTitle,
     description:
-      "Fully onchain turn-based PvP fleet tactics on a grid. Maneuver ships, control range, and fight for resources. Fleets and match outcomes settle onchain. Don't play to earn, play to win.",
+      "Fully onchain turn-based PvP fleet tactics on a grid. Maneuver ships, control range, and fight for resources. Don't play to earn, play to win.",
     url: siteUrl,
     siteName: "Void Tactics",
     locale: "en_US",
@@ -78,9 +81,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Void Tactics",
+    title: defaultPageTitle,
     description:
-      "Fully onchain turn-based PvP fleet tactics on a grid. Maneuver ships, control range, and fight for resources. Fleets and match outcomes settle onchain. Don't play to earn, play to win.",
+      "Fully onchain turn-based PvP fleet tactics on a grid. Maneuver ships, control range, and fight for resources. Don't play to earn, play to win.",
     creator: "@voidtacticsxyz",
     site: "@voidtacticsxyz",
     images: ["/img/og-image.png"],
