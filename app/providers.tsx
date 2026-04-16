@@ -8,9 +8,24 @@ import { baseSepolia, flowTestnet, saigon } from "viem/chains";
 import { http } from "wagmi";
 import { MusicPlayerProvider } from "./providers/MusicPlayerContext";
 import { TransactionProvider } from "./providers/TransactionContext";
-import { type ReactNode, useState, useMemo } from "react";
-import { xaiTestnet } from "./config/networks";
+import { type ReactNode, useState, useMemo, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { VOID_TACTICS_CHAIN_CHANGED_EVENT, xaiTestnet } from "./config/networks";
 import MobileAlphaNoticeModal from "./components/MobileAlphaNoticeModal";
+
+function InvalidateQueriesOnChainChange() {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const handler = () => {
+      void queryClient.invalidateQueries();
+    };
+    window.addEventListener(VOID_TACTICS_CHAIN_CHANGED_EVENT, handler);
+    return () => {
+      window.removeEventListener(VOID_TACTICS_CHAIN_CHANGED_EVENT, handler);
+    };
+  }, [queryClient]);
+  return null;
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -35,6 +50,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
+        <InvalidateQueriesOnChainChange />
         <RainbowKitProvider>
           <TransactionProvider>
             <MusicPlayerProvider>

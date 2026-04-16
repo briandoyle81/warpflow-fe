@@ -41,6 +41,9 @@ export function isChainSelectableInUi(chainId: number): boolean {
 
 const STORAGE_KEY = "void-tactics.selectedChainId";
 
+/** Dispatched when the app-selected chain id in localStorage changes (see `setSelectedChainId`). */
+export const VOID_TACTICS_CHAIN_CHANGED_EVENT = "void-tactics-chain-changed";
+
 export function isSupportedChainId(chainId: number | undefined | null): boolean {
   if (chainId == null) return false;
   return SUPPORTED_CHAINS.some((c) => c.id === chainId);
@@ -59,7 +62,17 @@ export function getSelectedChainId(): number {
 export function setSelectedChainId(chainId: number) {
   if (typeof window === "undefined") return;
   const next = isChainSelectableInUi(chainId) ? chainId : DEFAULT_CHAIN_ID;
+  const prevRaw = window.localStorage.getItem(STORAGE_KEY);
+  const prevParsed = prevRaw ? Number(prevRaw) : NaN;
+  const prev = Number.isFinite(prevParsed) ? prevParsed : null;
   window.localStorage.setItem(STORAGE_KEY, String(next));
+  if (prev !== next) {
+    window.dispatchEvent(
+      new CustomEvent(VOID_TACTICS_CHAIN_CHANGED_EVENT, {
+        detail: { chainId: next },
+      }),
+    );
+  }
 }
 
 export function getChainById(chainId: number | undefined | null): SupportedChain {

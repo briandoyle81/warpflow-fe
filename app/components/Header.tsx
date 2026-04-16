@@ -24,6 +24,7 @@ import {
   isSupportedChainId,
   setSelectedChainId,
   SUPPORTED_CHAINS,
+  VOID_TACTICS_CHAIN_CHANGED_EVENT,
 } from "../config/networks";
 
 const Header: React.FC = () => {
@@ -173,6 +174,20 @@ const Header: React.FC = () => {
     }
     setIsNetworkMenuOpen(false);
   };
+
+  useEffect(() => {
+    const handleChainChanged = () => {
+      setShowUTCPurchaseModal(false);
+      setIsNetworkMenuOpen(false);
+    };
+    window.addEventListener(VOID_TACTICS_CHAIN_CHANGED_EVENT, handleChainChanged);
+    return () => {
+      window.removeEventListener(
+        VOID_TACTICS_CHAIN_CHANGED_EVENT,
+        handleChainChanged,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     if (!isNetworkMenuOpen) return;

@@ -55,6 +55,7 @@ import {
   readFleetCompositionPersisted,
   type FleetComposition,
 } from "../utils/fleetCompositionStorage";
+import { VOID_TACTICS_CHAIN_CHANGED_EVENT } from "../config/networks";
 
 /** Onchain turn timer when creating an Immediate game lobby. */
 const IMMEDIATE_GAME_TURN_SECONDS = 5 * 60;
@@ -925,6 +926,28 @@ const Lobbies: React.FC = () => {
       specialType: "all",
     });
   }, [address, chainId]);
+
+  useEffect(() => {
+    const onChainChanged = () => {
+      setShowCreateForm(false);
+      setPendingCreateLobbyHash(undefined);
+      resetFleetSelectionModalState();
+      setShowFleetView(false);
+      setIsCreatingFleet(false);
+      setViewingFleetId(null);
+      setViewingFleetOwner(null);
+      setDraggedShipId(null);
+      setDragOverPosition(null);
+      setPendingLoadFleet(null);
+    };
+    window.addEventListener(VOID_TACTICS_CHAIN_CHANGED_EVENT, onChainChanged);
+    return () => {
+      window.removeEventListener(
+        VOID_TACTICS_CHAIN_CHANGED_EVENT,
+        onChainChanged,
+      );
+    };
+  }, [resetFleetSelectionModalState]);
 
   /** Close the fleet modal but keep in-memory and saved draft selection. */
   const closeFleetModalOnly = useCallback(() => {

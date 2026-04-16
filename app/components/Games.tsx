@@ -6,6 +6,7 @@ import { usePlayerGames } from "../hooks/usePlayerGames";
 import { useContractEvents } from "../hooks/useContractEvents";
 import GameDisplay from "./GameDisplay";
 import { GameDataView } from "../types/types";
+import { VOID_TACTICS_CHAIN_CHANGED_EVENT } from "../config/networks";
 
 const Games: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -202,6 +203,20 @@ const Games: React.FC = () => {
       );
     };
   }, []);
+
+  useEffect(() => {
+    const onChainChanged = () => {
+      setSelectedGame(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("selectedGameId");
+      }
+      void refetch();
+    };
+    window.addEventListener(VOID_TACTICS_CHAIN_CHANGED_EVENT, onChainChanged);
+    return () => {
+      window.removeEventListener(VOID_TACTICS_CHAIN_CHANGED_EVENT, onChainChanged);
+    };
+  }, [refetch]);
 
   // If a game is selected, show the game display
   if (selectedGame) {

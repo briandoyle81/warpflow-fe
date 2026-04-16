@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import { useGetAllPresetMaps, useMapCount } from "../hooks/useMapsContract";
 import { MapEditor } from "./MapEditor";
 import { PresetMap, GRID_DIMENSIONS } from "../types/types";
+import { VOID_TACTICS_CHAIN_CHANGED_EVENT } from "../config/networks";
 
 export default function Maps() {
   const { address } = useAccount();
@@ -40,6 +41,17 @@ export default function Maps() {
 
     setMaps(mapsList);
   }, [allMapsData]);
+
+  useEffect(() => {
+    const onChainChanged = () => {
+      setShowEditor(false);
+      setEditingMapId(undefined);
+    };
+    window.addEventListener(VOID_TACTICS_CHAIN_CHANGED_EVENT, onChainChanged);
+    return () => {
+      window.removeEventListener(VOID_TACTICS_CHAIN_CHANGED_EVENT, onChainChanged);
+    };
+  }, []);
 
   const handleCreateMap = () => {
     setEditingMapId(undefined);
