@@ -8,7 +8,7 @@ import {
   GRID_DIMENSIONS,
 } from "../types/types";
 import {
-  mapsContractConfig,
+  useMapsContract,
   useGetPresetMap,
   useGetPresetScoringMap,
 } from "../hooks/useMapsContract";
@@ -28,6 +28,7 @@ export function MapEditor({
   canEdit = true,
 }: MapEditorProps) {
   const isEditing = mapId !== undefined;
+  const mapsContract = useMapsContract();
 
   // Load map data when editing
   const { data: blockedPositions } = useGetPresetMap(mapId || 0);
@@ -1044,8 +1045,8 @@ export function MapEditor({
           transactionId={`map-${isEditing ? "update" : "create"}-${
             mapId || "new"
           }`}
-          contractAddress={mapsContractConfig.address}
-          abi={mapsContractConfig.abi}
+          contractAddress={mapsContract.address}
+          abi={mapsContract.abi}
           functionName={getTransactionData().functionName}
           args={getTransactionData().args}
           onSuccess={handleTransactionSuccess}

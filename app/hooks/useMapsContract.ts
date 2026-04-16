@@ -1,18 +1,19 @@
-import { useReadContract, useWriteContract } from "wagmi";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import { useReadContract, useWriteContract, useAccount } from "wagmi";
+import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
 import type { Abi } from "viem";
+import { getSelectedChainId } from "../config/networks";
 
-// Contract instance configuration
-export const mapsContractConfig = {
-  address: CONTRACT_ADDRESSES.MAPS as `0x${string}`,
-  abi: CONTRACT_ABIS.MAPS as Abi,
-} as const;
-
-// Hook for reading contract data
+// Hook for Maps contract address/abi on the active chain (must not be module-level:
+// CONTRACT_ADDRESSES is chain-aware via localStorage and would otherwise freeze at first import).
 export function useMapsContract() {
+  const { chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const { MAPS } = getContractAddresses(activeChainId);
+
   return {
-    address: mapsContractConfig.address,
-    abi: mapsContractConfig.abi,
+    address: MAPS as `0x${string}`,
+    abi: CONTRACT_ABIS.MAPS as Abi,
+    chainId: activeChainId,
   };
 }
 
@@ -22,8 +23,14 @@ export function useMapsRead(
   args?: readonly unknown[],
   options?: { query?: { enabled?: boolean } }
 ) {
+  const { chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const { MAPS } = getContractAddresses(activeChainId);
+
   return useReadContract({
-    ...mapsContractConfig,
+    address: MAPS as `0x${string}`,
+    abi: CONTRACT_ABIS.MAPS as Abi,
+    chainId: activeChainId,
     functionName,
     args,
     query: options?.query,

@@ -1,18 +1,18 @@
-import { useReadContract, useWriteContract } from "wagmi";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import { useReadContract, useWriteContract, useAccount } from "wagmi";
+import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
 import type { Abi } from "viem";
-
-// Contract instance configuration
-export const fleetsContractConfig = {
-  address: CONTRACT_ADDRESSES.FLEETS as `0x${string}`,
-  abi: CONTRACT_ABIS.FLEETS as Abi,
-} as const;
+import { getSelectedChainId } from "../config/networks";
 
 // Hook for reading contract data
 export function useFleetsContract() {
+  const { chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const { FLEETS } = getContractAddresses(activeChainId);
+
   return {
-    address: fleetsContractConfig.address,
-    abi: fleetsContractConfig.abi,
+    address: FLEETS as `0x${string}`,
+    abi: CONTRACT_ABIS.FLEETS as Abi,
+    chainId: activeChainId,
   };
 }
 
@@ -22,8 +22,14 @@ export function useFleetsRead(
   args?: readonly unknown[],
   options?: { query?: { enabled?: boolean } }
 ) {
+  const { chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const { FLEETS } = getContractAddresses(activeChainId);
+
   return useReadContract({
-    ...fleetsContractConfig,
+    address: FLEETS as `0x${string}`,
+    abi: CONTRACT_ABIS.FLEETS as Abi,
+    chainId: activeChainId,
     functionName,
     args,
     query: options?.query,
@@ -49,8 +55,14 @@ export function useFleetShipIdsAndPositions(
   fleetId?: bigint,
   options?: { query?: { enabled?: boolean } }
 ) {
+  const { chainId: walletChainId } = useAccount();
+  const activeChainId = walletChainId ?? getSelectedChainId();
+  const { FLEETS } = getContractAddresses(activeChainId);
+
   return useReadContract({
-    ...fleetsContractConfig,
+    address: FLEETS as `0x${string}`,
+    abi: CONTRACT_ABIS.FLEETS as Abi,
+    chainId: activeChainId,
     functionName: "getFleetShipIdsAndPositions",
     args: fleetId ? [fleetId] : undefined,
     query: options?.query,
