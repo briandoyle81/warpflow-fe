@@ -29,6 +29,13 @@ export default function SiteFooter() {
       >
         Terms of Service
       </Link>
+      <Link
+        href="/audio-credits"
+        className="underline decoration-current/40 underline-offset-4 transition-colors hover:text-cyan-400"
+        style={{ color: "var(--color-text-muted)" }}
+      >
+        Audio Credits
+      </Link>
     </footer>
   );
 }

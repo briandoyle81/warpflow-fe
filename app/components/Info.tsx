@@ -54,13 +54,23 @@ const Info: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-8">
+    <div
+      className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-8"
+      aria-label="Void Tactics info"
+    >
+      <p className="sr-only">
+        Void Tactics is a fully onchain turn-based PvP fleet strategy game on
+        Flow. Build ships, manage your navy, join lobbies, and play tactical
+        grid battles where range, movement, and target priority decide each
+        match.
+      </p>
       {/* Hero Section - full width so its inner grid aligns with key features below */}
-      <div
+      <section
         className="md:col-span-12 border-2 border-cyan-400 bg-black/60 py-8 relative overflow-hidden"
         style={{
           borderRadius: 0, // Square corners for industrial theme
         }}
+        aria-labelledby="info-hero-heading"
       >
         {/* Background pattern/grid effect */}
         <div
@@ -76,6 +86,7 @@ const Info: React.FC = () => {
           {/* Left side - Text + primary CTA */}
           <div className="text-center md:text-left md:col-span-5 pl-6 md:pl-8">
             <h1
+              id="info-hero-heading"
               className="text-5xl md:text-6xl font-bold mb-4 tracking-wider"
               style={{
                 fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -204,16 +215,18 @@ const Info: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Ship demo display (kept, moved below hero) */}
-      <div
+      <section
         className="md:col-span-12 border-2 border-phosphor-green bg-black/40 p-6"
         style={{
           borderRadius: 0,
         }}
+        aria-labelledby="info-intel-heading"
       >
-        <h3
+        <h2
+          id="info-intel-heading"
           className="text-xl font-bold mb-3 tracking-wider text-center md:text-left"
           style={{
             fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -221,7 +234,7 @@ const Info: React.FC = () => {
           }}
         >
           [INTEL]
-        </h3>
+        </h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-black/0 p-1" style={{ borderRadius: 0 }}>
             <HeroShipShowcase seedOffset={0} align="start" side="allied" />
@@ -235,11 +248,11 @@ const Info: React.FC = () => {
             />
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Key Features - same 12-col grid so left edges align with hero */}
       {/* Feature 1: Build your Navy */}
-      <div
+      <article
         className="md:col-span-6 border-2 border-cyan-400 bg-black/40 p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
@@ -276,10 +289,10 @@ const Info: React.FC = () => {
           <li>• Customizable ships (equipment, traits)</li>
           <li>• Recycling mechanics</li>
         </ul>
-      </div>
+      </article>
 
       {/* Feature 2: Assemble a Fleet */}
-      <div
+      <article
         className="md:col-span-6 border-2 border-phosphor-green bg-black/40 p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
@@ -316,10 +329,10 @@ const Info: React.FC = () => {
           <li>• Fast, hard-hitting strike force</li>
           <li>• Long-range sniper backline</li>
         </ul>
-      </div>
+      </article>
 
       {/* Feature 3: Tactical Combat */}
-      <div
+      <article
         className="md:col-span-6 border-2 border-amber-400 bg-black/40 p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
@@ -355,10 +368,10 @@ const Info: React.FC = () => {
           <li>• Strategic positioning system</li>
           <li>• Multiple weapon and defense types</li>
         </ul>
-      </div>
+      </article>
 
       {/* Feature 4: Collect the Rewards */}
-      <div
+      <article
         className="md:col-span-6 border-2 border-warning-red bg-black/40 p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
@@ -395,16 +408,18 @@ const Info: React.FC = () => {
           <li>• Salvage reward for each kill</li>
           <li>• Grow your fleet&apos;s power over time</li>
         </ul>
-      </div>
+      </article>
 
       {/* Getting Started Section */}
-      <div
+      <section
         className="md:col-span-12 border-2 border-cyan-400 bg-black/40 p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
         }}
+        aria-labelledby="info-getting-started-heading"
       >
         <h2
+          id="info-getting-started-heading"
           className="text-2xl font-bold mb-4 text-center"
           style={{
             fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -502,65 +517,8 @@ const Info: React.FC = () => {
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Audio Credits - Keep at bottom */}
-      <div
-        className="md:col-span-12 border border-purple-400/50 bg-black/30 p-4"
-        style={{
-          borderRadius: 0, // Square corners for industrial theme
-        }}
-      >
-        <h4
-          className="text-sm font-bold mb-3"
-          style={{
-            fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-            color: "var(--color-amber)",
-          }}
-        >
-          [AUDIO CREDITS]
-        </h4>
-        <div
-          className="text-sm space-y-2 opacity-100"
-          style={{
-            fontFamily: "var(--font-rajdhani), sans-serif",
-            color: "var(--color-text-primary)",
-          }}
-        >
-          <div>
-            <p className="font-semibold text-purple-300 mb-1">
-              UI Sound Effect:
-            </p>
-            <p className="ml-4">
-              &ldquo;UI_6 Tonal beep.Aliens.Proximity
-              alert(63osc,chrs,cmpr).wav&rdquo;
-            </p>
-            <p className="ml-4">
-              <span className="opacity-80">Source:</span>{" "}
-              <a
-                href="https://freesound.org/s/563864/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-cyan-400 hover:text-cyan-300 underline"
-              >
-                freesound.org/s/563864/
-              </a>
-            </p>
-            <p className="ml-4">
-              <span className="opacity-80">License:</span> Attribution 4.0
-            </p>
-          </div>
-          <div className="mt-3 pt-3 border-t border-purple-500/20">
-            <p className="font-semibold text-purple-300 mb-1">
-              Background Music:
-            </p>
-            <p className="ml-4">
-              &ldquo;synthwave-80s-robot-swarm-218092.mp3&rdquo;
-            </p>
-            <p className="ml-4 opacity-80">Additional credits to be added</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
