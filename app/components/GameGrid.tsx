@@ -2874,7 +2874,22 @@ export function GameGrid({
 
                 const shouldShowRammingLabels =
                   isRammingMovePreview && rammingPreviewPosition != null;
-                if (targetsToShow.length === 0 && !shouldShowRammingLabels)
+                const shouldShowHoldPositionLabel =
+                  lastMoveActionType != null &&
+                  Number(lastMoveActionType) !== ActionType.Retreat &&
+                  lastMoveOldPosition != null &&
+                  lastMoveNewPosition != null &&
+                  lastMoveOldPosition.row >= 0 &&
+                  lastMoveOldPosition.col >= 0 &&
+                  lastMoveNewPosition.row >= 0 &&
+                  lastMoveNewPosition.col >= 0 &&
+                  lastMoveOldPosition.row === lastMoveNewPosition.row &&
+                  lastMoveOldPosition.col === lastMoveNewPosition.col;
+                if (
+                  targetsToShow.length === 0 &&
+                  !shouldShowRammingLabels &&
+                  !shouldShowHoldPositionLabel
+                )
                   return null;
 
                 const containerRect =
@@ -3059,6 +3074,52 @@ export function GameGrid({
                         </>
                       );
                     })()}
+                    {(() => {
+                      if (
+                        lastMoveActionType == null ||
+                        Number(lastMoveActionType) === ActionType.Retreat ||
+                        !lastMoveOldPosition ||
+                        !lastMoveNewPosition ||
+                        lastMoveOldPosition.row < 0 ||
+                        lastMoveOldPosition.col < 0 ||
+                        lastMoveNewPosition.row < 0 ||
+                        lastMoveNewPosition.col < 0 ||
+                        lastMoveOldPosition.row !== lastMoveNewPosition.row ||
+                        lastMoveOldPosition.col !== lastMoveNewPosition.col
+                      ) {
+                        return null;
+                      }
+                      const { cx: cellX, cellTop, cellBottom } =
+                        measureGridCellLabelAnchor(
+                          containerRect,
+                          gridLayoutRef.current,
+                          lastMoveNewPosition.row,
+                          lastMoveNewPosition.col,
+                          {
+                            originX,
+                            originY,
+                            cellWidth,
+                            cellHeight,
+                          },
+                        );
+                      const isTopGridRow = lastMoveNewPosition.row === 0;
+                      const labelTopPx = isTopGridRow ? cellBottom : cellTop;
+                      const labelTransform = isTopGridRow
+                        ? "translate(-50%, 0)"
+                        : "translate(-50%, -100%)";
+                      return (
+                        <div
+                          className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-yellow-100 whitespace-nowrap border border-yellow-500 bg-yellow-900"
+                          style={{
+                            left: `${cellX}px`,
+                            top: `${labelTopPx}px`,
+                            transform: labelTransform,
+                          }}
+                        >
+                          Hold Position
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })()}
@@ -3168,9 +3229,10 @@ export function GameGrid({
               const gridEl = gridContainerRef.current;
               if (!gridEl) return null;
 
-              const tooltipWidth = 320;
+              const tooltipWidth = 384;
               const tooltipHeight = 400;
               const offset = 15;
+              const leftPlacementOffset = 28;
 
               const cr = gridEl.getBoundingClientRect();
               const layoutEl = gridLayoutRef.current;
@@ -3229,8 +3291,8 @@ export function GameGrid({
 
               if (wouldCoverHorizontally && wouldCoverVertically) {
                 if (isCreatorShip) {
-                  if (shipLeft - tooltipWidth - offset >= 0) {
-                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                  if (shipLeft - tooltipWidth - leftPlacementOffset >= 0) {
+                    tooltipLeft = shipLeft - tooltipWidth - leftPlacementOffset;
                   } else if (shipRight + tooltipWidth + offset <= cr.width) {
                     tooltipLeft = shipRight + offset;
                   } else if (shipTop - tooltipHeight - offset >= 0) {
@@ -3246,8 +3308,8 @@ export function GameGrid({
                 } else {
                   if (shipRight + tooltipWidth + offset <= cr.width) {
                     tooltipLeft = shipRight + offset;
-                  } else if (shipLeft - tooltipWidth - offset >= 0) {
-                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                  } else if (shipLeft - tooltipWidth - leftPlacementOffset >= 0) {
+                    tooltipLeft = shipLeft - tooltipWidth - leftPlacementOffset;
                   } else if (shipTop - tooltipHeight - offset >= 0) {
                     tooltipTop = shipTop - tooltipHeight - offset;
                     tooltipLeft = mouseX;
@@ -3261,8 +3323,8 @@ export function GameGrid({
                 }
               } else if (wouldCoverHorizontally) {
                 if (isCreatorShip) {
-                  if (shipLeft - tooltipWidth - offset >= 0) {
-                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                  if (shipLeft - tooltipWidth - leftPlacementOffset >= 0) {
+                    tooltipLeft = shipLeft - tooltipWidth - leftPlacementOffset;
                   } else {
                     tooltipLeft = shipRight + offset;
                   }
@@ -3270,7 +3332,7 @@ export function GameGrid({
                   if (shipRight + tooltipWidth + offset <= cr.width) {
                     tooltipLeft = shipRight + offset;
                   } else {
-                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                    tooltipLeft = shipLeft - tooltipWidth - leftPlacementOffset;
                   }
                 }
               } else if (wouldCoverVertically) {

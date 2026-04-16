@@ -634,9 +634,10 @@ export function MapDisplay({
               const gridEl = mapGridRef.current;
               if (!gridEl) return null;
 
-              const tooltipWidth = 320;
+              const tooltipWidth = 384;
               const tooltipHeight = 400;
               const offset = 15;
+              const leftPlacementOffset = 28;
 
               const cr = gridEl.getBoundingClientRect();
               const cw = cr.width / GRID_DIMENSIONS.WIDTH;
@@ -667,8 +668,8 @@ export function MapDisplay({
 
               if (wouldCoverHorizontally && wouldCoverVertically) {
                 if (isCreatorShip) {
-                  if (shipLeft - tooltipWidth - offset >= 0) {
-                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                  if (shipLeft - tooltipWidth - leftPlacementOffset >= 0) {
+                    tooltipLeft = shipLeft - tooltipWidth - leftPlacementOffset;
                   } else if (shipRight + tooltipWidth + offset <= cr.width) {
                     tooltipLeft = shipRight + offset;
                   } else if (shipTop - tooltipHeight - offset >= 0) {
@@ -684,8 +685,8 @@ export function MapDisplay({
                 } else {
                   if (shipRight + tooltipWidth + offset <= cr.width) {
                     tooltipLeft = shipRight + offset;
-                  } else if (shipLeft - tooltipWidth - offset >= 0) {
-                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                  } else if (shipLeft - tooltipWidth - leftPlacementOffset >= 0) {
+                    tooltipLeft = shipLeft - tooltipWidth - leftPlacementOffset;
                   } else if (shipTop - tooltipHeight - offset >= 0) {
                     tooltipTop = shipTop - tooltipHeight - offset;
                     tooltipLeft = mouseX;
@@ -699,8 +700,8 @@ export function MapDisplay({
                 }
               } else if (wouldCoverHorizontally) {
                 if (isCreatorShip) {
-                  if (shipLeft - tooltipWidth - offset >= 0) {
-                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                  if (shipLeft - tooltipWidth - leftPlacementOffset >= 0) {
+                    tooltipLeft = shipLeft - tooltipWidth - leftPlacementOffset;
                   } else {
                     tooltipLeft = shipRight + offset;
                   }
@@ -708,7 +709,7 @@ export function MapDisplay({
                   if (shipRight + tooltipWidth + offset <= cr.width) {
                     tooltipLeft = shipRight + offset;
                   } else {
-                    tooltipLeft = shipLeft - tooltipWidth - offset;
+                    tooltipLeft = shipLeft - tooltipWidth - leftPlacementOffset;
                   }
                 }
               } else if (wouldCoverVertically) {

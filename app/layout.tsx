@@ -51,6 +51,14 @@ export const metadata: Metadata = {
     siteName: "Void Tactics",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/img/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Void Tactics",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -59,6 +67,7 @@ export const metadata: Metadata = {
       "Fully onchain turn-based PvP fleet tactics on a grid. Maneuver ships, control range, and fight for resources. Fleets and match outcomes settle onchain. Don't play to earn, play to win.",
     creator: "@voidtacticsxyz",
     site: "@voidtacticsxyz",
+    images: ["/img/og-image.png"],
   },
   robots: {
     index: true,
