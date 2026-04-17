@@ -1,5 +1,6 @@
 import { useReadContract, useWriteContract, useAccount } from "wagmi";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
+import { useSelectedChainId } from "./useSelectedChainId";
 
 // Types based on the contract
 export interface GunData {
@@ -77,9 +78,14 @@ export function useShipAttributesRead(
   functionName: ShipAttributesReadFunction,
   args?: readonly unknown[]
 ) {
+  const chainId = useSelectedChainId();
+  const shipAttributes = getContractAddresses(chainId)
+    .SHIP_ATTRIBUTES as `0x${string}`;
+
   return useReadContract({
-    address: CONTRACT_ADDRESSES.SHIP_ATTRIBUTES as `0x${string}`,
+    address: shipAttributes,
     abi: CONTRACT_ABIS.SHIP_ATTRIBUTES,
+    chainId,
     functionName,
     args,
   });

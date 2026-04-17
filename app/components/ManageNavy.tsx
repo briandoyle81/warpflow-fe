@@ -15,7 +15,7 @@ import {
   getQueueStatus,
   clearCacheOnLogout,
 } from "../hooks";
-import { useAccount, useChainId, usePublicClient } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { formatEther } from "viem";
 import { toast } from "react-hot-toast";
 import {
@@ -36,6 +36,7 @@ import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
 import type { Abi } from "viem";
 import { useCurrentCostsVersion } from "../hooks/useShipAttributesContract";
+import { useSelectedChainId } from "../hooks/useSelectedChainId";
 import { useShipAttributesByIds } from "../hooks/useShipAttributesByIds";
 import { fetchAndPersistShipAttributesCaches } from "../utils/shipAttributesLocalCache";
 import {
@@ -487,7 +488,7 @@ Big orders make the drones happy. The more hulls you order in one go, the higher
 
 const ManageNavy: React.FC = () => {
   const { address, isConnected, status } = useAccount();
-  const chainId = useChainId();
+  const chainId = useSelectedChainId();
   const shipsContractAddress = React.useMemo(
     () => getContractAddresses(chainId).SHIPS as `0x${string}`,
     [chainId],
@@ -496,7 +497,7 @@ const ManageNavy: React.FC = () => {
     () => getContractAddresses(chainId).SHIP_ATTRIBUTES as `0x${string}`,
     [chainId],
   );
-  const publicClient = usePublicClient();
+  const publicClient = usePublicClient({ chainId });
   const { transactionState } = useTransaction();
   const { ships, isLoading, error, hasShips, shipCount, refetch } =
     useOwnedShips();
@@ -803,6 +804,13 @@ const ManageNavy: React.FC = () => {
   const fleetImportInputRef = React.useRef<HTMLInputElement>(null);
   const [fleetCompositionHydrated, setFleetCompositionHydrated] =
     React.useState(false);
+
+  React.useEffect(() => {
+    setSelectedShips(new Set());
+    setShipToRecycle(null);
+    setShowRecycleModal(false);
+    setShowFilterWindow(false);
+  }, [chainId]);
 
   // Load starred ships from localStorage on mount
   React.useEffect(() => {

@@ -1,13 +1,12 @@
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { useReadContract, useWriteContract } from "wagmi";
 import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
 import type { Abi } from "viem";
-import { getSelectedChainId } from "../config/networks";
+import { useSelectedChainId } from "./useSelectedChainId";
 // import { Ship, ShipTuple } from "../types/types";
 
 // Hook for reading contract data
 export function useShipsContract() {
-  const { chainId: walletChainId } = useAccount();
-  const activeChainId = walletChainId ?? getSelectedChainId();
+  const activeChainId = useSelectedChainId();
   const contractAddresses = getContractAddresses(activeChainId);
 
   return {
@@ -19,8 +18,7 @@ export function useShipsContract() {
 
 // Hook for reading contract data with proper typing
 export function useShipsRead(functionName: string, args?: readonly unknown[]) {
-  const { chainId: walletChainId } = useAccount();
-  const activeChainId = walletChainId ?? getSelectedChainId();
+  const activeChainId = useSelectedChainId();
   const contractAddresses = getContractAddresses(activeChainId);
 
   return useReadContract({

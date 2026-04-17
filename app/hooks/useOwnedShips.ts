@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useAccount } from "wagmi";
-import { getSelectedChainId } from "../config/networks";
 import { useShipsRead } from "./useShipsContract";
 import { Ship } from "../types/types";
 import { cacheShipsData } from "./useShipDataCache";
+import { useSelectedChainId } from "./useSelectedChainId";
 
 export function useOwnedShips() {
-  const { address, chainId: walletChainId } = useAccount();
-  const activeChainId = walletChainId ?? getSelectedChainId();
+  const { address } = useAccount();
+  const activeChainId = useSelectedChainId();
 
   const baselineOwnedIdsKeyRef = useRef<string | null>(null);
   useEffect(() => {

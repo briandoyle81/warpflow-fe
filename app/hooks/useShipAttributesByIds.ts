@@ -1,6 +1,7 @@
 import React from "react";
-import { useChainId, useReadContract } from "wagmi";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import { useReadContract } from "wagmi";
+import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
+import { useSelectedChainId } from "./useSelectedChainId";
 import { Attributes } from "../types/types";
 import {
   readValidShipAttributesByIdsCache,
@@ -9,7 +10,7 @@ import {
 } from "../utils/shipAttributesLocalCache";
 
 export function useShipAttributesByIds(shipIds: bigint[]) {
-  const chainId = useChainId();
+  const chainId = useSelectedChainId();
   const shipIdsString = React.useMemo(
     () => shipIdsToCacheKeyString(shipIds),
     [shipIds],
@@ -25,14 +26,20 @@ export function useShipAttributesByIds(shipIds: bigint[]) {
   // Only call contract if we don't have valid cached data
   const shouldCallContract = !cachedData && shipIds.length > 0;
 
+  const shipAttributesAddress = React.useMemo(
+    () => getContractAddresses(chainId).SHIP_ATTRIBUTES as `0x${string}`,
+    [chainId],
+  );
+
   const {
     data: contractData,
     isLoading,
     error,
     refetch,
   } = useReadContract({
-    address: CONTRACT_ADDRESSES.SHIP_ATTRIBUTES as `0x${string}`,
+    address: shipAttributesAddress,
     abi: CONTRACT_ABIS.SHIP_ATTRIBUTES,
+    chainId,
     functionName: "calculateShipAttributesByIds",
     args: shouldCallContract ? [shipIds] : undefined,
   });
