@@ -4,6 +4,7 @@ import { useState, useEffect, useLayoutEffect, type CSSProperties } from "react"
 import { useAccount } from "wagmi";
 import Header from "./components/Header";
 import AlphaDiscordNoticeBar from "./components/AlphaDiscordNoticeBar";
+import FlowWalletNoticeBar from "./components/FlowWalletNoticeBar";
 import SiteFooter from "./components/SiteFooter";
 import ManageNavy from "./components/ManageNavy";
 import Lobbies from "./components/Lobbies";
@@ -207,6 +208,13 @@ export default function Home() {
           style={topChromeRowStyle}
           aria-hidden={hideGlobalChrome}
         >
+          <FlowWalletNoticeBar suppressed={hideGlobalChrome} />
+        </div>
+        <div
+          className="shrink-0"
+          style={topChromeRowStyle}
+          aria-hidden={hideGlobalChrome}
+        >
           <AlphaDiscordNoticeBar suppressed={hideGlobalChrome} />
         </div>
         <div
@@ -257,6 +265,13 @@ export default function Home() {
       className="flex min-h-screen flex-col"
       style={{ backgroundColor: "var(--color-near-black)" }}
     >
+      <div
+        className="shrink-0"
+        style={topChromeRowStyle}
+        aria-hidden={hideGlobalChrome}
+      >
+        <FlowWalletNoticeBar suppressed={hideGlobalChrome} />
+      </div>
       <div
         className="shrink-0"
         style={topChromeRowStyle}

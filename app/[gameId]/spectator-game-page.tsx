@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Header from "../components/Header";
 import AlphaDiscordNoticeBar from "../components/AlphaDiscordNoticeBar";
+import FlowWalletNoticeBar from "../components/FlowWalletNoticeBar";
 import SiteFooter from "../components/SiteFooter";
 import GameDisplay from "../components/GameDisplay";
 import { useGetGame } from "../hooks/useGameContract";
@@ -44,6 +45,9 @@ export default function SpectatorGamePage({
       className="flex min-h-screen flex-col"
       style={{ backgroundColor: "var(--color-near-black)" }}
     >
+      <div className="shrink-0">
+        <FlowWalletNoticeBar />
+      </div>
       <div className="shrink-0">
         <AlphaDiscordNoticeBar />
       </div>
