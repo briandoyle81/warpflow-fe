@@ -63,6 +63,7 @@ import {
   buildFleetCompositionExport,
   type FleetComposition,
 } from "../utils/fleetCompositionStorage";
+import { invalidateAllShipPurchasePriceCachesForChain } from "../utils/shipPurchaseInfoCache";
 
 /** Same typography as `TutorialGridTaskPanel` brief body. */
 const MANAGE_NAVY_TUTORIAL_MONO: React.CSSProperties = {
@@ -2021,6 +2022,18 @@ const ManageNavy: React.FC = () => {
               className="px-4 py-2 rounded-none border border-purple-400 text-purple-400 hover:border-purple-300 hover:text-purple-300 hover:bg-purple-400/10 font-mono font-bold text-sm transition-all duration-200"
             >
               [QUEUE STATUS]
+            </button>
+
+            <button
+              onClick={() => {
+                invalidateAllShipPurchasePriceCachesForChain(chainId);
+                toast.success(
+                  "Cleared purchase price cache (native + UTC) for this network",
+                );
+              }}
+              className="px-4 py-2 rounded-none border border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm transition-all duration-200"
+            >
+              [CLEAR PRICE CACHE]
             </button>
 
             <button

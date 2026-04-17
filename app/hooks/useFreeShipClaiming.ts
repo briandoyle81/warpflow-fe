@@ -3,7 +3,9 @@ import {
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
+  usePublicClient,
 } from "wagmi";
+import { getLegacyGasPriceOverridesForWrite } from "../utils/legacyGasPriceForWrite";
 import {
   CONTRACT_ABIS,
   getContractAddresses,
@@ -14,6 +16,7 @@ import { useOwnedShips } from "./useOwnedShips";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getVariantForChainId } from "../config/networks";
 import { useSelectedChainId } from "./useSelectedChainId";
+import { useSwitchToSelectedChainIfNeeded } from "./useSwitchToSelectedChainIfNeeded";
 
 // Cache expiration time (24 hours) - only for unclaimed addresses
 const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -44,6 +47,7 @@ export function useFreeShipClaiming() {
   const { address } = useAccount();
   const { refetch } = useOwnedShips();
   const activeChainId = useSelectedChainId();
+  const switchToSelectedChainIfNeeded = useSwitchToSelectedChainIfNeeded();
   const contractAddresses = getContractAddresses(activeChainId);
 
   // `claimFreeShips` requires a chain-specific variant expected by the contract.
@@ -111,10 +115,12 @@ export function useFreeShipClaiming() {
 
   // Write contract for claiming
   const { writeContract, isPending, error, data: hash } = useWriteContract();
+  const publicClient = usePublicClient({ chainId: activeChainId });
 
   // Wait for transaction receipt
   const { isLoading: isConfirming, isSuccess: isConfirmed, error: receiptError } = useWaitForTransactionReceipt({
     hash,
+    chainId: activeChainId,
   });
   const processedReceiptHashRef = useRef<`0x${string}` | null>(null);
 
@@ -366,6 +372,7 @@ export function useFreeShipClaiming() {
     setShowError(false);
 
     try {
+      await switchToSelectedChainIfNeeded();
       // Call the smart contract to claim free ships (with variant parameter)
       await writeContract({
         address: contractAddresses.SHIPS as `0x${string}`,
@@ -373,6 +380,10 @@ export function useFreeShipClaiming() {
         functionName: "claimFreeShips",
         args: [freeShipVariant], // `_variant` expects a chain expectation
         chainId: activeChainId,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          activeChainId,
+          publicClient,
+        )),
       });
 
       // Toast will be shown when receipt is received (in useEffect below)

@@ -1,7 +1,8 @@
 "use client";
 
-import { useAccount, useChainId, useReadContract } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
+import { useSelectedChainId } from "./useSelectedChainId";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 
@@ -18,7 +19,7 @@ function addrEq(a?: string | null, b?: string | null) {
  */
 export function useShipPurchasePricesAccess() {
   const { address, isConnected } = useAccount();
-  const chainId = useChainId();
+  const chainId = useSelectedChainId();
   const shipsAddr = getContractAddresses(chainId).SHIPS;
   const purchaserAddr = getContractAddresses(chainId).SHIP_PURCHASER;
   const purchaserDeployed =
@@ -28,12 +29,14 @@ export function useShipPurchasePricesAccess() {
   const { data: shipsOwner } = useReadContract({
     address: shipsAddr as `0x${string}`,
     abi: CONTRACT_ABIS.SHIPS,
+    chainId,
     functionName: "owner",
   });
 
   const { data: purchaserOwner } = useReadContract({
     address: purchaserAddr as `0x${string}`,
     abi: CONTRACT_ABIS.SHIP_PURCHASER,
+    chainId,
     functionName: "owner",
     query: { enabled: purchaserDeployed },
   });

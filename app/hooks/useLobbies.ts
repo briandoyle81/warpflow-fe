@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
+import { getLegacyGasPriceOverridesForWrite } from "../utils/legacyGasPriceForWrite";
 import type { Address } from "viem";
 import {
   useLobbiesWrite,
@@ -10,6 +11,7 @@ import {
 } from "./useLobbiesContract";
 import { useLobbyList } from "./useLobbyList";
 import { Lobby } from "../types/types";
+import { useSwitchToSelectedChainIfNeeded } from "./useSwitchToSelectedChainIfNeeded";
 
 export interface CreateLobbyParams {
   costLimit: bigint;
@@ -29,6 +31,8 @@ export interface LobbyListState {
 export function useLobbies() {
   const { address } = useAccount();
   const lobbiesRpc = useLobbiesChainParams();
+  const publicClient = usePublicClient({ chainId: lobbiesRpc.chainId });
+  const switchToSelectedChainIfNeeded = useSwitchToSelectedChainIfNeeded();
   const { writeContract, data: hash } = useLobbiesWrite();
   const { data: lobbyCount } = useLobbyCount();
   const { playerState } = usePlayerLobbyState(address || "");
@@ -71,8 +75,13 @@ export function useLobbies() {
         ? (additionalLobbyFee as bigint) || 0n
         : 0n;
 
+      await switchToSelectedChainIfNeeded();
       await writeContract({
         ...lobbiesRpc,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          lobbiesRpc.chainId,
+          publicClient,
+        )),
         functionName: "createLobby",
         args: [
           params.costLimit,
@@ -98,8 +107,13 @@ export function useLobbies() {
     if (!address) throw new Error("No wallet connected");
 
     try {
+      await switchToSelectedChainIfNeeded();
       await writeContract({
         ...lobbiesRpc,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          lobbiesRpc.chainId,
+          publicClient,
+        )),
         functionName: "joinLobby",
         args: [lobbyId],
       });
@@ -117,8 +131,13 @@ export function useLobbies() {
     if (!address) throw new Error("No wallet connected");
 
     try {
+      await switchToSelectedChainIfNeeded();
       await writeContract({
         ...lobbiesRpc,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          lobbiesRpc.chainId,
+          publicClient,
+        )),
         functionName: "leaveLobby",
         args: [lobbyId],
       });
@@ -133,8 +152,13 @@ export function useLobbies() {
     if (!address) throw new Error("No wallet connected");
 
     try {
+      await switchToSelectedChainIfNeeded();
       await writeContract({
         ...lobbiesRpc,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          lobbiesRpc.chainId,
+          publicClient,
+        )),
         functionName: "timeoutJoiner",
         args: [lobbyId],
       });
@@ -153,8 +177,13 @@ export function useLobbies() {
     if (!address) throw new Error("No wallet connected");
 
     try {
+      await switchToSelectedChainIfNeeded();
       await writeContract({
         ...lobbiesRpc,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          lobbiesRpc.chainId,
+          publicClient,
+        )),
         functionName: "createFleet",
         args: [lobbyId, shipIds, startingPositions],
       });
@@ -170,8 +199,13 @@ export function useLobbies() {
     if (!address) throw new Error("No wallet connected");
 
     try {
+      await switchToSelectedChainIfNeeded();
       await writeContract({
         ...lobbiesRpc,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          lobbiesRpc.chainId,
+          publicClient,
+        )),
         functionName: "quitWithPenalty",
         args: [lobbyId],
       });
@@ -186,8 +220,13 @@ export function useLobbies() {
     if (!address) throw new Error("No wallet connected");
 
     try {
+      await switchToSelectedChainIfNeeded();
       await writeContract({
         ...lobbiesRpc,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          lobbiesRpc.chainId,
+          publicClient,
+        )),
         functionName: "acceptGame",
         args: [lobbyId],
       });
@@ -205,8 +244,13 @@ export function useLobbies() {
     if (!address) throw new Error("No wallet connected");
 
     try {
+      await switchToSelectedChainIfNeeded();
       await writeContract({
         ...lobbiesRpc,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          lobbiesRpc.chainId,
+          publicClient,
+        )),
         functionName: "rejectGame",
         args: [lobbyId],
       });

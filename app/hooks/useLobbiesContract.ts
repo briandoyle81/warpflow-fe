@@ -1,13 +1,12 @@
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { useReadContract, useWriteContract } from "wagmi";
 import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
 import type { Abi } from "viem";
-import { getSelectedChainId } from "../config/networks";
 import { Lobby, PlayerLobbyState } from "../types/types";
+import { useSelectedChainId } from "./useSelectedChainId";
 
-/** Lobbies contract target for the wallet chain, or app-selected chain when disconnected. */
+/** Lobbies contract target for the in-app network picker (reads and intended writes). */
 export function useLobbiesChainParams() {
-  const { chainId: walletChainId } = useAccount();
-  const activeChainId = walletChainId ?? getSelectedChainId();
+  const activeChainId = useSelectedChainId();
   const contractAddresses = getContractAddresses(activeChainId);
   return {
     address: contractAddresses.LOBBIES as `0x${string}`,

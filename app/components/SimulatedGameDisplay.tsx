@@ -53,6 +53,7 @@ import {
 } from "../utils/gameGridRanges";
 import {
   useAccount,
+  usePublicClient,
   useReadContract,
   useWaitForTransactionReceipt,
   useWriteContract,
@@ -60,7 +61,9 @@ import {
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import type { Abi } from "viem";
 import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
-import { getSelectedChainId } from "../config/networks";
+import { useSelectedChainId } from "../hooks/useSelectedChainId";
+import { useSwitchToSelectedChainIfNeeded } from "../hooks/useSwitchToSelectedChainIfNeeded";
+import { getLegacyGasPriceOverridesForWrite } from "../utils/legacyGasPriceForWrite";
 
 interface SimulatedGameDisplayProps {
   tutorialContext: TutorialContextValue;
@@ -777,9 +780,11 @@ export function SimulatedGameDisplay({
   tutorialContext,
   onBack,
 }: SimulatedGameDisplayProps) {
-  const { address, chainId: walletChainId } = useAccount();
+  const { address } = useAccount();
   const { openConnectModal } = useConnectModal();
-  const activeChainId = walletChainId ?? getSelectedChainId();
+  const activeChainId = useSelectedChainId();
+  const publicClient = usePublicClient({ chainId: activeChainId });
+  const switchToSelectedChainIfNeeded = useSwitchToSelectedChainIfNeeded();
   const contractAddresses = useMemo(
     () => getContractAddresses(activeChainId),
     [activeChainId],
@@ -892,8 +897,9 @@ export function SimulatedGameDisplay({
   const tutorialClaimReceiptConfig = useMemo(
     () => ({
       hash: tutorialClaimHash,
+      chainId: activeChainId,
     }),
-    [tutorialClaimHash],
+    [tutorialClaimHash, activeChainId],
   );
   const {
     isLoading: isTutorialClaimConfirming,
@@ -929,6 +935,68 @@ export function SimulatedGameDisplay({
     toast.success("Tutorial reward claimed");
     setPendingTutorialClaimPath(null);
   }, [isTutorialClaimConfirmed, activeChainId, address]);
+
+  const runTutorialClaimTx = useCallback(
+    async (
+      path: "win" | "loss",
+      functionName: "completeTutorialWinPath" | "completeTutorialLossPath",
+    ) => {
+      if (!address) {
+        openConnectModal?.();
+        return;
+      }
+      if (isTutorialRewardAlreadyClaimed) {
+        onBack?.();
+        queueMicrotask(() =>
+          window.dispatchEvent(
+            new CustomEvent("void-tactics-navigate-to-manage-navy"),
+          ),
+        );
+        return;
+      }
+      if (
+        !contractAddresses.TUTORIAL_CLAIM ||
+        contractAddresses.TUTORIAL_CLAIM ===
+          "0x0000000000000000000000000000000000000000"
+      ) {
+        toast.error("Tutorial claim is unavailable on this network");
+        return;
+      }
+      if (isTutorialClaimPending || isTutorialClaimConfirming) {
+        return;
+      }
+      try {
+        await switchToSelectedChainIfNeeded();
+        setPendingTutorialClaimPath(path);
+        writeTutorialClaim({
+          address: contractAddresses.TUTORIAL_CLAIM as `0x${string}`,
+          abi: CONTRACT_ABIS.TUTORIAL_CLAIM as Abi,
+          functionName,
+          chainId: activeChainId,
+          ...(await getLegacyGasPriceOverridesForWrite(
+            activeChainId,
+            publicClient,
+          )),
+        });
+      } catch (e) {
+        console.error(e);
+        toast.error("Could not switch network or send transaction");
+      }
+    },
+    [
+      address,
+      activeChainId,
+      contractAddresses.TUTORIAL_CLAIM,
+      isTutorialClaimPending,
+      isTutorialClaimConfirming,
+      isTutorialRewardAlreadyClaimed,
+      onBack,
+      openConnectModal,
+      publicClient,
+      switchToSelectedChainIfNeeded,
+      writeTutorialClaim,
+    ],
+  );
 
   // For display we follow the main game and keep the selected ship ID as bigint
   // (so GameGrid behavior and animations are identical). When we need to talk
@@ -3155,39 +3223,7 @@ export function SimulatedGameDisplay({
                   (isTutorialClaimPending || isTutorialClaimConfirming)
                 ? "Claiming..."
                 : "Claim 2 ships + win",
-          onClick: () => {
-            if (!address) {
-              openConnectModal?.();
-              return;
-            }
-            if (isTutorialRewardAlreadyClaimed) {
-              onBack?.();
-              queueMicrotask(() =>
-                window.dispatchEvent(
-                  new CustomEvent("void-tactics-navigate-to-manage-navy"),
-                ),
-              );
-              return;
-            }
-            if (
-              !contractAddresses.TUTORIAL_CLAIM ||
-              contractAddresses.TUTORIAL_CLAIM ===
-                "0x0000000000000000000000000000000000000000"
-            ) {
-              toast.error("Tutorial claim is unavailable on this network");
-              return;
-            }
-            if (isTutorialClaimPending || isTutorialClaimConfirming) {
-              return;
-            }
-            setPendingTutorialClaimPath("win");
-            writeTutorialClaim({
-              address: contractAddresses.TUTORIAL_CLAIM as `0x${string}`,
-              abi: CONTRACT_ABIS.TUTORIAL_CLAIM as Abi,
-              functionName: "completeTutorialWinPath",
-              chainId: activeChainId,
-            });
-          },
+          onClick: () => void runTutorialClaimTx("win", "completeTutorialWinPath"),
         },
       };
     }
@@ -3206,55 +3242,20 @@ export function SimulatedGameDisplay({
                   (isTutorialClaimPending || isTutorialClaimConfirming)
                 ? "Claiming..."
                 : "Claim 3 ships + loss record",
-          onClick: () => {
-            if (!address) {
-              openConnectModal?.();
-              return;
-            }
-            if (isTutorialRewardAlreadyClaimed) {
-              onBack?.();
-              queueMicrotask(() =>
-                window.dispatchEvent(
-                  new CustomEvent("void-tactics-navigate-to-manage-navy"),
-                ),
-              );
-              return;
-            }
-            if (
-              !contractAddresses.TUTORIAL_CLAIM ||
-              contractAddresses.TUTORIAL_CLAIM ===
-                "0x0000000000000000000000000000000000000000"
-            ) {
-              toast.error("Tutorial claim is unavailable on this network");
-              return;
-            }
-            if (isTutorialClaimPending || isTutorialClaimConfirming) {
-              return;
-            }
-            setPendingTutorialClaimPath("loss");
-            writeTutorialClaim({
-              address: contractAddresses.TUTORIAL_CLAIM as `0x${string}`,
-              abi: CONTRACT_ABIS.TUTORIAL_CLAIM as Abi,
-              functionName: "completeTutorialLossPath",
-              chainId: activeChainId,
-            });
-          },
+          onClick: () =>
+            void runTutorialClaimTx("loss", "completeTutorialLossPath"),
         },
       };
     }
     return base;
   }, [
-    activeChainId,
     address,
-    contractAddresses.TUTORIAL_CLAIM,
     currentStep?.id,
     isTutorialRewardAlreadyClaimed,
     isTutorialClaimConfirming,
     isTutorialClaimPending,
     pendingTutorialClaimPath,
-    openConnectModal,
-    onBack,
-    writeTutorialClaim,
+    runTutorialClaimTx,
   ]);
 
   return (

@@ -1,19 +1,24 @@
-import { useAccount, useConfig } from "wagmi";
+import { useAccount, useConfig, usePublicClient } from "wagmi";
+import { getLegacyGasPriceOverridesForWrite } from "../utils/legacyGasPriceForWrite";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { useShipsWrite } from "./useShipsContract";
 import { useOwnedShips } from "./useOwnedShips";
 import { toast } from "react-hot-toast";
-import { CONTRACT_ADDRESSES } from "../config/contracts";
+import { getContractAddresses } from "../config/contracts";
 import { useEffect } from "react";
-import { getSelectedChainId } from "../config/networks";
+import { useSelectedChainId } from "./useSelectedChainId";
+import { useSwitchToSelectedChainIfNeeded } from "./useSwitchToSelectedChainIfNeeded";
 import { clearShipImageCacheForShip } from "./useShipImageCache";
 
 export function useShipActions() {
-  const { address, chainId: walletChainId } = useAccount();
+  const { address } = useAccount();
   const config = useConfig();
-  const activeChainId = walletChainId ?? getSelectedChainId();
+  const activeChainId = useSelectedChainId();
+  const contractAddresses = getContractAddresses(activeChainId);
+  const switchToSelectedChainIfNeeded = useSwitchToSelectedChainIfNeeded();
   const { refetch } = useOwnedShips();
   const { writeContractAsync, isPending, error } = useShipsWrite();
+  const publicClient = usePublicClient({ chainId: activeChainId });
 
   // Handle write contract errors (including user rejection)
   useEffect(() => {
@@ -42,8 +47,9 @@ export function useShipActions() {
     }
 
     try {
+      await switchToSelectedChainIfNeeded();
       const hash = await writeContractAsync({
-        address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+        address: contractAddresses.SHIPS as `0x${string}`,
         abi: [
           {
             inputs: [{ internalType: "uint256", name: "_id", type: "uint256" }],
@@ -56,6 +62,10 @@ export function useShipActions() {
         functionName: "constructShip",
         args: [shipId],
         chainId: activeChainId,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          activeChainId,
+          publicClient,
+        )),
       });
 
       await waitForTransactionReceipt(config, {
@@ -94,8 +104,9 @@ export function useShipActions() {
     }
 
     try {
+      await switchToSelectedChainIfNeeded();
       const hash = await writeContractAsync({
-        address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+        address: contractAddresses.SHIPS as `0x${string}`,
         abi: [
           {
             inputs: [],
@@ -108,6 +119,10 @@ export function useShipActions() {
         functionName: "constructAllMyShips",
         args: [],
         chainId: activeChainId,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          activeChainId,
+          publicClient,
+        )),
       });
 
       await waitForTransactionReceipt(config, {
@@ -150,8 +165,9 @@ export function useShipActions() {
     }
 
     try {
+      await switchToSelectedChainIfNeeded();
       const hash = await writeContractAsync({
-        address: CONTRACT_ADDRESSES.SHIPS as `0x${string}`,
+        address: contractAddresses.SHIPS as `0x${string}`,
         abi: [
           {
             inputs: [
@@ -170,6 +186,10 @@ export function useShipActions() {
         functionName: "shipBreaker",
         args: [shipIds],
         chainId: activeChainId,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          activeChainId,
+          publicClient,
+        )),
       });
 
       await waitForTransactionReceipt(config, {

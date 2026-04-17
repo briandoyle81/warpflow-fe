@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { useChainId, useReadContract } from "wagmi";
+import { useReadContract } from "wagmi";
 import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
+import { useSelectedChainId } from "./useSelectedChainId";
 import { normalizeGetPurchaseInfoTuple } from "../utils/normalizePurchaseInfo";
 import {
   readValidShipPurchaseInfoCache,
@@ -13,7 +14,7 @@ import {
 const ZERO = "0x0000000000000000000000000000000000000000";
 
 export function useShipsPurchaseInfo() {
-  const chainId = useChainId();
+  const chainId = useSelectedChainId();
   const shipsAddr = getContractAddresses(chainId).SHIPS as `0x${string}`;
   const shipsDeployed =
     Boolean(shipsAddr) && shipsAddr.toLowerCase() !== ZERO.toLowerCase();
@@ -30,6 +31,7 @@ export function useShipsPurchaseInfo() {
   const { data, isLoading, error, refetch } = useReadContract({
     address: shipsAddr,
     abi: CONTRACT_ABIS.SHIPS,
+    chainId,
     functionName: "getPurchaseInfo",
     query: { enabled: shouldFetch },
   });

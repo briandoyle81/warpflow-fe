@@ -3,13 +3,17 @@ import {
   useBalance,
   useWriteContract,
   useWaitForTransactionReceipt,
+  usePublicClient,
 } from "wagmi";
+import { getLegacyGasPriceOverridesForWrite } from "../utils/legacyGasPriceForWrite";
 import { getContractAddresses } from "../config/contracts";
 import { toast } from "react-hot-toast";
 import { useOwnedShips } from "./useOwnedShips";
 import { useEffect } from "react";
-import { getSelectedChainId, getVariantForChainId } from "../config/networks";
+import { getVariantForChainId } from "../config/networks";
 import { useShipsPurchaseInfo } from "./useShipsPurchaseInfo";
+import { useSelectedChainId } from "./useSelectedChainId";
+import { useSwitchToSelectedChainIfNeeded } from "./useSwitchToSelectedChainIfNeeded";
 
 // Ships contract ABI for purchasing with FLOW
 const shipsContractABI = [
@@ -28,9 +32,10 @@ const shipsContractABI = [
 ] as const;
 
 export function useShipPurchasing() {
-  const { address, chainId: walletChainId } = useAccount();
+  const { address } = useAccount();
   const { refetch } = useOwnedShips();
-  const activeChainId = walletChainId ?? getSelectedChainId();
+  const activeChainId = useSelectedChainId();
+  const switchToSelectedChainIfNeeded = useSwitchToSelectedChainIfNeeded();
   const contractAddresses = getContractAddresses(activeChainId);
   const chainVariant = getVariantForChainId(activeChainId);
 
@@ -47,6 +52,7 @@ export function useShipPurchasing() {
   });
 
   const { writeContract, isPending, error, data: hash } = useWriteContract();
+  const publicClient = usePublicClient({ chainId: activeChainId });
 
   const {
     isLoading: isConfirming,
@@ -54,6 +60,7 @@ export function useShipPurchasing() {
     error: receiptError,
   } = useWaitForTransactionReceipt({
     hash,
+    chainId: activeChainId,
   });
 
   useEffect(() => {
@@ -121,12 +128,18 @@ export function useShipPurchasing() {
       "0xac5b774D7a700AcDb528048B6052bc1549cd73B9" as `0x${string}`;
 
     try {
+      await switchToSelectedChainIfNeeded();
       await writeContract({
         address: contractAddresses.SHIPS as `0x${string}`,
         abi: shipsContractABI,
         functionName: "purchaseWithFlow",
         args: [address, tier as number, referralAddress, chainVariant],
         value: tierPrice,
+        chainId: activeChainId,
+        ...(await getLegacyGasPriceOverridesForWrite(
+          activeChainId,
+          publicClient,
+        )),
       });
     } catch (err: unknown) {
       console.error("Error purchasing ships:", err);

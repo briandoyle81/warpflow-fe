@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useAccount, useChainId } from "wagmi";
+import { useAccount } from "wagmi";
 import { formatEther, parseEther } from "viem";
 import { toast } from "react-hot-toast";
 import type { Abi } from "viem";
@@ -11,7 +11,42 @@ import { TransactionButton } from "./TransactionButton";
 import { useShipPurchasePricesAccess } from "../hooks/useShipPurchasePricesAccess";
 import { useShipsPurchaseInfo } from "../hooks/useShipsPurchaseInfo";
 import { useShipPurchaserPurchaseInfo } from "../hooks/useShipPurchaserPurchaseInfo";
-import { invalidateShipPurchaseInfoCache } from "../utils/shipPurchaseInfoCache";
+import { invalidateAllShipPurchasePriceCachesForChain } from "../utils/shipPurchaseInfoCache";
+import { useSelectedChainId } from "../hooks/useSelectedChainId";
+
+type PriceDraft = {
+  nativeShips: number[];
+  nativeEth: string[];
+  utcShips: number[];
+  utcTokens: string[];
+  nativeDirty: boolean;
+  utcDirty: boolean;
+};
+
+function draftStorageKey(chainId: number): string {
+  return `warpflow-price-draft-v1-${chainId}`;
+}
+
+function readDraft(chainId: number): PriceDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(draftStorageKey(chainId));
+    if (!raw) return null;
+    return JSON.parse(raw) as PriceDraft;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(chainId: number, draft: PriceDraft): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(draftStorageKey(chainId), JSON.stringify(draft));
+}
+
+function clearDraft(chainId: number): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(draftStorageKey(chainId));
+}
 
 function emptyTxArgs(n: number): [number[], bigint[]] {
   return [
@@ -47,7 +82,7 @@ function buildArgs(
 
 const ShipPurchasePrices: React.FC = () => {
   const { address, isConnected } = useAccount();
-  const chainId = useChainId();
+  const chainId = useSelectedChainId();
   const nativeSymbol = getNativeTokenSymbol(chainId);
   const shipsAddress = getContractAddresses(chainId).SHIPS as `0x${string}`;
   const purchaserAddress = getContractAddresses(chainId).SHIP_PURCHASER as `0x${string}`;
@@ -67,25 +102,122 @@ const ShipPurchasePrices: React.FC = () => {
   const [nativeEth, setNativeEth] = useState<string[]>([]);
   const [utcShips, setUtcShips] = useState<number[]>([]);
   const [utcTokens, setUtcTokens] = useState<string[]>([]);
+  const [nativeDirty, setNativeDirty] = useState(false);
+  const [utcDirty, setUtcDirty] = useState(false);
+  const [loadedDraftChainId, setLoadedDraftChainId] = useState<number | null>(
+    null,
+  );
+  const [hasNativeDraft, setHasNativeDraft] = useState(false);
+  const [hasUtcDraft, setHasUtcDraft] = useState(false);
+
+  const onChainNativeShips = useMemo(
+    () => [...shipsInfo.shipsPerTier],
+    [shipsInfo.shipsPerTier.join(",")],
+  );
+  const onChainNativeEth = useMemo(
+    () => shipsInfo.pricesWei.map((w) => formatEther(w)),
+    [shipsInfo.pricesWei.map((x) => x.toString()).join(",")],
+  );
+  const onChainUtcShips = useMemo(
+    () => [...utcInfo.shipsPerTier],
+    [utcInfo.shipsPerTier.join(",")],
+  );
+  const onChainUtcTokens = useMemo(
+    () => utcInfo.pricesWei.map((w) => formatEther(w)),
+    [utcInfo.pricesWei.map((x) => x.toString()).join(",")],
+  );
 
   useEffect(() => {
-    if (shipsInfo.tierCount === 0) return;
+    if (loadedDraftChainId === chainId) return;
+    const draft = readDraft(chainId);
+    if (draft) {
+      setNativeShips(draft.nativeShips ?? []);
+      setNativeEth(draft.nativeEth ?? []);
+      setUtcShips(draft.utcShips ?? []);
+      setUtcTokens(draft.utcTokens ?? []);
+      setNativeDirty(Boolean(draft.nativeDirty));
+      setUtcDirty(Boolean(draft.utcDirty));
+      setHasNativeDraft(Boolean(draft.nativeDirty));
+      setHasUtcDraft(Boolean(draft.utcDirty));
+    } else {
+      setNativeDirty(false);
+      setUtcDirty(false);
+      setHasNativeDraft(false);
+      setHasUtcDraft(false);
+      setNativeShips([]);
+      setNativeEth([]);
+      setUtcShips([]);
+      setUtcTokens([]);
+    }
+    setLoadedDraftChainId(chainId);
+  }, [chainId, loadedDraftChainId]);
+
+  useEffect(() => {
+    if (hasNativeDraft) return;
+    if (shipsInfo.isLoading) {
+      setNativeShips([]);
+      setNativeEth([]);
+      return;
+    }
+    if (shipsInfo.tierCount === 0) {
+      setNativeShips([]);
+      setNativeEth([]);
+      return;
+    }
     setNativeShips([...shipsInfo.shipsPerTier]);
     setNativeEth(shipsInfo.pricesWei.map((w) => formatEther(w)));
   }, [
+    hasNativeDraft,
+    shipsInfo.isLoading,
     shipsInfo.tierCount,
-    shipsInfo.shipsPerTier.join(","),
-    shipsInfo.pricesWei.map((x) => x.toString()).join(","),
+    onChainNativeShips.join(","),
+    onChainNativeEth.join(","),
   ]);
 
   useEffect(() => {
-    if (utcInfo.tierCount === 0) return;
+    if (hasUtcDraft) return;
+    if (utcInfo.isLoading) {
+      setUtcShips([]);
+      setUtcTokens([]);
+      return;
+    }
+    if (!purchaserDeployed || utcInfo.tierCount === 0) {
+      setUtcShips([]);
+      setUtcTokens([]);
+      return;
+    }
     setUtcShips([...utcInfo.shipsPerTier]);
     setUtcTokens(utcInfo.pricesWei.map((w) => formatEther(w)));
   }, [
+    hasUtcDraft,
+    purchaserDeployed,
+    utcInfo.isLoading,
     utcInfo.tierCount,
-    utcInfo.shipsPerTier.join(","),
-    utcInfo.pricesWei.map((x) => x.toString()).join(","),
+    onChainUtcShips.join(","),
+    onChainUtcTokens.join(","),
+  ]);
+
+  useEffect(() => {
+    if (!nativeDirty && !utcDirty) {
+      clearDraft(chainId);
+      return;
+    }
+    writeDraft(chainId, {
+      nativeShips,
+      nativeEth,
+      utcShips,
+      utcTokens,
+      nativeDirty,
+      utcDirty,
+    });
+  }, [
+    chainId,
+    nativeShips,
+    nativeEth,
+    utcShips,
+    utcTokens,
+    nativeDirty,
+    utcDirty,
   ]);
 
   const nativeBuilt = useMemo(
@@ -103,10 +235,10 @@ const ShipPurchasePrices: React.FC = () => {
 
   const isReloadingFromChain =
     shipsInfo.isLoading || (purchaserDeployed && utcInfo.isLoading);
+  const hasUnsavedChanges = nativeDirty || utcDirty;
 
   const handleClearCacheAndReload = useCallback(() => {
-    invalidateShipPurchaseInfoCache(chainId, "ships");
-    invalidateShipPurchaseInfoCache(chainId, "shipPurchaser");
+    invalidateAllShipPurchasePriceCachesForChain(chainId);
     shipsInfo.refetch();
     if (purchaserDeployed) {
       utcInfo.refetch();
@@ -117,6 +249,31 @@ const ShipPurchasePrices: React.FC = () => {
     purchaserDeployed,
     shipsInfo.refetch,
     utcInfo.refetch,
+  ]);
+
+  const handleClearPriceEntry = useCallback(() => {
+    clearDraft(chainId);
+    setNativeDirty(false);
+    setUtcDirty(false);
+    setHasNativeDraft(false);
+    setHasUtcDraft(false);
+    setNativeShips([...onChainNativeShips]);
+    setNativeEth([...onChainNativeEth]);
+    if (purchaserDeployed) {
+      setUtcShips([...onChainUtcShips]);
+      setUtcTokens([...onChainUtcTokens]);
+    } else {
+      setUtcShips([]);
+      setUtcTokens([]);
+    }
+    toast.success("Cleared unsaved price entry.");
+  }, [
+    chainId,
+    onChainNativeShips,
+    onChainNativeEth,
+    purchaserDeployed,
+    onChainUtcShips,
+    onChainUtcTokens,
   ]);
 
   if (!isConnected) {
@@ -168,6 +325,7 @@ const ShipPurchasePrices: React.FC = () => {
     isLoading: boolean;
     emptyMessage: string;
     onAfterSuccess: () => void;
+    belowSubtitle?: React.ReactNode;
   }) => {
     if (config.isLoading && config.tierIndices.length === 0) {
       return (
@@ -190,6 +348,9 @@ const ShipPurchasePrices: React.FC = () => {
       <div className="bg-gray-800 rounded-none p-4 border border-gray-700">
         <h3 className="text-lg font-mono text-white mb-1">{config.title}</h3>
         <p className="text-sm text-gray-400 mb-4">{config.subtitle}</p>
+        {config.belowSubtitle ? (
+          <div className="mb-4">{config.belowSubtitle}</div>
+        ) : null}
         <div className="overflow-x-auto">
           <table className="w-full text-sm font-mono text-left border-collapse">
             <thead>
@@ -268,7 +429,13 @@ const ShipPurchasePrices: React.FC = () => {
                 toast.success("Purchase info updated");
                 config.onAfterSuccess();
               }}
-              onError={() => toast.error("Update failed")}
+              onError={(error) =>
+                toast.error(
+                  error?.message
+                    ? `Update failed: ${error.message}`
+                    : "Update failed",
+                )
+              }
             >
               {config.saveLabel}
             </TransactionButton>
@@ -299,17 +466,32 @@ const ShipPurchasePrices: React.FC = () => {
               Each contract stores tier ship counts and prices with{" "}
               <span className="text-gray-300">setPurchaseInfo</span>.
             </p>
+            {hasUnsavedChanges ? (
+              <p className="text-amber-300 text-xs font-mono mt-2">
+                Unsaved changes in price entry.
+              </p>
+            ) : null}
           </div>
-          <button
-            type="button"
-            onClick={handleClearCacheAndReload}
-            disabled={isReloadingFromChain}
-            className="shrink-0 px-4 py-2 rounded-none border-2 border-amber-400/90 text-amber-400 font-mono text-xs font-bold uppercase tracking-wider transition-colors hover:bg-amber-400/10 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isReloadingFromChain
-              ? "[RELOADING…]"
-              : "[CLEAR CACHE & RELOAD]"}
-          </button>
+          <div className="shrink-0 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleClearPriceEntry}
+              disabled={!hasUnsavedChanges}
+              className="px-4 py-2 rounded-none border-2 border-red-400/90 text-red-300 font-mono text-xs font-bold uppercase tracking-wider transition-colors hover:bg-red-400/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              [CLEAR PRICE ENTRY]
+            </button>
+            <button
+              type="button"
+              onClick={handleClearCacheAndReload}
+              disabled={isReloadingFromChain}
+              className="px-4 py-2 rounded-none border-2 border-amber-400/90 text-amber-400 font-mono text-xs font-bold uppercase tracking-wider transition-colors hover:bg-amber-400/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isReloadingFromChain
+                ? "[RELOADING…]"
+                : "[CLEAR CACHE & RELOAD]"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -319,9 +501,17 @@ const ShipPurchasePrices: React.FC = () => {
         canEdit: isShipsOwner,
         tierIndices: shipsInfo.tiers,
         ships: nativeShips,
-        setShips: setNativeShips,
+        setShips: (updater) => {
+          setNativeDirty(true);
+          setHasNativeDraft(true);
+          setNativeShips(updater);
+        },
         prices: nativeEth,
-        setPrices: setNativeEth,
+        setPrices: (updater) => {
+          setNativeDirty(true);
+          setHasNativeDraft(true);
+          setNativeEth(updater);
+        },
         priceLabel: nativeSymbol,
         contractAddress: shipsAddress,
         abi: CONTRACT_ABIS.SHIPS as Abi,
@@ -332,6 +522,8 @@ const ShipPurchasePrices: React.FC = () => {
         isLoading: shipsInfo.isLoading,
         emptyMessage: "No native purchase tiers from Ships.getPurchaseInfo.",
         onAfterSuccess: () => {
+          setNativeDirty(false);
+          setHasNativeDraft(false);
           shipsInfo.refetch();
         },
       })}
@@ -343,9 +535,17 @@ const ShipPurchasePrices: React.FC = () => {
           canEdit: isPurchaserOwner,
           tierIndices: utcInfo.tiers,
           ships: utcShips,
-          setShips: setUtcShips,
+          setShips: (updater) => {
+            setUtcDirty(true);
+            setHasUtcDraft(true);
+            setUtcShips(updater);
+          },
           prices: utcTokens,
-          setPrices: setUtcTokens,
+          setPrices: (updater) => {
+            setUtcDirty(true);
+            setHasUtcDraft(true);
+            setUtcTokens(updater);
+          },
           priceLabel: "UTC",
           contractAddress: purchaserAddress,
           abi: CONTRACT_ABIS.SHIP_PURCHASER as Abi,
@@ -357,8 +557,16 @@ const ShipPurchasePrices: React.FC = () => {
           emptyMessage:
             "No UTC purchase tiers from ShipPurchaser.getPurchaseInfo.",
           onAfterSuccess: () => {
+            setUtcDirty(false);
+            setHasUtcDraft(false);
             utcInfo.refetch();
           },
+          belowSubtitle: (
+            <p className="text-red-300/90 text-xs font-mono">
+              Note: it is unusual to change UTC pack prices unless you are
+              running a sale.
+            </p>
+          ),
         })
       ) : (
         <div className="bg-gray-800 rounded-none p-4 border border-gray-600 text-gray-400 text-sm font-mono">

@@ -2,17 +2,21 @@
 
 import React, { useState, useCallback } from "react";
 import { TransactionButton } from "./TransactionButton";
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
+import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
 import {
   useAccount,
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
+  usePublicClient,
 } from "wagmi";
+import { getLegacyGasPriceOverridesForWrite } from "../utils/legacyGasPriceForWrite";
 import type { Abi, Address } from "viem";
 import { parseEther, formatEther } from "viem";
 import { toast } from "react-hot-toast";
 import { useMapExists } from "../hooks/useMapsContract";
+import { useSelectedChainId } from "../hooks/useSelectedChainId";
+import { useSwitchToSelectedChainIfNeeded } from "../hooks/useSwitchToSelectedChainIfNeeded";
 
 interface LobbyCreateButtonProps {
   costLimit: bigint;
@@ -76,6 +80,9 @@ export function LobbyCreateButton({
   onTransactionSent,
 }: LobbyCreateButtonProps) {
   const { address } = useAccount();
+  const chainId = useSelectedChainId();
+  const contractAddresses = getContractAddresses(chainId);
+  const switchToSelectedChainIfNeeded = useSwitchToSelectedChainIfNeeded();
   const [isApprovingUTC, setIsApprovingUTC] = useState(false);
   const [utcApproved, setUtcApproved] = useState(false);
 
@@ -87,21 +94,23 @@ export function LobbyCreateButton({
 
   // Read UTC balance
   const { data: utcBalance } = useReadContract({
-    address: CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`,
+    address: contractAddresses.UNIVERSAL_CREDITS as `0x${string}`,
     abi: CONTRACT_ABIS.UNIVERSAL_CREDITS as Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
+    chainId,
   });
 
   // Read UTC allowance
   const { data: utcAllowance, refetch: refetchAllowance } = useReadContract({
-    address: CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`,
+    address: contractAddresses.UNIVERSAL_CREDITS as `0x${string}`,
     abi: CONTRACT_ABIS.UNIVERSAL_CREDITS as Abi,
     functionName: "allowance",
     args:
-      address && CONTRACT_ADDRESSES.LOBBIES
-        ? [address, CONTRACT_ADDRESSES.LOBBIES]
+      address && contractAddresses.LOBBIES
+        ? [address, contractAddresses.LOBBIES]
         : undefined,
+    chainId,
   });
 
   // Check if map exists
@@ -109,15 +118,18 @@ export function LobbyCreateButton({
 
   // Check if contract is paused
   const { data: paused } = useReadContract({
-    address: CONTRACT_ADDRESSES.LOBBIES as `0x${string}`,
+    address: contractAddresses.LOBBIES as `0x${string}`,
     abi: CONTRACT_ABIS.LOBBIES as Abi,
     functionName: "paused",
+    chainId,
   });
 
   const { writeContract: writeUTC, data: approveHash } = useWriteContract();
+  const publicClient = usePublicClient({ chainId });
   const { isLoading: isApproving, isSuccess: approveSuccess } =
     useWaitForTransactionReceipt({
       hash: approveHash,
+      chainId,
     });
 
   // Calculate total UTC required: reservation fee (1 UTC) + additional lobby fee (if value > 0, it's in UTC)
@@ -166,18 +178,31 @@ export function LobbyCreateButton({
 
     setIsApprovingUTC(true);
     try {
+      await switchToSelectedChainIfNeeded();
       await writeUTC({
-        address: CONTRACT_ADDRESSES.UNIVERSAL_CREDITS as `0x${string}`,
+        address: contractAddresses.UNIVERSAL_CREDITS as `0x${string}`,
         abi: UTC_APPROVE_ABI,
         functionName: "approve",
-        args: [CONTRACT_ADDRESSES.LOBBIES as `0x${string}`, totalUtcRequired],
+        args: [contractAddresses.LOBBIES as `0x${string}`, totalUtcRequired],
+        chainId,
+        ...(await getLegacyGasPriceOverridesForWrite(chainId, publicClient)),
       });
     } catch (err) {
       setIsApprovingUTC(false);
       console.error("Failed to approve UTC:", err);
       toast.error("Failed to approve UTC transfer");
     }
-  }, [address, totalUtcRequired, utcBalanceBigInt, writeUTC]);
+  }, [
+    address,
+    chainId,
+    contractAddresses.LOBBIES,
+    contractAddresses.UNIVERSAL_CREDITS,
+    publicClient,
+    switchToSelectedChainIfNeeded,
+    totalUtcRequired,
+    utcBalanceBigInt,
+    writeUTC,
+  ]);
 
   const validateBeforeTransaction = React.useCallback(() => {
     if (!address) {
@@ -277,10 +302,10 @@ export function LobbyCreateButton({
     );
   }
 
-  return (
+   return (
     <TransactionButton
       transactionId={transactionId}
-      contractAddress={CONTRACT_ADDRESSES.LOBBIES as `0x${string}`}
+      contractAddress={contractAddresses.LOBBIES as `0x${string}`}
       abi={LOBBY_CREATE_ABI}
       functionName="createLobby"
       args={[

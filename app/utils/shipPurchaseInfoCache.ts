@@ -77,3 +77,11 @@ export function invalidateShipPurchaseInfoCache(
   if (typeof window === "undefined") return;
   localStorage.removeItem(storageKey(chainId, kind));
 }
+
+/** Clears native-tier (Ships) and UTC-tier (ShipPurchaser) cached prices for one chain. */
+export function invalidateAllShipPurchasePriceCachesForChain(
+  chainId: number,
+): void {
+  invalidateShipPurchaseInfoCache(chainId, "ships");
+  invalidateShipPurchaseInfoCache(chainId, "shipPurchaser");
+}

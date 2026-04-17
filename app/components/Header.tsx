@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   useAccount,
   useBalance,
-  useSwitchChain,
+  useConfig,
   useDisconnect,
   useReadContract,
 } from "wagmi";
@@ -26,6 +26,7 @@ import {
   SUPPORTED_CHAINS,
   VOID_TACTICS_CHAIN_CHANGED_EVENT,
 } from "../config/networks";
+import { switchWalletToAppChain } from "../utils/switchWalletChain";
 
 const Header: React.FC = () => {
   const [isHydrated, setIsHydrated] = useState(false);
@@ -33,12 +34,15 @@ const Header: React.FC = () => {
   const [isNetworkMenuOpen, setIsNetworkMenuOpen] = useState(false);
 
   const account = useAccount();
+  const config = useConfig();
 
   const [selectedChainId, setSelectedChainIdState] = useState<number>(() => {
     if (typeof window === "undefined") return DEFAULT_CHAIN_ID;
     return getSelectedChainId();
   });
   const pendingSwitchChainIdRef = useRef<number | null>(null);
+  /** When true, do not overwrite the header picker from `account.chainId` while storage still targets another network. */
+  const userChoseNetworkThisSessionRef = useRef(false);
   const lastSwitchRequestRef = useRef<{ chainId: number; at: number } | null>(
     null,
   );
@@ -78,7 +82,6 @@ const Header: React.FC = () => {
     query: { enabled: isHydrated && !!account.address },
   });
 
-  const { switchChain } = useSwitchChain();
   const { disconnect } = useDisconnect();
 
   // Hydration safety
@@ -106,6 +109,16 @@ const Header: React.FC = () => {
     if (selectedChainId !== account.chainId) {
       // Only sync app selection to the wallet chain when that chain is enabled in the UI picker.
       if (!isChainSelectableInUi(account.chainId)) return;
+      // After the user picks a network here, do not snap the picker back to the old wallet chain
+      // while localStorage still matches their choice (switch in flight or MetaMask lag).
+      const storedTarget = getSelectedChainId();
+      if (
+        userChoseNetworkThisSessionRef.current &&
+        isChainSelectableInUi(storedTarget) &&
+        storedTarget !== account.chainId
+      ) {
+        return;
+      }
       setSelectedChainId(account.chainId);
       setSelectedChainIdState(account.chainId);
     }
@@ -148,13 +161,15 @@ const Header: React.FC = () => {
       return;
     }
     lastSwitchRequestRef.current = { chainId: pending, at: now };
-    switchChain({ chainId: pending });
-  }, [
-    account.status,
-    account.chainId,
-    isHydrated,
-    switchChain,
-  ]);
+    const connector = account.connector;
+    if (!connector) return;
+    void switchWalletToAppChain(config, connector, pending).catch((err) => {
+      console.error("Network switch failed:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Could not switch network",
+      );
+    });
+  }, [account.status, account.chainId, account.connector, config, isHydrated]);
 
   const handleNetworkChange = (nextId: number) => {
     if (!isChainSelectableInUi(nextId)) {
@@ -163,14 +178,23 @@ const Header: React.FC = () => {
     }
     setSelectedChainId(nextId);
     setSelectedChainIdState(nextId);
+    userChoseNetworkThisSessionRef.current = true;
     pendingSwitchChainIdRef.current = nextId;
     lastSwitchRequestRef.current = { chainId: nextId, at: Date.now() };
     if (
       isHydrated &&
       account.status === "connected" &&
-      account.chainId !== nextId
+      account.chainId !== nextId &&
+      account.connector
     ) {
-      switchChain({ chainId: nextId });
+      void switchWalletToAppChain(config, account.connector, nextId).catch(
+        (err) => {
+          console.error("Network switch failed:", err);
+          toast.error(
+            err instanceof Error ? err.message : "Could not switch network",
+          );
+        },
+      );
     }
     setIsNetworkMenuOpen(false);
   };
@@ -211,6 +235,7 @@ const Header: React.FC = () => {
 
   const handleDisconnect = async () => {
     try {
+      userChoseNetworkThisSessionRef.current = false;
       disconnect();
       toast.success("Successfully disconnected!");
     } catch (error) {

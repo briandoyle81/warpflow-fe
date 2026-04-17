@@ -1,10 +1,16 @@
 "use client";
 
 import React from "react";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import type { Abi } from "viem";
 import { toast } from "react-hot-toast";
 import { useTransaction } from "../providers/TransactionContext";
+import { useSelectedChainId } from "../hooks/useSelectedChainId";
+import { useSwitchToSelectedChainIfNeeded } from "../hooks/useSwitchToSelectedChainIfNeeded";
+import {
+  bumpedLegacyGasPriceForRetry,
+  getLegacyGasPriceOverridesForWrite,
+} from "../utils/legacyGasPriceForWrite";
 
 interface TransactionButtonProps {
   // Transaction identification
@@ -59,6 +65,9 @@ export function TransactionButton({
   validateBeforeTransaction,
   style: buttonStyle,
 }: TransactionButtonProps) {
+  const selectedChainId = useSelectedChainId();
+  const switchToSelectedChainIfNeeded = useSwitchToSelectedChainIfNeeded();
+  const publicClient = usePublicClient({ chainId: selectedChainId });
   const { writeContract, isPending, error, data: hash } = useWriteContract();
   const {
     transactionState,
@@ -94,6 +103,7 @@ export function TransactionButton({
     data: receipt,
   } = useWaitForTransactionReceipt({
     hash,
+    chainId: selectedChainId,
     query: {
       enabled:
         !!hash &&
@@ -152,6 +162,36 @@ export function TransactionButton({
     isLocallyPending;
   const hasTransactionError = transactionState.error && isActiveTransaction;
 
+  const messageFromUnknownError = React.useCallback((err: unknown): string => {
+    if (err instanceof Error) return err.message;
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "message" in err &&
+      typeof (err as { message: unknown }).message === "string"
+    ) {
+      return (err as { message: string }).message;
+    }
+    return String(err);
+  }, []);
+
+  const isTransactionUnderpricedError = React.useCallback(
+    (err: unknown): boolean => {
+      let current: unknown = err;
+      for (let i = 0; i < 8 && current != null; i++) {
+        const msg = messageFromUnknownError(current).toLowerCase();
+        if (msg.includes("transaction underpriced")) return true;
+        if (typeof current === "object" && current !== null && "cause" in current) {
+          current = (current as { cause: unknown }).cause;
+        } else {
+          break;
+        }
+      }
+      return false;
+    },
+    [messageFromUnknownError],
+  );
+
   // Handle transaction execution
   const handleTransaction = async () => {
     try {
@@ -164,23 +204,56 @@ export function TransactionButton({
         }
       }
 
+      await switchToSelectedChainIfNeeded();
+
       // Start transaction tracking
       startTransaction(transactionId);
       setIsLocallyPending(true); // Set local pending state
 
       // Execute the contract call
-      await writeContract({
+      const writePayload = {
         address: contractAddress,
         abi,
         functionName,
         args,
         value,
-      });
+        chainId: selectedChainId,
+      } as const;
+
+      try {
+        await writeContract({
+          ...writePayload,
+          ...(await getLegacyGasPriceOverridesForWrite(
+            selectedChainId,
+            publicClient,
+          )),
+        });
+      } catch (writeErr) {
+        if (!isTransactionUnderpricedError(writeErr) || !publicClient) {
+          throw writeErr;
+        }
+
+        // Some RPCs reject wallet-estimated fees with "transaction underpriced".
+        // Retry once with explicit legacy gasPrice above network quote.
+        const baseGasPrice = await publicClient.getGasPrice();
+        const bumpedGasPrice = bumpedLegacyGasPriceForRetry(
+          selectedChainId,
+          baseGasPrice,
+        );
+        await writeContract({
+          ...writePayload,
+          gasPrice: bumpedGasPrice,
+        });
+      }
 
       // Note: The hash will be available in the hash variable from useWriteContract
       // We'll trigger onTransactionSent in a useEffect when hash becomes available
     } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const detail = messageFromUnknownError(err);
+      const normalized = isTransactionUnderpricedError(err)
+        ? `${detail}\n\nHint: wallet/RPC nonce state may be stuck. Try clearing wallet activity/nonce state, then retry.`
+        : detail;
+      const error = new Error(normalized);
       setIsLocallyPending(false); // Reset local pending state on error
       completeTransaction(transactionId, false, error);
       onError?.(error);

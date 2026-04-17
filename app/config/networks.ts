@@ -91,6 +91,21 @@ export function getNativeTokenSymbol(chainId: number | undefined | null): string
   return (chain.nativeCurrency?.symbol ?? "FLOW").toUpperCase();
 }
 
+/** Ronin Saigon testnet enforces a minimum legacy gas price of 20 gwei. */
+export const RONIN_SAIGON_MIN_GAS_PRICE_WEI = 20n * 10n ** 9n;
+
+export function isRoninSaigonChain(chainId: number): boolean {
+  return chainId === saigon.id;
+}
+
+/** Ensures legacy `gasPrice` meets chain minimums (Ronin Saigon). */
+export function applyLegacyGasPriceFloor(chainId: number, gasPriceWei: bigint): bigint {
+  if (isRoninSaigonChain(chainId) && gasPriceWei < RONIN_SAIGON_MIN_GAS_PRICE_WEI) {
+    return RONIN_SAIGON_MIN_GAS_PRICE_WEI;
+  }
+  return gasPriceWei;
+}
+
 // Contract-side art/game variant to use per supported chain.
 // NOTE: These values must match the backend contract deployment expectations.
 const CHAIN_VARIANT_BY_CHAIN_ID: Record<number, number> = {
