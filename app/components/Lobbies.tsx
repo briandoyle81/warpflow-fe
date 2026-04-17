@@ -106,7 +106,7 @@ function formatLobbyMaxScoreDisplay(maxScore: bigint): string {
 }
 
 const VOID_TACTICS_ALPHA_ACCESS_TWEET =
-  "Hi @voidtacticsxyz, I'm interested in the Void Tactics Alpha at https://voidtactics.xyz!\n\nPlease add me to the Discord!";
+  "Hi @voidtacticsxyz, I'm interested in the Void Tactics Alpha at https://www.voidtactics.xyz!\n\nPlease add me to the Discord!";
 const VOID_TACTICS_ALPHA_TWITTER_INTENT = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
   VOID_TACTICS_ALPHA_ACCESS_TWEET,
 )}`;
