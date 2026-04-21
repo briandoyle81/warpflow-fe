@@ -4,6 +4,7 @@ import React from "react";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
 import type { Abi } from "viem";
+import posthog from "posthog-js";
 
 interface ShipActionButtonProps {
   action: "construct" | "constructAll" | "constructShips" | "recycle";
@@ -159,7 +160,17 @@ export function ShipActionButton({
       disabled={disabled}
       loadingText={`[${action.toUpperCase()}...]`}
       errorText={`[ERROR ${action.toUpperCase()}]`}
-      onSuccess={onSuccess}
+      onSuccess={() => {
+        if (action === "recycle") {
+          posthog.capture("ships_recycled", { ship_count: shipIds?.length ?? 0 });
+        } else {
+          posthog.capture("ships_constructed", {
+            action,
+            ship_count: action === "construct" ? 1 : (shipIds?.length ?? 0),
+          });
+        }
+        onSuccess?.();
+      }}
       onError={onError}
       validateBeforeTransaction={validateBeforeTransaction}
     >

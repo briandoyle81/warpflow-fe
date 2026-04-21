@@ -17,6 +17,7 @@ import { toast } from "react-hot-toast";
 import { useMapExists } from "../hooks/useMapsContract";
 import { useSelectedChainId } from "../hooks/useSelectedChainId";
 import { useSwitchToSelectedChainIfNeeded } from "../hooks/useSwitchToSelectedChainIfNeeded";
+import posthog from "posthog-js";
 
 interface LobbyCreateButtonProps {
   costLimit: bigint;
@@ -323,7 +324,16 @@ export function LobbyCreateButton({
         isApprovingUTC || isApproving ? "[APPROVING UTC...]" : "[CREATING...]"
       }
       errorText="[ERROR CREATING]"
-      onSuccess={onSuccess}
+      onSuccess={() => {
+        posthog.capture("lobby_created", {
+          cost_limit_eth: formatEther(costLimit),
+          turn_time_seconds: turnTime.toString(),
+          creator_goes_first: creatorGoesFirst,
+          max_score: maxScore.toString(),
+          is_reserved: Boolean(isReserved),
+        });
+        onSuccess?.();
+      }}
       onError={onError}
       onTransactionSent={onTransactionSent}
       validateBeforeTransaction={validateBeforeTransaction}

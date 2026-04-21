@@ -5,9 +5,11 @@ import { useOnboardingTutorial } from "../hooks/useOnboardingTutorial";
 import {
   TutorialContextValue,
   TUTORIAL_STEP_STORAGE_KEY,
+  getTutorialAnalyticsRewardPath,
 } from "../types/onboarding";
 import { SimulatedTransactionDialog } from "./SimulatedTransactionDialog";
 import { SimulatedGameDisplay } from "./SimulatedGameDisplay";
+import posthog from "posthog-js";
 
 // Create context for tutorial
 const TutorialContext = createContext<TutorialContextValue | null>(null);
@@ -35,6 +37,9 @@ export function OnboardingTutorial({
 
   const {
     currentStep,
+    currentStepIndex,
+    displayStepNumber,
+    rescueCompletionBranch,
     isTransactionDialogOpen,
     pendingAction,
     approveTransaction,
@@ -42,6 +47,18 @@ export function OnboardingTutorial({
   } = tutorialContext;
 
   const handleSkip = () => {
+    const stepId = currentStep?.id ?? "unknown";
+    const rewardPath = getTutorialAnalyticsRewardPath(
+      stepId,
+      rescueCompletionBranch,
+    );
+    posthog.capture("tutorial_abandoned", {
+      step_id: stepId,
+      step_index: currentStepIndex,
+      display_step_number: displayStepNumber,
+      rescue_branch: rescueCompletionBranch,
+      reward_path: rewardPath,
+    });
     // Clear saved step index when quitting the tutorial.
     if (typeof window !== "undefined") {
       localStorage.removeItem(TUTORIAL_STEP_STORAGE_KEY);

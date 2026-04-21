@@ -18,6 +18,7 @@ import ShipPurchasePrices from "./components/ShipPurchasePrices";
 import { useShipAttributesOwner } from "./hooks/useShipAttributesContract";
 import { useShipPurchasePricesAccess } from "./hooks/useShipPurchasePricesAccess";
 import { TUTORIAL_STEP_STORAGE_KEY } from "./types/onboarding";
+import posthog from "posthog-js";
 
 /** Tabs we may persist; includes owner-only names so refresh works before contract reads resolve. */
 const KNOWN_TAB_NAMES = new Set<string>([
@@ -330,7 +331,7 @@ export default function Home() {
                 return (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => { setActiveTab(tab); posthog.capture("tab_navigated", { tab_name: tab }); }}
                     className="px-6 py-3 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
                     style={{
                       fontFamily:

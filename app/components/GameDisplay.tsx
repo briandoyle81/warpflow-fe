@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useAccount } from "wagmi";
+import posthog from "posthog-js";
 import {
   GameDataView,
   ShipPosition,
@@ -39,6 +40,7 @@ import { GameBoardLayout } from "./GameBoardLayout";
 import { GameGrid } from "./GameGrid";
 import { computeMovementRange } from "../utils/gameGridRanges";
 import { buildMapGridsFromContractMap } from "../utils/mapGridUtils";
+import { useSelectedChainId } from "../hooks/useSelectedChainId";
 
 interface GameDisplayProps {
   game: GameDataView;
@@ -58,6 +60,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   // Tooltip disable toggle
   const [disableTooltips, setDisableTooltips] = React.useState(false);
   const { address } = useAccount();
+  const appChainId = useSelectedChainId();
   const gameContract = useGameContract();
   const { clearAllTransactions, transactionState } = useTransaction();
   const [selectedShipId, setSelectedShipId] = useState<bigint | null>(null);
@@ -2675,8 +2678,29 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   }`}
                   loadingText="Submitting..."
                   errorText="Error"
-                  onTransactionSent={() => {
+                  onTransactionSent={(hash) => {
                     setAwaitingTurnSyncAfterSubmit(true);
+                    if (selectedShipId == null) return;
+                    const moveTypeLabel =
+                      ActionType[computedActionType] ??
+                      String(computedActionType);
+                    let targetShipIdForAnalytics: string | undefined;
+                    if (computedActionType !== ActionType.Pass) {
+                      const tid = targetShipId ?? 0n;
+                      if (tid !== 0n) {
+                        targetShipIdForAnalytics = tid.toString();
+                      }
+                    }
+                    posthog.capture("game_move_submitted", {
+                      game_id: String(game.metadata.gameId),
+                      ship_id: selectedShipId.toString(),
+                      move_type: moveTypeLabel,
+                      ...(targetShipIdForAnalytics != null
+                        ? { target_ship_id: targetShipIdForAnalytics }
+                        : {}),
+                      tx_hash: hash,
+                      chain_id: appChainId,
+                    });
                   }}
                   onSuccess={() => {
                     const currentPosition = game.shipPositions.find(

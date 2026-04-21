@@ -38,7 +38,7 @@ export default function PrivacyPolicyPage() {
           className="mb-10 text-sm uppercase tracking-wider"
           style={{ color: "var(--color-text-muted)" }}
         >
-          Last updated: April 8, 2026
+          Last updated: April 22, 2026
         </p>
 
         <div className="space-y-6 text-sm leading-relaxed sm:text-base">
@@ -91,6 +91,48 @@ export default function PrivacyPolicyPage() {
               your browser (for example localStorage or sessionStorage) so the
               experience can work offline of a dedicated account system. You can
               clear this data through your browser settings.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2
+              className="text-lg font-bold uppercase tracking-wide"
+              style={{
+                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              }}
+            >
+              Analytics (PostHog)
+            </h2>
+            <p style={{ color: "var(--color-text-secondary)" }}>
+              We use{" "}
+              <a
+                href="https://posthog.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan-400 underline decoration-cyan-400/50 underline-offset-4 hover:text-cyan-300"
+              >
+                PostHog
+              </a>{" "}
+              as a product analytics provider to understand how Void Tactics is used
+              and to improve the alpha. PostHog may receive technical data from your
+              browser (for example device or browser type, and network metadata) as
+              described in their policy. We may send event data such as navigation,
+              tutorial progress, lobby and purchase flows, and high-level in-app
+              actions (for example when a move is submitted on the game grid, with
+              non-sensitive fields like ship id, move type, and optional target).
+              When you connect a wallet, we may associate analytics with your public
+              wallet address using PostHog identify. We do not send private keys or
+              seed phrases. Error and exception reports may also be sent to PostHog to
+              help us fix bugs. Review{" "}
+              <a
+                href="https://posthog.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan-400 underline decoration-cyan-400/50 underline-offset-4 hover:text-cyan-300"
+              >
+                PostHog privacy information
+              </a>{" "}
+              for how they process data.
             </p>
           </section>
 

@@ -4,6 +4,7 @@ import React from "react";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
 import { useAccount } from "wagmi";
+import posthog from "posthog-js";
 
 interface LobbyJoinButtonProps {
   lobbyId: bigint;
@@ -52,7 +53,10 @@ export function LobbyJoinButton({
       disabled={disabled}
       loadingText="[JOINING...]"
       errorText="[ERROR JOINING]"
-      onSuccess={onSuccess}
+      onSuccess={() => {
+        posthog.capture("lobby_joined", { lobby_id: lobbyId.toString() });
+        onSuccess?.();
+      }}
       onError={onError}
       validateBeforeTransaction={validateBeforeTransaction}
     >

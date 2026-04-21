@@ -5,6 +5,7 @@ import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
 import { useAccount, useBalance } from "wagmi";
 import { getSelectedChainId } from "../config/networks";
+import posthog from "posthog-js";
 
 interface UTCPurchaseButtonProps {
   tier: number;
@@ -62,11 +63,12 @@ export function UTCPurchaseButton({
   }, [address, flowBalance, flowCost]);
 
   const handleSuccess = React.useCallback(() => {
+    posthog.capture("utc_purchased", { tier, utc_amount: utcAmount });
     // Call the provided onSuccess callback
     onSuccess?.();
     // Trigger refetch to update the UI state
     refetch?.();
-  }, [onSuccess, refetch]);
+  }, [onSuccess, refetch, tier, utcAmount]);
 
   return (
     <TransactionButton

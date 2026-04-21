@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from "react";
 import { useFreeShipClaiming } from "../hooks/useFreeShipClaiming";
 import { useAccount } from "wagmi";
 import { toast } from "react-hot-toast";
+import posthog from "posthog-js";
 
 interface FreeShipClaimButtonProps {
   isEligible: boolean;
@@ -31,11 +32,12 @@ export function FreeShipClaimButton({
 
   // Call onSuccess when transaction is confirmed (only once)
   useEffect(() => {
-    if (isConfirmed && onSuccess && !hasCalledOnSuccess.current) {
+    if (isConfirmed && !hasCalledOnSuccess.current) {
       hasCalledOnSuccess.current = true;
-      onSuccess();
+      posthog.capture("free_ship_claimed", { wallet_address: address });
+      onSuccess?.();
     }
-  }, [isConfirmed, onSuccess]);
+  }, [isConfirmed, onSuccess, address]);
 
   // Reset the ref when starting a new transaction
   useEffect(() => {

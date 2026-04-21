@@ -1,10 +1,13 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import posthog from "posthog-js";
 import {
   TutorialAction,
   TutorialContextValue,
   TUTORIAL_COMPLETED_STEPS_KEY,
   TUTORIAL_RESCUE_BRANCH_KEY,
   TUTORIAL_STEP_STORAGE_KEY,
+  type TutorialRescueBranch,
+  getTutorialAnalyticsRewardPath,
 } from "../types/onboarding";
 import { ActionType } from "../types/types";
 import { TUTORIAL_STEPS } from "../data/tutorialSteps";
@@ -18,8 +21,6 @@ const TUTORIAL_STEP_SNAPSHOTS_KEY = "void-tactics-tutorial-step-snapshots";
 const TUTORIAL_DATA_VERSION_KEY = "void-tactics-tutorial-data-version";
 // Bump when canonical tutorial state or step behavior changes; clears saved
 // step index and legacy snapshot storage from older clients.
-type RescueCompletionBranch = "retreat" | "sniper" | null;
-
 const TUTORIAL_DATA_VERSION =
   "2026-04-07-tutorial-traits-explicit";
 
@@ -76,7 +77,7 @@ export function useOnboardingTutorial() {
   });
 
   const [rescueCompletionBranch, setRescueCompletionBranch] =
-    useState<RescueCompletionBranch>(() => {
+    useState<TutorialRescueBranch>(() => {
       if (typeof window === "undefined") {
         return null;
       }
@@ -92,7 +93,7 @@ export function useOnboardingTutorial() {
     });
 
   const persistRescueCompletionBranch = useCallback(
-    (branch: "retreat" | "sniper") => {
+    (branch: Exclude<TutorialRescueBranch, null>) => {
       setRescueCompletionBranch(branch);
       if (typeof window !== "undefined") {
         try {
@@ -600,6 +601,43 @@ export function useOnboardingTutorial() {
     );
   }, [currentStep?.id]);
 
+  const hasTrackedCompletion = useRef(false);
+  const hasTrackedTutorialStart = useRef(false);
+
+  useEffect(() => {
+    if (!currentStep) return;
+    if (hasTrackedTutorialStart.current) return;
+    hasTrackedTutorialStart.current = true;
+    posthog.capture("tutorial_started", {
+      step_id: currentStep.id,
+      step_index: currentStepIndex,
+      resumed_from_saved_step: currentStepIndex > 0,
+    });
+  }, [currentStep, currentStepIndex]);
+
+  useEffect(() => {
+    if (!isVisibleLastStep || !currentStep) return;
+    if (hasTrackedCompletion.current) return;
+    hasTrackedCompletion.current = true;
+    const rewardPath = getTutorialAnalyticsRewardPath(
+      currentStep.id,
+      rescueCompletionBranch,
+    );
+    posthog.capture("tutorial_completed", {
+      step_id: currentStep.id,
+      step_index: currentStepIndex,
+      display_step_number: displayStepNumber,
+      rescue_branch: rescueCompletionBranch ?? "unknown",
+      reward_path: rewardPath ?? "unknown",
+    });
+  }, [
+    isVisibleLastStep,
+    currentStep,
+    currentStepIndex,
+    displayStepNumber,
+    rescueCompletionBranch,
+  ]);
+
   const resetTutorial = useCallback(() => {
     setIsTransactionDialogOpen(false);
     setPendingAction(null);
@@ -608,6 +646,8 @@ export function useOnboardingTutorial() {
     setCompletedStepIds(new Set());
     setCurrentStepIndex(0);
     setRescueCompletionBranch(null);
+    hasTrackedCompletion.current = false;
+    hasTrackedTutorialStart.current = false;
     if (typeof window !== "undefined") {
       localStorage.setItem(TUTORIAL_STEP_STORAGE_KEY, "0");
       window.localStorage.removeItem(TUTORIAL_STEP_SNAPSHOTS_KEY);
@@ -680,6 +720,8 @@ export function useOnboardingTutorial() {
     setCompletedStepIds(new Set());
     setRescueCompletionBranch(null);
     setIsStepHydrated(false);
+    hasTrackedCompletion.current = false;
+    hasTrackedTutorialStart.current = false;
   }, []);
 
   const contextValue: TutorialContextValue = useMemo(
@@ -688,6 +730,7 @@ export function useOnboardingTutorial() {
       displayStepNumber,
       displayTotalSteps,
       isVisibleLastStep,
+      rescueCompletionBranch,
       currentStep,
       gameState,
       isTransactionDialogOpen,
@@ -712,6 +755,7 @@ export function useOnboardingTutorial() {
       displayStepNumber,
       displayTotalSteps,
       isVisibleLastStep,
+      rescueCompletionBranch,
       currentStep,
       gameState,
       isTransactionDialogOpen,

@@ -12,6 +12,7 @@ import { type ReactNode, useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { VOID_TACTICS_CHAIN_CHANGED_EVENT, xaiTestnet } from "./config/networks";
 import MobileAlphaNoticeModal from "./components/MobileAlphaNoticeModal";
+import { PosthogAppChainSync } from "./components/PosthogAppChainSync";
 
 function InvalidateQueriesOnChainChange() {
   const queryClient = useQueryClient();
@@ -51,6 +52,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <InvalidateQueriesOnChainChange />
+        <PosthogAppChainSync />
         <RainbowKitProvider>
           <TransactionProvider>
             <MusicPlayerProvider>

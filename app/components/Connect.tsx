@@ -1,7 +1,23 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount } from "wagmi";
+import posthog from "posthog-js";
 
 const Connect: React.FC = () => {
+  const { address, status } = useAccount();
+  const hasIdentified = useRef(false);
+
+  useEffect(() => {
+    if (status === "connected" && address && !hasIdentified.current) {
+      hasIdentified.current = true;
+      posthog.identify(address, { wallet_address: address });
+      posthog.capture("wallet_connected", { wallet_address: address });
+    }
+    if (status === "disconnected") {
+      hasIdentified.current = false;
+    }
+  }, [status, address]);
+
   return (
     <ConnectButton.Custom>
       {({

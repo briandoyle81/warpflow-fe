@@ -11,6 +11,7 @@ import type { Abi } from "viem";
 import { formatEther } from "viem";
 import { toast } from "react-hot-toast";
 import { getSelectedChainId, getVariantForChainId } from "../config/networks";
+import posthog from "posthog-js";
 
 interface ShipPurchaseButtonProps {
   tier: number;
@@ -202,11 +203,16 @@ export function ShipPurchaseButton({
   ]);
 
   const handleSuccess = React.useCallback(() => {
+    posthog.capture("ship_purchased", {
+      tier,
+      payment_method: paymentMethod,
+      price_eth: formatEther(price),
+    });
     // Call the provided onSuccess callback
     onSuccess?.();
     // Trigger refetch to update the UI state
     refetch?.();
-  }, [onSuccess, refetch]);
+  }, [onSuccess, refetch, tier, paymentMethod, price]);
 
   // If UTC payment and not approved, show approve button
   if (paymentMethod === "UTC" && !utcApproved) {

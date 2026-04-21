@@ -4,6 +4,7 @@ import React from "react";
 import { TransactionButton } from "./TransactionButton";
 import { CONTRACT_ADDRESSES } from "../config/contracts";
 import { useAccount } from "wagmi";
+import posthog from "posthog-js";
 
 interface LobbyAcceptButtonProps {
   lobbyId: bigint;
@@ -52,7 +53,10 @@ export function LobbyAcceptButton({
       disabled={disabled}
       loadingText="[ACCEPTING...]"
       errorText="[ERROR ACCEPTING]"
-      onSuccess={onSuccess}
+      onSuccess={() => {
+        posthog.capture("game_accepted", { lobby_id: lobbyId.toString() });
+        onSuccess?.();
+      }}
       onError={onError}
       validateBeforeTransaction={validateBeforeTransaction}
     >

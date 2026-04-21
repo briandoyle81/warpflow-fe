@@ -30,6 +30,28 @@ export const TUTORIAL_COMPLETED_STEPS_KEY =
 export const TUTORIAL_RESCUE_BRANCH_KEY =
   "void-tactics-tutorial-rescue-completion-branch";
 
+/** Set after the player resolves the `rescue` fork (EMP retreat vs sniper shot). */
+export type TutorialRescueBranch = "retreat" | "sniper" | null;
+
+/**
+ * Maps tutorial UI to the reward CTA: 2 ships + win vs 3 ships + loss record.
+ * Used for PostHog and funnels; null when the fork is not committed yet.
+ */
+export function getTutorialAnalyticsRewardPath(
+  stepId: string | null | undefined,
+  rescueBranch: TutorialRescueBranch,
+): "two_ships_win" | "three_ships_loss" | null {
+  if (stepId === "completion-sniper" || stepId === "rescue-outcome-sniper") {
+    return "two_ships_win";
+  }
+  if (stepId === "completion-retreat" || stepId === "rescue-outcome-retreat") {
+    return "three_ships_loss";
+  }
+  if (rescueBranch === "sniper") return "two_ships_win";
+  if (rescueBranch === "retreat") return "three_ships_loss";
+  return null;
+}
+
 export type TutorialShipId = string;
 
 export interface TutorialStep {
@@ -132,6 +154,8 @@ export interface TutorialContextValue {
   displayStepNumber: number;
   displayTotalSteps: number;
   isVisibleLastStep: boolean;
+  /** Persisted rescue fork when set; drives completion branch and reward path. */
+  rescueCompletionBranch: TutorialRescueBranch;
   currentStep: TutorialStep | null;
   gameState: SimulatedGameState;
   isTransactionDialogOpen: boolean;

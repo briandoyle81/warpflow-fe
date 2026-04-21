@@ -64,6 +64,7 @@ import { CONTRACT_ABIS, getContractAddresses } from "../config/contracts";
 import { useSelectedChainId } from "../hooks/useSelectedChainId";
 import { useSwitchToSelectedChainIfNeeded } from "../hooks/useSwitchToSelectedChainIfNeeded";
 import { getLegacyGasPriceOverridesForWrite } from "../utils/legacyGasPriceForWrite";
+import posthog from "posthog-js";
 
 interface SimulatedGameDisplayProps {
   tutorialContext: TutorialContextValue;
@@ -968,6 +969,14 @@ export function SimulatedGameDisplay({
       try {
         await switchToSelectedChainIfNeeded();
         setPendingTutorialClaimPath(path);
+        posthog.capture("tutorial_reward_claim_submitted", {
+          claim_path: path,
+          reward_path:
+            path === "win" ? "two_ships_win" : "three_ships_loss",
+          completion_step_id: currentStep?.id,
+          contract_function: functionName,
+          chain_id: activeChainId,
+        });
         writeTutorialClaim({
           address: contractAddresses.TUTORIAL_CLAIM as `0x${string}`,
           abi: CONTRACT_ABIS.TUTORIAL_CLAIM as Abi,
@@ -987,6 +996,7 @@ export function SimulatedGameDisplay({
       address,
       activeChainId,
       contractAddresses.TUTORIAL_CLAIM,
+      currentStep?.id,
       isTutorialClaimPending,
       isTutorialClaimConfirming,
       isTutorialRewardAlreadyClaimed,
