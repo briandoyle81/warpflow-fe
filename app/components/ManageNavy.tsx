@@ -47,11 +47,17 @@ import {
   hasCompletedBuyShipsTutorial,
   hasCompletedConstructDeliveryTutorial,
   hasEverClickedFreeShipClaim,
+  isBuyShipsTutorialPermanentlyDismissed,
   isBuyShipsTutorialSessionDismissed,
+  isConstructDeliveryTutorialPermanentlyDismissed,
   isConstructDeliveryTutorialSessionDismissed,
+  isDroneFactoryTutorialPermanentlyDismissed,
   isDroneFactoryTutorialSessionDismissed,
   persistBuyShipsTutorialCompleted,
+  persistBuyShipsTutorialPermanentlyDismissed,
   persistConstructDeliveryTutorialCompleted,
+  persistConstructDeliveryTutorialPermanentlyDismissed,
+  persistDroneFactoryTutorialPermanentlyDismissed,
   persistFreeShipClaimClicked,
 } from "../utils/freeShipClaimTutorialStorage";
 import {
@@ -64,6 +70,37 @@ import {
   type FleetComposition,
 } from "../utils/fleetCompositionStorage";
 import { invalidateAllShipPurchasePriceCachesForChain } from "../utils/shipPurchaseInfoCache";
+
+/** Checkbox + Not now row for Manage Navy tutorial briefs. */
+function ManageNavyTutorialDismissFooter({
+  onNotNow,
+}: {
+  onNotNow: (dontShowAgain: boolean) => void;
+}) {
+  const [dontShowAgain, setDontShowAgain] = React.useState(false);
+  return (
+    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <label className="flex max-w-[14rem] cursor-pointer items-start gap-2 text-left text-xs text-gray-300 sm:max-w-none">
+        <input
+          type="checkbox"
+          checked={dontShowAgain}
+          onChange={(e) => setDontShowAgain(e.target.checked)}
+          className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-none border border-gray-500 bg-gray-800 accent-cyan-400"
+        />
+        <span style={{ fontFamily: "var(--font-jetbrains-mono), monospace" }}>
+          Don&apos;t show this again
+        </span>
+      </label>
+      <button
+        type="button"
+        onClick={() => onNotNow(dontShowAgain)}
+        className="shrink-0 self-end px-2 py-0.5 text-sm bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap sm:self-auto"
+      >
+        Not now
+      </button>
+    </div>
+  );
+}
 
 /** Same typography as `TutorialGridTaskPanel` brief body. */
 const MANAGE_NAVY_TUTORIAL_MONO: React.CSSProperties = {
@@ -333,7 +370,7 @@ function ManageNavyDroneFactoryBrief({
   onNotNow,
   className = "",
 }: {
-  onNotNow: () => void;
+  onNotNow: (dontShowAgain: boolean) => void;
   /** e.g. absolute positioning so the panel does not shift the three-button row */
   className?: string;
 }) {
@@ -370,15 +407,7 @@ The drones make ships efficiently, but they are not very responsive when you dem
 
 Use the highlighted [CLAIM FREE SHIPS] control to draw from the next production batch.`}
       </p>
-      <div className="mt-3 flex justify-end">
-        <button
-          type="button"
-          onClick={onNotNow}
-          className="px-2 py-0.5 text-sm bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap"
-        >
-          Not now
-        </button>
-      </div>
+      <ManageNavyTutorialDismissFooter onNotNow={onNotNow} />
     </aside>
   );
 }
@@ -388,7 +417,7 @@ function ManageNavyConstructDeliveryBrief({
   constructButtonLabel,
   className = "",
 }: {
-  onNotNow: () => void;
+  onNotNow: (dontShowAgain: boolean) => void;
   constructButtonLabel: "[CONSTRUCT ALL SHIPS]" | "[CONSTRUCT 150 SHIPS]";
   className?: string;
 }) {
@@ -423,15 +452,7 @@ function ManageNavyConstructDeliveryBrief({
 
 Tell the drones you are ready for delivery with the highlighted ${constructButtonLabel} control.`}
       </p>
-      <div className="mt-3 flex justify-end">
-        <button
-          type="button"
-          onClick={onNotNow}
-          className="px-2 py-0.5 text-sm bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap"
-        >
-          Not now
-        </button>
-      </div>
+      <ManageNavyTutorialDismissFooter onNotNow={onNotNow} />
     </aside>
   );
 }
@@ -440,7 +461,7 @@ function ManageNavyBuyShipsBrief({
   onNotNow,
   className = "",
 }: {
-  onNotNow: () => void;
+  onNotNow: (dontShowAgain: boolean) => void;
   className?: string;
 }) {
   return (
@@ -474,15 +495,7 @@ function ManageNavyBuyShipsBrief({
 
 Big orders make the drones happy. The more hulls you order in one go, the higher the guaranteed floor on quality you can expect.`}
       </p>
-      <div className="mt-3 flex justify-end">
-        <button
-          type="button"
-          onClick={onNotNow}
-          className="px-2 py-0.5 text-sm bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap"
-        >
-          Not now
-        </button>
-      </div>
+      <ManageNavyTutorialDismissFooter onNotNow={onNotNow} />
     </aside>
   );
 }
@@ -596,13 +609,23 @@ const ManageNavy: React.FC = () => {
     setShowDroneFactoryTutorial(false);
   }, [address, chainId]);
 
-  const dismissDroneFactoryTutorialNotNow = React.useCallback(() => {
-    dismissDroneFactoryTutorialForSession();
-    setShowDroneFactoryTutorial(false);
-  }, []);
+  const dismissDroneFactoryTutorialNotNow = React.useCallback(
+    (dontShowAgain: boolean) => {
+      dismissDroneFactoryTutorialForSession();
+      if (dontShowAgain && address) {
+        persistDroneFactoryTutorialPermanentlyDismissed(address, chainId);
+      }
+      setShowDroneFactoryTutorial(false);
+    },
+    [address, chainId],
+  );
 
   React.useEffect(() => {
     if (typeof window === "undefined" || !address || !isConnected) {
+      setShowDroneFactoryTutorial(false);
+      return;
+    }
+    if (isDroneFactoryTutorialPermanentlyDismissed(address, chainId)) {
       setShowDroneFactoryTutorial(false);
       return;
     }
@@ -623,13 +646,23 @@ const ManageNavy: React.FC = () => {
   const [showConstructDeliveryTutorial, setShowConstructDeliveryTutorial] =
     React.useState(false);
 
-  const dismissConstructDeliveryTutorialNotNow = React.useCallback(() => {
-    dismissConstructDeliveryTutorialForSession();
-    setShowConstructDeliveryTutorial(false);
-  }, []);
+  const dismissConstructDeliveryTutorialNotNow = React.useCallback(
+    (dontShowAgain: boolean) => {
+      dismissConstructDeliveryTutorialForSession();
+      if (dontShowAgain && address) {
+        persistConstructDeliveryTutorialPermanentlyDismissed(address, chainId);
+      }
+      setShowConstructDeliveryTutorial(false);
+    },
+    [address, chainId],
+  );
 
   React.useEffect(() => {
     if (typeof window === "undefined" || !address || !isConnected) {
+      setShowConstructDeliveryTutorial(false);
+      return;
+    }
+    if (isConstructDeliveryTutorialPermanentlyDismissed(address, chainId)) {
       setShowConstructDeliveryTutorial(false);
       return;
     }
@@ -690,13 +723,23 @@ const ManageNavy: React.FC = () => {
 
   const [showBuyShipsTutorial, setShowBuyShipsTutorial] = React.useState(false);
 
-  const dismissBuyShipsTutorialNotNow = React.useCallback(() => {
-    dismissBuyShipsTutorialForSession();
-    setShowBuyShipsTutorial(false);
-  }, []);
+  const dismissBuyShipsTutorialNotNow = React.useCallback(
+    (dontShowAgain: boolean) => {
+      dismissBuyShipsTutorialForSession();
+      if (dontShowAgain && address) {
+        persistBuyShipsTutorialPermanentlyDismissed(address, chainId);
+      }
+      setShowBuyShipsTutorial(false);
+    },
+    [address, chainId],
+  );
 
   React.useEffect(() => {
     if (typeof window === "undefined" || !address || !isConnected) {
+      setShowBuyShipsTutorial(false);
+      return;
+    }
+    if (isBuyShipsTutorialPermanentlyDismissed(address, chainId)) {
       setShowBuyShipsTutorial(false);
       return;
     }
