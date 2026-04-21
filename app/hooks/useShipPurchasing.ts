@@ -14,6 +14,7 @@ import { getVariantForChainId } from "../config/networks";
 import { useShipsPurchaseInfo } from "./useShipsPurchaseInfo";
 import { useSelectedChainId } from "./useSelectedChainId";
 import { useSwitchToSelectedChainIfNeeded } from "./useSwitchToSelectedChainIfNeeded";
+import { formatEther } from "viem";
 
 // Ships contract ABI for purchasing with FLOW
 const shipsContractABI = [
@@ -171,7 +172,7 @@ export function useShipPurchasing() {
       costs.push({
         count: i,
         cost: p * BigInt(i),
-        costFormatted: `${(Number(p * BigInt(i)) / 1e18).toFixed(2)} FLOW`,
+        costFormatted: `${formatEther(p * BigInt(i))} FLOW`,
       });
     }
     return costs;

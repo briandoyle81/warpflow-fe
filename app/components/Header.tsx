@@ -28,6 +28,31 @@ import {
 } from "../config/networks";
 import { switchWalletToAppChain } from "../utils/switchWalletChain";
 
+function resolveChainIdFromQueryParam(value: string | null): number | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase().replace(/[\s_]+/g, "-");
+  const numeric = Number(normalized);
+  if (Number.isFinite(numeric) && isChainSelectableInUi(numeric)) {
+    return numeric;
+  }
+  const byName: Record<string, number> = {
+    flow: 545,
+    "flow-testnet": 545,
+    ronin: 2021,
+    saigon: 2021,
+    "ronin-saigon": 2021,
+    base: 84532,
+    "base-sepolia": 84532,
+    xai: 37714555429,
+    "xai-testnet": 37714555429,
+    "xai-testnet-v2": 37714555429,
+  };
+  const chainId = byName[normalized];
+  return typeof chainId === "number" && isChainSelectableInUi(chainId)
+    ? chainId
+    : null;
+}
+
 const Header: React.FC = () => {
   const [isHydrated, setIsHydrated] = useState(false);
   const [showUTCPurchaseModal, setShowUTCPurchaseModal] = useState(false);
@@ -88,6 +113,22 @@ const Header: React.FC = () => {
   useEffect(() => {
     setIsHydrated(true);
   }, []);
+
+  // Support links like `/?chain=ronin-saigon` to preselect network.
+  useEffect(() => {
+    if (!isHydrated) return;
+    const params = new URLSearchParams(window.location.search);
+    const requestedChain =
+      resolveChainIdFromQueryParam(params.get("chain")) ??
+      resolveChainIdFromQueryParam(params.get("network"));
+    if (requestedChain == null || requestedChain === selectedChainId) return;
+
+    setSelectedChainId(requestedChain);
+    setSelectedChainIdState(requestedChain);
+    userChoseNetworkThisSessionRef.current = true;
+    pendingSwitchChainIdRef.current = requestedChain;
+    lastSwitchRequestRef.current = { chainId: requestedChain, at: Date.now() };
+  }, [isHydrated, selectedChainId]);
 
   // Check if wallet is connecting
   const isConnecting =

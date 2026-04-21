@@ -10,6 +10,15 @@ Contracts here: https://github.com/briandoyle81/warpflow-contracts
 
 https://warpflow.vercel.app
 
+## Sample Network Links
+
+Use `https://voidtactics.xyz/?chain=<network>` to open the site with a preselected network.
+
+- Flow Testnet: https://voidtactics.xyz/?chain=flow-testnet
+- Ronin Saigon: https://voidtactics.xyz/?chain=ronin-saigon
+- Base Sepolia: https://voidtactics.xyz/?chain=base-sepolia
+- Xai Testnet v2: https://voidtactics.xyz/?chain=xai-testnet-v2
+
 ## Game Overview
 
 ### Core Gameplay

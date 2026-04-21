@@ -157,9 +157,8 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
           {tiers.map((tier, index) => {
             const flowCost = pricesWei[index] ?? 0n;
             const flowCostFormatted = formatEther(flowCost);
-            const flowNum = parseFloat(flowCostFormatted);
             const colors = getTierColors(tier);
-            const utcDisplay = flowNum.toFixed(2);
+            const utcDisplay = flowCostFormatted;
 
             return (
               <UTCPurchaseButton
@@ -181,7 +180,7 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
                         You pay
                       </div>
                       <div className="font-bold">
-                        {flowNum.toFixed(2)} {nativeTokenSymbol}
+                        {flowCostFormatted} {nativeTokenSymbol}
                       </div>
                     </div>
                     <div className="border border-solid border-current/30 bg-black/20 px-2 py-1.5">

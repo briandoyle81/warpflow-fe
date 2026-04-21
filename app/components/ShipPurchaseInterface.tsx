@@ -7,6 +7,7 @@ import { useShipPurchaserPurchaseInfo } from "../hooks/useShipPurchaserPurchaseI
 import { ShipPurchaseButton } from "./ShipPurchaseButton";
 import { ShipImage } from "./ShipImage";
 import type { Ship } from "../types/types";
+import { formatEther } from "viem";
 
 interface ShipPurchaseInterfaceProps {
   onClose: () => void;
@@ -236,9 +237,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
         {tiers.map((tier: number, index: number) => {
           const price = prices[index];
           const shipsCount = maxPerTier[index];
-          const priceFormatted = price
-            ? (Number(price) / 1e18).toFixed(2)
-            : "0.00";
+          const priceFormatted = price ? formatEther(price) : "0";
           const colors = getTierColors(tier);
           const guaranteedRanksDisplay = getGuaranteedRankNumbers(tier)
             .filter((r) => r > 1)
