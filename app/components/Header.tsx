@@ -73,6 +73,8 @@ const Header: React.FC = () => {
   );
   const lastVariantWarningKeyRef = useRef<string | null>(null);
   const networkMenuRef = useRef<HTMLDivElement | null>(null);
+  /** Apply `?chain=` / `?network=` only once so manual picks are not overwritten on every change. */
+  const urlChainQueryConsumedRef = useRef(false);
 
   const nativeTokenSymbol = getNativeTokenSymbol(selectedChainId);
   const selectedChainVariant = getVariantForChainId(selectedChainId);
@@ -114,21 +116,34 @@ const Header: React.FC = () => {
     setIsHydrated(true);
   }, []);
 
-  // Support links like `/?chain=ronin-saigon` to preselect network.
+  // Support links like `/?chain=ronin-saigon` to preselect network (once per page load).
   useEffect(() => {
     if (!isHydrated) return;
+    if (urlChainQueryConsumedRef.current) return;
+
     const params = new URLSearchParams(window.location.search);
     const requestedChain =
       resolveChainIdFromQueryParam(params.get("chain")) ??
       resolveChainIdFromQueryParam(params.get("network"));
-    if (requestedChain == null || requestedChain === selectedChainId) return;
 
+    if (requestedChain == null) {
+      urlChainQueryConsumedRef.current = true;
+      return;
+    }
+
+    const stored = getSelectedChainId();
+    if (requestedChain === stored) {
+      urlChainQueryConsumedRef.current = true;
+      return;
+    }
+
+    urlChainQueryConsumedRef.current = true;
     setSelectedChainId(requestedChain);
     setSelectedChainIdState(requestedChain);
     userChoseNetworkThisSessionRef.current = true;
     pendingSwitchChainIdRef.current = requestedChain;
     lastSwitchRequestRef.current = { chainId: requestedChain, at: Date.now() };
-  }, [isHydrated, selectedChainId]);
+  }, [isHydrated]);
 
   // Check if wallet is connecting
   const isConnecting =
