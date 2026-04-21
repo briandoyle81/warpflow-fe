@@ -11,6 +11,8 @@ interface FreeShipClaimButtonProps {
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  /** Where the button was shown (for PostHog funnels). */
+  analyticsSurface?: "info" | "manage_navy" | "unknown";
   /** Fires when the user activates the button (before eligibility checks and claim). */
   onPress?: () => void;
   onSuccess?: () => void;
@@ -22,6 +24,7 @@ export function FreeShipClaimButton({
   children,
   className = "",
   disabled = false,
+  analyticsSurface = "unknown",
   onPress,
   onSuccess,
   onError,
@@ -34,10 +37,13 @@ export function FreeShipClaimButton({
   useEffect(() => {
     if (isConfirmed && !hasCalledOnSuccess.current) {
       hasCalledOnSuccess.current = true;
-      posthog.capture("free_ship_claimed", { wallet_address: address });
+      posthog.capture("free_ship_claimed", {
+        wallet_address: address,
+        surface: analyticsSurface,
+      });
       onSuccess?.();
     }
-  }, [isConfirmed, onSuccess, address]);
+  }, [isConfirmed, onSuccess, address, analyticsSurface]);
 
   // Reset the ref when starting a new transaction
   useEffect(() => {
@@ -60,6 +66,10 @@ export function FreeShipClaimButton({
     }
 
     try {
+      posthog.capture("free_ship_claim_clicked", {
+        wallet_address: address,
+        surface: analyticsSurface,
+      });
       await claimFreeShips();
       // Don't call onSuccess here - wait for confirmation via useEffect
     } catch (err) {

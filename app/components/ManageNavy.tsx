@@ -1506,6 +1506,7 @@ const ManageNavy: React.FC = () => {
       {!isLoadingClaimStatus && !freeShipError && claimStatusError && (
         <FreeShipClaimButton
           isEligible={true}
+          analyticsSurface="manage_navy"
           className="px-6 py-3 rounded-none border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           onPress={markFreeShipClaimClickedForTutorial}
           onSuccess={() => {
@@ -1521,6 +1522,7 @@ const ManageNavy: React.FC = () => {
         isEligible && (
           <FreeShipClaimButton
             isEligible={isEligible}
+            analyticsSurface="manage_navy"
             className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             onPress={markFreeShipClaimClickedForTutorial}
             onSuccess={() => {

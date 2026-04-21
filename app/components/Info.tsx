@@ -4,13 +4,14 @@ import React, { useState, useLayoutEffect } from "react";
 import { OnboardingTutorial } from "./OnboardingTutorial";
 import { TUTORIAL_STEP_STORAGE_KEY } from "../types/onboarding";
 import { useAccount } from "wagmi";
+import posthog from "posthog-js";
 import { HeroShipShowcase } from "./HeroShipShowcase";
 import { useFreeShipClaiming } from "../hooks/useFreeShipClaiming";
 import { useOwnedShips } from "../hooks/useOwnedShips";
 import { FreeShipClaimButton } from "./FreeShipClaimButton";
 
 const Info: React.FC = () => {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const { refetch } = useOwnedShips();
   const {
     isEligible,
@@ -50,6 +51,10 @@ const Info: React.FC = () => {
   }
 
   const handlePlayNow = () => {
+    posthog.capture("info_play_now_clicked", {
+      wallet_connected: isConnected,
+      ...(address ? { wallet_address: address } : {}),
+    });
     setShowTutorial(true);
   };
 
@@ -158,6 +163,7 @@ const Info: React.FC = () => {
                   isEligible && (
                     <FreeShipClaimButton
                       isEligible={isEligible}
+                      analyticsSurface="info"
                       className="px-8 py-4 border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
                       onSuccess={() => refetch()}
                     >
