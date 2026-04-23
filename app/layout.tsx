@@ -97,6 +97,7 @@ export const metadata: Metadata = {
   other: {
     "talentapp:project_verification":
       "ccd99a570185c2fec7a44930dc3b30732f617a6bd4390ebcff5c3f16e020448312fd63176d45ad22493038ef29dd21349e6c9169bc365e484ded9857e07b5a98",
+    "base:app_id": "69e9124356caa7489826f553",
   },
 };
 
