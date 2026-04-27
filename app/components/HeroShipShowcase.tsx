@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { renderShip } from "../utils/shipRenderer";
 import { Ship, Attributes } from "../types/types";
 import { calculateShipRank } from "../utils/shipLevel";
+import { SHIP_IMAGE_RANK_STAR_BOX } from "./ShipImage";
 import {
   getMainWeaponName,
   getArmorName,
@@ -64,8 +65,6 @@ const SHIP_NAMES = [
   "Artemis",
   "Athena",
 ];
-
-const SHIP_ART_SIZE = 320;
 
 import { calculateAttributesFromContracts } from "../utils/shipAttributesCalculator";
 
@@ -159,12 +158,18 @@ export const HeroShipShowcase: React.FC<{
   align?: HeroShipShowcaseAlign;
   side?: "allied" | "enemy";
   flipLayout?: boolean;
+  /** When true, hide the R{n} badge below `md` (Info Intel on narrow screens). */
+  hideRankBadgeMobile?: boolean;
+  /** When true, hide the SHINY label below `md` (Info Intel on narrow screens). */
+  hideShinyMobile?: boolean;
 }> = ({
   seedOffset = 0,
   intervalMs = 10000,
   align = "end",
   side = "allied",
   flipLayout = false,
+  hideRankBadgeMobile = false,
+  hideShinyMobile = false,
 }) => {
   // Rotate ships every N milliseconds
   const [shipIndex, setShipIndex] = useState(seedOffset);
@@ -199,12 +204,12 @@ export const HeroShipShowcase: React.FC<{
     }
   }, [heroShip]);
 
-  const justifyClass =
-    align === "start"
-      ? "md:justify-start"
-      : align === "center"
-        ? "md:justify-center"
-        : "md:justify-end";
+  const gridPlacementClass =
+    align === "center"
+      ? "mx-auto max-w-3xl"
+      : align === "end"
+        ? "ml-auto max-w-3xl"
+        : "";
 
   const accent = side === "enemy" ? "var(--color-warning-red)" : "var(--color-cyan)";
   const accentBorderClass = side === "enemy" ? "border-red-400" : "border-blue-400";
@@ -217,72 +222,104 @@ export const HeroShipShowcase: React.FC<{
   const accentInset = side === "enemy" ? "rgba(255, 77, 77, 0.1)" : "rgba(86, 214, 255, 0.1)";
   const flipSprite = side === "allied";
 
+  const rankBadgeStyle = useMemo(() => {
+    const rank = shipRank.rank;
+    if (rank >= 6) {
+      return {
+        color: "var(--color-amber)",
+        borderColor: "var(--color-amber)",
+        backgroundColor: "rgba(255, 184, 77, 0.35)",
+      };
+    }
+    if (rank === 3) {
+      return {
+        color: accent,
+        borderColor: accent,
+        backgroundColor:
+          side === "enemy"
+            ? "rgba(255, 77, 77, 0.2)"
+            : "rgba(86, 214, 255, 0.2)",
+      };
+    }
+    if (rank === 4) {
+      return {
+        color: "#a855f7",
+        borderColor: "#a855f7",
+        backgroundColor: "rgba(168, 85, 247, 0.2)",
+      };
+    }
+    if (rank === 5) {
+      return {
+        color: "var(--color-amber)",
+        borderColor: "var(--color-amber)",
+        backgroundColor: "rgba(255, 184, 77, 0.2)",
+      };
+    }
+    return {
+      color: "var(--color-text-muted)",
+      borderColor: "var(--color-text-muted)",
+      backgroundColor: "rgba(100, 116, 139, 0.2)",
+    };
+  }, [shipRank.rank, side, accent]);
+
+  /** Narrow stats column, wider art (~36% / ~64%). Flip column fr order when art is on the left. */
+  const intelGridCols = flipLayout
+    ? "grid-cols-[minmax(0,3.5fr)_minmax(0,2fr)]"
+    : "grid-cols-[minmax(0,2fr)_minmax(0,3.5fr)]";
+
   return (
-    <div className={`flex flex-col md:flex-row md:items-center ${justifyClass} gap-2 w-full`}>
-      {/* Stats panel (left of art) */}
-      <div className={`${flipLayout ? "order-2 md:order-2" : "order-2 md:order-1"} flex-1`}>
+    <div
+      className={`grid w-full min-w-0 items-start gap-2 sm:gap-3 ${intelGridCols} ${gridPlacementClass}`}
+    >
+      {/* Stats panel (left when not flipLayout; right when enemy flipLayout) */}
+      <div
+        className={`min-w-0 max-w-full ${flipLayout ? "order-2" : "order-1"}`}
+      >
         <div
-          className={`border-2 ${accentBorderClass} bg-black/60 p-4 flex flex-col justify-between`}
+          className={`flex min-w-0 flex-col gap-2 border-2 ${accentBorderClass} bg-black/60 p-2 sm:gap-3 sm:p-3 md:p-4`}
           style={{
             borderRadius: 0, // Square corners for industrial theme
-            minWidth: SHIP_ART_SIZE / 2,
-            height: SHIP_ART_SIZE, // Match ship art box height
           }}
         >
-          {/* Ship Name and Rank */}
-          <div className="mb-3">
-            <h3
-              className="text-lg font-bold mb-2"
-              style={{
-                fontFamily:
-                  "var(--font-rajdhani), 'Arial Black', sans-serif",
-                color: accent,
-              }}
-            >
-              {heroShip.name}
-            </h3>
-            <div className="flex items-center gap-2">
-              {heroShip.shipData.shiny && (
-                <span
-                  className="text-xs px-2 py-1 border border-yellow-400 text-yellow-400 bg-yellow-400/20"
+          {/* Ship name (left) + rank badge (upper right) */}
+          <div className="mb-1.5 md:mb-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <h3
+                  className="truncate text-lg font-bold sm:text-xl md:text-2xl lg:text-3xl"
                   style={{
-                    borderRadius: 0,
-                    fontFamily: "var(--font-mono), monospace",
+                    fontFamily:
+                      "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    color: accent,
                   }}
                 >
-                  SHINY
-                </span>
-              )}
+                  {heroShip.name}
+                </h3>
+                {heroShip.shipData.shiny && (
+                  <div
+                    className={`mt-1.5 flex flex-wrap gap-2 ${
+                      hideShinyMobile ? "hidden md:flex" : ""
+                    }`}
+                  >
+                    <span
+                      className="border border-yellow-400 bg-yellow-400/20 px-2 py-0.5 text-xs text-yellow-400 sm:px-2.5 sm:text-sm"
+                      style={{
+                        borderRadius: 0,
+                        fontFamily: "var(--font-mono), monospace",
+                      }}
+                    >
+                      SHINY
+                    </span>
+                  </div>
+                )}
+              </div>
               <span
-                className="text-xs px-2 py-1 border font-mono font-bold"
+                className={`shrink-0 items-center border px-2 py-0.5 font-mono text-xs font-bold sm:px-2.5 sm:py-1 sm:text-sm ${
+                  hideRankBadgeMobile ? "hidden md:inline-flex" : "inline-flex"
+                }`}
                 style={{
                   borderRadius: 0,
-                  ...(shipRank.rank === 3
-                    ? {
-                        color: accent,
-                        borderColor: accent,
-                        backgroundColor:
-                          side === "enemy"
-                            ? "rgba(255, 77, 77, 0.2)"
-                            : "rgba(86, 214, 255, 0.2)",
-                      }
-                    : shipRank.rank === 4
-                      ? {
-                          color: "#a855f7",
-                          borderColor: "#a855f7",
-                          backgroundColor: "rgba(168, 85, 247, 0.2)",
-                        }
-                      : shipRank.rank === 5
-                        ? {
-                            color: "var(--color-amber)",
-                            borderColor: "var(--color-amber)",
-                            backgroundColor: "rgba(255, 184, 77, 0.2)",
-                          }
-                        : {
-                            color: "var(--color-text-muted)",
-                            borderColor: "var(--color-text-muted)",
-                            backgroundColor: "rgba(100, 116, 139, 0.2)",
-                          }),
+                  ...rankBadgeStyle,
                 }}
               >
                 R{shipRank.rank}
@@ -292,21 +329,21 @@ export const HeroShipShowcase: React.FC<{
 
           {/* Equipment */}
           <div
-            className={`mb-3 pb-3 border-b ${accentDividerClass}`}
+            className={`mb-1.5 border-b pb-1.5 md:mb-2 md:pb-2 ${accentDividerClass}`}
             style={{
               fontFamily: "var(--font-mono), monospace",
             }}
           >
-            <div className="text-xs space-y-1">
-              <div className="flex justify-between">
-                <span className="opacity-60">Weapon:</span>
-                <span className={accentTextClass}>
+            <div className="space-y-0.5 text-xs leading-tight sm:text-sm md:text-base">
+              <div className="flex min-w-0 justify-between gap-2">
+                <span className="shrink-0 opacity-60">Weapon:</span>
+                <span className={`min-w-0 truncate text-right ${accentTextClass}`}>
                   {getMainWeaponName(heroShip.equipment.mainWeapon)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="opacity-60">Armor:</span>
-                <span className={accentTextClass}>
+              <div className="flex min-w-0 justify-between gap-2">
+                <span className="shrink-0 opacity-60">Armor:</span>
+                <span className={`min-w-0 truncate text-right ${accentTextClass}`}>
                   {heroShip.equipment.armor > 0
                     ? getArmorName(heroShip.equipment.armor)
                     : heroShip.equipment.shields > 0
@@ -314,9 +351,9 @@ export const HeroShipShowcase: React.FC<{
                       : "None"}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="opacity-60">Special:</span>
-                <span className={accentTextClass}>
+              <div className="flex min-w-0 justify-between gap-2">
+                <span className="shrink-0 opacity-60">Special:</span>
+                <span className={`min-w-0 truncate text-right ${accentTextClass}`}>
                   {heroShip.equipment.special > 0
                     ? getSpecialName(heroShip.equipment.special)
                     : "None"}
@@ -325,40 +362,42 @@ export const HeroShipShowcase: React.FC<{
             </div>
           </div>
 
-          {/* Attributes */}
+          {/* Combat stats: single column (matches side-by-side intel card) */}
           <div
-            className="text-xs space-y-1"
+            className="space-y-0.5 text-xs leading-tight sm:text-sm md:text-base"
             style={{
               fontFamily: "var(--font-mono), monospace",
             }}
           >
-            <div className="flex justify-between">
-              <span className="opacity-60">Range:</span>
-              <span className="text-green-400 font-bold">
+            <div className="flex min-w-0 justify-between gap-2">
+              <span className="shrink-0 opacity-60">Range:</span>
+              <span className="truncate text-right font-bold text-green-400">
                 {shipAttributes.range}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="opacity-60">Damage:</span>
-              <span className="text-red-400 font-bold">
+            <div className="flex min-w-0 justify-between gap-2">
+              <span className="shrink-0 opacity-60">Damage:</span>
+              <span className="truncate text-right font-bold text-red-400">
                 {shipAttributes.gunDamage}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="opacity-60">Hull:</span>
-              <span className="text-amber-400 font-bold">
+            <div className="flex min-w-0 justify-between gap-2">
+              <span className="shrink-0 opacity-60">Hull:</span>
+              <span className="truncate text-right font-bold text-amber-400">
                 {shipAttributes.hullPoints}/{shipAttributes.maxHullPoints}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="opacity-60">Move:</span>
-              <span className={`${side === "enemy" ? "text-red-400" : "text-cyan-400"} font-bold`}>
+            <div className="flex min-w-0 justify-between gap-2">
+              <span className="shrink-0 opacity-60">Move:</span>
+              <span
+                className={`truncate text-right font-bold ${side === "enemy" ? "text-red-400" : "text-cyan-400"}`}
+              >
                 {shipAttributes.movement}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="opacity-60">Defense:</span>
-              <span className="text-yellow-400 font-bold">
+            <div className="flex min-w-0 justify-between gap-2">
+              <span className="shrink-0 opacity-60">Defense:</span>
+              <span className="truncate text-right font-bold text-yellow-400">
                 {shipAttributes.damageReduction}%
               </span>
             </div>
@@ -366,46 +405,64 @@ export const HeroShipShowcase: React.FC<{
         </div>
       </div>
 
-      {/* Ship art (right) */}
-      <div className={`flex items-center justify-center ${flipLayout ? "order-1 md:order-1" : "order-1 md:order-2"}`}>
+      {/* Ship art: wider column; square uses full column width (taller than stats when art is large) */}
+      <div
+        className={`flex min-h-0 min-w-0 flex-col items-start justify-center ${flipLayout ? "order-1" : "order-2"}`}
+      >
         {heroShipImage ? (
           <div
-            className={`relative p-4 bg-black/40 border-2 ${accentSoftBorderClass} flex items-center justify-center`}
+            className={`relative flex aspect-square w-full max-w-full items-center justify-center border-2 bg-black/40 p-1.5 sm:p-2 md:p-4 ${accentSoftBorderClass}`}
             style={{
               borderRadius: 0, // Square corners for industrial theme
-              width: SHIP_ART_SIZE,
-              height: SHIP_ART_SIZE, // Square box
             }}
           >
-            <img
-              src={heroShipImage}
-              alt={heroShip.name}
-              className="w-full h-full object-contain"
-              style={{
-                imageRendering: "pixelated",
-                filter: `drop-shadow(0 0 20px ${accentGlow})`,
-                transform: flipSprite ? "scaleX(-1)" : undefined,
-              }}
-            />
-            {/* Glow effect */}
+            {/* Flip wrapper matches ShipCard tooltip: art + rank stars + glow mirror together */}
             <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                boxShadow: `inset 0 0 60px ${accentInset}`,
-              }}
-            />
+              className="relative h-full w-full min-h-0 flex-1 [container-type:size]"
+              style={flipSprite ? { transform: "scaleX(-1)" } : undefined}
+            >
+              <img
+                src={heroShipImage}
+                alt={heroShip.name}
+                className="h-full w-full object-contain"
+                style={{
+                  imageRendering: "pixelated",
+                  filter: `drop-shadow(0 0 20px ${accentGlow})`,
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-0 z-[1]"
+                style={{
+                  boxShadow: `inset 0 0 60px ${accentInset}`,
+                }}
+              />
+              {heroShip.shipData.constructed && (
+                <div
+                  className="pointer-events-none absolute right-[2.5%] top-[5%] z-10 leading-none text-yellow-400"
+                  style={{
+                    fontSize: SHIP_IMAGE_RANK_STAR_BOX,
+                  }}
+                  role="img"
+                  aria-label={`Combat rank ${shipRank.rank} of 6`}
+                >
+                  {Array.from({ length: shipRank.rank }, (_, i) => (
+                    <span key={i} aria-hidden>
+                      ⭐
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div
-            className={`bg-black/40 border-2 ${accentSoftBorderClass} flex items-center justify-center`}
+            className={`flex aspect-square w-full max-w-full items-center justify-center border-2 bg-black/40 ${accentSoftBorderClass}`}
             style={{
               borderRadius: 0, // Square corners for industrial theme
-              width: SHIP_ART_SIZE,
-              height: SHIP_ART_SIZE, // Square box
             }}
           >
             <p
-              className="text-sm opacity-50"
+              className="text-sm opacity-50 sm:text-base md:text-lg"
               style={{
                 fontFamily: "var(--font-mono), monospace",
                 color: "var(--color-text-muted)",

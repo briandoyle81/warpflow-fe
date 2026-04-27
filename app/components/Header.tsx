@@ -1,6 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   useAccount,
   useBalance,
@@ -10,7 +15,6 @@ import {
 } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { formatEther } from "viem";
-import MusicPlayer from "./MusicPlayer";
 import { toast } from "react-hot-toast";
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from "../config/contracts";
 import type { Abi } from "viem";
@@ -53,10 +57,150 @@ function resolveChainIdFromQueryParam(value: string | null): number | null {
     : null;
 }
 
+function HeaderAlphaBadge({ compact }: { compact?: boolean }) {
+  return (
+    <div
+      className={`shrink-0 border border-solid w-fit ${
+        compact ? "px-2 py-0.5" : "px-2.5 py-1"
+      }`}
+      style={{
+        fontFamily:
+          "var(--font-jetbrains-mono), 'Courier New', monospace",
+        fontSize: compact ? "10px" : "11px",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: compact ? "0.06em" : "0.1em",
+        color: "var(--color-amber)",
+        borderColor: "rgba(245, 158, 11, 0.75)",
+        backgroundColor: "rgba(13, 17, 23, 0.7)",
+      }}
+    >
+      [TESTNET ALPHA]
+    </div>
+  );
+}
+
+function HeaderDisconnectedConnect({
+  connectButtonClassName,
+}: {
+  connectButtonClassName: string;
+}) {
+  return (
+    <ConnectButton.Custom>
+      {({
+        account,
+        chain,
+        openChainModal,
+        openConnectModal,
+        authenticationStatus,
+        mounted,
+      }) => {
+        const ready = mounted && authenticationStatus !== "loading";
+        const connected =
+          ready &&
+          account &&
+          chain &&
+          (!authenticationStatus || authenticationStatus === "authenticated");
+
+        return (
+          <div
+            {...(!ready && {
+              "aria-hidden": true,
+              style: {
+                opacity: 0,
+                pointerEvents: "none",
+                userSelect: "none",
+              },
+            })}
+          >
+            {(() => {
+              if (!connected) {
+                return (
+                  <button
+                    onClick={openConnectModal}
+                    type="button"
+                    className={connectButtonClassName}
+                    style={{
+                      fontFamily:
+                        "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      borderColor: "var(--color-cyan)",
+                      color: "var(--color-cyan)",
+                      backgroundColor: "var(--color-steel)",
+                      borderRadius: 0,
+                    }}
+                  >
+                    [LOG IN]
+                  </button>
+                );
+              }
+
+              if (chain.unsupported) {
+                return (
+                  <button
+                    onClick={openChainModal}
+                    type="button"
+                    className={connectButtonClassName}
+                    style={{
+                      fontFamily:
+                        "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      borderColor: "var(--color-warning-red)",
+                      color: "var(--color-warning-red)",
+                      backgroundColor: "var(--color-steel)",
+                      borderRadius: 0,
+                    }}
+                  >
+                    [WRONG NETWORK]
+                  </button>
+                );
+              }
+
+              return null;
+            })()}
+          </div>
+        );
+      }}
+    </ConnectButton.Custom>
+  );
+}
+
+function HeaderTitleBlock({ variant }: { variant?: "mobile" | "desktop" }) {
+  const isMobile = variant === "mobile";
+  return (
+    <div
+      className={
+        isMobile
+          ? "relative min-w-0 shrink"
+          : "relative w-fit shrink-0"
+      }
+    >
+      <h1
+        className={
+          isMobile
+            ? "truncate text-xl font-black uppercase leading-none tracking-wide sm:text-2xl"
+            : "text-[34px] font-black uppercase leading-none tracking-[0.06em] sm:text-3xl md:text-4xl"
+        }
+        style={{
+          fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+          color: "var(--color-text-primary)",
+        }}
+      >
+        VOID TACTICS
+      </h1>
+      <div
+        className={isMobile ? "mt-0.5 h-0.5 w-full" : "absolute -bottom-1 left-0 right-0 h-0.5"}
+        style={{ backgroundColor: "var(--color-cyan)" }}
+      />
+    </div>
+  );
+}
+
 const Header: React.FC = () => {
   const [isHydrated, setIsHydrated] = useState(false);
   const [showUTCPurchaseModal, setShowUTCPurchaseModal] = useState(false);
   const [isNetworkMenuOpen, setIsNetworkMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLElement | null>(null);
+  const mobileMenuPanelRef = useRef<HTMLDivElement | null>(null);
 
   const account = useAccount();
   const config = useConfig();
@@ -259,6 +403,7 @@ const Header: React.FC = () => {
     const handleChainChanged = () => {
       setShowUTCPurchaseModal(false);
       setIsNetworkMenuOpen(false);
+      setIsMobileMenuOpen(false);
     };
     window.addEventListener(VOID_TACTICS_CHAIN_CHANGED_EVENT, handleChainChanged);
     return () => {
@@ -285,6 +430,39 @@ const Header: React.FC = () => {
     };
   }, [isNetworkMenuOpen]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const clickedMenuButton = menuButtonRef.current?.contains(target);
+      const clickedMenuPanel = mobileMenuPanelRef.current?.contains(target);
+      if (!clickedMenuButton && !clickedMenuPanel) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMobileMenuOpen]);
+
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
@@ -302,6 +480,75 @@ const Header: React.FC = () => {
 
   const isConnected = account.isConnected;
 
+  const showMobileWalletMenu =
+    isHydrated && (isConnecting || isConnected);
+
+  useEffect(() => {
+    if (!isConnected && !isConnecting) {
+      setIsMobileMenuOpen(false);
+    }
+  }, [isConnected, isConnecting]);
+
+  const renderMobileTrailingSlot = () => {
+    const assignMenuRef = (el: HTMLElement | null) => {
+      menuButtonRef.current = el;
+    };
+
+    if (!isHydrated) {
+      return (
+        <div
+          ref={assignMenuRef}
+          className="h-9 w-9 shrink-0"
+          aria-hidden
+        />
+      );
+    }
+    if (!isConnected && !isConnecting) {
+      return (
+        <div ref={assignMenuRef} className="shrink-0">
+          <HeaderDisconnectedConnect connectButtonClassName="px-3 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150 text-xs" />
+        </div>
+      );
+    }
+    return (
+      <button
+        ref={assignMenuRef}
+        type="button"
+        onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+        className="md:hidden flex h-9 w-9 shrink-0 items-center justify-center border border-solid transition-colors duration-150"
+        style={{
+          color: "var(--color-cyan)",
+          backgroundColor: "rgba(13, 17, 23, 0.75)",
+          borderColor: "rgba(86, 214, 255, 0.75)",
+          borderTopColor: "var(--color-steel)",
+          borderLeftColor: "var(--color-steel)",
+          borderRadius: 0,
+        }}
+        aria-expanded={isMobileMenuOpen}
+        aria-controls="header-mobile-controls"
+        aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+      >
+        <span className="relative block h-3.5 w-4">
+          <span
+            className={`absolute left-0 h-0.5 w-4 bg-current transition-all duration-200 ${
+              isMobileMenuOpen ? "top-1.5 rotate-45" : "top-0"
+            }`}
+          />
+          <span
+            className={`absolute left-0 top-1.5 h-0.5 w-4 bg-current transition-opacity duration-200 ${
+              isMobileMenuOpen ? "opacity-0" : "opacity-100"
+            }`}
+          />
+          <span
+            className={`absolute left-0 h-0.5 w-4 bg-current transition-all duration-200 ${
+              isMobileMenuOpen ? "top-1.5 -rotate-45" : "top-3"
+            }`}
+          />
+        </span>
+      </button>
+    );
+  };
+
   return (
     <header
       className="relative z-[300] border-b-2 border-solid overflow-visible"
@@ -311,84 +558,43 @@ const Header: React.FC = () => {
         borderTopColor: "var(--color-steel)",
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
-        <div className="flex flex-wrap items-center justify-between py-2 gap-4 overflow-visible">
+      <div className="mx-auto max-w-7xl overflow-visible px-3 sm:px-6 lg:px-8">
+        <div className="relative flex flex-wrap items-start justify-between gap-2 overflow-visible py-2 md:items-center md:gap-4 md:py-2">
           {/* Left side - Logo and Title */}
-          <div className="flex flex-col items-start gap-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="relative">
-                <h1
-                  className="text-3xl sm:text-4xl font-black uppercase tracking-wider"
-                  style={{
-                    fontFamily:
-                      "var(--font-rajdhani), 'Arial Black', sans-serif",
-                    color: "var(--color-text-primary)",
-                  }}
-                >
-                  VOID TACTICS
-                </h1>
-                <div
-                  className="absolute -bottom-1 left-0 right-0 h-0.5"
-                  style={{ backgroundColor: "var(--color-cyan)" }}
-                ></div>
-              </div>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div
-                  className="px-3 py-1 border border-solid"
-                  style={{
-                    fontFamily:
-                      "var(--font-jetbrains-mono), 'Courier New', monospace",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                    color: "var(--color-amber)",
-                    borderColor: "var(--color-amber)",
-                    backgroundColor: "var(--color-near-black)",
-                  }}
-                >
-                  [TESTNET ALPHA]
+          <div className="flex w-full flex-col items-stretch gap-1.5 md:w-auto md:items-start md:gap-3">
+            {/* Mobile: title + testnet badge on same row. */}
+            <div className="flex w-full flex-col gap-1.5 md:hidden">
+              <div className="flex w-full items-center justify-between gap-3">
+                <div className="flex min-w-0 items-end gap-2 pr-1">
+                  <HeaderTitleBlock variant="mobile" />
+                  <HeaderAlphaBadge compact />
+                </div>
+                <div className="flex shrink-0 items-center">
+                  {renderMobileTrailingSlot()}
                 </div>
               </div>
             </div>
-            <div className="ml-0">
-              <span
-                className="text-sm px-2 py-1 border border-solid"
-                style={{
-                  fontFamily:
-                    "var(--font-jetbrains-mono), 'Courier New', monospace",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  color: "var(--color-warning-red)",
-                  borderColor: "var(--color-warning-red)",
-                  backgroundColor: "var(--color-near-black)",
-                }}
-              >
-                In active development, ships and games will be lost
-              </span>
-            </div>
-          </div>
-          {/* Center section - Player Controls */}
-          <div className="flex-1 flex justify-center items-center">
-            <div
-              className="border border-solid p-2"
-              style={{
-                borderColor: "var(--color-gunmetal)",
-                borderTopColor: "var(--color-steel)",
-                borderLeftColor: "var(--color-steel)",
-                backgroundColor: "var(--color-near-black)",
-              }}
-            >
-              <MusicPlayer />
+
+            {/* Desktop: title and testnet badge on one row */}
+            <div className="hidden md:flex md:flex-row md:items-end md:gap-3">
+              <HeaderTitleBlock />
+              <HeaderAlphaBadge />
             </div>
           </div>
 
           {/* Right side - Wallet connection and info */}
           {isHydrated && (
-            <>
+            <div
+              ref={mobileMenuPanelRef}
+              id="header-mobile-controls"
+              className={`${
+                showMobileWalletMenu && isMobileMenuOpen
+                  ? "flex md:flex"
+                  : "hidden md:flex"
+              } w-[min(92vw,380px)] md:ml-auto md:w-auto flex-col md:flex-row absolute right-0 top-[calc(100%+8px)] z-[360] border border-solid p-3 shadow-xl bg-[var(--color-near-black)] border-[var(--color-gunmetal)] border-t-[var(--color-steel)] border-l-[var(--color-steel)] md:static md:z-auto md:border-0 md:p-0 md:shadow-none md:bg-transparent`}
+            >
               {isConnecting && (
-                <div className="flex items-center">
+                <div className="flex items-center md:ml-auto py-1">
                   <div className="text-cyan-400/60 font-mono text-sm">
                     Connecting...
                   </div>
@@ -396,91 +602,16 @@ const Header: React.FC = () => {
               )}
 
               {!isConnected && !isConnecting && (
-                <div className="flex items-center">
-                  <ConnectButton.Custom>
-                    {({
-                      account,
-                      chain,
-                      openChainModal,
-                      openConnectModal,
-                      authenticationStatus,
-                      mounted,
-                    }) => {
-                      const ready =
-                        mounted && authenticationStatus !== "loading";
-                      const connected =
-                        ready &&
-                        account &&
-                        chain &&
-                        (!authenticationStatus ||
-                          authenticationStatus === "authenticated");
-
-                      return (
-                        <div
-                          {...(!ready && {
-                            "aria-hidden": true,
-                            style: {
-                              opacity: 0,
-                              pointerEvents: "none",
-                              userSelect: "none",
-                            },
-                          })}
-                        >
-                          {(() => {
-                            if (!connected) {
-                              return (
-                                <button
-                                  onClick={openConnectModal}
-                                  type="button"
-                                  className="px-6 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
-                                  style={{
-                                    fontFamily:
-                                      "var(--font-rajdhani), 'Arial Black', sans-serif",
-                                    borderColor: "var(--color-cyan)",
-                                    color: "var(--color-cyan)",
-                                    backgroundColor: "var(--color-steel)",
-                                    borderRadius: 0, // Square corners for industrial theme
-                                  }}
-                                >
-                                  [LOG IN]
-                                </button>
-                              );
-                            }
-
-                            if (chain.unsupported) {
-                              return (
-                                <button
-                                  onClick={openChainModal}
-                                  type="button"
-                                  className="px-6 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
-                                  style={{
-                                    fontFamily:
-                                      "var(--font-rajdhani), 'Arial Black', sans-serif",
-                                    borderColor: "var(--color-warning-red)",
-                                    color: "var(--color-warning-red)",
-                                    backgroundColor: "var(--color-steel)",
-                                    borderRadius: 0, // Square corners for industrial theme
-                                  }}
-                                >
-                                  [WRONG NETWORK]
-                                </button>
-                              );
-                            }
-
-                            return null; // This case is handled in the connected section below
-                          })()}
-                        </div>
-                      );
-                    }}
-                  </ConnectButton.Custom>
+                <div className="hidden md:flex items-center md:ml-auto w-full md:w-auto pt-1 md:pt-0">
+                  <HeaderDisconnectedConnect connectButtonClassName="px-6 py-2 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150 w-full md:w-auto" />
                 </div>
               )}
 
               {isConnected && (
-                <div className="flex flex-col sm:flex-row items-end gap-4 ml-auto">
-                  <div className="flex flex-col items-end gap-2">
+                <div className="flex w-full md:w-auto flex-col sm:flex-row items-stretch md:items-end gap-3 md:gap-4 md:ml-auto pt-1 md:pt-0">
+                  <div className="flex flex-col items-stretch md:items-end gap-2">
                     {/* Flow Balance and Buy Flow button */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 justify-between md:justify-start">
                       {/* Flow Balance */}
                       <div
                         className="flex items-center gap-2 px-3 py-1.5 h-8 w-40 justify-center border border-solid"
@@ -524,7 +655,7 @@ const Header: React.FC = () => {
                     </div>
 
                     {/* UTC Balance and Network */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 justify-between md:justify-start">
                       {/* UTC Balance - Clickable */}
                       <button
                         onClick={() => setShowUTCPurchaseModal(true)}
@@ -663,10 +794,10 @@ const Header: React.FC = () => {
                   </div>
 
                   {/* Action buttons */}
-                  <div className="flex gap-2 flex-col">
+                  <div className="flex gap-2 flex-col items-stretch">
                     <button
                       onClick={handleDisconnect}
-                      className="px-3 py-1.5 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150 w-48 flex items-center justify-center text-xs h-8"
+                      className="px-3 py-1.5 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150 w-full md:w-48 flex items-center justify-center text-xs h-8"
                       style={{
                         fontFamily:
                           "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -688,7 +819,7 @@ const Header: React.FC = () => {
                     </button>
                     {/* Address (moved here) */}
                     <div
-                      className="flex items-center gap-2 px-3 py-1.5 h-8 w-48 justify-center border border-solid"
+                      className="flex items-center gap-2 px-3 py-1.5 h-8 w-full md:w-48 justify-center border border-solid"
                       style={{
                         backgroundColor: "var(--color-near-black)",
                         borderColor: "var(--color-gunmetal)",
@@ -746,7 +877,7 @@ const Header: React.FC = () => {
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>

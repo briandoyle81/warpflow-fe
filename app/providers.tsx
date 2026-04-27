@@ -6,7 +6,6 @@ import { WagmiProvider } from "wagmi";
 import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { baseSepolia, flowTestnet, saigon } from "viem/chains";
 import { http } from "wagmi";
-import { MusicPlayerProvider } from "./providers/MusicPlayerContext";
 import { TransactionProvider } from "./providers/TransactionContext";
 import { type ReactNode, useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -55,10 +54,8 @@ export function Providers({ children }: { children: ReactNode }) {
         <PosthogAppChainSync />
         <RainbowKitProvider>
           <TransactionProvider>
-            <MusicPlayerProvider>
-              {children}
-              <MobileAlphaNoticeModal />
-            </MusicPlayerProvider>
+            {children}
+            <MobileAlphaNoticeModal />
           </TransactionProvider>
         </RainbowKitProvider>
       </QueryClientProvider>

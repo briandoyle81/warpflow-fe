@@ -70,6 +70,17 @@
   image-rendering: crisp-edges;
 }
 
+html {
+  font-size: 100%;
+}
+
+/* Slightly larger type on small screens (matches Tailwind `md` at 768px). */
+@media (max-width: 767px) {
+  html {
+    font-size: 110%;
+  }
+}
+
 body {
   background: var(--color-near-black);
   color: var(--color-text-primary);

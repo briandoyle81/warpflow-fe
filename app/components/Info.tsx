@@ -60,7 +60,7 @@ const Info: React.FC = () => {
 
   return (
     <div
-      className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-8"
+      className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-x-4 gap-y-4 px-0 md:grid-cols-12 md:gap-x-6 md:gap-y-8 md:px-0"
       aria-label="Void Tactics info"
     >
       <p className="sr-only">
@@ -71,7 +71,7 @@ const Info: React.FC = () => {
       </p>
       {/* Hero Section - full width so its inner grid aligns with key features below */}
       <section
-        className="md:col-span-12 border-2 border-cyan-400 bg-black/60 py-8 relative overflow-hidden"
+        className="relative overflow-hidden border-2 border-cyan-400 bg-black/60 py-4 md:col-span-12 md:py-8"
         style={{
           borderRadius: 0, // Square corners for industrial theme
         }}
@@ -87,12 +87,12 @@ const Info: React.FC = () => {
           }}
         />
 
-        <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 items-center px-6 md:px-0">
+        <div className="relative z-10 grid grid-cols-1 items-center gap-4 px-2 md:grid-cols-12 md:gap-6 md:px-0">
           {/* Left side - Text + primary CTA */}
-          <div className="text-center md:text-left md:col-span-5 pl-6 md:pl-8">
+          <div className="text-left md:col-span-5 md:pl-8 md:pr-2">
             <h1
               id="info-hero-heading"
-              className="text-5xl md:text-6xl font-bold mb-4 tracking-wider"
+              className="sr-only mb-0 md:not-sr-only md:mb-4 text-3xl sm:text-4xl md:text-6xl font-bold tracking-wider leading-none"
               style={{
                 fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                 color: "var(--color-cyan)",
@@ -102,7 +102,7 @@ const Info: React.FC = () => {
               VOID TACTICS
             </h1>
             <p
-              className="text-xl md:text-2xl mb-3 opacity-100"
+              className="text-base sm:text-lg md:text-2xl mb-2 md:mb-3 opacity-100"
               style={{
                 fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                 color: "var(--color-text-primary)",
@@ -110,8 +110,29 @@ const Info: React.FC = () => {
             >
               STRATEGIC PvP FLEET COMMAND
             </p>
+            <div className="mb-3 space-y-2 md:mb-4 md:hidden">
+              <p
+                className="text-sm leading-snug opacity-100"
+                style={{
+                  fontFamily: "var(--font-rajdhani), sans-serif",
+                  color: "var(--color-text-primary)",
+                }}
+              >
+                Admiral, your fleet is under fire.
+              </p>
+              <p
+                className="text-xs leading-snug text-balance opacity-90 line-clamp-2"
+                style={{
+                  fontFamily: "var(--font-rajdhani), sans-serif",
+                  color: "var(--color-text-primary)",
+                }}
+              >
+                Turn-based PvP on a grid. Positioning, range, and target
+                priority decide each fight.
+              </p>
+            </div>
             <p
-              className="text-lg mb-4 opacity-100"
+              className="hidden text-base sm:text-lg mb-3 md:mb-4 opacity-100 md:block"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
                 color: "var(--color-text-primary)",
@@ -120,7 +141,7 @@ const Info: React.FC = () => {
               Admiral, your fleet is dropping out of warp under fire.
             </p>
             <p
-              className="text-base mb-6 opacity-100"
+              className="hidden text-sm sm:text-base mb-5 md:mb-6 opacity-100 md:block"
               style={{
                 fontFamily: "var(--font-rajdhani), sans-serif",
                 color: "var(--color-text-primary)",
@@ -130,11 +151,11 @@ const Info: React.FC = () => {
               range control, and ruthless target priority in tactical,
               turn-based battles.
             </p>
-            <div className="flex flex-col gap-3 items-center md:items-start">
-              <div className="flex flex-wrap gap-3 items-center w-full md:w-auto">
+            <div className="flex flex-col gap-3 items-stretch md:items-start">
+              <div className="flex flex-wrap gap-2 sm:gap-3 items-stretch md:items-center w-full md:w-auto">
                 <button
                   onClick={handlePlayNow}
-                  className="px-10 py-4 border-2 border-solid uppercase font-black tracking-wider transition-colors duration-150 w-full md:w-auto"
+                  className="px-6 sm:px-8 md:px-10 py-3.5 md:py-4 border-2 border-solid uppercase font-black tracking-wider transition-colors duration-150 w-full md:w-auto text-sm sm:text-base"
                   style={{
                     fontFamily:
                       "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -150,7 +171,7 @@ const Info: React.FC = () => {
                 {!isConnected && (
                   <button
                     disabled
-                    className="px-8 py-4 border-2 border-green-400 text-green-400 font-mono font-bold tracking-wider transition-all duration-200 opacity-50 cursor-not-allowed w-full md:w-auto rounded-none"
+                    className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-green-400 text-green-400 font-mono font-bold tracking-wide md:tracking-wider transition-all duration-200 opacity-50 cursor-not-allowed w-full md:w-auto rounded-none text-xs sm:text-sm"
                     style={{ borderRadius: 0 }}
                   >
                     [LOG IN TO CLAIM FREE SHIPS]
@@ -164,7 +185,7 @@ const Info: React.FC = () => {
                     <FreeShipClaimButton
                       isEligible={isEligible}
                       analyticsSurface="info"
-                      className="px-8 py-4 border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
+                      className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wide md:tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto text-xs sm:text-sm"
                       onSuccess={() => refetch()}
                     >
                       [CLAIM FREE SHIPS]
@@ -185,14 +206,14 @@ const Info: React.FC = () => {
                             ),
                           )
                         }
-                        className="px-8 py-4 border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 w-full md:w-auto rounded-none"
+                        className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wide md:tracking-wider transition-all duration-200 w-full md:w-auto rounded-none text-xs sm:text-sm"
                         style={{ borderRadius: 0 }}
                       >
                         [VIEW FLEET]
                       </button>
                       {nextClaimInFormatted != null && (
                         <div
-                          className="px-8 py-4 border-2 border-amber-400/80 text-amber-400 font-mono font-bold tracking-wider bg-amber-400/5 rounded-none"
+                          className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-amber-400/80 text-amber-400 font-mono font-bold tracking-wide md:tracking-wider bg-amber-400/5 rounded-none w-full md:w-auto text-xs sm:text-sm text-center"
                           title="Time until you can claim free ships again"
                         >
                           NEXT CLAIM IN: {nextClaimInFormatted}
@@ -205,7 +226,7 @@ const Info: React.FC = () => {
           </div>
 
           {/* Right side - Gameplay clip (above the fold) */}
-          <div className="md:col-span-7 flex justify-center md:justify-end pr-6 md:pr-8">
+          <div className="flex justify-center px-0 md:col-span-7 md:justify-end md:pr-8 md:pl-0">
             <div
               className="w-full max-w-2xl border-2 border-cyan-400 bg-black/40 p-2"
               style={{
@@ -225,7 +246,7 @@ const Info: React.FC = () => {
 
       {/* Ship demo display (kept, moved below hero) */}
       <section
-        className="md:col-span-12 border-2 border-phosphor-green bg-black/40 p-6"
+        className="border-2 border-phosphor-green bg-black/40 p-2 md:col-span-12 md:p-6"
         style={{
           borderRadius: 0,
         }}
@@ -243,14 +264,25 @@ const Info: React.FC = () => {
         </h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-black/0 p-1" style={{ borderRadius: 0 }}>
-            <HeroShipShowcase seedOffset={0} align="start" side="allied" />
+            <HeroShipShowcase
+              seedOffset={0}
+              align="start"
+              side="allied"
+              hideRankBadgeMobile
+              hideShinyMobile
+            />
           </div>
-          <div className="bg-black/0 p-1" style={{ borderRadius: 0 }}>
+          <div
+            className="hidden bg-black/0 p-1 md:block"
+            style={{ borderRadius: 0 }}
+          >
             <HeroShipShowcase
               seedOffset={3}
               align="start"
               side="enemy"
               flipLayout={true}
+              hideRankBadgeMobile
+              hideShinyMobile
             />
           </div>
         </div>
@@ -259,7 +291,7 @@ const Info: React.FC = () => {
       {/* Key Features - same 12-col grid so left edges align with hero */}
       {/* Feature 1: Build your Navy */}
       <article
-        className="md:col-span-6 border-2 border-cyan-400 bg-black/40 p-6"
+        className="border-2 border-cyan-400 bg-black/40 p-2 md:col-span-6 md:p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
         }}
@@ -299,7 +331,7 @@ const Info: React.FC = () => {
 
       {/* Feature 2: Assemble a Fleet */}
       <article
-        className="md:col-span-6 border-2 border-phosphor-green bg-black/40 p-6"
+        className="border-2 border-phosphor-green bg-black/40 p-2 md:col-span-6 md:p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
         }}
@@ -339,7 +371,7 @@ const Info: React.FC = () => {
 
       {/* Feature 3: Tactical Combat */}
       <article
-        className="md:col-span-6 border-2 border-amber-400 bg-black/40 p-6"
+        className="border-2 border-amber-400 bg-black/40 p-2 md:col-span-6 md:p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
         }}
@@ -378,7 +410,7 @@ const Info: React.FC = () => {
 
       {/* Feature 4: Collect the Rewards */}
       <article
-        className="md:col-span-6 border-2 border-warning-red bg-black/40 p-6"
+        className="border-2 border-warning-red bg-black/40 p-2 md:col-span-6 md:p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
         }}
@@ -418,7 +450,7 @@ const Info: React.FC = () => {
 
       {/* Getting Started Section */}
       <section
-        className="md:col-span-12 border-2 border-cyan-400 bg-black/40 p-6"
+        className="border-2 border-cyan-400 bg-black/40 p-2 md:col-span-12 md:p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
         }}
@@ -426,7 +458,7 @@ const Info: React.FC = () => {
       >
         <h2
           id="info-getting-started-heading"
-          className="text-2xl font-bold mb-4 text-center"
+          className="text-xl sm:text-2xl font-bold mb-4 text-center"
           style={{
             fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
             color: "var(--color-cyan)",
@@ -434,7 +466,7 @@ const Info: React.FC = () => {
         >
           [GETTING STARTED]
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-4">
           <div className="text-center">
             <div
               className="text-3xl font-bold mb-2"

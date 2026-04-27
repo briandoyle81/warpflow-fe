@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, type CSSProperties } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+  type CSSProperties,
+} from "react";
 import { useAccount } from "wagmi";
 import Header from "./components/Header";
 import AlphaDiscordNoticeBar from "./components/AlphaDiscordNoticeBar";
@@ -43,6 +50,24 @@ export default function Home() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [isInfoTutorialActive, setIsInfoTutorialActive] = useState(false);
   const [isGamesDetailActive, setIsGamesDetailActive] = useState(false);
+
+  const tabScrollRef = useRef<HTMLDivElement>(null);
+  const [tabScrollMore, setTabScrollMore] = useState({ left: false, right: false });
+
+  const updateTabScrollHints = useCallback(() => {
+    const el = tabScrollRef.current;
+    if (!el || typeof window === "undefined") return;
+    if (window.matchMedia("(min-width: 768px)").matches) {
+      setTabScrollMore({ left: false, right: false });
+      return;
+    }
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const epsilon = 3;
+    setTabScrollMore({
+      left: scrollLeft > epsilon,
+      right: scrollLeft + clientWidth < scrollWidth - epsilon,
+    });
+  }, []);
 
   // Register tutorial chrome listener before paint so Info's layout effect can use it.
   useLayoutEffect(() => {
@@ -187,6 +212,32 @@ export default function Home() {
   /** Hide site header (0px row) during Info onboarding tutorial or Games detail; not tied to wallet state. */
   const hideGlobalChrome = isInfoTutorialActive || isGamesDetailActive;
 
+  useLayoutEffect(() => {
+    updateTabScrollHints();
+  }, [
+    updateTabScrollHints,
+    activeTab,
+    isOwner,
+    canAdminShipPurchasePrices,
+    status,
+    hideGlobalChrome,
+  ]);
+
+  useEffect(() => {
+    if (status !== "connected" || hideGlobalChrome) return;
+    const el = tabScrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(updateTabScrollHints);
+    ro.observe(el);
+    el.addEventListener("scroll", updateTabScrollHints, { passive: true });
+    window.addEventListener("resize", updateTabScrollHints);
+    return () => {
+      ro.disconnect();
+      el.removeEventListener("scroll", updateTabScrollHints);
+      window.removeEventListener("resize", updateTabScrollHints);
+    };
+  }, [updateTabScrollHints, status, hideGlobalChrome]);
+
   const topChromeRowStyle: CSSProperties = hideGlobalChrome
     ? {
         height: "0px",
@@ -226,14 +277,13 @@ export default function Home() {
           <Header />
         </div>
         <main
-          className={`flex min-h-0 flex-1 flex-col gap-8 px-8 pb-20 sm:px-20 w-full max-w-7xl mx-auto ${
+          className={`flex min-h-0 flex-1 flex-col gap-4 px-2 pb-16 md:gap-8 md:px-10 md:pb-20 lg:px-20 w-full max-w-7xl mx-auto ${
             hideGlobalChrome ? "pt-0" : "pt-4"
           }`}
         >
           <div
-            className="border border-solid p-8"
+            className="border-0 bg-transparent p-2 md:border md:border-solid md:bg-[var(--color-slate)] md:p-8"
             style={{
-              backgroundColor: "var(--color-slate)",
               borderColor: "var(--color-gunmetal)",
               borderTopColor: "var(--color-steel)",
               borderLeftColor: "var(--color-steel)",
@@ -288,10 +338,12 @@ export default function Home() {
         <Header />
       </div>
       <main
-        className={`flex min-h-0 flex-1 flex-col gap-8 pb-20 w-full ${
+        className={`flex min-h-0 flex-1 flex-col gap-4 pb-16 w-full md:gap-8 md:pb-20 ${
           hideGlobalChrome ? "pt-0" : "pt-4"
         } ${
-          activeTab === "Games" || isInfoTutorialActive ? "px-0" : "px-8 sm:px-20"
+          activeTab === "Games" || isInfoTutorialActive
+            ? "px-0"
+            : "px-2 md:px-10 lg:px-20"
         }`}
       >
         {/* Game Tabs */}
@@ -305,7 +357,20 @@ export default function Home() {
           }`}
         >
           {status === "connected" && !hideGlobalChrome && (
-            <div className="flex flex-wrap justify-center gap-2 mb-8">
+            <div className="relative -mx-2 mb-4 px-2 pb-1 md:mx-0 md:mb-8 md:px-0 md:pb-0">
+              <div
+                ref={tabScrollRef}
+                className="overflow-x-auto overflow-y-hidden [scrollbar-width:thin] md:overflow-visible"
+              >
+              <div
+                className="flex w-max min-w-full snap-x snap-mandatory gap-2 md:w-full md:snap-none md:flex-wrap md:justify-center"
+                role="tablist"
+                aria-label={
+                  tabScrollMore.left || tabScrollMore.right
+                    ? "Main sections, scroll sideways for more tabs"
+                    : "Main sections"
+                }
+              >
               {(() => {
                 const tabs = [
                   "Info",
@@ -331,8 +396,11 @@ export default function Home() {
                 return (
                   <button
                     key={tab}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
                     onClick={() => { setActiveTab(tab); posthog.capture("tab_navigated", { tab_name: tab }); }}
-                    className="px-6 py-3 border-2 border-solid uppercase font-semibold tracking-wider transition-colors duration-150"
+                    className="shrink-0 snap-start px-4 py-2.5 min-h-11 border-2 border-solid text-xs uppercase font-semibold tracking-wider transition-colors duration-150 sm:px-5 sm:text-sm md:min-h-0 md:px-6 md:py-3 md:text-base"
                     style={{
                       fontFamily:
                         "var(--font-rajdhani), 'Arial Black', sans-serif",
@@ -375,6 +443,32 @@ export default function Home() {
                   </button>
                 );
               })}
+              </div>
+              </div>
+              <div
+                className={`pointer-events-none absolute inset-y-0 left-0 z-[2] flex w-11 items-center justify-start bg-gradient-to-r from-[var(--color-near-black)] from-[35%] to-transparent pl-0.5 text-xl font-black leading-none text-cyan-400/90 transition-opacity duration-200 md:hidden ${
+                  tabScrollMore.left ? "opacity-100" : "opacity-0"
+                }`}
+                style={{
+                  fontFamily:
+                    "var(--font-rajdhani), 'Arial Black', sans-serif",
+                }}
+                aria-hidden
+              >
+                ‹
+              </div>
+              <div
+                className={`pointer-events-none absolute inset-y-0 right-0 z-[2] flex w-11 items-center justify-end bg-gradient-to-l from-[var(--color-near-black)] from-[35%] to-transparent pr-0.5 text-xl font-black leading-none text-cyan-400/90 transition-opacity duration-200 md:hidden ${
+                  tabScrollMore.right ? "opacity-100" : "opacity-0"
+                }`}
+                style={{
+                  fontFamily:
+                    "var(--font-rajdhani), 'Arial Black', sans-serif",
+                }}
+                aria-hidden
+              >
+                ›
+              </div>
             </div>
           )}
 
@@ -409,9 +503,8 @@ export default function Home() {
             </div>
           ) : (
             <div
-              className="border border-solid p-8"
+              className="border-0 bg-transparent p-0 md:border md:border-solid md:bg-[var(--color-slate)] md:p-8"
               style={{
-                backgroundColor: "var(--color-slate)",
                 borderColor: "var(--color-gunmetal)",
                 borderTopColor: "var(--color-steel)",
                 borderLeftColor: "var(--color-steel)",
