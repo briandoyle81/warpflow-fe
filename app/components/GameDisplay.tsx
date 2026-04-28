@@ -108,6 +108,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   );
   const chromeOnSide = chromeLayout === "side";
   const [isLandscapeMobile, setIsLandscapeMobile] = React.useState(false);
+  const [mobileActivePanel, setMobileActivePanel] = React.useState<
+    "status" | "actions" | "fleet" | "events" | "none"
+  >("none");
   const [requiresLandscapeMode, setRequiresLandscapeMode] =
     React.useState(false);
 
@@ -2223,6 +2226,13 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     getShipAttributes,
   ]);
 
+  React.useEffect(() => {
+    if (!isLandscapeMobile) return;
+    if (isShowingProposedMove && mobileActivePanel === "none") {
+      setMobileActivePanel("actions");
+    }
+  }, [isLandscapeMobile, isShowingProposedMove, mobileActivePanel]);
+
   const isSelectedShipDisabled = React.useMemo(() => {
     if (!selectedShipId) return false;
     const attrs = getShipAttributes(selectedShipId);
@@ -3320,10 +3330,28 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     </>
   );
 
+  const myScore =
+    game.metadata.creator === address
+      ? game.creatorScore?.toString() || "0"
+      : game.joinerScore?.toString() || "0";
+  const opponentScore =
+    game.metadata.creator === address
+      ? game.joinerScore?.toString() || "0"
+      : game.creatorScore?.toString() || "0";
+  const maxScore = game.maxScore?.toString() || "0";
+  const mobileTurnLabel =
+    game.metadata.winner !== "0x0000000000000000000000000000000000000000"
+      ? game.metadata.winner === address
+        ? "Victory"
+        : "Defeat"
+      : isMyTurnEffective
+        ? "Your turn"
+        : "Opponent turn";
+
   return (
     <div
       ref={gameViewRootRef}
-      className={`flex flex-col gap-6 ${
+      className={`flex flex-col ${isLandscapeMobile ? "gap-3 pb-16" : "gap-6"} ${
         useSideLayout ? GAME_VIEW_SIDE_ROOT_CLASS : "mx-auto w-full"
       }`}
       style={
@@ -3335,53 +3363,77 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       }
     >
       {isLandscapeMobile && (
-        <div
-          className="sticky top-0 z-[260] flex items-center justify-between gap-2 border border-solid px-2 py-1.5"
-          style={{
-            backgroundColor: "rgba(12, 18, 28, 0.95)",
-            borderColor: "var(--color-gunmetal)",
-            borderTopColor: "var(--color-steel)",
-            borderLeftColor: "var(--color-steel)",
-            borderRadius: 0,
-          }}
-        >
-          <button
-            onClick={onBack}
-            className="px-2 py-1 border border-solid text-xs uppercase font-semibold tracking-wider"
+        <>
+          <div
+            className="sticky top-0 z-[260] border border-solid px-2 py-2"
             style={{
-              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              backgroundColor: "rgba(8, 12, 22, 0.96)",
               borderColor: "var(--color-gunmetal)",
-              color: "var(--color-text-secondary)",
-              backgroundColor: "var(--color-steel)",
+              borderTopColor: "var(--color-steel)",
+              borderLeftColor: "var(--color-steel)",
               borderRadius: 0,
             }}
           >
-            Back
-          </button>
-          <div className="min-w-0 text-center">
-            <p className="truncate text-xs uppercase tracking-wider text-gray-300">
-              Game {game.metadata.gameId.toString()} | Round{" "}
-              {game.turnState.currentRound.toString()}
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <button
+                onClick={onBack}
+                className="px-2 py-1 border border-solid text-xs uppercase font-semibold tracking-wider"
+                style={{
+                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  borderColor: "var(--color-gunmetal)",
+                  color: "var(--color-text-secondary)",
+                  backgroundColor: "var(--color-steel)",
+                  borderRadius: 0,
+                }}
+              >
+                Back
+              </button>
+              <div className="min-w-0 text-center">
+                <p className="truncate text-[11px] uppercase tracking-wider text-gray-300">
+                  Game {game.metadata.gameId.toString()} | Round{" "}
+                  {game.turnState.currentRound.toString()}
+                </p>
+                <p
+                  className="truncate text-xs uppercase tracking-wider"
+                  style={{
+                    color: isMyTurnEffective
+                      ? "var(--color-cyan)"
+                      : "var(--color-warning-red)",
+                  }}
+                >
+                  {mobileTurnLabel}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  lastPollTimeRef.current = Date.now();
+                  refetchGame();
+                }}
+                className="px-2 py-1 border border-solid text-xs uppercase font-semibold tracking-wider"
+                style={{
+                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  borderColor: "var(--color-cyan)",
+                  color: "var(--color-cyan)",
+                  backgroundColor: "var(--color-near-black)",
+                  borderRadius: 0,
+                }}
+              >
+                Sync
+              </button>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="border border-solid px-2 py-1 text-xs" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
+                <span className="text-gray-400">My score </span>
+                <span className="font-mono text-white">{myScore}/{maxScore}</span>
+              </div>
+              <div className="border border-solid px-2 py-1 text-xs" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
+                <span className="text-gray-400">Opponent </span>
+                <span className="font-mono text-white">{opponentScore}/{maxScore}</span>
+              </div>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              lastPollTimeRef.current = Date.now();
-              refetchGame();
-            }}
-            className="px-2 py-1 border border-solid text-xs uppercase font-semibold tracking-wider"
-            style={{
-              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-              borderColor: "var(--color-cyan)",
-              color: "var(--color-cyan)",
-              backgroundColor: "var(--color-near-black)",
-              borderRadius: 0,
-            }}
-          >
-            Sync
-          </button>
-        </div>
+        </>
       )}
       <div
         className={
@@ -3393,7 +3445,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       {/* Header chrome (top bar or left rail) */}
       <div
         className={
-          useSideLayout
+          isLandscapeMobile
+            ? "hidden"
+            : useSideLayout
             ? "flex min-h-0 self-stretch w-[min(18rem,34vw)] max-w-[20rem] shrink-0 flex-col gap-3 overflow-hidden pl-2 pr-1"
             : "flex items-center justify-between"
         }
@@ -4139,19 +4193,69 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       </div>
       </div>
 
-      {isLandscapeMobile && isShowingProposedMove && (
+      {isLandscapeMobile && mobileActivePanel !== "none" && (
         <div
-          className="fixed inset-x-0 bottom-0 z-[280] border-t border-solid p-3"
+          className="fixed inset-x-0 bottom-14 z-[280] border-t border-solid p-3"
           style={{
             backgroundColor: "rgba(6, 10, 18, 0.98)",
             borderColor: "var(--color-gunmetal)",
             borderTopColor: "var(--color-cyan)",
-            maxHeight: "44vh",
+            maxHeight: "52vh",
             overflowY: "auto",
             borderRadius: 0,
           }}
         >
-          {renderProposedMoveActivePanel()}
+          {mobileActivePanel === "actions" ? (
+            isShowingProposedMove ? (
+              renderProposedMoveActivePanel()
+            ) : (
+              <div className="text-sm text-gray-300">
+                Select a ship and choose a destination to open actions.
+              </div>
+            )
+          ) : null}
+          {mobileActivePanel === "status" ? (
+            <div className="space-y-3">
+              <div className="text-xs uppercase tracking-wider text-gray-400">
+                Turn Timer
+              </div>
+              <div
+                className="text-base uppercase font-semibold tracking-wider"
+                style={{
+                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  color: isMyTurnEffective
+                    ? "var(--color-cyan)"
+                    : "var(--color-warning-red)",
+                }}
+              >
+                {isMyTurnEffective ? "Your turn" : "Opponent turn"} |{" "}
+                {formatSeconds(Math.max(0, turnSecondsLeft))}
+              </div>
+              {game.metadata.winner ===
+              "0x0000000000000000000000000000000000000000" ? (
+                <FleeSafetySwitch
+                  gameId={game.metadata.gameId}
+                  onFlee={() => {
+                    toast.success("You have fled the battle!");
+                    refetch?.();
+                  }}
+                />
+              ) : (
+                <div className="text-sm text-gray-200">
+                  Result: {game.metadata.winner === address ? "Victory" : "Defeat"}
+                </div>
+              )}
+            </div>
+          ) : null}
+          {mobileActivePanel === "events" ? (
+            <GameEvents
+              lastMove={selectedShipId !== null ? undefined : displayedLastMove}
+              shipMap={shipMap}
+              address={address}
+              appendDestroyedText={appendDestroyedTextToLastMove}
+              debugSuffix={lastMoveTargetPositionDebugSuffix}
+            />
+          ) : null}
         </div>
       )}
 
@@ -4164,7 +4268,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           borderTopColor: "var(--color-steel)",
           borderLeftColor: "var(--color-steel)",
           borderRadius: 0,
-          maxHeight: isLandscapeMobile ? "46vh" : undefined,
+          display:
+            isLandscapeMobile && mobileActivePanel !== "fleet" ? "none" : "block",
+          maxHeight: isLandscapeMobile ? "50vh" : undefined,
           overflowY: isLandscapeMobile ? "auto" : undefined,
         }}
       >
@@ -4494,6 +4600,66 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           )}
         </div>
       </div>
+
+      {isLandscapeMobile && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-[290] grid grid-cols-5 gap-1 border-t border-solid p-1.5"
+          style={{
+            backgroundColor: "rgba(5, 8, 16, 0.97)",
+            borderColor: "var(--color-gunmetal)",
+          }}
+        >
+          {(
+            [
+              ["status", "Status"],
+              ["actions", "Actions"],
+              ["fleet", "Fleet"],
+              ["events", "Events"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() =>
+                setMobileActivePanel((prev) => (prev === id ? "none" : id))
+              }
+              className="px-1.5 py-1.5 text-[11px] uppercase font-semibold tracking-wider border border-solid"
+              style={{
+                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                borderColor:
+                  mobileActivePanel === id
+                    ? "var(--color-cyan)"
+                    : "var(--color-gunmetal)",
+                color:
+                  mobileActivePanel === id
+                    ? "var(--color-cyan)"
+                    : "var(--color-text-secondary)",
+                backgroundColor:
+                  mobileActivePanel === id
+                    ? "rgba(86, 214, 255, 0.12)"
+                    : "var(--color-steel)",
+                borderRadius: 0,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setMobileActivePanel("none")}
+            className="px-1.5 py-1.5 text-[11px] uppercase font-semibold tracking-wider border border-solid"
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderColor: "var(--color-gunmetal)",
+              color: "var(--color-text-secondary)",
+              backgroundColor: "var(--color-steel)",
+              borderRadius: 0,
+            }}
+          >
+            Map
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -29,13 +29,16 @@ function InvalidateQueriesOnChainChange() {
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
+  const walletConnectProjectId =
+    process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
+    process.env.NEXT_PUBLIC_WALLETCONNECT_ID ||
+    "YOUR_PROJECT_ID";
 
   const config = useMemo(
     () =>
       getDefaultConfig({
         appName: "WarpFlow",
-        projectId:
-          process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID",
+        projectId: walletConnectProjectId,
         chains: [flowTestnet, saigon, baseSepolia, xaiTestnet],
         transports: {
           [flowTestnet.id]: http(),
@@ -44,7 +47,7 @@ export function Providers({ children }: { children: ReactNode }) {
           [xaiTestnet.id]: http(),
         },
       }),
-    []
+    [walletConnectProjectId]
   );
 
   return (
