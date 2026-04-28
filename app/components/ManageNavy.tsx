@@ -71,7 +71,7 @@ import {
 } from "../utils/fleetCompositionStorage";
 import { invalidateAllShipPurchasePriceCachesForChain } from "../utils/shipPurchaseInfoCache";
 
-/** Checkbox + Not now row for Manage Navy tutorial briefs. */
+/** Checkbox + Not now row for Manage Navy tutorial briefs (desktop side panels). */
 function ManageNavyTutorialDismissFooter({
   onNotNow,
 }: {
@@ -98,6 +98,136 @@ function ManageNavyTutorialDismissFooter({
       >
         Not now
       </button>
+    </div>
+  );
+}
+
+/** Mobile bottom sheet: Close (this session), Not now (respects checkbox), never show again. */
+function ManageNavyTutorialDismissFooterSheet({
+  onNotNow,
+}: {
+  onNotNow: (dontShowAgain: boolean) => void;
+}) {
+  const [dontShowAgain, setDontShowAgain] = React.useState(false);
+  return (
+    <div className="mt-4 flex flex-col gap-3 border-t border-cyan-500/25 pt-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-2">
+        <button
+          type="button"
+          onClick={() => onNotNow(false)}
+          className="w-full rounded-none border border-cyan-500/70 px-3 py-2 text-sm font-mono font-bold uppercase tracking-wider text-cyan-200 transition-colors hover:bg-cyan-500/15 sm:w-auto"
+        >
+          Close
+        </button>
+        <button
+          type="button"
+          onClick={() => onNotNow(dontShowAgain)}
+          className="w-full rounded-none border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-mono text-gray-200 transition-colors hover:bg-gray-700 sm:w-auto"
+        >
+          Not now
+        </button>
+      </div>
+      <label className="flex cursor-pointer items-start gap-2 text-left text-xs text-gray-300">
+        <input
+          type="checkbox"
+          checked={dontShowAgain}
+          onChange={(e) => setDontShowAgain(e.target.checked)}
+          className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-none border border-gray-500 bg-gray-800 accent-cyan-400"
+        />
+        <span style={{ fontFamily: "var(--font-jetbrains-mono), monospace" }}>
+          Don&apos;t show this again (applies when you choose Not now)
+        </span>
+      </label>
+    </div>
+  );
+}
+
+type ManageNavyMobileTutorialKind = "construct" | "buy" | "drone";
+
+function ManageNavyMobileTutorialSheet({
+  kind,
+  constructButtonLabel,
+  onNotNow,
+}: {
+  kind: ManageNavyMobileTutorialKind;
+  constructButtonLabel: "[CONSTRUCT ALL SHIPS]" | "[CONSTRUCT 150 SHIPS]";
+  onNotNow: (dontShowAgain: boolean) => void;
+}) {
+  const title =
+    kind === "construct"
+      ? "Ready for delivery"
+      : kind === "buy"
+        ? "Materials and energy"
+        : "Drone factories online";
+  const progressPct = kind === "construct" ? "66%" : kind === "buy" ? "100%" : "33%";
+  const body =
+    kind === "construct"
+      ? `Admiral, your new ships are staged for fit and finishing. The yard will not release them until you give the word.
+
+Tell the drones you are ready for delivery with ${constructButtonLabel} when you choose. You can close this briefing and come back anytime.`
+      : kind === "buy"
+        ? `Admiral, you can order more hulls from the drone yards by supplying them with materials and energy.
+
+Big orders make the drones happy. The more hulls you order in one go, the higher the guaranteed floor on quality you can expect.
+
+Use [BUY NEW SHIPS] when you want to open purchasing. Nothing here requires you to buy before you dismiss this tip.`
+        : `Admiral, your faction has access to drone-based factories that stay hard at work producing new ships.
+
+The drones make ships efficiently, but they are not very responsive when you demand exact specifications. In any given run you never know what they will produce.
+
+Use [CLAIM FREE SHIPS] when you are ready to draw from the next batch.`;
+
+  return (
+    <div
+      className="fixed inset-0 z-[280] flex flex-col md:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="manage-navy-mobile-tutorial-title"
+    >
+      <button
+        type="button"
+        className="min-h-0 w-full flex-1 cursor-default border-0 bg-black/50 p-0"
+        aria-label="Close tutorial"
+        onClick={() => onNotNow(false)}
+      />
+      <aside
+        className="max-h-[min(72vh,28rem)] w-full shrink-0 overflow-y-auto border-t-2 border-cyan-400/90 bg-[#0f172a] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-8px_32px_rgba(0,0,0,0.45)]"
+        style={{ borderRadius: 0 }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="mb-2 flex items-start justify-between gap-3">
+          <h3
+            id="manage-navy-mobile-tutorial-title"
+            className="text-lg font-bold uppercase leading-tight tracking-wide text-cyan-300"
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+            }}
+          >
+            {title}
+          </h3>
+          <button
+            type="button"
+            onClick={() => onNotNow(false)}
+            className="shrink-0 rounded-none border border-cyan-500/70 px-2 py-1 text-sm font-mono text-cyan-200 hover:bg-cyan-500/15"
+            aria-label="Close tutorial"
+          >
+            ×
+          </button>
+        </div>
+        <div className="mb-3 h-1 w-full shrink-0 bg-gray-700">
+          <div
+            className="h-1 bg-cyan-400 transition-all duration-300"
+            style={{ width: progressPct }}
+          />
+        </div>
+        <p
+          className="whitespace-pre-line text-sm leading-relaxed text-gray-200"
+          style={MANAGE_NAVY_TUTORIAL_MONO}
+        >
+          {body}
+        </p>
+        <ManageNavyTutorialDismissFooterSheet onNotNow={onNotNow} />
+      </aside>
     </div>
   );
 }
@@ -376,7 +506,7 @@ function ManageNavyDroneFactoryBrief({
 }) {
   return (
     <aside
-      className={`pointer-events-auto flex min-w-0 w-[min(calc(100vw-2rem),28.75rem)] max-w-[28.75rem] flex-col border-2 border-cyan-400/90 bg-[#0f172a] p-3 shadow-lg shadow-cyan-500/15 ${className}`}
+      className={`pointer-events-auto hidden min-w-0 w-[min(calc(100vw-2rem),28.75rem)] max-w-[28.75rem] flex-col border-2 border-cyan-400/90 bg-[#0f172a] p-3 shadow-lg shadow-cyan-500/15 md:flex ${className}`}
       style={{
         borderRadius: 0,
       }}
@@ -423,7 +553,7 @@ function ManageNavyConstructDeliveryBrief({
 }) {
   return (
     <aside
-      className={`pointer-events-auto flex min-w-0 w-[min(calc(100vw-2rem),28.75rem)] max-w-[28.75rem] flex-col border-2 border-cyan-400/90 bg-[#0f172a] p-3 shadow-lg shadow-cyan-500/15 ${className}`}
+      className={`pointer-events-auto hidden min-w-0 w-[min(calc(100vw-2rem),28.75rem)] max-w-[28.75rem] flex-col border-2 border-cyan-400/90 bg-[#0f172a] p-3 shadow-lg shadow-cyan-500/15 md:flex ${className}`}
       style={{
         borderRadius: 0,
       }}
@@ -466,7 +596,7 @@ function ManageNavyBuyShipsBrief({
 }) {
   return (
     <aside
-      className={`pointer-events-auto flex min-w-0 w-[min(calc(100vw-2rem),28.75rem)] max-w-[28.75rem] flex-col border-2 border-cyan-400/90 bg-[#0f172a] p-3 shadow-lg shadow-cyan-500/15 ${className}`}
+      className={`pointer-events-auto hidden min-w-0 w-[min(calc(100vw-2rem),28.75rem)] max-w-[28.75rem] flex-col border-2 border-cyan-400/90 bg-[#0f172a] p-3 shadow-lg shadow-cyan-500/15 md:flex ${className}`}
       style={{
         borderRadius: 0,
       }}
@@ -813,7 +943,18 @@ const ManageNavy: React.FC = () => {
   >("id");
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
   const [showDebugButtons, setShowDebugButtons] = React.useState(false);
+  const [isMobileManageNavyLayout, setIsMobileManageNavyLayout] =
+    React.useState(false);
   const [showInGameProperties, setShowInGameProperties] = React.useState(true);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobileManageNavyLayout(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   // State for starred ships
   const [starredShips, setStarredShips] = React.useState<Set<string>>(
@@ -1529,11 +1670,11 @@ const ManageNavy: React.FC = () => {
       : ("[CONSTRUCT ALL SHIPS]" as const);
 
   const claimFreeShipControls = (
-    <div className="flex flex-nowrap items-center justify-center gap-4">
+    <div className="flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:flex-nowrap sm:items-center sm:gap-4">
       {isLoadingClaimStatus && (
         <button
           disabled
-          className="px-6 py-3 rounded-none border-2 border-gray-400 text-gray-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
+          className="w-full justify-center px-6 py-3 rounded-none border-2 border-gray-400 text-gray-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed md:w-auto"
         >
           [CHECKING ELIGIBILITY...]
         </button>
@@ -1541,7 +1682,7 @@ const ManageNavy: React.FC = () => {
       {!isLoadingClaimStatus && freeShipError && (
         <button
           disabled
-          className="px-6 py-3 rounded-none border-2 border-red-400 text-red-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed"
+          className="w-full justify-center px-6 py-3 rounded-none border-2 border-red-400 text-red-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed md:w-auto"
         >
           [ERROR CLAIMING]
         </button>
@@ -1550,7 +1691,7 @@ const ManageNavy: React.FC = () => {
         <FreeShipClaimButton
           isEligible={true}
           analyticsSurface="manage_navy"
-          className="px-6 py-3 rounded-none border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full justify-center px-6 py-3 rounded-none border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
           onPress={markFreeShipClaimClickedForTutorial}
           onSuccess={() => {
             refetch();
@@ -1566,7 +1707,7 @@ const ManageNavy: React.FC = () => {
           <FreeShipClaimButton
             isEligible={isEligible}
             analyticsSurface="manage_navy"
-            className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full justify-center px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
             onPress={markFreeShipClaimClickedForTutorial}
             onSuccess={() => {
               refetch();
@@ -1581,7 +1722,7 @@ const ManageNavy: React.FC = () => {
         !isEligible &&
         nextClaimInFormatted != null && (
           <div
-            className="px-6 py-3 rounded-none border-2 border-amber-400/80 text-amber-400 font-mono font-bold tracking-wider bg-amber-400/5"
+            className="w-full px-3 py-3 text-center text-xs font-mono font-bold tracking-wider text-amber-400 sm:px-6 sm:text-sm md:w-auto rounded-none border-2 border-amber-400/80 bg-amber-400/5"
             title="Time until you can claim free ships again"
           >
             NEXT CLAIM IN: {nextClaimInFormatted}
@@ -1603,7 +1744,7 @@ const ManageNavy: React.FC = () => {
             : staleCostSyncShipIds,
         ]}
         disabled={transactionState.isPending}
-        className="px-6 py-3 rounded-none border-2 border-amber-400 text-amber-400 hover:border-amber-300 hover:text-amber-300 hover:bg-amber-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full justify-center px-6 py-3 rounded-none border-2 border-amber-400 text-amber-400 hover:border-amber-300 hover:text-amber-300 hover:bg-amber-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
         style={{ borderRadius: 0 }}
         onSuccess={() => {
           toast.success(
@@ -1625,7 +1766,7 @@ const ManageNavy: React.FC = () => {
     );
 
   const fleetCompositionSelectControl = (
-    <div className="flex flex-col gap-1">
+    <div className="flex w-full min-w-0 flex-col gap-1">
       <label
         className="text-[10px] font-bold uppercase tracking-wider opacity-70"
         style={{
@@ -1638,7 +1779,7 @@ const ManageNavy: React.FC = () => {
       <select
         value={fleetCompositionSelectedId ?? ""}
         onChange={onFleetCompositionSelectChange}
-        className="px-3 py-2 uppercase font-semibold tracking-wider text-sm min-w-[12rem] max-w-[16rem]"
+        className="w-full min-w-0 max-w-full px-3 py-2 text-sm font-semibold uppercase tracking-wider sm:min-w-[12rem] sm:max-w-[16rem]"
         style={{
           fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
           appearance: "none",
@@ -1668,10 +1809,10 @@ const ManageNavy: React.FC = () => {
         color: "var(--color-text-primary)",
       }}
     >
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <h3
-            className="text-2xl font-bold tracking-wider uppercase"
+            className="text-xl font-bold uppercase tracking-wider sm:text-2xl"
             style={{
               fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
               color: "var(--color-text-primary)",
@@ -1679,7 +1820,7 @@ const ManageNavy: React.FC = () => {
           >
             [MANAGE NAVY]
           </h3>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <label className="hidden cursor-pointer items-center gap-2 text-sm md:flex">
             <input
               type="checkbox"
               checked={showDebugButtons}
@@ -1705,7 +1846,7 @@ const ManageNavy: React.FC = () => {
         </div>
 
         {/* Real-time Status */}
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-4 sm:justify-end">
           <div className="flex items-center gap-2">
             <div
               className="w-2 h-2"
@@ -1736,19 +1877,19 @@ const ManageNavy: React.FC = () => {
 
       {/* Action Buttons: same three-button row with or without tutorial; brief is absolute (no layout shift). When tutorial is on, stack above ship grid so art does not cover the panel. */}
       <div
-        className={`relative isolate mb-8 flex w-full flex-wrap items-center justify-center gap-4 overflow-visible ${
+        className={`relative isolate mb-8 flex w-full flex-col items-stretch justify-center gap-4 overflow-visible md:flex-row md:flex-wrap md:items-center ${
           showManageNavyTutorialChrome ? "z-[200]" : ""
         }`}
       >
         {showConstructDeliveryTutorial ? (
-          <div className="relative inline-flex items-start gap-4">
+          <div className="relative flex w-full flex-col gap-4 lg:inline-flex lg:w-auto lg:flex-row lg:items-start lg:gap-4">
             {/* Same pattern as claim tutorial: brief is absolute beside the highlighted control; here to the RIGHT of construct */}
-            <div className="relative z-[100] shrink-0">
+            <div className="relative z-[100] w-full min-w-0 shrink-0 lg:w-auto">
               <div
                 className="border border-yellow-400/90 bg-yellow-400/24 animate-pulse p-[3px]"
                 style={{ borderRadius: 0 }}
               >
-                <div className="flex flex-nowrap items-center justify-center gap-4">
+                <div className="flex w-full min-w-0 flex-col gap-3 md:flex-row md:flex-nowrap md:items-center md:justify-center md:gap-4">
                   {fleetCompositionSelectControl}
                   {fleetStats.unconstructedShips > STALE_COST_SYNC_BATCH_CAP ? (
                     <ShipActionButton
@@ -1756,7 +1897,7 @@ const ManageNavy: React.FC = () => {
                       shipIds={shipsByStatus.unconstructed
                         .slice(0, STALE_COST_SYNC_BATCH_CAP)
                         .map((ship: Ship) => ship.id)}
-                      className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full justify-center px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                       disabled={fleetStats.unconstructedShips === 0}
                       onSuccess={() => {
                         if (address) {
@@ -1778,7 +1919,7 @@ const ManageNavy: React.FC = () => {
                   ) : (
                     <ShipActionButton
                       action="constructAll"
-                      className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full justify-center px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                       disabled={fleetStats.unconstructedShips === 0}
                       onSuccess={() => {
                         if (address) {
@@ -1807,12 +1948,12 @@ const ManageNavy: React.FC = () => {
                 onNotNow={dismissConstructDeliveryTutorialNotNow}
               />
             </div>
-            <div className="relative z-10 flex shrink-0 items-start gap-4">
+            <div className="relative z-10 flex w-full shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:gap-4 lg:w-auto">
               <button
                 type="button"
                 onClick={handleBuyNewShipsClick}
                 disabled={transactionState.isPending}
-                className="px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full justify-center px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                 style={{
                   borderRadius: 0,
                 }}
@@ -1821,14 +1962,14 @@ const ManageNavy: React.FC = () => {
               </button>
               <div className="shrink-0">{claimFreeShipControls}</div>
               <div
-                className="pointer-events-auto absolute inset-0 z-20 rounded-none bg-slate-950/85"
+                className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-slate-950/85 md:block"
                 aria-hidden="true"
               />
             </div>
           </div>
         ) : showBuyShipsTutorial ? (
-          <div className="relative inline-flex items-start gap-4">
-            <div className="relative z-10 flex shrink-0 gap-4">
+          <div className="relative flex w-full flex-col gap-4 lg:inline-flex lg:w-auto lg:flex-row lg:items-start lg:gap-4">
+            <div className="relative z-10 flex w-full shrink-0 flex-col gap-3 md:flex-row md:gap-4 lg:w-auto">
               {fleetCompositionSelectControl}
               {fleetStats.unconstructedShips > STALE_COST_SYNC_BATCH_CAP ? (
                 <ShipActionButton
@@ -1836,7 +1977,7 @@ const ManageNavy: React.FC = () => {
                   shipIds={shipsByStatus.unconstructed
                     .slice(0, STALE_COST_SYNC_BATCH_CAP)
                     .map((ship: Ship) => ship.id)}
-                  className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full justify-center px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                   disabled={fleetStats.unconstructedShips === 0}
                   onSuccess={() => {
                     toast.success("150 ships construction started!");
@@ -1851,7 +1992,7 @@ const ManageNavy: React.FC = () => {
               ) : (
                 <ShipActionButton
                   action="constructAll"
-                  className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full justify-center px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                   disabled={fleetStats.unconstructedShips === 0}
                   onSuccess={() => {
                     toast.success("Ships constructed successfully!");
@@ -1866,11 +2007,11 @@ const ManageNavy: React.FC = () => {
               )}
               {staleCostBulkButton}
               <div
-                className="pointer-events-auto absolute inset-0 z-20 rounded-none bg-slate-950/85"
+                className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-slate-950/85 md:block"
                 aria-hidden="true"
               />
             </div>
-            <div className="relative z-[100] shrink-0">
+            <div className="relative z-[100] w-full shrink-0 lg:w-auto">
               <ManageNavyBuyShipsBrief
                 className="absolute right-full top-0 z-[110] mr-4"
                 onNotNow={dismissBuyShipsTutorialNotNow}
@@ -1883,7 +2024,7 @@ const ManageNavy: React.FC = () => {
                   type="button"
                   onClick={handleBuyNewShipsClick}
                   disabled={transactionState.isPending}
-                  className="px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full justify-center px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                   style={{
                     borderRadius: 0,
                   }}
@@ -1896,15 +2037,15 @@ const ManageNavy: React.FC = () => {
               <div className="relative">
                 {claimFreeShipControls}
                 <div
-                  className="pointer-events-auto absolute inset-0 z-20 rounded-none bg-slate-950/85"
+                  className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-slate-950/85 md:block"
                   aria-hidden="true"
                 />
               </div>
             </div>
           </div>
         ) : (
-          <div className="relative inline-flex items-start gap-4">
-            <div className="relative z-10 flex shrink-0 gap-4">
+          <div className="relative flex w-full flex-col gap-4 lg:inline-flex lg:w-auto lg:flex-row lg:items-start lg:gap-4">
+            <div className="relative z-10 flex w-full shrink-0 flex-col gap-3 md:flex-row md:flex-wrap md:gap-4 lg:w-auto">
               {fleetCompositionSelectControl}
               {fleetStats.unconstructedShips > STALE_COST_SYNC_BATCH_CAP ? (
                 <ShipActionButton
@@ -1912,7 +2053,7 @@ const ManageNavy: React.FC = () => {
                   shipIds={shipsByStatus.unconstructed
                     .slice(0, STALE_COST_SYNC_BATCH_CAP)
                     .map((ship: Ship) => ship.id)}
-                  className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full justify-center px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                   disabled={fleetStats.unconstructedShips === 0}
                   onSuccess={() => {
                     toast.success("150 ships construction started!");
@@ -1927,7 +2068,7 @@ const ManageNavy: React.FC = () => {
               ) : (
                 <ShipActionButton
                   action="constructAll"
-                  className="px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full justify-center px-6 py-3 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                   disabled={fleetStats.unconstructedShips === 0}
                   onSuccess={() => {
                     toast.success("Ships constructed successfully!");
@@ -1946,7 +2087,7 @@ const ManageNavy: React.FC = () => {
                 type="button"
                 onClick={handleBuyNewShipsClick}
                 disabled={transactionState.isPending}
-                className="px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full justify-center px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                 style={{
                   borderRadius: 0,
                 }}
@@ -1956,7 +2097,7 @@ const ManageNavy: React.FC = () => {
 
               {showDroneFactoryTutorial && (
                 <div
-                  className="pointer-events-auto absolute inset-0 z-20 rounded-none bg-slate-950/85"
+                  className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-slate-950/85 md:block"
                   aria-hidden="true"
                 />
               )}
@@ -1965,8 +2106,8 @@ const ManageNavy: React.FC = () => {
             <div
               className={
                 showDroneFactoryTutorial
-                  ? "relative z-[100] shrink-0"
-                  : "relative z-30 shrink-0"
+                  ? "relative z-[100] w-full shrink-0 lg:w-auto"
+                  : "relative z-30 w-full shrink-0 lg:w-auto"
               }
             >
               {showDroneFactoryTutorial && (
@@ -1991,7 +2132,7 @@ const ManageNavy: React.FC = () => {
 
         {/* Debug buttons - only show when debug mode is enabled */}
         {showDebugButtons && (
-          <>
+          <div className="hidden w-full flex-col flex-wrap gap-2 md:flex md:flex-row md:justify-center md:gap-2">
             <button
               onClick={() => {
                 const cleared = clearBrokenImageCache();
@@ -2090,7 +2231,7 @@ const ManageNavy: React.FC = () => {
             >
               [CLEAR ON LOGOUT]
             </button>
-          </>
+          </div>
         )}
 
         {selectedShips.size > 0 &&
@@ -2105,7 +2246,7 @@ const ManageNavy: React.FC = () => {
               <ShipActionButton
                 action="recycle"
                 shipIds={recyclableShips.map((id) => BigInt(id))}
-                className="px-6 py-3 rounded-none border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-200 disabled:cursor-not-allowed"
+                className="w-full justify-center px-6 py-3 rounded-none border-2 border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-200 disabled:cursor-not-allowed md:w-auto"
                 onSuccess={() => {
                   // Show success toast
                   toast.success("Ships recycled successfully!");
@@ -2117,7 +2258,7 @@ const ManageNavy: React.FC = () => {
                 {`[RECYCLE ${recyclableShips.length} SHIPS]`}
               </ShipActionButton>
             ) : (
-              <div className="px-6 py-3 rounded-none border-2 border-orange-400 text-orange-400 font-mono font-bold tracking-wider opacity-50">
+              <div className="w-full px-4 py-3 text-center text-sm font-mono font-bold tracking-wider text-orange-400 opacity-50 sm:px-6 md:w-auto rounded-none border-2 border-orange-400">
                 [SELECTED SHIPS ARE IN FLEETS - CANNOT RECYCLE]
               </div>
             );
@@ -2127,12 +2268,12 @@ const ManageNavy: React.FC = () => {
       {/* Ship Purchase Interface */}
       {showShipPurchase && (
         <div
-          className="mb-8 border border-blue-400/80 bg-gradient-to-b from-slate-950/90 to-black/50 p-6 sm:p-8"
+          className="mb-8 border border-blue-400/80 bg-gradient-to-b from-slate-950/90 to-black/50 px-3 py-5 sm:p-8"
           style={{ borderRadius: 0 }}
         >
           <div className="mx-auto max-w-6xl">
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-cyan-500/20 pb-4">
-            <div className="flex flex-wrap items-start gap-6">
+          <div className="mb-6 flex flex-col gap-4 border-b border-cyan-500/20 pb-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start">
               <div className="flex flex-col gap-1">
                 <h4
                   className="text-xl font-black uppercase tracking-[0.08em] text-cyan-300 sm:text-2xl"
@@ -2152,11 +2293,11 @@ const ManageNavy: React.FC = () => {
                   Prices not yet normalized for all chains
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-gray-300 font-mono text-sm">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <span className="font-mono text-sm text-gray-300">
                   PAYMENT METHOD:
                 </span>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setPaymentMethod("FLOW")}
                     className={`px-3 py-1 border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
@@ -2188,7 +2329,9 @@ const ManageNavy: React.FC = () => {
             </div>
             <button
               onClick={() => setShowShipPurchase(false)}
-              className="text-blue-400 hover:text-blue-300 text-2xl font-bold"
+              className="self-end text-2xl font-bold text-blue-400 hover:text-blue-300 sm:self-auto"
+              type="button"
+              aria-label="Close ship purchasing"
             >
               ×
             </button>
@@ -2205,7 +2348,7 @@ const ManageNavy: React.FC = () => {
 
       {/* Filtering and Sorting Controls */}
       <div
-        className="border border-solid p-4 mb-6"
+        className="mb-6 border border-solid p-3 sm:p-4"
         style={{
           backgroundColor: "var(--color-slate)",
           borderColor: "var(--color-gunmetal)",
@@ -2214,8 +2357,8 @@ const ManageNavy: React.FC = () => {
           borderRadius: 0,
         }}
       >
-        <div className="flex flex-wrap items-center gap-4 justify-between">
-          <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <label
               className="text-sm font-bold uppercase tracking-wider shrink-0"
               style={{
@@ -2295,9 +2438,9 @@ const ManageNavy: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-4">
             <label
-              className="text-sm font-bold uppercase tracking-wider"
+              className="shrink-0 text-sm font-bold uppercase tracking-wider"
               style={{
                 fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                 color: "var(--color-cyan)",
@@ -2317,7 +2460,7 @@ const ManageNavy: React.FC = () => {
                     | "speed",
                 )
               }
-              className="px-3 py-1 uppercase font-semibold tracking-wider text-sm"
+              className="min-w-0 flex-1 px-3 py-1 text-sm font-semibold uppercase tracking-wider sm:min-w-[8rem] sm:flex-none"
               style={{
                 fontFamily:
                   "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -2354,8 +2497,8 @@ const ManageNavy: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-4">
+            <label className="flex min-w-0 cursor-pointer items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={showInGameProperties}
@@ -2651,9 +2794,9 @@ const ManageNavy: React.FC = () => {
           }`}
         >
           <div className="flex flex-col gap-3 mb-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <h4
-                className="text-xl font-bold min-w-0"
+                className="min-w-0 text-base font-bold sm:text-xl"
                 style={{
                   fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                   color: "var(--color-text-primary)",
@@ -2662,7 +2805,7 @@ const ManageNavy: React.FC = () => {
                 [YOUR SHIPS] - Showing {filteredAndSortedShips.length} of{" "}
                 {ships.length} ships
               </h4>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={handleSelectAll}
                   className="px-3 py-1 border-2 border-solid uppercase font-semibold tracking-wider text-sm transition-colors duration-150"
@@ -2706,7 +2849,7 @@ const ManageNavy: React.FC = () => {
             </div>
 
             <div
-              className="flex flex-wrap items-center gap-3 border border-solid px-3 py-2"
+              className="flex flex-col gap-2 border border-solid px-2 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-3"
               style={{
                 borderColor: "var(--color-gunmetal)",
                 borderTopColor: "var(--color-steel)",
@@ -2735,7 +2878,7 @@ const ManageNavy: React.FC = () => {
                         setFleetCompositionRenameDraft(e.target.value)
                       }
                       onBlur={commitFleetRename}
-                      className="px-2 py-1 text-sm min-w-[8rem] max-w-[16rem] flex-1 sm:flex-none"
+                      className="min-h-10 w-full min-w-0 flex-1 px-2 py-1 text-sm sm:min-w-[8rem] sm:max-w-[16rem] sm:flex-none"
                       style={{
                         fontFamily:
                           "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -2803,7 +2946,7 @@ const ManageNavy: React.FC = () => {
           </div>
           <div
             ref={shipGridRef}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+            className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3"
           >
             {shipsForGridDisplay.map((ship: Ship) => {
               const shipCv = Number(ship.shipData.costsVersion);
@@ -3090,6 +3233,33 @@ const ManageNavy: React.FC = () => {
           </div>
         </div>
       )}
+
+      {isMobileManageNavyLayout && showConstructDeliveryTutorial && (
+        <ManageNavyMobileTutorialSheet
+          kind="construct"
+          constructButtonLabel={constructTutorialButtonLabel}
+          onNotNow={dismissConstructDeliveryTutorialNotNow}
+        />
+      )}
+      {isMobileManageNavyLayout &&
+        !showConstructDeliveryTutorial &&
+        showBuyShipsTutorial && (
+          <ManageNavyMobileTutorialSheet
+            kind="buy"
+            constructButtonLabel={constructTutorialButtonLabel}
+            onNotNow={dismissBuyShipsTutorialNotNow}
+          />
+        )}
+      {isMobileManageNavyLayout &&
+        !showConstructDeliveryTutorial &&
+        !showBuyShipsTutorial &&
+        showDroneFactoryTutorial && (
+          <ManageNavyMobileTutorialSheet
+            kind="drone"
+            constructButtonLabel={constructTutorialButtonLabel}
+            onNotNow={dismissDroneFactoryTutorialNotNow}
+          />
+        )}
     </div>
   );
 };
