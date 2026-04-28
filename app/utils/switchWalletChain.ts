@@ -24,6 +24,7 @@ export async function switchWalletToAppChain(
 ): Promise<void> {
   const chain = getChainById(chainId);
   const addEthereumChainParameter = buildAddEthereumChainParameter(chain);
+  const getProvider = connector.getProvider?.bind(connector);
 
   try {
     await switchChain(config, {
@@ -32,11 +33,6 @@ export async function switchWalletToAppChain(
       addEthereumChainParameter,
     });
   } catch (err) {
-    const code = readRpcErrorCode(err);
-    const needsManual = code === 4902 || messageHintsMissingChain(err);
-    if (!needsManual) throw err;
-
-    const getProvider = connector.getProvider?.bind(connector);
     if (typeof getProvider !== "function") throw err;
 
     const provider = (await getProvider({
@@ -45,20 +41,33 @@ export async function switchWalletToAppChain(
     if (!provider?.request) throw err;
 
     try {
-      await addEthereumChainViaWallet(
-        provider,
-        chainId,
-        addEthereumChainParameter,
-      );
-    } catch (addErr) {
-      if (isUserRejectedWalletError(addErr)) throw addErr;
-      if (!isChainAlreadyInWalletError(addErr)) throw addErr;
-    }
+      // Some connectors fail wagmi `switchChain` in production while the wallet
+      // still supports direct EIP-1193 switching.
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: numberToHex(chainId) }],
+      });
+    } catch (switchErr) {
+      const code = readRpcErrorCode(switchErr);
+      const needsManual = code === 4902 || messageHintsMissingChain(switchErr);
+      if (!needsManual) throw switchErr;
 
-    await provider.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: numberToHex(chainId) }],
-    });
+      try {
+        await addEthereumChainViaWallet(
+          provider,
+          chainId,
+          addEthereumChainParameter,
+        );
+      } catch (addErr) {
+        if (isUserRejectedWalletError(addErr)) throw addErr;
+        if (!isChainAlreadyInWalletError(addErr)) throw addErr;
+      }
+
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: numberToHex(chainId) }],
+      });
+    }
   }
 
   let lastObservedChainId: number | null = null;

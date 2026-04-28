@@ -31,6 +31,7 @@ import {
   VOID_TACTICS_CHAIN_CHANGED_EVENT,
 } from "../config/networks";
 import { switchWalletToAppChain } from "../utils/switchWalletChain";
+import { readRpcErrorCode } from "../utils/ensureUiChainsInWallet";
 
 function resolveChainIdFromQueryParam(value: string | null): number | null {
   if (!value) return null;
@@ -365,8 +366,11 @@ const Header: React.FC = () => {
     if (!connector) return;
     void switchWalletToAppChain(config, connector, pending).catch((err) => {
       console.error("Network switch failed:", err);
+      const code = readRpcErrorCode(err);
       toast.error(
-        err instanceof Error ? err.message : "Could not switch network",
+        err instanceof Error
+          ? `${err.message}${code != null ? ` (code ${code})` : ""}`
+          : "Could not switch network",
       );
     });
   }, [account.status, account.chainId, account.connector, config, isHydrated]);
@@ -390,8 +394,11 @@ const Header: React.FC = () => {
       void switchWalletToAppChain(config, account.connector, nextId).catch(
         (err) => {
           console.error("Network switch failed:", err);
+          const code = readRpcErrorCode(err);
           toast.error(
-            err instanceof Error ? err.message : "Could not switch network",
+            err instanceof Error
+              ? `${err.message}${code != null ? ` (code ${code})` : ""}`
+              : "Could not switch network",
           );
         },
       );
