@@ -3351,7 +3351,9 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   return (
     <div
       ref={gameViewRootRef}
-      className={`flex flex-col ${isLandscapeMobile ? "gap-3 pb-16" : "gap-6"} ${
+      className={`flex flex-col ${
+        isLandscapeMobile ? "gap-3 pb-16" : "gap-6 pt-2"
+      } ${
         useSideLayout ? GAME_VIEW_SIDE_ROOT_CLASS : "mx-auto w-full"
       }`}
       style={

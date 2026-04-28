@@ -1855,10 +1855,9 @@ export function GameGrid({
                               <div
                                 className="flex shrink-0 flex-row items-center gap-px leading-none text-yellow-400"
                                 style={{
-                                  // Keep stars smaller in gameplay overlays. Using a plain
-                                  // numeric clamp avoids nesting the ShipImage clamp string,
-                                  // which can invalidate font-size and cause oversized stars.
-                                  fontSize: "clamp(6px, 0.95vmin, 10px)",
+                                  // Use container-relative sizing so desktop viewport size
+                                  // does not inflate in-cell rank stars.
+                                  fontSize: "clamp(7.5px, 9cqw, 12px)",
                                 }}
                               >
                                 {Array.from({ length: rank }, (_, i) => (
