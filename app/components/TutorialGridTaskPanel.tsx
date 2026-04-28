@@ -55,6 +55,8 @@ export interface TutorialGridTaskPanelProps {
     onClear: () => void;
     disabled?: boolean;
   };
+  /** Optional compact layout preset for specific steps (keeps text readable). */
+  compactPreset?: "welcome";
 }
 
 const mono = {
@@ -117,7 +119,9 @@ export function TutorialGridTaskPanel({
   panelAnchor = "right",
   panelVerticalAnchor = "top",
   tutorialRewardCacheDebug,
+  compactPreset,
 }: TutorialGridTaskPanelProps) {
+  const isCompactWelcome = compactPreset === "welcome";
   const [debugEnabled, setDebugEnabled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentMeasureRef = useRef<HTMLDivElement>(null);
@@ -259,7 +263,9 @@ export function TutorialGridTaskPanel({
       onScroll={panelFitToContent ? updateScrollHint : undefined}
       className={`pointer-events-auto absolute ${
         panelVerticalAnchor === "bottom" ? "bottom-2" : "top-2"
-      } ${panelAnchor === "left" ? "left-2" : "right-2"} z-[190] flex min-h-0 w-[min(117.5%,28.75rem)] flex-col border-2 border-cyan-400/90 p-3 shadow-lg shadow-cyan-500/15 ${
+      } ${panelAnchor === "left" ? "left-2" : "right-2"} z-[190] flex min-h-0 w-[min(117.5%,28.75rem)] flex-col border-2 border-cyan-400/90 ${
+        isCompactWelcome ? "p-2.5" : "p-3"
+      } shadow-lg shadow-cyan-500/15 ${
         panelFitToContent
           ? "overflow-y-auto overflow-x-hidden"
           : "overflow-hidden"
@@ -280,10 +286,16 @@ export function TutorialGridTaskPanel({
       aria-label={`Tutorial briefing, step ${displayStepNumber} of ${displayTotalSteps}`}
       aria-describedby={moreBelow ? "tutorial-panel-scroll-hint" : undefined}
     >
-      <div className="mb-2 flex shrink-0 items-start justify-between gap-2">
+      <div
+        className={`flex shrink-0 items-start justify-between ${
+          isCompactWelcome ? "mb-1.5 gap-1.5" : "mb-2 gap-2"
+        }`}
+      >
         <div className="min-w-0 flex-1">
           <h3
-            className="text-lg font-bold uppercase tracking-wide text-cyan-300 leading-tight"
+            className={`font-bold uppercase tracking-wide text-cyan-300 leading-tight ${
+              isCompactWelcome ? "text-base" : "text-lg"
+            }`}
             style={{
               fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
             }}
@@ -295,7 +307,9 @@ export function TutorialGridTaskPanel({
           <button
             type="button"
             onClick={onReset}
-            className="px-2 py-0.5 text-sm bg-yellow-800/90 text-yellow-100 rounded-none font-mono hover:bg-yellow-700 whitespace-nowrap"
+            className={`bg-yellow-800/90 text-yellow-100 rounded-none font-mono hover:bg-yellow-700 whitespace-nowrap ${
+              isCompactWelcome ? "px-1.5 py-0.5 text-xs" : "px-2 py-0.5 text-sm"
+            }`}
           >
             Reset
           </button>
@@ -303,7 +317,9 @@ export function TutorialGridTaskPanel({
             <button
               type="button"
               onClick={onQuit}
-              className="px-2 py-0.5 text-sm bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap"
+              className={`bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap ${
+                isCompactWelcome ? "px-1.5 py-0.5 text-xs" : "px-2 py-0.5 text-sm"
+              }`}
             >
               Quit
             </button>
@@ -311,7 +327,7 @@ export function TutorialGridTaskPanel({
         </div>
       </div>
 
-      <div className="mb-2 h-1 w-full shrink-0 bg-gray-700">
+      <div className={`${isCompactWelcome ? "mb-1.5" : "mb-2"} h-1 w-full shrink-0 bg-gray-700`}>
         <div
           className="h-1 bg-cyan-400 transition-all duration-300"
           style={{
@@ -324,7 +340,7 @@ export function TutorialGridTaskPanel({
         <>
           <div
             ref={contentMeasureRef}
-            className="space-y-2 overflow-x-hidden pr-0.5"
+            className={`${isCompactWelcome ? "space-y-1.5" : "space-y-2"} overflow-x-hidden pr-0.5`}
           >
             {mainBody}
           </div>
@@ -335,9 +351,14 @@ export function TutorialGridTaskPanel({
           <div
             ref={scrollRef}
             onScroll={updateScrollHint}
-            className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pr-0.5"
+            className={`min-h-0 flex-1 ${
+              isCompactWelcome ? "space-y-1.5" : "space-y-2"
+            } overflow-y-auto overflow-x-hidden pr-0.5`}
           >
-            <div ref={contentMeasureRef} className="space-y-2">
+            <div
+              ref={contentMeasureRef}
+              className={isCompactWelcome ? "space-y-1.5" : "space-y-2"}
+            >
               {mainBody}
             </div>
           </div>
@@ -345,12 +366,18 @@ export function TutorialGridTaskPanel({
         </div>
       )}
 
-      <div className="mt-2 flex shrink-0 flex-wrap items-center gap-2">
+      <div
+        className={`flex shrink-0 flex-wrap items-center ${
+          isCompactWelcome ? "mt-1.5 gap-1.5" : "mt-2 gap-2"
+        }`}
+      >
         <button
           type="button"
           onClick={onPrevious}
           disabled={currentStepIndex === 0}
-          className="px-2.5 py-1 text-sm bg-gray-700 text-white rounded-none font-mono hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`bg-gray-700 text-white rounded-none font-mono hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            isCompactWelcome ? "px-2 py-1 text-xs" : "px-2.5 py-1 text-sm"
+          }`}
         >
           ← Prev
         </button>
@@ -360,14 +387,22 @@ export function TutorialGridTaskPanel({
             checked={debugEnabled}
             onChange={(e) => setDebugEnabled(e.target.checked)}
           />
-          <span className="text-sm font-mono text-gray-300">Debug</span>
+          <span
+            className={`font-mono text-gray-300 ${
+              isCompactWelcome ? "text-xs" : "text-sm"
+            }`}
+          >
+            Debug
+          </span>
         </label>
         {tutorialRewardCacheDebug ? (
           <button
             type="button"
             disabled={tutorialRewardCacheDebug.disabled}
             onClick={tutorialRewardCacheDebug.onClear}
-            className="px-2 py-1 text-xs bg-amber-900/80 text-amber-100 rounded-none font-mono border border-amber-600/60 hover:bg-amber-800/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`bg-amber-900/80 text-amber-100 rounded-none font-mono border border-amber-600/60 hover:bg-amber-800/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              isCompactWelcome ? "px-1.5 py-1 text-[11px]" : "px-2 py-1 text-xs"
+            }`}
           >
             Clear reward cache
           </button>
@@ -377,7 +412,9 @@ export function TutorialGridTaskPanel({
             type="button"
             onClick={onNext}
             disabled={nextDisabled}
-            className="ml-auto px-2.5 py-1 text-sm bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`ml-auto bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              isCompactWelcome ? "px-2 py-1 text-xs" : "px-2.5 py-1 text-sm"
+            }`}
           >
             Next →
           </button>

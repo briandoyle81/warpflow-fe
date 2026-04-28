@@ -488,14 +488,28 @@ export default function Home() {
               </div>
             </div>
           ) : activeTab === "Games" ? (
-            <div className="w-full px-2 sm:px-4">
+            <div
+              className={`w-full ${
+                isGamesDetailActive ? "px-0" : "px-2 sm:px-4"
+              }`}
+            >
               <div
-                className="border border-solid p-4"
+                className={`${
+                  isGamesDetailActive ? "border-0 p-0" : "border border-solid p-4"
+                }`}
                 style={{
-                  backgroundColor: "var(--color-slate)",
-                  borderColor: "var(--color-gunmetal)",
-                  borderTopColor: "var(--color-steel)",
-                  borderLeftColor: "var(--color-steel)",
+                  backgroundColor: isGamesDetailActive
+                    ? "transparent"
+                    : "var(--color-slate)",
+                  borderColor: isGamesDetailActive
+                    ? "transparent"
+                    : "var(--color-gunmetal)",
+                  borderTopColor: isGamesDetailActive
+                    ? "transparent"
+                    : "var(--color-steel)",
+                  borderLeftColor: isGamesDetailActive
+                    ? "transparent"
+                    : "var(--color-steel)",
                 }}
               >
                 <Games />

@@ -1061,6 +1061,23 @@ export function SimulatedGameDisplay({
     gridContainerRef,
   );
   const chromeOnSide = chromeLayout === "side";
+  const [requiresLandscapeMode, setRequiresLandscapeMode] =
+    React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const orientationMq = window.matchMedia("(orientation: landscape)");
+    const mobileMq = window.matchMedia("(max-width: 1023px)");
+    const sync = () =>
+      setRequiresLandscapeMode(mobileMq.matches && !orientationMq.matches);
+    sync();
+    orientationMq.addEventListener("change", sync);
+    mobileMq.addEventListener("change", sync);
+    return () => {
+      orientationMq.removeEventListener("change", sync);
+      mobileMq.removeEventListener("change", sync);
+    };
+  }, []);
 
   const proposedMoveTargetListClass = chromeOnSide
     ? "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
@@ -3268,6 +3285,35 @@ export function SimulatedGameDisplay({
     runTutorialClaimTx,
   ]);
 
+  if (requiresLandscapeMode) {
+    return (
+      <div className="mx-auto flex min-h-[70vh] w-full max-w-4xl items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md border-2 border-cyan-400 bg-black/85 p-6 text-center">
+          <h2
+            className="text-xl font-bold uppercase tracking-wider text-cyan-300"
+            style={{ fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif" }}
+          >
+            Rotate to Landscape
+          </h2>
+          <p className="mt-3 text-sm text-gray-300">
+            The tutorial battle view requires landscape mode on mobile. Rotate
+            your device to continue.
+          </p>
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="mt-5 border border-gray-500 px-4 py-2 text-sm font-semibold uppercase tracking-wider text-gray-200 transition-colors hover:border-cyan-300 hover:text-cyan-300"
+              style={{ borderRadius: 0 }}
+            >
+              Back
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={gameViewRootRef}
@@ -3967,6 +4013,7 @@ export function SimulatedGameDisplay({
                     tutorialGridPanelConfig.panelBottomRowExclusive
                   }
                   panelFitToContent={tutorialGridPanelConfig.panelFitToContent}
+                  compactPreset={currentStep?.id === "welcome" ? "welcome" : undefined}
                   displayStepNumber={displayStepNumber}
                   displayTotalSteps={displayTotalSteps}
                   currentStepIndex={currentStepIndex}
@@ -4143,7 +4190,7 @@ export function SimulatedGameDisplay({
                 fontSize: "18px",
               }}
             >
-              Opponent's Fleet
+              Opponent&apos;s Fleet
               <span
                 className="ml-2"
                 style={{

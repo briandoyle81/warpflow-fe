@@ -1894,7 +1894,7 @@ const Lobbies: React.FC = () => {
           transform: translate(-50%, -50%) scale(1.05);
         }
       `}</style>
-      <h3 className="text-2xl font-bold mb-6 tracking-wider text-center">
+      <h3 className="mb-5 text-center text-xl font-bold tracking-wider sm:mb-6 sm:text-2xl">
         [CREATE AND JOIN NEW GAMES]
       </h3>
 
@@ -1914,7 +1914,7 @@ const Lobbies: React.FC = () => {
 
       {needsShipsForLobbyUi && (
         <div
-          className="mb-8 border-2 border-cyan-500/35 bg-black/55 px-6 py-12 text-center sm:px-12"
+          className="mb-8 border-2 border-cyan-500/35 bg-black/55 px-4 py-10 text-center sm:px-12 sm:py-12"
           style={{ borderRadius: 0 }}
         >
           <p
@@ -1944,7 +1944,7 @@ const Lobbies: React.FC = () => {
 
       {needsConstructForLobbyUi && (
         <div
-          className="mb-8 border-2 border-amber-500/35 bg-black/55 px-6 py-12 text-center sm:px-12"
+          className="mb-8 border-2 border-amber-500/35 bg-black/55 px-4 py-10 text-center sm:px-12 sm:py-12"
           style={{ borderRadius: 0 }}
         >
           <p
@@ -1987,33 +1987,35 @@ const Lobbies: React.FC = () => {
           }}
         >
           <h4 className="mb-3 text-lg font-bold text-cyan-400">PLAYER STATUS</h4>
-          <div
-            className={`grid grid-cols-1 gap-4 text-sm ${
-              showCreateForm
-                ? "sm:grid-cols-2"
-                : "sm:grid-cols-3 sm:grid-rows-2"
-            }`}
-          >
-            <div
-              className={
-                showCreateForm ? "" : "sm:col-start-1 sm:row-start-1"
-              }
-            >
+          <div className="grid grid-cols-2 gap-3 text-sm sm:gap-4">
+            <div>
               <span className="text-gray-400">Active Lobbies:</span>
               <span className="ml-2">{activeLobbiesCount.toString()}</span>
             </div>
-            <div
-              className={
-                showCreateForm ? "" : "sm:col-start-2 sm:row-start-1"
-              }
-            >
+            <div>
               <span className="text-gray-400">Kick Count:</span>
               <span className="ml-2">
                 {playerState?.kickCount?.toString() || "0"}
               </span>
             </div>
+            <div>
+              <span className="text-gray-400">Has Active Lobby:</span>
+              <span
+                className={`ml-2 ${
+                  hasActiveLobby ? "text-green-400" : "text-red-400"
+                }`}
+              >
+                {hasActiveLobby ? "YES" : "NO"}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400">Free Games:</span>
+              <span className="ml-2">
+                {freeGamesPerAddress?.toString() || "0"}
+              </span>
+            </div>
             {!showCreateForm && (
-              <div className="flex flex-col justify-center gap-2 sm:col-start-3 sm:row-span-2 sm:row-start-1">
+              <div className="col-span-2 flex flex-col justify-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(true)}
@@ -2036,30 +2038,6 @@ const Lobbies: React.FC = () => {
                 )}
               </div>
             )}
-            <div
-              className={
-                showCreateForm ? "" : "sm:col-start-1 sm:row-start-2"
-              }
-            >
-              <span className="text-gray-400">Has Active Lobby:</span>
-              <span
-                className={`ml-2 ${
-                  hasActiveLobby ? "text-green-400" : "text-red-400"
-                }`}
-              >
-                {hasActiveLobby ? "YES" : "NO"}
-              </span>
-            </div>
-            <div
-              className={
-                showCreateForm ? "" : "sm:col-start-2 sm:row-start-2"
-              }
-            >
-              <span className="text-gray-400">Free Games:</span>
-              <span className="ml-2">
-                {freeGamesPerAddress?.toString() || "0"}
-              </span>
-            </div>
           </div>
         </div>
       )}
@@ -2108,15 +2086,24 @@ const Lobbies: React.FC = () => {
             borderRadius: 0, // Square corners for industrial theme
           }}
         >
-          <h4 className="text-lg font-bold text-purple-400 mb-4">
-            CREATE LOBBY
-          </h4>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h4 className="text-lg font-bold text-purple-400">CREATE LOBBY</h4>
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(false)}
+              aria-label="Close create lobby form"
+              className="px-3 py-1 border border-red-400 text-red-400 hover:bg-red-400/20"
+              style={{ borderRadius: 0 }}
+            >
+              X
+            </button>
+          </div>
           <div className="space-y-4">
             <div>
               <span className="block text-sm text-gray-400 mb-2">
                 Fleet threat limit
               </span>
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
                 <label className="flex min-w-0 cursor-pointer items-start gap-3 rounded-none border border-gray-600 bg-black/40 p-3 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-cyan-400">
                   <input
                     type="checkbox"
@@ -2185,7 +2172,7 @@ const Lobbies: React.FC = () => {
               <span className="block text-sm text-gray-400 mb-2">
                 Turn timer
               </span>
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
                 <label className="flex min-w-0 cursor-pointer items-start gap-3 rounded-none border border-gray-600 bg-black/40 p-3 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-cyan-400">
                   <input
                     type="checkbox"
@@ -2265,7 +2252,7 @@ const Lobbies: React.FC = () => {
               <span className="block text-sm text-gray-400 mb-2">
                 Max score (points to win)
               </span>
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
                 <label className="flex min-w-0 cursor-pointer items-start gap-2 rounded-none border border-gray-600 bg-black/40 p-2.5 sm:gap-3 sm:p-3 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-cyan-400">
                   <input
                     type="checkbox"
@@ -2403,7 +2390,7 @@ const Lobbies: React.FC = () => {
                 player who creates their fleet first will go first in the game.
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <LobbyCreateButton
                 costLimit={BigInt(createFormCostLimit)}
                 turnTime={BigInt(createFormTurnTimeSeconds)}
@@ -2428,7 +2415,7 @@ const Lobbies: React.FC = () => {
                       address.toLowerCase()
                   )
                 }
-                className="flex-1 px-6 py-3 rounded-none border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-cyan-400 disabled:hover:text-cyan-400 disabled:hover:bg-transparent"
+                className="w-full flex-1 px-6 py-3 rounded-none border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-cyan-400 disabled:hover:text-cyan-400 disabled:hover:bg-transparent sm:w-auto"
                 onTransactionSent={(hash) => {
                   setPendingCreateLobbyHash(hash);
                 }}
@@ -2444,7 +2431,7 @@ const Lobbies: React.FC = () => {
               </LobbyCreateButton>
               <button
                 onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 border border-red-400 text-red-400 hover:bg-red-400/20"
+                className="w-full px-4 py-2 border border-red-400 text-red-400 hover:bg-red-400/20 sm:w-auto"
                 style={{
                   borderRadius: 0, // Square corners for industrial theme
                 }}
@@ -2458,11 +2445,11 @@ const Lobbies: React.FC = () => {
 
       {/* Lobby List */}
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h4 className="text-lg font-bold text-cyan-400">AVAILABLE LOBBIES</h4>
           <button
             onClick={() => loadLobbies()}
-            className="px-3 py-1 text-xs border border-cyan-400 text-cyan-400 hover:bg-cyan-400/10"
+            className="w-full px-3 py-2 text-xs border border-cyan-400 text-cyan-400 hover:bg-cyan-400/10 sm:w-auto sm:py-1"
             style={{
               borderRadius: 0, // Square corners for industrial theme
             }}
@@ -2499,9 +2486,9 @@ const Lobbies: React.FC = () => {
                 borderRadius: 0, // Square corners for industrial theme
               }}
             >
-              <div className="flex justify-between items-start mb-2">
+              <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h5 className="text-lg font-bold">
                       Lobby #{lobby.basic.id.toString()}
                     </h5>
@@ -2558,7 +2545,7 @@ const Lobbies: React.FC = () => {
                     )}
 
                   {/* Fleet Selection Indicators */}
-                  <div className="flex gap-2 mt-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {lobby.players.creatorFleetId > 0n && (
                       <button
                         onClick={() => {
@@ -2597,7 +2584,7 @@ const Lobbies: React.FC = () => {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 items-end">
+                <div className="flex flex-row flex-wrap items-center gap-2 sm:flex-col sm:items-end">
                   <span
                     className={`px-2 py-1 rounded-none text-xs font-bold ${getStatusColor(
                       lobby.state.status,
@@ -2621,7 +2608,7 @@ const Lobbies: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+              <div className="mb-4 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 sm:gap-4">
                 <div>
                   <span className="text-gray-400">Fleet Threat Limit:</span>
                   <span className="ml-2">
@@ -3001,8 +2988,8 @@ const Lobbies: React.FC = () => {
           return (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[400]">
               <div className="bg-black border border-cyan-400 rounded-none p-6 w-[100vw] h-[100vh] flex flex-col">
-                <div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
+                <div className="mb-2 grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_1fr] md:items-center">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
                     <h4 className="text-lg font-bold text-cyan-400 whitespace-nowrap">
                       {participantHasFleet ? "VIEW FLEET" : "SELECT FLEET"}
                     </h4>
@@ -3018,7 +3005,7 @@ const Lobbies: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex w-full flex-col items-stretch gap-2 md:w-auto md:flex-row md:items-center md:justify-center">
                     {!participantHasFleet ? (
                       <>
                         <button
@@ -3032,7 +3019,7 @@ const Lobbies: React.FC = () => {
                             !hasMovedShip ||
                             selectedFleetHasStaleCostsVersion
                           }
-                          className="px-4 py-2 rounded-none border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                          className="w-full px-4 py-2 rounded-none border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto md:whitespace-nowrap"
                         >
                           {isCreatingFleet
                             ? "CREATING FLEET..."
@@ -3054,7 +3041,7 @@ const Lobbies: React.FC = () => {
                             closeFleetModalOnly();
                           }}
                           disabled={isCreatingFleet}
-                          className="px-4 py-2 border border-red-400 text-red-400 rounded-none hover:bg-red-400/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                          className="w-full px-4 py-2 border border-red-400 text-red-400 rounded-none hover:bg-red-400/20 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto md:whitespace-nowrap"
                         >
                           CANCEL
                         </button>
@@ -3063,7 +3050,7 @@ const Lobbies: React.FC = () => {
                       <button
                         type="button"
                         onClick={closeFleetModalAndGoToGames}
-                        className="px-4 py-2 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 whitespace-nowrap"
+                        className="w-full px-4 py-2 rounded-none border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm tracking-wider transition-all duration-200 md:w-auto md:whitespace-nowrap"
                       >
                         GO TO GAMES
                       </button>
@@ -3072,14 +3059,14 @@ const Lobbies: React.FC = () => {
                         type="button"
                         disabled
                         aria-disabled="true"
-                        className="cursor-not-allowed px-4 py-2 rounded-none border-2 border-gray-600 bg-gray-900/40 text-gray-500 font-mono font-bold text-sm tracking-wider whitespace-nowrap"
+                        className="w-full cursor-not-allowed px-4 py-2 rounded-none border-2 border-gray-600 bg-gray-900/40 text-gray-500 font-mono font-bold text-sm tracking-wider md:w-auto md:whitespace-nowrap"
                       >
                         WAITING FOR OPPOSING ADMIRAL
                       </button>
                     )}
                   </div>
 
-                  <div className="relative flex items-center justify-end gap-3">
+                  <div className="relative flex flex-wrap items-center justify-start gap-2 sm:justify-end sm:gap-3">
                     {/* Filter Button */}
                     <button
                       onClick={() => setFiltersExpanded(!filtersExpanded)}

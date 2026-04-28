@@ -703,7 +703,7 @@ export function GameGrid({
     <>
       {/* Map Grid */}
       <div
-        className="w-full h-full min-h-0 px-2"
+        className="w-full h-full min-h-0 px-0 lg:px-2"
         onContextMenu={handleGridContextMenu}
       >
         <div
@@ -1722,15 +1722,21 @@ export function GameGrid({
                         {/* Moved badge */}
                         {movedShipIdsSet.has(cell.shipId) && (
                           <div
-                            className={`absolute z-20 ${
+                            className={`absolute z-20 flex items-center justify-center rounded-full font-mono text-white ${
                               cell.isCreator
                                 ? "bottom-0 right-0"
                                 : "bottom-0 left-0"
-                            } m-0.5 w-3 h-3 rounded-full text-[8px] font-mono flex items-center justify-center ${
+                            } ${
                               isShipOwnedByCurrentPlayer(cell.shipId)
                                 ? "bg-blue-700/80"
                                 : "bg-red-700/80"
-                            } text-white`}
+                            }`}
+                            style={{
+                              width: "clamp(8px, 14cqw, 12px)",
+                              height: "clamp(8px, 14cqw, 12px)",
+                              margin: "clamp(1px, 2cqw, 2px)",
+                              fontSize: "clamp(6px, 9cqw, 8px)",
+                            }}
                           >
                             M
                           </div>
@@ -1760,18 +1766,29 @@ export function GameGrid({
                             : cell.isCreator;
                           return (
                             <div
-                              className={`absolute z-20 ${
+                              className={`absolute z-20 [container-type:size] ${
                                 skullAnchorIsCreator
                                   ? "bottom-0 left-0"
                                   : "bottom-0 right-0"
-                              } m-0.5 flex items-center gap-0.5`}
+                              } flex items-center`}
+                              style={{
+                                margin: "clamp(1px, 2cqw, 2px)",
+                                gap: "clamp(1px, 2cqw, 2px)",
+                              }}
                             >
                               {skullLevels.map((level) => (
                                 <div
                                   key={level}
-                                  className="w-4 h-4 rounded-full bg-red-500/90 flex items-center justify-center"
+                                  className="flex items-center justify-center rounded-full bg-red-500/90"
+                                  style={{
+                                    width: "clamp(8px, 15cqw, 12px)",
+                                    height: "clamp(8px, 15cqw, 12px)",
+                                  }}
                                 >
-                                  <span className="text-[8px] leading-none font-mono">
+                                  <span
+                                    className="leading-none font-mono"
+                                    style={{ fontSize: "clamp(6px, 9cqw, 8px)" }}
+                                  >
                                     💀
                                   </span>
                                 </div>
@@ -1821,11 +1838,15 @@ export function GameGrid({
 
                           const dot = (
                             <div
-                              className={`h-2 w-2 shrink-0 rounded-full ${
+                              className={`shrink-0 rounded-full ${
                                 isShipOwnedByCurrentPlayer(cell.shipId)
                                   ? "bg-blue-500"
                                   : "bg-red-500"
                               }`}
+                              style={{
+                                width: "clamp(4px, 7cqw, 8px)",
+                                height: "clamp(4px, 7cqw, 8px)",
+                              }}
                             />
                           );
 
@@ -1834,7 +1855,10 @@ export function GameGrid({
                               <div
                                 className="flex shrink-0 flex-row items-center gap-px leading-none text-yellow-400"
                                 style={{
-                                  fontSize: SHIP_IMAGE_RANK_STAR_BOX,
+                                  // Keep stars smaller in gameplay overlays. Using a plain
+                                  // numeric clamp avoids nesting the ShipImage clamp string,
+                                  // which can invalidate font-size and cause oversized stars.
+                                  fontSize: "clamp(6px, 0.95vmin, 10px)",
                                 }}
                               >
                                 {Array.from({ length: rank }, (_, i) => (
@@ -1843,7 +1867,8 @@ export function GameGrid({
                               </div>
                             ) : (
                               <span
-                                className="inline-block h-2 w-0 shrink-0"
+                                className="inline-block w-0 shrink-0"
+                                style={{ height: "clamp(4px, 7cqw, 8px)" }}
                                 aria-hidden
                               />
                             );
@@ -1851,9 +1876,13 @@ export function GameGrid({
                           return (
                             <div className="pointer-events-none absolute inset-0 z-20 min-h-0 [container-type:size]">
                               <div
-                                className={`absolute left-1 right-1 flex flex-row items-start justify-between gap-0.5 ${
-                                  showGridHullStrip ? "top-3" : "top-1"
-                                } ${teamPulseClasses}`}
+                                className={`absolute flex flex-row items-start justify-between ${teamPulseClasses}`}
+                                style={{
+                                  left: "5%",
+                                  right: "5%",
+                                  top: showGridHullStrip ? "17%" : "4%",
+                                  gap: "clamp(1px, 2cqw, 2px)",
+                                }}
                               >
                                 {cell.isCreator ? (
                                   <>

@@ -21,7 +21,7 @@ export const GameBoardLayout: React.FC<GameBoardLayoutProps> = ({
   return (
     <div
       ref={containerRef}
-      className="p-2 w-full border border-solid"
+      className="w-full border border-solid p-0 lg:p-2"
       onMouseDown={(e) => {
         if (e.button !== 0) return;
         if (e.target !== e.currentTarget) return;

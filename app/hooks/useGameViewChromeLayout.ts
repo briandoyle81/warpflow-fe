@@ -14,8 +14,10 @@ export function horizontalWastePx(el: HTMLElement): number {
 }
 
 export const GAME_VIEW_EDGE_PAD_PX = 8;
+export const GAME_VIEW_EDGE_PAD_MOBILE_PX = 0;
 
 const GRID_BOTTOM_MARGIN = 8;
+const GRID_BOTTOM_MARGIN_MOBILE = 0;
 
 /** GameBoardLayout outline width; getBoundingClientRect omits outline, so we pad for it. */
 const GRID_OUTLINE_WIDTH_PX = 2;
@@ -24,7 +26,7 @@ const MIN_GAME_ROOT_WIDTH_PX = 200;
 
 /** Side breakout + flex; width is set by the hook so the grid fits vertically. */
 export const GAME_VIEW_SIDE_ROOT_CLASS =
-  "max-w-none min-w-0 box-border ml-[calc(50%-50vw+8px)]";
+  "max-w-none min-w-0 box-border ml-[calc(50%-50vw)] lg:ml-[calc(50%-50vw+8px)]";
 
 export function useGameViewChromeLayout(
   gameRootRef: RefObject<HTMLElement | null>,
@@ -51,9 +53,17 @@ export function useGameViewChromeLayout(
       const vh = window.innerHeight;
       const layoutViewportW =
         document.documentElement?.clientWidth ?? window.innerWidth;
-      const edgePad = GAME_VIEW_EDGE_PAD_PX;
+      const isMobileViewport = window.matchMedia("(max-width: 1023px)").matches;
+      const edgePad = isMobileViewport
+        ? GAME_VIEW_EDGE_PAD_MOBILE_PX
+        : GAME_VIEW_EDGE_PAD_PX;
       const rightLimit =
-        layoutViewportW - edgePad - GRID_OUTLINE_WIDTH_PX;
+        layoutViewportW -
+        edgePad -
+        (isMobileViewport ? 0 : GRID_OUTLINE_WIDTH_PX);
+      const gridBottomMargin = isMobileViewport
+        ? GRID_BOTTOM_MARGIN_MOBILE
+        : GRID_BOTTOM_MARGIN;
 
       root.style.boxSizing = "border-box";
 
@@ -70,7 +80,7 @@ export function useGameViewChromeLayout(
 
       const gridFitsViewport = () => {
         const gridRect = gridContainer.getBoundingClientRect();
-        const verticalFits = gridRect.bottom <= vh - GRID_BOTTOM_MARGIN;
+        const verticalFits = gridRect.bottom <= vh - gridBottomMargin;
         const horizontalFits = gridRect.right <= rightLimit;
         return verticalFits && horizontalFits;
       };

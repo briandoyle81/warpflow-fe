@@ -107,11 +107,34 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     gridContainerRef,
   );
   const chromeOnSide = chromeLayout === "side";
+  const [isLandscapeMobile, setIsLandscapeMobile] = React.useState(false);
+  const [requiresLandscapeMode, setRequiresLandscapeMode] =
+    React.useState(false);
 
-  const proposedMoveTargetListClass = chromeOnSide
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const orientationMq = window.matchMedia("(orientation: landscape)");
+    const mobileMq = window.matchMedia("(max-width: 1023px)");
+    const sync = () => {
+      const isMobile = mobileMq.matches;
+      const isLandscape = orientationMq.matches;
+      setRequiresLandscapeMode(isMobile && !isLandscape);
+      setIsLandscapeMobile(isMobile && isLandscape);
+    };
+    sync();
+    orientationMq.addEventListener("change", sync);
+    mobileMq.addEventListener("change", sync);
+    return () => {
+      orientationMq.removeEventListener("change", sync);
+      mobileMq.removeEventListener("change", sync);
+    };
+  }, []);
+  const useSideLayout = chromeOnSide && !isLandscapeMobile;
+
+  const proposedMoveTargetListClass = useSideLayout
     ? "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
     : "flex flex-wrap gap-2 min-h-[5rem]";
-  const proposedMoveTargetBtnClass = chromeOnSide
+  const proposedMoveTargetBtnClass = useSideLayout
     ? "h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex w-full shrink-0 items-center justify-center"
     : "h-9 px-3 py-0 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 flex items-center shrink-0";
 
@@ -2593,7 +2616,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   /** Top of proposed-move panel: 2/3 submit + 1/3 cancel (side), or horizontal row (wide). */
   const renderProposedMoveSubmitCancelRow = (): React.ReactNode => {
-    const isRail = chromeOnSide;
+    const isRail = useSideLayout;
     return (
       <div
         className={
@@ -2893,6 +2916,33 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     };
   }, []);
 
+  if (requiresLandscapeMode) {
+    return (
+      <div className="mx-auto flex min-h-[70vh] w-full max-w-4xl items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md border-2 border-cyan-400 bg-black/85 p-6 text-center">
+          <h2
+            className="text-xl font-bold uppercase tracking-wider text-cyan-300"
+            style={{ fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif" }}
+          >
+            Rotate to Landscape
+          </h2>
+          <p className="mt-3 text-sm text-gray-300">
+            This battle view requires landscape mode on mobile. Rotate your
+            device to continue.
+          </p>
+          <button
+            type="button"
+            onClick={onBack}
+            className="mt-5 border border-gray-500 px-4 py-2 text-sm font-semibold uppercase tracking-wider text-gray-200 transition-colors hover:border-cyan-300 hover:text-cyan-300"
+            style={{ borderRadius: 0 }}
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Show loading state if game data is being fetched
   if (gameLoading) {
     return (
@@ -3044,7 +3094,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     <>
       <div
         className={
-          chromeOnSide
+          useSideLayout
             ? "flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 p-4"
             : "flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 p-4"
         }
@@ -3053,7 +3103,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
           <div
             className={
-              chromeOnSide
+              useSideLayout
                 ? "flex min-h-0 min-w-0 flex-1 flex-col gap-4"
                 : "flex min-h-0 min-w-0 flex-1 flex-row items-stretch gap-6"
             }
@@ -3128,14 +3178,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         {!isSelectedShipDisabled && validTargets.length > 0 && (
           <div
             className={
-              chromeOnSide
+              useSideLayout
                 ? "flex min-h-0 min-w-0 flex-1 flex-col"
                 : "min-h-0 flex-1"
             }
           >
             <div
               className={
-                chromeOnSide
+                useSideLayout
                   ? "flex min-h-0 min-w-0 flex-1 flex-col border border-solid p-3"
                   : "min-h-[7.5rem] border border-solid p-3"
               }
@@ -3202,7 +3252,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           </div>
         )}
 
-        {chromeOnSide &&
+        {useSideLayout &&
           (validTargets.length === 0 || isSelectedShipDisabled) && (
             <div className="min-h-0 min-w-0 flex-1" aria-hidden />
           )}
@@ -3274,19 +3324,68 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     <div
       ref={gameViewRootRef}
       className={`flex flex-col gap-6 ${
-        chromeOnSide ? GAME_VIEW_SIDE_ROOT_CLASS : "mx-auto w-full"
+        useSideLayout ? GAME_VIEW_SIDE_ROOT_CLASS : "mx-auto w-full"
       }`}
       style={
-        chromeOnSide
+        useSideLayout
           ? {
               marginLeft: "8px",
             }
           : undefined
       }
     >
+      {isLandscapeMobile && (
+        <div
+          className="sticky top-0 z-[260] flex items-center justify-between gap-2 border border-solid px-2 py-1.5"
+          style={{
+            backgroundColor: "rgba(12, 18, 28, 0.95)",
+            borderColor: "var(--color-gunmetal)",
+            borderTopColor: "var(--color-steel)",
+            borderLeftColor: "var(--color-steel)",
+            borderRadius: 0,
+          }}
+        >
+          <button
+            onClick={onBack}
+            className="px-2 py-1 border border-solid text-xs uppercase font-semibold tracking-wider"
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderColor: "var(--color-gunmetal)",
+              color: "var(--color-text-secondary)",
+              backgroundColor: "var(--color-steel)",
+              borderRadius: 0,
+            }}
+          >
+            Back
+          </button>
+          <div className="min-w-0 text-center">
+            <p className="truncate text-xs uppercase tracking-wider text-gray-300">
+              Game {game.metadata.gameId.toString()} | Round{" "}
+              {game.turnState.currentRound.toString()}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              lastPollTimeRef.current = Date.now();
+              refetchGame();
+            }}
+            className="px-2 py-1 border border-solid text-xs uppercase font-semibold tracking-wider"
+            style={{
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+              borderColor: "var(--color-cyan)",
+              color: "var(--color-cyan)",
+              backgroundColor: "var(--color-near-black)",
+              borderRadius: 0,
+            }}
+          >
+            Sync
+          </button>
+        </div>
+      )}
       <div
         className={
-          chromeOnSide
+          useSideLayout
             ? "flex min-h-0 min-w-0 flex-row items-stretch gap-4"
             : "flex flex-col gap-6"
         }
@@ -3294,14 +3393,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       {/* Header chrome (top bar or left rail) */}
       <div
         className={
-          chromeOnSide
+          useSideLayout
             ? "flex min-h-0 self-stretch w-[min(18rem,34vw)] max-w-[20rem] shrink-0 flex-col gap-3 overflow-hidden pl-2 pr-1"
             : "flex items-center justify-between"
         }
       >
         <div
           className={
-            chromeOnSide
+            useSideLayout
               ? "flex shrink-0 flex-col items-stretch gap-3"
               : "flex items-center space-x-4"
           }
@@ -3372,7 +3471,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           </div>
           <div
             className={
-              chromeOnSide ? "flex flex-col gap-2" : "contents"
+              useSideLayout ? "flex flex-col gap-2" : "contents"
             }
           >
           <div className="flex flex-col">
@@ -3639,7 +3738,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           {/* Scores box aligned left, to the right of title */}
           <div
             className={
-              chromeOnSide
+              useSideLayout
                 ? "w-full shrink-0 border border-solid p-2 text-lg"
                 : "ml-6 w-48 border border-solid p-2 text-lg"
             }
@@ -3710,7 +3809,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         </div>
 
         {/* Proposed move body lives in the left rail (side chrome), not between rail and map. */}
-        {chromeOnSide && isShowingProposedMove && (
+        {useSideLayout && isShowingProposedMove && (
         <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto border border-solid p-3"
           style={{
@@ -3727,7 +3826,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 </div>
 
         {/* Move confirmation: stacked layout (wide chrome), matches SimulatedGameDisplay. */}
-        {!chromeOnSide && isShowingProposedMove && (
+        {!useSideLayout && !isLandscapeMobile && isShowingProposedMove && (
                     <div
             className="min-h-0 flex-1 border border-solid p-3"
                       style={{
@@ -3745,7 +3844,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       {/* Game map: same stack as tutorial (GameBoardLayout + 17×11 aspect clip). */}
       <div
         className={
-          chromeOnSide
+          useSideLayout
             ? "relative min-h-0 min-w-0 flex-1"
             : "relative w-full"
         }
@@ -4040,15 +4139,33 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       </div>
       </div>
 
+      {isLandscapeMobile && isShowingProposedMove && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-[280] border-t border-solid p-3"
+          style={{
+            backgroundColor: "rgba(6, 10, 18, 0.98)",
+            borderColor: "var(--color-gunmetal)",
+            borderTopColor: "var(--color-cyan)",
+            maxHeight: "44vh",
+            overflowY: "auto",
+            borderRadius: 0,
+          }}
+        >
+          {renderProposedMoveActivePanel()}
+        </div>
+      )}
+
       {/* Ship Details */}
       <div
-        className="p-4 border border-solid w-full"
+        className={`border border-solid w-full ${isLandscapeMobile ? "p-2" : "p-4"}`}
         style={{
           backgroundColor: "var(--color-slate)",
           borderColor: "var(--color-gunmetal)",
           borderTopColor: "var(--color-steel)",
           borderLeftColor: "var(--color-steel)",
           borderRadius: 0,
+          maxHeight: isLandscapeMobile ? "46vh" : undefined,
+          overflowY: isLandscapeMobile ? "auto" : undefined,
         }}
       >
         <div

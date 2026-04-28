@@ -493,7 +493,7 @@ const Info: React.FC = () => {
                 color: "var(--color-text-primary)",
               }}
             >
-              Connect your Flow wallet to access the game
+              Connect your wallet to access the game
             </p>
           </div>
           <div className="text-center">

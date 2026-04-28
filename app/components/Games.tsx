@@ -12,6 +12,7 @@ const Games: React.FC = () => {
   const { address, isConnected } = useAccount();
   const { games, isLoading, error, refetch } = usePlayerGames();
   const [selectedGame, setSelectedGame] = useState<GameDataView | null>(null);
+  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
   // Track if component has mounted (client-side only)
   const [isMounted, setIsMounted] = useState(false);
@@ -48,6 +49,19 @@ const Games: React.FC = () => {
     const s = (total % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
+
+  const sortedGames = useMemo(() => {
+    const copy = [...games];
+    copy.sort((a, b) => {
+      const aInProgress = a.metadata.winner === ZERO_ADDRESS ? 1 : 0;
+      const bInProgress = b.metadata.winner === ZERO_ADDRESS ? 1 : 0;
+      if (aInProgress !== bInProgress) return bInProgress - aInProgress;
+      const aStarted = Number(a.metadata.startedAt || 0n);
+      const bStarted = Number(b.metadata.startedAt || 0n);
+      return bStarted - aStarted;
+    });
+    return copy;
+  }, [games]);
 
   // Persist selectedGame to localStorage
   const storageKey = useMemo(
@@ -268,30 +282,30 @@ const Games: React.FC = () => {
     <div className="space-y-6 w-full">
       <h1 className="text-2xl font-mono text-white">Games</h1>
 
-      {games.length === 0 ? (
+      {sortedGames.length === 0 ? (
         <div className="text-center py-8 text-gray-400">
           <p>No games found. Create a lobby and start playing!</p>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="text-sm text-gray-400">
-            Total games: {games.length}
+            Total games: {sortedGames.length}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {games.map((game) => (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {sortedGames.map((game) => (
               <div
                 key={game.metadata.gameId.toString()}
-                className="bg-gray-800 rounded-none p-4 border border-gray-700"
+                className="border border-gray-700 bg-gray-800 p-4 rounded-none"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-mono text-white">
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 className="text-base font-mono text-white sm:text-lg">
                     Game #{game.metadata.gameId.toString()}
                   </h3>
                   <span
-                    className={`text-xs px-2 py-1 rounded-none ${
+                    className={`w-fit text-xs px-2 py-1 rounded-none ${
                       game.metadata.winner ===
-                      "0x0000000000000000000000000000000000000000"
+                      ZERO_ADDRESS
                         ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
                         : game.metadata.winner === address
                         ? "bg-green-400/20 text-green-400 border border-green-400/30"
@@ -299,7 +313,7 @@ const Games: React.FC = () => {
                     }`}
                   >
                     {game.metadata.winner ===
-                    "0x0000000000000000000000000000000000000000"
+                    ZERO_ADDRESS
                       ? "IN PROGRESS"
                       : game.metadata.winner === address
                       ? "VICTORY"
@@ -308,58 +322,58 @@ const Games: React.FC = () => {
                 </div>
 
                 <div className="space-y-2 text-sm text-gray-300">
-                  <div className="flex justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="opacity-60">Lobby ID:</span>
-                    <span>{game.metadata.lobbyId.toString()}</span>
+                    <span className="text-right">{game.metadata.lobbyId.toString()}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="opacity-60">Creator:</span>
-                    <span className="font-mono text-xs">
+                    <span className="font-mono text-xs text-right">
                       {game.metadata.creator.slice(0, 6)}...
                       {game.metadata.creator.slice(-4)}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="opacity-60">Joiner:</span>
-                    <span className="font-mono text-xs">
+                    <span className="font-mono text-xs text-right">
                       {game.metadata.joiner.slice(0, 6)}...
                       {game.metadata.joiner.slice(-4)}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="opacity-60">Started:</span>
-                    <span>
+                    <span className="text-right">
                       {new Date(
                         Number(game.metadata.startedAt) * 1000
                       ).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="opacity-60">Creator Score:</span>
-                    <span>{game.creatorScore.toString()}</span>
+                    <span className="text-right">{game.creatorScore.toString()}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="opacity-60">Joiner Score:</span>
-                    <span>{game.joinerScore.toString()}</span>
+                    <span className="text-right">{game.joinerScore.toString()}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="opacity-60">Max Score:</span>
-                    <span>{game.maxScore.toString()}</span>
+                    <span className="text-right">{game.maxScore.toString()}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="opacity-60">Current Turn:</span>
-                    <span className="font-mono text-xs">
+                    <span className="font-mono text-xs text-right">
                       {game.turnState.currentTurn === address
                         ? "YOU"
                         : "OPPONENT"}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="opacity-60">Time Remaining:</span>
                     {(() => {
                       const isFinished =
                         game.metadata.winner !==
-                        "0x0000000000000000000000000000000000000000";
+                        ZERO_ADDRESS;
                       const remaining = isFinished
                         ? 0
                         : calculateTimeRemaining(game);
