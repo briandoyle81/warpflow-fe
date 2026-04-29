@@ -47,6 +47,10 @@ interface ShipCardProps {
   tooltipGridPosition?: { row: number; col: number };
   /** Manage Navy: optional fleet composition add/remove controls below stats. */
   fleetCompositionControls?: React.ReactNode;
+  /** Hide COMMON/SHINY badge (used by compact mobile game UI). */
+  hideRarityLabel?: boolean;
+  /** Hide rank badge (used by compact mobile game UI). */
+  hideRankLabel?: boolean;
 }
 
 const ShipCard: React.FC<ShipCardProps> = ({
@@ -76,7 +80,10 @@ const ShipCard: React.FC<ShipCardProps> = ({
   nameBlockMinHeightPx,
   tooltipGridPosition,
   fleetCompositionControls,
+  hideRarityLabel = false,
+  hideRankLabel = false,
 }) => {
+  const useCompactStatGrid = gameViewMode && hideRarityLabel && hideRankLabel;
   // Determine border class based on selection mode and ship state
   const getBorderClass = () => {
     const isInGameView = tooltipMode || gameViewMode;
@@ -566,32 +573,34 @@ const ShipCard: React.FC<ShipCardProps> = ({
               }}
             />
           )}
-          <span
-            className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-xs px-2 py-1 border border-solid uppercase font-semibold tracking-wider"
-            style={{
-              fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
-              backgroundColor: ship.shipData.shiny
-                ? "var(--color-near-black)"
-                : "var(--color-near-black)",
-              color: ship.shipData.shiny
-                ? "var(--color-amber)"
-                : "var(--color-text-secondary)",
-              borderColor: ship.shipData.shiny
-                ? "var(--color-amber)"
-                : "var(--color-gunmetal)",
-              borderTopColor: ship.shipData.shiny
-                ? "var(--color-amber)"
-                : "var(--color-steel)",
-              borderLeftColor: ship.shipData.shiny
-                ? "var(--color-amber)"
-                : "var(--color-steel)",
-              borderRadius: 0, // Square corners
-            }}
-          >
-            {ship.shipData.shiny ? "SHINY ✨" : "COMMON"}
-          </span>
+          {!hideRarityLabel && (
+            <span
+              className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-xs px-2 py-1 border border-solid uppercase font-semibold tracking-wider"
+              style={{
+                fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+                backgroundColor: ship.shipData.shiny
+                  ? "var(--color-near-black)"
+                  : "var(--color-near-black)",
+                color: ship.shipData.shiny
+                  ? "var(--color-amber)"
+                  : "var(--color-text-secondary)",
+                borderColor: ship.shipData.shiny
+                  ? "var(--color-amber)"
+                  : "var(--color-gunmetal)",
+                borderTopColor: ship.shipData.shiny
+                  ? "var(--color-amber)"
+                  : "var(--color-steel)",
+                borderLeftColor: ship.shipData.shiny
+                  ? "var(--color-amber)"
+                  : "var(--color-steel)",
+                borderRadius: 0, // Square corners
+              }}
+            >
+              {ship.shipData.shiny ? "SHINY ✨" : "COMMON"}
+            </span>
+          )}
           {/* Rank */}
-          {ship.shipData.constructed && (
+          {ship.shipData.constructed && !hideRankLabel && (
             <div className="relative group">
               <span
                 className={`text-xs px-2 py-1 border border-solid uppercase font-semibold tracking-wider cursor-default ${getRankColor(
@@ -628,7 +637,13 @@ const ShipCard: React.FC<ShipCardProps> = ({
       {/* Compact Stats or Construction Message */}
       <div className="space-y-2 text-sm">
         {ship.shipData.constructed ? (
-          <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs relative">
+          <div
+            className={`grid gap-y-1 text-xs relative ${
+              useCompactStatGrid
+                ? "grid-cols-2 gap-x-2"
+                : "grid-cols-3 gap-x-4"
+            }`}
+          >
             {showInGameProperties ? (
               // In-Game Properties
               (() => {
@@ -693,7 +708,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                         {getSpecialName(ship.equipment.special)}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center col-span-3">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 col-span-full">
                       <div className="flex items-center">
                         <span className="opacity-60">Status:</span>
                         <span
@@ -767,7 +782,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                     {getSpecialName(ship.equipment.special)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center col-span-3">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 col-span-full">
                   <div className="flex items-center">
                     <span className="opacity-60">Status:</span>
                     <span

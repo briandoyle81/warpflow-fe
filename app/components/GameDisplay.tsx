@@ -108,6 +108,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   );
   const chromeOnSide = chromeLayout === "side";
   const [isLandscapeMobile, setIsLandscapeMobile] = React.useState(false);
+  const [isMobileFleetModalOpen, setIsMobileFleetModalOpen] = React.useState(false);
+  const [isMobileFleeOpen, setIsMobileFleeOpen] = React.useState(false);
+  const [isMobileWeaponMenuOpen, setIsMobileWeaponMenuOpen] = React.useState(false);
+  const [mobileLeftPanelTab, setMobileLeftPanelTab] = React.useState<
+    "status" | "actions" | "events"
+  >("status");
   const [mobileActivePanel, setMobileActivePanel] = React.useState<
     "status" | "actions" | "fleet" | "events" | "none"
   >("none");
@@ -2928,22 +2934,28 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
   if (requiresLandscapeMode) {
     return (
-      <div className="mx-auto flex min-h-[70vh] w-full max-w-4xl items-center justify-center px-4 py-10">
-        <div className="w-full max-w-md border-2 border-cyan-400 bg-black/85 p-6 text-center">
+      <div
+        className="fixed inset-0 z-[500] flex items-center justify-center p-4"
+        style={{ backgroundColor: "var(--color-near-black)" }}
+      >
+        <div
+          className="border-2 border-cyan-400 bg-black/85 p-4 text-center sm:p-5"
+          style={{ width: "min(90vw, 22rem)" }}
+        >
           <h2
-            className="text-xl font-bold uppercase tracking-wider text-cyan-300"
+            className="text-lg font-bold uppercase tracking-wider text-cyan-300 sm:text-xl"
             style={{ fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif" }}
           >
             Rotate to Landscape
           </h2>
-          <p className="mt-3 text-sm text-gray-300">
+          <p className="mt-2 text-sm text-gray-300 sm:mt-3">
             This battle view requires landscape mode on mobile. Rotate your
             device to continue.
           </p>
           <button
             type="button"
             onClick={onBack}
-            className="mt-5 border border-gray-500 px-4 py-2 text-sm font-semibold uppercase tracking-wider text-gray-200 transition-colors hover:border-cyan-300 hover:text-cyan-300"
+            className="mt-4 border border-gray-500 px-4 py-2 text-sm font-semibold uppercase tracking-wider text-gray-200 transition-colors hover:border-cyan-300 hover:text-cyan-300 sm:mt-5"
             style={{ borderRadius: 0 }}
           >
             Back
@@ -3347,17 +3359,614 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       : isMyTurnEffective
         ? "Your turn"
         : "Opponent turn";
+  const mobileTurnTime = formatSeconds(Math.max(0, turnSecondsLeft));
+  const mobileTurnPct = Math.max(0, Math.min(100, turnPercentRemaining));
+  const mobileSelectedShipAttributes =
+    selectedShipId != null ? getShipAttributes(selectedShipId) : null;
+  const mobileSelectedShipPosition =
+    selectedShipId != null
+      ? game.shipPositions.find((sp) => sp.shipId === selectedShipId) ?? null
+      : null;
+  const isMobileJoiner = address === game.metadata.joiner;
+  const mobileCanUseSpecial = Boolean(
+    selectedShip &&
+      selectedShip.equipment.special > 0 &&
+      (mobileSelectedShipAttributes?.hullPoints ?? 0) > 0,
+  );
+  const mobileWeaponDisplayName =
+    selectedShip && selectedWeaponType === "weapon"
+      ? getMainWeaponName(selectedShip.equipment.mainWeapon)
+      : selectedShip && selectedWeaponType === "special"
+        ? getSpecialName(selectedShip.equipment.special)
+        : "Weapon";
+
+  const renderFleetColumn = ({
+      title,
+      titleColor,
+      ownerAddress,
+      shipIds,
+      isCurrentPlayerShip,
+      flipShip,
+    }: {
+      title: string;
+      titleColor: string;
+      ownerAddress: string;
+      shipIds: readonly bigint[];
+      isCurrentPlayerShip: boolean;
+      flipShip: boolean;
+    }) => (
+      <div>
+        <h4
+          className="mb-3 uppercase font-bold tracking-wider"
+          style={{
+            fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+            color: titleColor,
+            fontSize: "18px",
+          }}
+        >
+          {title}
+          <span
+            className="ml-2"
+            style={{
+              fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
+              color: "var(--color-text-secondary)",
+              fontSize: "14px",
+              fontWeight: 400,
+            }}
+          >
+            ({ownerAddress})
+          </span>
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {shipIds.map((shipId) => {
+            const shipPosition = game.shipPositions.find((sp) => sp.shipId === shipId);
+            const attributes = getShipAttributes(shipId);
+            const ship = shipMap.get(shipId);
+            if (!shipPosition || !attributes || !ship) return null;
+            const reactorCriticalStatus =
+              attributes.reactorCriticalTimer > 0 && attributes.hullPoints === 0
+                ? "critical"
+                : attributes.reactorCriticalTimer > 0
+                  ? "warning"
+                  : "none";
+            return (
+              <ShipCard
+                key={shipId.toString()}
+                ship={ship}
+                isStarred={false}
+                onToggleStar={() => {}}
+                isSelected={false}
+                onToggleSelection={() => {}}
+                onRecycleClick={() => {}}
+                showInGameProperties={true}
+                inGameAttributes={attributes}
+                attributesLoading={false}
+                hideRecycle={true}
+                hideCheckbox={true}
+                isCurrentPlayerShip={isCurrentPlayerShip}
+                flipShip={flipShip}
+                reactorCriticalStatus={reactorCriticalStatus}
+                hasMoved={movedShipIdsSet.has(shipId)}
+                gameViewMode={true}
+                layoutShipId={shipId.toString()}
+                nameBlockMinHeightPx={gameViewNameBlockMinHeights[shipId.toString()]}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+
+  if (isLandscapeMobile) {
+    return (
+      <div className="mx-auto h-full w-full overflow-hidden" style={{ height: "100dvh" }}>
+        <div className="flex h-full min-h-0 items-start gap-2">
+          <div
+            className={`relative flex h-full min-h-0 min-w-0 flex-1 flex-col border border-solid p-2 ${
+              isMobileJoiner ? "order-2" : "order-1"
+            }`}
+            style={{
+              backgroundColor: "var(--color-slate)",
+              borderColor: "var(--color-gunmetal)",
+              borderTopColor: "var(--color-steel)",
+              borderLeftColor: "var(--color-steel)",
+            }}
+          >
+            <div
+              className="mb-2 border border-solid px-1.5 py-1"
+              style={{
+                backgroundColor: "rgba(8, 12, 22, 0.96)",
+                borderColor: "var(--color-gunmetal)",
+                borderTopColor: "var(--color-steel)",
+                borderLeftColor: "var(--color-steel)",
+              }}
+            >
+              <div className="flex items-center justify-between gap-1.5">
+                <button
+                  onClick={onBack}
+                  className="px-1.5 py-0.5 border border-solid text-[10px] uppercase font-semibold tracking-wider"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    borderColor: "var(--color-gunmetal)",
+                    color: "var(--color-text-secondary)",
+                    backgroundColor: "var(--color-steel)",
+                    borderRadius: 0,
+                  }}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    lastPollTimeRef.current = Date.now();
+                    refetchGame();
+                  }}
+                  className="px-1.5 py-0.5 border border-solid text-[10px] uppercase font-semibold tracking-wider"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    borderColor: "var(--color-cyan)",
+                    color: "var(--color-cyan)",
+                    backgroundColor: "var(--color-near-black)",
+                    borderRadius: 0,
+                  }}
+                >
+                  Sync
+                </button>
+              </div>
+              <div className="mt-1 min-w-0 text-center">
+                <p className="truncate text-[10px] uppercase tracking-wider text-gray-300">
+                  Game {game.metadata.gameId.toString()} | Round{" "}
+                  {game.turnState.currentRound.toString()}
+                </p>
+                <p
+                  className="truncate text-[10px] uppercase tracking-wider"
+                  style={{
+                    color: isMyTurnEffective
+                      ? "var(--color-cyan)"
+                      : "var(--color-warning-red)",
+                  }}
+                >
+                  {mobileTurnLabel} | {mobileTurnTime}
+                </p>
+              </div>
+              <div className="mt-1 h-1 w-full overflow-hidden" style={{ backgroundColor: "var(--color-gunmetal)" }}>
+                <div className="h-full transition-all duration-1000 ease-linear" style={{ width: `${mobileTurnPct}%`, backgroundColor: "var(--color-warning-red)" }} />
+              </div>
+            </div>
+
+            <div className="mb-2 grid grid-cols-4 gap-1">
+              {(["status", "actions", "events"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setMobileLeftPanelTab(tab)}
+                  className="px-1 py-1 text-[10px] uppercase tracking-wider border border-solid"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    borderColor:
+                      mobileLeftPanelTab === tab
+                        ? "var(--color-cyan)"
+                        : "var(--color-gunmetal)",
+                    color:
+                      mobileLeftPanelTab === tab
+                        ? "var(--color-cyan)"
+                        : "var(--color-text-secondary)",
+                    backgroundColor:
+                      mobileLeftPanelTab === tab
+                        ? "rgba(86, 214, 255, 0.12)"
+                        : "var(--color-steel)",
+                    borderRadius: 0,
+                  }}
+                >
+                  {tab}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setIsMobileFleetModalOpen(true)}
+                className="px-1 py-1 text-[10px] uppercase tracking-wider border border-solid"
+                style={{
+                  fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                  borderColor: "var(--color-phosphor-green)",
+                  color: "var(--color-phosphor-green)",
+                  backgroundColor: "var(--color-steel)",
+                  borderRadius: 0,
+                }}
+              >
+                Fleets
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {mobileLeftPanelTab === "actions" ? (
+                isShowingProposedMove ? (
+                  renderProposedMoveActivePanel()
+                ) : (
+                  <div className="text-sm text-gray-300">
+                    Select a ship and choose a destination to open actions.
+                  </div>
+                )
+              ) : null}
+              {mobileLeftPanelTab === "status" ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="border border-solid px-1.5 py-1 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
+                      <span className="text-gray-400">Me </span>
+                      <span className="font-mono text-white">{myScore}/{maxScore}</span>
+                    </div>
+                    <div className="border border-solid px-1.5 py-1 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
+                      <span className="text-gray-400">Opp </span>
+                      <span className="font-mono text-white">{opponentScore}/{maxScore}</span>
+                    </div>
+                  </div>
+                  {game.metadata.winner !== "0x0000000000000000000000000000000000000000" ? (
+                    <div className="text-sm text-gray-200">
+                      Result: {game.metadata.winner === address ? "Victory" : "Defeat"}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {mobileLeftPanelTab === "events" ? (
+                <GameEvents
+                  lastMove={selectedShipId !== null ? undefined : displayedLastMove}
+                  shipMap={shipMap}
+                  address={address}
+                  appendDestroyedText={appendDestroyedTextToLastMove}
+                  debugSuffix={lastMoveTargetPositionDebugSuffix}
+                />
+              ) : null}
+            </div>
+
+            {selectedShip && mobileSelectedShipAttributes ? (
+              <div
+                className="absolute inset-1 z-[260] overflow-y-auto border border-solid p-2"
+                style={{
+                  backgroundColor: "rgba(3, 8, 16, 0.97)",
+                  borderColor: "var(--color-cyan)",
+                }}
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="relative min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileWeaponMenuOpen((prev) => !prev)}
+                      disabled={!selectedShip}
+                      className="flex min-w-[7.5rem] max-w-[10.5rem] items-center justify-between gap-2 border border-solid bg-black/40 px-2 py-1 text-[10px] uppercase tracking-wider text-cyan-300 disabled:opacity-50"
+                      style={{
+                        borderColor: "var(--color-gunmetal)",
+                        borderRadius: 0,
+                      }}
+                    >
+                      <span className="truncate">{mobileWeaponDisplayName}</span>
+                      <span>{isMobileWeaponMenuOpen ? "▲" : "▼"}</span>
+                    </button>
+                    {isMobileWeaponMenuOpen ? (
+                      <div
+                        className="absolute left-0 top-[calc(100%+4px)] z-[270] w-full border border-solid bg-[var(--color-near-black)]"
+                        style={{
+                          borderColor: "var(--color-gunmetal)",
+                          borderRadius: 0,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setWeaponTypeFromGrid("weapon");
+                            setIsMobileWeaponMenuOpen(false);
+                          }}
+                          className="flex w-full items-center justify-between border-b border-solid px-2 py-1 text-left text-[10px] uppercase tracking-wider"
+                          style={{
+                            borderColor: "var(--color-gunmetal)",
+                            color:
+                              selectedWeaponType === "weapon"
+                                ? "var(--color-cyan)"
+                                : "var(--color-text-secondary)",
+                            backgroundColor:
+                              selectedWeaponType === "weapon"
+                                ? "rgba(86, 214, 255, 0.12)"
+                                : "transparent",
+                          }}
+                        >
+                          <span className="truncate">
+                            {selectedShip
+                              ? getMainWeaponName(selectedShip.equipment.mainWeapon)
+                              : "Weapon"}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!mobileCanUseSpecial}
+                          onClick={() => {
+                            if (!mobileCanUseSpecial) return;
+                            setWeaponTypeFromGrid("special");
+                            setIsMobileWeaponMenuOpen(false);
+                          }}
+                          className="flex w-full items-center justify-between px-2 py-1 text-left text-[10px] uppercase tracking-wider disabled:opacity-40"
+                          style={{
+                            color:
+                              selectedWeaponType === "special"
+                                ? "var(--color-cyan)"
+                                : "var(--color-text-secondary)",
+                            backgroundColor:
+                              selectedWeaponType === "special"
+                                ? "rgba(86, 214, 255, 0.12)"
+                                : "transparent",
+                          }}
+                        >
+                          <span className="truncate">
+                            {selectedShip
+                              ? getSpecialName(selectedShip.equipment.special)
+                              : "Special"}
+                          </span>
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileWeaponMenuOpen(false);
+                      setSelectedShipId(null);
+                    }}
+                    className="px-1.5 py-0.5 text-[10px] uppercase border border-solid"
+                    style={{
+                      borderColor: "var(--color-gunmetal)",
+                      color: "var(--color-text-secondary)",
+                      backgroundColor: "var(--color-steel)",
+                      borderRadius: 0,
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+                <ShipCard
+                  ship={selectedShip}
+                  isStarred={false}
+                  onToggleStar={() => {}}
+                  isSelected={true}
+                  onToggleSelection={() => {}}
+                  onRecycleClick={() => {}}
+                  showInGameProperties={true}
+                  inGameAttributes={mobileSelectedShipAttributes}
+                  attributesLoading={false}
+                  hideRecycle={true}
+                  hideCheckbox={true}
+                  isCurrentPlayerShip={isShipOwnedByCurrentPlayer(selectedShip.id)}
+                  flipShip={Boolean(mobileSelectedShipPosition?.isCreator)}
+                  reactorCriticalStatus={
+                    mobileSelectedShipAttributes.reactorCriticalTimer > 0 &&
+                    mobileSelectedShipAttributes.hullPoints === 0
+                      ? "critical"
+                      : mobileSelectedShipAttributes.reactorCriticalTimer > 0
+                        ? "warning"
+                        : "none"
+                  }
+                  hasMoved={movedShipIdsSet.has(selectedShip.id)}
+                  gameViewMode={true}
+                  hideRarityLabel={true}
+                  hideRankLabel={true}
+                  layoutShipId={selectedShip.id.toString()}
+                  nameBlockMinHeightPx={gameViewNameBlockMinHeights[selectedShip.id.toString()]}
+                />
+              </div>
+            ) : null}
+          </div>
+
+          <div
+            className={`relative h-full min-h-0 shrink-0 overflow-hidden ${
+              isMobileJoiner ? "order-1" : "order-2"
+            }`}
+            style={{
+              aspectRatio: `${GRID_WIDTH} / ${GRID_HEIGHT}`,
+              paddingRight: "2px",
+              paddingTop: "2px",
+            }}
+          >
+            <div
+              className="h-full max-h-full"
+              style={{
+                height: "calc(100% - 2px)",
+                width: "auto",
+                aspectRatio: `${GRID_WIDTH} / ${GRID_HEIGHT}`,
+              }}
+            >
+              <GameBoardLayout
+                isCurrentPlayerTurn={!readOnly && isMyTurnEffective}
+                containerRef={gridContainerRef}
+                onBoardChromeMouseDown={handleCancelMove}
+              >
+                <div
+                  className="relative h-full [contain:layout]"
+                  style={{ aspectRatio: `${GRID_WIDTH} / ${GRID_HEIGHT}` }}
+                >
+                  <div className="absolute inset-0 min-h-0 overflow-hidden">
+                    <GameGrid
+                      grid={grid}
+                      allShipPositions={game.shipPositions}
+                      shipMap={shipMap}
+                      selectedShipId={selectedShipId}
+                      previewPosition={previewPosition}
+                      targetShipId={targetShipId}
+                      selectedWeaponType={selectedWeaponType}
+                      hoveredCell={hoveredCell}
+                      draggedShipId={draggedShipId}
+                      dragOverCell={dragOverCell}
+                      movementRange={movementRange}
+                      shootingRange={shootingRange}
+                      validTargets={validTargets}
+                      labelTargets={labelTargets}
+                      assistableTargets={assistableTargets}
+                      assistableTargetsFromStart={assistableTargetsFromStart}
+                      dragShootingRange={dragShootingRange}
+                      dragValidTargets={dragValidTargets}
+                      isCurrentPlayerTurn={!readOnly && isMyTurnEffective}
+                      isShipOwnedByCurrentPlayer={isShipOwnedByCurrentPlayer}
+                      movedShipIdsSet={movedShipIdsSet}
+                      specialType={specialType}
+                      blockedGrid={blockedGrid}
+                      scoringGrid={scoringGrid}
+                      onlyOnceGrid={onlyOnceGrid}
+                      calculateDamage={calculateDamage}
+                      getShipAttributes={getShipAttributes}
+                      disableTooltips={true}
+                      address={address}
+                      currentTurn={game.turnState.currentTurn}
+                      highlightedMovePosition={highlightedMovePosition}
+                      lastMoveShipId={lastMoveShipId}
+                      lastMoveOldPosition={lastMoveOldPosition}
+                      lastMoveNewPosition={lastMoveNewPosition}
+                      lastMoveActionType={lastMoveActionType}
+                      lastMoveTargetShipId={lastMoveTargetShipId}
+                      lastMoveIsCurrentPlayer={lastMoveIsCurrentPlayer}
+                      rammingPreviewPosition={
+                        isRammingMovePreview && previewPosition ? previewPosition : null
+                      }
+                      isRammingMovePreview={isRammingMovePreview}
+                      retreatPrepShipId={retreatPrepShipId}
+                      retreatPrepIsCreator={retreatPrepIsCreator}
+                      onGridRightClickDeselect={handleGridRightClickDeselect}
+                      setSelectedShipId={setSelectedShipId}
+                      setPreviewPosition={setPreviewPosition}
+                      setTargetShipId={setTargetShipId}
+                      setSelectedWeaponType={setWeaponTypeFromGrid}
+                      setHoveredCell={setHoveredCell}
+                      setDraggedShipId={setDraggedShipId}
+                      setDragOverCell={setDragOverCell}
+                    />
+                  </div>
+                {game.metadata.winner === "0x0000000000000000000000000000000000000000" ? (
+                  <div
+                    className={`pointer-events-none absolute top-1 z-[230] ${
+                      isMobileJoiner ? "left-1" : "right-1"
+                    }`}
+                  >
+                    <div className="pointer-events-auto relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsMobileFleeOpen((prev) => !prev)}
+                        className="flex h-7 w-7 items-center justify-center border border-solid text-xs font-bold"
+                        style={{
+                          borderColor: "var(--color-warning-red)",
+                          color: "var(--color-warning-red)",
+                          backgroundColor: "rgba(10, 10, 15, 0.92)",
+                          borderRadius: 0,
+                        }}
+                        title="Battle menu"
+                        aria-label="Open battle menu"
+                      >
+                        ⚑
+                      </button>
+                      {isMobileFleeOpen ? (
+                        <div
+                          className="absolute right-0 top-[calc(100%+6px)] w-[13.25rem] border border-solid p-1"
+                          style={{
+                            backgroundColor: "rgba(3, 8, 16, 0.98)",
+                            borderColor: "var(--color-warning-red)",
+                            borderRadius: 0,
+                          }}
+                        >
+                          <FleeSafetySwitch
+                            gameId={game.metadata.gameId}
+                            onFlee={() => {
+                              toast.success("You have fled the battle!");
+                              setIsMobileFleeOpen(false);
+                              refetch?.();
+                            }}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+                </div>
+              </GameBoardLayout>
+            </div>
+          </div>
+        </div>
+
+        {isMobileFleetModalOpen ? (
+          <div className="fixed inset-0 z-[310] flex flex-col bg-[rgba(4,8,15,0.98)] p-3">
+            <div className="mb-3 flex items-center justify-between border border-solid px-3 py-2" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
+              <h3 className="text-sm uppercase tracking-wider text-cyan-300">Fleet Intel</h3>
+              <button
+                type="button"
+                onClick={() => setIsMobileFleetModalOpen(false)}
+                className="px-2 py-1 text-xs uppercase border border-solid"
+                style={{
+                  borderColor: "var(--color-gunmetal)",
+                  color: "var(--color-text-secondary)",
+                  backgroundColor: "var(--color-steel)",
+                  borderRadius: 0,
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto border border-solid p-3" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
+              <div className="grid grid-cols-2 gap-4">
+                {game.metadata.creator === address ? (
+                  <>
+                    {renderFleetColumn({
+                      title: readOnly ? "Creator Fleet" : "My Fleet",
+                      titleColor: "var(--color-cyan)",
+                      ownerAddress: game.metadata.creator,
+                      shipIds: game.creatorActiveShipIds,
+                      isCurrentPlayerShip: true,
+                      flipShip: game.metadata.creator === address,
+                    })}
+                    {renderFleetColumn({
+                      title: readOnly ? "Joiner Fleet" : "Opponent's Fleet",
+                      titleColor: "var(--color-warning-red)",
+                      ownerAddress: game.metadata.joiner,
+                      shipIds: game.joinerActiveShipIds,
+                      isCurrentPlayerShip: false,
+                      flipShip: false,
+                    })}
+                  </>
+                ) : (
+                  <>
+                    {renderFleetColumn({
+                      title: readOnly ? "Creator Fleet" : "Opponent's Fleet",
+                      titleColor: "var(--color-warning-red)",
+                      ownerAddress: game.metadata.creator,
+                      shipIds: game.creatorActiveShipIds,
+                      isCurrentPlayerShip: false,
+                      flipShip: true,
+                    })}
+                    {renderFleetColumn({
+                      title: readOnly ? "Joiner Fleet" : "My Fleet",
+                      titleColor: "var(--color-cyan)",
+                      ownerAddress: game.metadata.joiner,
+                      shipIds: game.joinerActiveShipIds,
+                      isCurrentPlayerShip: true,
+                      flipShip: false,
+                    })}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div
       ref={gameViewRootRef}
       className={`flex flex-col ${
-        isLandscapeMobile ? "gap-3 pb-16" : "gap-6 pt-2"
+        isLandscapeMobile ? "gap-2 pb-12" : "gap-6 pt-2"
       } ${
         useSideLayout ? GAME_VIEW_SIDE_ROOT_CLASS : "mx-auto w-full"
       }`}
       style={
-        useSideLayout
+        isLandscapeMobile
+          ? {
+              width: "100%",
+              maxWidth: "none",
+              marginLeft: 0,
+            }
+          : useSideLayout
           ? {
               marginLeft: "8px",
             }
@@ -3367,7 +3976,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       {isLandscapeMobile && (
         <>
           <div
-            className="sticky top-0 z-[260] border border-solid px-2 py-2"
+            className="sticky top-0 z-[260] border border-solid px-2 py-1.5"
             style={{
               backgroundColor: "rgba(8, 12, 22, 0.96)",
               borderColor: "var(--color-gunmetal)",
@@ -3396,7 +4005,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   {game.turnState.currentRound.toString()}
                 </p>
                 <p
-                  className="truncate text-xs uppercase tracking-wider"
+                  className="truncate text-[11px] uppercase tracking-wider"
                   style={{
                     color: isMyTurnEffective
                       ? "var(--color-cyan)"
@@ -3424,15 +4033,21 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 Sync
               </button>
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <div className="border border-solid px-2 py-1 text-xs" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
-                <span className="text-gray-400">My score </span>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <div className="border border-solid px-1.5 py-0.5 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
+                <span className="text-gray-400">Me </span>
                 <span className="font-mono text-white">{myScore}/{maxScore}</span>
               </div>
-              <div className="border border-solid px-2 py-1 text-xs" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
-                <span className="text-gray-400">Opponent </span>
+              <div className="border border-solid px-1.5 py-0.5 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
+                <span className="text-gray-400">Opp </span>
                 <span className="font-mono text-white">{opponentScore}/{maxScore}</span>
               </div>
+              <div className="ml-auto text-[11px] font-mono" style={{ color: isMyTurnEffective ? "var(--color-cyan)" : "var(--color-warning-red)" }}>
+                {mobileTurnTime}
+              </div>
+            </div>
+            <div className="mt-1 h-1 w-full overflow-hidden" style={{ backgroundColor: "var(--color-gunmetal)" }}>
+              <div className="h-full transition-all duration-1000 ease-linear" style={{ width: `${mobileTurnPct}%`, backgroundColor: "var(--color-warning-red)" }} />
             </div>
           </div>
         </>
@@ -4197,12 +4812,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
       {isLandscapeMobile && mobileActivePanel !== "none" && (
         <div
-          className="fixed inset-x-0 bottom-14 z-[280] border-t border-solid p-3"
+          className="fixed inset-x-0 bottom-11 z-[280] border-t border-solid p-2"
           style={{
             backgroundColor: "rgba(6, 10, 18, 0.98)",
             borderColor: "var(--color-gunmetal)",
             borderTopColor: "var(--color-cyan)",
-            maxHeight: "52vh",
+            maxHeight: "46vh",
             overflowY: "auto",
             borderRadius: 0,
           }}
@@ -4605,7 +5220,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
       {isLandscapeMobile && (
         <div
-          className="fixed inset-x-0 bottom-0 z-[290] grid grid-cols-5 gap-1 border-t border-solid p-1.5"
+          className="fixed inset-x-0 bottom-0 z-[290] grid grid-cols-5 gap-1 border-t border-solid p-1"
           style={{
             backgroundColor: "rgba(5, 8, 16, 0.97)",
             borderColor: "var(--color-gunmetal)",
@@ -4625,7 +5240,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               onClick={() =>
                 setMobileActivePanel((prev) => (prev === id ? "none" : id))
               }
-              className="px-1.5 py-1.5 text-[11px] uppercase font-semibold tracking-wider border border-solid"
+              className="px-1 py-1 text-[10px] uppercase font-semibold tracking-wider border border-solid"
               style={{
                 fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                 borderColor:
@@ -4649,7 +5264,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           <button
             type="button"
             onClick={() => setMobileActivePanel("none")}
-            className="px-1.5 py-1.5 text-[11px] uppercase font-semibold tracking-wider border border-solid"
+            className="px-1 py-1 text-[10px] uppercase font-semibold tracking-wider border border-solid"
             style={{
               fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
               borderColor: "var(--color-gunmetal)",
