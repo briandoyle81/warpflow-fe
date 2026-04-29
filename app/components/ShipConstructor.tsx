@@ -397,17 +397,17 @@ const ShipConstructor: React.FC = () => {
   return (
     <div className="w-full max-w-7xl mx-auto">
       <div
-        className="bg-gray-900 p-6 border border-cyan-400/30"
+        className="border border-cyan-400/30 bg-gray-900 p-3 md:p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
         }}
       >
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
-            <div className="flex gap-2">
+        <div className="mb-4 flex items-center justify-between md:mb-6">
+          <div className="flex w-full items-center gap-4">
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
               <button
                 onClick={() => setMode("customize")}
-                className={`px-4 py-2 border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
+                className={`w-full border-2 px-3 py-2 text-xs font-mono font-bold tracking-wider transition-all duration-200 sm:w-auto sm:px-4 sm:text-sm ${
                   mode === "customize"
                     ? "border-yellow-400 text-yellow-400 bg-yellow-400/10"
                     : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
@@ -420,7 +420,7 @@ const ShipConstructor: React.FC = () => {
               </button>
               <button
                 onClick={() => setMode("create")}
-                className={`px-4 py-2 border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
+                className={`w-full border-2 px-3 py-2 text-xs font-mono font-bold tracking-wider transition-all duration-200 sm:w-auto sm:px-4 sm:text-sm ${
                   mode === "create"
                     ? "border-cyan-400 text-cyan-400 bg-cyan-400/10"
                     : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
@@ -437,7 +437,7 @@ const ShipConstructor: React.FC = () => {
 
         {mode === "customize" && (
           <div
-            className="mb-6 bg-gray-800 p-4 border border-gray-700"
+            className="mb-4 border border-gray-700 bg-gray-800 p-3 md:mb-6 md:p-4"
             style={{
               borderRadius: 0, // Square corners for industrial theme
             }}
@@ -470,7 +470,7 @@ const ShipConstructor: React.FC = () => {
         )}
 
         {controlsDisabled && (
-          <div className="mb-3 text-sm text-yellow-300 font-mono flex items-center gap-2">
+          <div className="mb-3 flex items-center gap-2 text-sm font-mono text-yellow-300">
             <span>Select a constructed ship to enable controls.</span>
             <div className="relative inline-block">
               <button
@@ -487,7 +487,7 @@ const ShipConstructor: React.FC = () => {
               </button>
               {showTooltip && (
                 <div
-                  className="absolute left-0 top-full mt-2 w-[700px] max-w-[90vw] p-4 bg-black border-2 border-cyan-400 text-sm text-cyan-300 font-mono z-50 shadow-lg max-h-[80vh] overflow-y-auto"
+                  className="absolute left-0 top-full z-50 mt-2 max-h-[80vh] w-[min(700px,92vw)] overflow-y-auto border-2 border-cyan-400 bg-black p-3 text-sm font-mono text-cyan-300 shadow-lg md:w-[700px] md:p-4"
                   style={{
                     borderRadius: 0, // Square corners for industrial theme
                   }}
@@ -498,9 +498,9 @@ const ShipConstructor: React.FC = () => {
                     <div className="font-bold text-cyan-400 mb-3 text-center">
                       SHIP MODIFICATION
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                       {/* Left Column - Cost Information */}
-                      <div className="space-y-2 text-xs pr-4 border-r border-cyan-400/30">
+                      <div className="space-y-2 border-b border-cyan-400/30 pb-3 text-xs md:border-b-0 md:border-r md:pb-0 md:pr-4">
                         <p className="font-bold text-yellow-400">
                           EXACT COST CALCULATION:
                         </p>
@@ -609,7 +609,7 @@ const ShipConstructor: React.FC = () => {
                       </div>
 
                       {/* Right Column - Property Information */}
-                      <div className="space-y-2 text-xs pl-4">
+                      <div className="space-y-2 text-xs md:pl-4">
                         <p className="font-bold text-yellow-400">
                           PROPERTIES YOU CAN CHANGE:
                         </p>
@@ -658,7 +658,7 @@ const ShipConstructor: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
           {/* Controls Panel */}
           <div
             className={`space-y-6 ${
@@ -667,7 +667,7 @@ const ShipConstructor: React.FC = () => {
           >
             {/* Equipment Section */}
             <div
-              className="bg-gray-800 p-4 border border-gray-700"
+              className="border border-gray-700 bg-gray-800 p-3 md:p-4"
               style={{
                 borderRadius: 0, // Square corners for industrial theme
               }}
@@ -699,7 +699,7 @@ const ShipConstructor: React.FC = () => {
                   <label className="block text-sm text-cyan-300 mb-2">
                     Defense Type
                   </label>
-                  <div className="mb-3 flex gap-4">
+                  <div className="mb-3 flex flex-wrap gap-3 sm:gap-4">
                     <label className="flex items-center gap-2 text-sm text-cyan-300 cursor-pointer">
                       <input
                         type="radio"
@@ -811,7 +811,7 @@ const ShipConstructor: React.FC = () => {
 
             {/* Traits Section */}
             <div
-              className="bg-gray-800 p-4 border border-gray-700"
+              className="border border-gray-700 bg-gray-800 p-3 md:p-4"
               style={{
                 borderRadius: 0, // Square corners for industrial theme
               }}
@@ -885,7 +885,7 @@ const ShipConstructor: React.FC = () => {
 
             {/* Colors Section */}
             <div
-              className="bg-gray-800 p-4 border border-gray-700"
+              className="border border-gray-700 bg-gray-800 p-3 md:p-4"
               style={{
                 borderRadius: 0, // Square corners for industrial theme
               }}
@@ -943,7 +943,7 @@ const ShipConstructor: React.FC = () => {
 
             {/* ShipData Section */}
             <div
-              className="bg-gray-800 p-4 border border-gray-700"
+              className="border border-gray-700 bg-gray-800 p-3 md:p-4"
               style={{
                 borderRadius: 0, // Square corners for industrial theme
               }}
@@ -992,7 +992,7 @@ const ShipConstructor: React.FC = () => {
               selectedShipId &&
               buildDroneYardShipStruct && (
                 <div
-                  className="bg-gray-800 p-4 border border-yellow-400/50"
+                  className="border border-yellow-400/50 bg-gray-800 p-3 md:p-4"
                   style={{
                     borderRadius: 0, // Square corners for industrial theme
                   }}
@@ -1094,7 +1094,7 @@ const ShipConstructor: React.FC = () => {
 
           {/* Preview Panel */}
           <div
-            className="bg-gray-800 p-4 border border-gray-700"
+            className="border border-gray-700 bg-gray-800 p-3 md:p-4"
             style={{
               borderRadius: 0, // Square corners for industrial theme
             }}
@@ -1103,7 +1103,7 @@ const ShipConstructor: React.FC = () => {
               PREVIEW
             </h3>
             <div
-              className="flex flex-col items-center justify-center min-h-[400px] bg-gray-900 p-4"
+              className="flex min-h-[260px] flex-col items-center justify-center bg-gray-900 p-3 sm:min-h-[320px] md:min-h-[400px] md:p-4"
               style={{
                 borderRadius: 0, // Square corners for industrial theme
               }}
