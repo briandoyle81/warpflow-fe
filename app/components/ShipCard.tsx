@@ -51,6 +51,8 @@ interface ShipCardProps {
   hideRarityLabel?: boolean;
   /** Hide rank badge (used by compact mobile game UI). */
   hideRankLabel?: boolean;
+  /** Render card content without outer border/padding frame. */
+  hideOuterFrame?: boolean;
 }
 
 const ShipCard: React.FC<ShipCardProps> = ({
@@ -82,6 +84,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
   fleetCompositionControls,
   hideRarityLabel = false,
   hideRankLabel = false,
+  hideOuterFrame = false,
 }) => {
   const useCompactStatGrid = gameViewMode && hideRarityLabel && hideRankLabel;
   // Determine border class based on selection mode and ship state
@@ -310,14 +313,16 @@ const ShipCard: React.FC<ShipCardProps> = ({
 
   return (
     <div
-      className={`border border-solid p-4 ${
+      className={`${
+        hideOuterFrame ? "" : "border border-solid p-4"
+      } ${
         selectionMode && canSelect
           ? "cursor-pointer transition-colors duration-150"
           : ""
       }`}
       {...(layoutShipId ? { "data-ship-id": layoutShipId } : {})}
       style={{
-        ...borderStyle,
+        ...(hideOuterFrame ? {} : borderStyle),
         borderRadius: 0, // Square corners
       }}
       onClick={handleCardClick}

@@ -2633,12 +2633,17 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   /** Top of proposed-move panel: 2/3 submit + 1/3 cancel (side), or horizontal row (wide). */
   const renderProposedMoveSubmitCancelRow = (): React.ReactNode => {
     const isRail = useSideLayout;
+    const isJoinerSide =
+      !!address &&
+      address.toLowerCase() === game.metadata.joiner.toLowerCase();
     return (
       <div
         className={
           isRail
             ? "flex w-full min-w-0 shrink-0 flex-row gap-2"
-            : "flex w-full min-w-0 shrink-0 flex-row flex-wrap items-center gap-2"
+            : `flex w-full min-w-0 shrink-0 flex-row flex-wrap items-center gap-2 ${
+                isJoinerSide ? "justify-end" : "justify-start"
+              }`
         }
       >
         <>
@@ -2710,7 +2715,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   style={submitMoveButtonStyle}
                   className={`px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 ${
                     isRail ? "min-w-0 flex-[2] h-full w-full" : ""
-                  }${
+                  } ${isRail ? "order-2" : "order-2"}${
                     shouldPulseSubmitMoveButton
                       ? " animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
                       : ""
@@ -2856,7 +2861,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             onClick={handleCancelMove}
             className={`px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150${
               isRail ? " min-w-0 flex-[1]" : ""
-            }`}
+            } ${isRail ? "order-1" : "order-1"}`}
             style={
               isRail
                 ? {
@@ -3462,16 +3467,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       <div className="mx-auto h-full w-full overflow-hidden" style={{ height: "100dvh" }}>
         <div className="flex h-full min-h-0 items-start gap-2">
           <div
-            className={`relative flex h-full min-h-0 min-w-0 flex-1 flex-col border border-solid p-2 ${
+            className={`flex h-full min-h-0 min-w-0 flex-1 items-center justify-center ${
               isMobileJoiner ? "order-2" : "order-1"
             }`}
-            style={{
-              backgroundColor: "var(--color-slate)",
-              borderColor: "var(--color-gunmetal)",
-              borderTopColor: "var(--color-steel)",
-              borderLeftColor: "var(--color-steel)",
-            }}
           >
+            <div className="relative flex h-[min(100%,39rem)] min-h-0 w-full max-w-[18rem] flex-col pl-1 pr-2 py-2">
             <div
               className="mb-2 border border-solid px-1.5 py-1"
               style={{
@@ -3481,10 +3481,10 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 borderLeftColor: "var(--color-steel)",
               }}
             >
-              <div className="flex items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={onBack}
-                  className="px-1.5 py-0.5 border border-solid text-[10px] uppercase font-semibold tracking-wider"
+                  className="shrink-0 px-1.5 py-0.5 border border-solid text-[10px] uppercase font-semibold tracking-wider"
                   style={{
                     fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                     borderColor: "var(--color-gunmetal)",
@@ -3495,13 +3495,29 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 >
                   Back
                 </button>
+                <div className="min-w-0 flex-1 text-center">
+                  <p className="truncate text-[10px] uppercase tracking-wider text-gray-300">
+                    Game {game.metadata.gameId.toString()} | Round{" "}
+                    {game.turnState.currentRound.toString()}
+                  </p>
+                  <p
+                    className="truncate text-[10px] uppercase tracking-wider"
+                    style={{
+                      color: isMyTurnEffective
+                        ? "var(--color-cyan)"
+                        : "var(--color-warning-red)",
+                    }}
+                  >
+                    {mobileTurnLabel} | {mobileTurnTime}
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
                     lastPollTimeRef.current = Date.now();
                     refetchGame();
                   }}
-                  className="px-1.5 py-0.5 border border-solid text-[10px] uppercase font-semibold tracking-wider"
+                  className="shrink-0 px-1.5 py-0.5 border border-solid text-[10px] uppercase font-semibold tracking-wider"
                   style={{
                     fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                     borderColor: "var(--color-cyan)",
@@ -3512,22 +3528,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 >
                   Sync
                 </button>
-              </div>
-              <div className="mt-1 min-w-0 text-center">
-                <p className="truncate text-[10px] uppercase tracking-wider text-gray-300">
-                  Game {game.metadata.gameId.toString()} | Round{" "}
-                  {game.turnState.currentRound.toString()}
-                </p>
-                <p
-                  className="truncate text-[10px] uppercase tracking-wider"
-                  style={{
-                    color: isMyTurnEffective
-                      ? "var(--color-cyan)"
-                      : "var(--color-warning-red)",
-                  }}
-                >
-                  {mobileTurnLabel} | {mobileTurnTime}
-                </p>
               </div>
               <div className="mt-1 h-1 w-full overflow-hidden" style={{ backgroundColor: "var(--color-gunmetal)" }}>
                 <div className="h-full transition-all duration-1000 ease-linear" style={{ width: `${mobileTurnPct}%`, backgroundColor: "var(--color-warning-red)" }} />
@@ -3619,13 +3619,12 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
             {selectedShip && mobileSelectedShipAttributes ? (
               <div
-                className="absolute inset-1 z-[260] overflow-y-auto border border-solid p-2"
+                className="absolute inset-0 z-[260] overflow-y-auto pl-0.5 pr-1.5 pt-1 pb-2"
                 style={{
                   backgroundColor: "rgba(3, 8, 16, 0.97)",
-                  borderColor: "var(--color-cyan)",
                 }}
               >
-                <div className="mb-2 flex items-center justify-between">
+                <div className="mb-1 flex items-center justify-between">
                   <div className="relative min-w-0">
                     <button
                       type="button"
@@ -3719,37 +3718,44 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     Close
                   </button>
                 </div>
-                <ShipCard
-                  ship={selectedShip}
-                  isStarred={false}
-                  onToggleStar={() => {}}
-                  isSelected={true}
-                  onToggleSelection={() => {}}
-                  onRecycleClick={() => {}}
-                  showInGameProperties={true}
-                  inGameAttributes={mobileSelectedShipAttributes}
-                  attributesLoading={false}
-                  hideRecycle={true}
-                  hideCheckbox={true}
-                  isCurrentPlayerShip={isShipOwnedByCurrentPlayer(selectedShip.id)}
-                  flipShip={Boolean(mobileSelectedShipPosition?.isCreator)}
-                  reactorCriticalStatus={
-                    mobileSelectedShipAttributes.reactorCriticalTimer > 0 &&
-                    mobileSelectedShipAttributes.hullPoints === 0
-                      ? "critical"
-                      : mobileSelectedShipAttributes.reactorCriticalTimer > 0
-                        ? "warning"
-                        : "none"
-                  }
-                  hasMoved={movedShipIdsSet.has(selectedShip.id)}
-                  gameViewMode={true}
-                  hideRarityLabel={true}
-                  hideRankLabel={true}
-                  layoutShipId={selectedShip.id.toString()}
-                  nameBlockMinHeightPx={gameViewNameBlockMinHeights[selectedShip.id.toString()]}
-                />
+                <div className="space-y-1">
+                  <ShipCard
+                    ship={selectedShip}
+                    isStarred={false}
+                    onToggleStar={() => {}}
+                    isSelected={true}
+                    onToggleSelection={() => {}}
+                    onRecycleClick={() => {}}
+                    showInGameProperties={true}
+                    inGameAttributes={mobileSelectedShipAttributes}
+                    attributesLoading={false}
+                    hideRecycle={true}
+                    hideCheckbox={true}
+                    isCurrentPlayerShip={isShipOwnedByCurrentPlayer(selectedShip.id)}
+                    flipShip={Boolean(mobileSelectedShipPosition?.isCreator)}
+                    reactorCriticalStatus={
+                      mobileSelectedShipAttributes.reactorCriticalTimer > 0 &&
+                      mobileSelectedShipAttributes.hullPoints === 0
+                        ? "critical"
+                        : mobileSelectedShipAttributes.reactorCriticalTimer > 0
+                          ? "warning"
+                          : "none"
+                    }
+                    hasMoved={movedShipIdsSet.has(selectedShip.id)}
+                    gameViewMode={true}
+                    hideRarityLabel={true}
+                    hideRankLabel={true}
+                    hideOuterFrame={true}
+                    layoutShipId={selectedShip.id.toString()}
+                    nameBlockMinHeightPx={gameViewNameBlockMinHeights[selectedShip.id.toString()]}
+                  />
+                  {isShowingProposedMove ? (
+                    <div className="pt-1">{renderProposedMoveSubmitCancelRow()}</div>
+                  ) : null}
+                </div>
               </div>
             ) : null}
+            </div>
           </div>
 
           <div

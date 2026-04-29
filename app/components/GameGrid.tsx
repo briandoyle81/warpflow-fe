@@ -405,6 +405,16 @@ export function GameGrid({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  const [useCompactMobileDamageLabels, setUseCompactMobileDamageLabels] =
+    React.useState(false);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const sync = () => setUseCompactMobileDamageLabels(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   const isMyTurn = currentTurn === address;
   const selectedShipCreatorSide = React.useMemo(() => {
@@ -2977,7 +2987,9 @@ export function GameGrid({
                         !!targetAttributes &&
                         targetAttributes.reactorCriticalTimer + 1 >= 3;
                       let labelText: string;
-                      if (selectedWeaponType === "special") {
+                      if (useCompactMobileDamageLabels) {
+                        labelText = String(damage.reducedDamage);
+                      } else if (selectedWeaponType === "special") {
                         // Flak does damage, other special abilities repair/heal
                         if (specialType === 3) {
                           // Flak special - show damage effect
@@ -3034,7 +3046,11 @@ export function GameGrid({
                       return (
                         <div
                           key={target.shipId.toString()}
-                          className={`absolute rounded-none px-2 py-1 text-xs font-mono text-center text-white whitespace-nowrap ${
+                          className={`absolute rounded-none font-mono text-center text-white whitespace-nowrap ${
+                            useCompactMobileDamageLabels
+                              ? "px-1.5 py-0.5 text-[11px] font-bold"
+                              : "px-2 py-1 text-xs"
+                          } ${
                             selectedWeaponType === "special"
                               ? specialType === 3 // Flak
                                 ? "bg-orange-900 border border-orange-500" // Orange for flak
