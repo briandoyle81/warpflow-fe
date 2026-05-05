@@ -945,15 +945,25 @@ const ManageNavy: React.FC = () => {
   const [showDebugButtons, setShowDebugButtons] = React.useState(false);
   const [isMobileManageNavyLayout, setIsMobileManageNavyLayout] =
     React.useState(false);
+  const [isCompactManageNavyViewport, setIsCompactManageNavyViewport] =
+    React.useState(false);
   const [showInGameProperties, setShowInGameProperties] = React.useState(true);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(max-width: 767px)");
-    const sync = () => setIsMobileManageNavyLayout(mq.matches);
+    const mobileMq = window.matchMedia("(max-width: 767px)");
+    const compactMq = window.matchMedia("(max-width: 1023px)");
+    const sync = () => {
+      setIsMobileManageNavyLayout(mobileMq.matches);
+      setIsCompactManageNavyViewport(compactMq.matches);
+    };
     sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
+    mobileMq.addEventListener("change", sync);
+    compactMq.addEventListener("change", sync);
+    return () => {
+      mobileMq.removeEventListener("change", sync);
+      compactMq.removeEventListener("change", sync);
+    };
   }, []);
 
   // State for starred ships
@@ -961,6 +971,24 @@ const ManageNavy: React.FC = () => {
     new Set(),
   );
   const [showShipPurchase, setShowShipPurchase] = React.useState(false);
+  const showMobileShipPurchaseTakeover =
+    showShipPurchase && isCompactManageNavyViewport;
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("void-tactics-manage-navy-purchase-active", {
+        detail: { active: showMobileShipPurchaseTakeover },
+      }),
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("void-tactics-manage-navy-purchase-active", {
+          detail: { active: false },
+        }),
+      );
+    };
+  }, [showMobileShipPurchaseTakeover]);
 
   const handleBuyNewShipsClick = React.useCallback(() => {
     if (address && showBuyShipsTutorial) {
@@ -1882,9 +1910,9 @@ const ManageNavy: React.FC = () => {
         }`}
       >
         {showConstructDeliveryTutorial ? (
-          <div className="relative flex w-full flex-col gap-4 lg:inline-flex lg:w-auto lg:flex-row lg:items-start lg:gap-4">
+          <div className="relative flex w-full flex-col gap-4 md:inline-flex md:w-auto md:flex-row md:items-start md:gap-4">
             {/* Same pattern as claim tutorial: brief is absolute beside the highlighted control; here to the RIGHT of construct */}
-            <div className="relative z-[100] w-full min-w-0 shrink-0 lg:w-auto">
+            <div className="relative z-[100] w-full min-w-0 shrink-0 md:w-auto">
               <div
                 className="border border-yellow-400/90 bg-yellow-400/24 animate-pulse p-[3px]"
                 style={{ borderRadius: 0 }}
@@ -1948,7 +1976,7 @@ const ManageNavy: React.FC = () => {
                 onNotNow={dismissConstructDeliveryTutorialNotNow}
               />
             </div>
-            <div className="relative z-10 flex w-full shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:gap-4 lg:w-auto">
+            <div className="relative z-10 flex w-full shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:gap-4 md:w-auto">
               <button
                 type="button"
                 onClick={handleBuyNewShipsClick}
@@ -1968,8 +1996,8 @@ const ManageNavy: React.FC = () => {
             </div>
           </div>
         ) : showBuyShipsTutorial ? (
-          <div className="relative flex w-full flex-col gap-4 lg:inline-flex lg:w-auto lg:flex-row lg:items-start lg:gap-4">
-            <div className="relative z-10 flex w-full shrink-0 flex-col gap-3 md:flex-row md:gap-4 lg:w-auto">
+          <div className="relative flex w-full flex-col gap-4 md:inline-flex md:w-auto md:flex-row md:items-start md:gap-4">
+            <div className="relative z-10 flex w-full shrink-0 flex-col gap-3 md:flex-row md:gap-4 md:w-auto">
               {fleetCompositionSelectControl}
               {fleetStats.unconstructedShips > STALE_COST_SYNC_BATCH_CAP ? (
                 <ShipActionButton
@@ -2011,7 +2039,7 @@ const ManageNavy: React.FC = () => {
                 aria-hidden="true"
               />
             </div>
-            <div className="relative z-[100] w-full shrink-0 lg:w-auto">
+            <div className="relative z-[100] w-full shrink-0 md:w-auto">
               <ManageNavyBuyShipsBrief
                 className="absolute right-full top-0 z-[110] mr-4"
                 onNotNow={dismissBuyShipsTutorialNotNow}
@@ -2044,8 +2072,8 @@ const ManageNavy: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="relative flex w-full flex-col gap-4 lg:inline-flex lg:w-auto lg:flex-row lg:items-start lg:gap-4">
-            <div className="relative z-10 flex w-full shrink-0 flex-col gap-3 md:flex-row md:flex-wrap md:gap-4 lg:w-auto">
+          <div className="relative flex w-full flex-col gap-4 md:inline-flex md:w-auto md:flex-row md:items-start md:gap-4">
+            <div className="relative z-10 flex w-full shrink-0 flex-col gap-3 md:flex-row md:flex-wrap md:gap-4 md:w-auto">
               {fleetCompositionSelectControl}
               {fleetStats.unconstructedShips > STALE_COST_SYNC_BATCH_CAP ? (
                 <ShipActionButton
@@ -2106,8 +2134,8 @@ const ManageNavy: React.FC = () => {
             <div
               className={
                 showDroneFactoryTutorial
-                  ? "relative z-[100] w-full shrink-0 lg:w-auto"
-                  : "relative z-30 w-full shrink-0 lg:w-auto"
+                  ? "relative z-[100] w-full shrink-0 md:w-auto"
+                  : "relative z-30 w-full shrink-0 md:w-auto"
               }
             >
               {showDroneFactoryTutorial && (
@@ -2268,10 +2296,14 @@ const ManageNavy: React.FC = () => {
       {/* Ship Purchase Interface */}
       {showShipPurchase && (
         <div
-          className="mb-8 border border-blue-400/80 bg-gradient-to-b from-slate-950/90 to-black/50 px-3 py-5 sm:p-8"
+          className={`${
+            showMobileShipPurchaseTakeover
+              ? "fixed inset-0 z-[340] mb-0 overflow-y-auto border-0 bg-[#020612] px-3 py-4"
+              : "mb-8 border border-blue-400/80 bg-gradient-to-b from-slate-950/90 to-black/50 px-3 py-5 sm:p-8"
+          }`}
           style={{ borderRadius: 0 }}
         >
-          <div className="mx-auto max-w-6xl">
+          <div className={`${showMobileShipPurchaseTakeover ? "mx-auto w-full max-w-6xl" : "mx-auto max-w-6xl"}`}>
           <div className="mb-6 flex flex-col gap-4 border-b border-cyan-500/20 pb-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
             <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start">
               <div className="flex flex-col gap-1">

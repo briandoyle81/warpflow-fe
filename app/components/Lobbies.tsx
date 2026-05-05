@@ -105,11 +105,7 @@ function formatLobbyMaxScoreDisplay(maxScore: bigint): string {
   return n.toLocaleString();
 }
 
-const VOID_TACTICS_ALPHA_ACCESS_TWEET =
-  "Hi @voidtacticsxyz, I'm interested in the Void Tactics Alpha at https://www.voidtactics.xyz!\n\nPlease add me to the Discord!";
-const VOID_TACTICS_ALPHA_TWITTER_INTENT = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-  VOID_TACTICS_ALPHA_ACCESS_TWEET,
-)}`;
+const VOID_TACTICS_ALPHA_DISCORD_INVITE = "https://discord.gg/Zu25XwfrA";
 
 /** Minimum owned and constructed ships required to use lobbies. */
 const MIN_SHIPS_FOR_LOBBIES = 10;
@@ -2067,7 +2063,7 @@ const Lobbies: React.FC = () => {
         >
           Click{" "}
           <a
-            href={VOID_TACTICS_ALPHA_TWITTER_INTENT}
+            href={VOID_TACTICS_ALPHA_DISCORD_INVITE}
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-amber-300 underline decoration-amber-400/70 underline-offset-2 transition-colors hover:text-amber-200"

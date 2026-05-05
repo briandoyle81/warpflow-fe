@@ -4,11 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 
 const STORAGE_KEY = "void-tactics-alpha-discord-notice-dismissed";
 
-const VOID_TACTICS_ALPHA_ACCESS_TWEET =
-  "Hi @voidtacticsxyz, I'm interested in the Void Tactics Alpha at https://www.voidtactics.xyz!\n\nPlease add me to the Discord!";
-const VOID_TACTICS_ALPHA_TWITTER_INTENT = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-  VOID_TACTICS_ALPHA_ACCESS_TWEET,
-)}`;
+const VOID_TACTICS_ALPHA_DISCORD_INVITE = "https://discord.gg/Zu25XwfrA";
 
 function persistDismissed() {
   try {
@@ -84,7 +80,7 @@ export default function AlphaDiscordNoticeBar({
           <span className="font-black">Alpha:</span>{" "}
           coordinate matches and get updates on Discord.{" "}
           <a
-            href={VOID_TACTICS_ALPHA_TWITTER_INTENT}
+            href={VOID_TACTICS_ALPHA_DISCORD_INVITE}
             target="_blank"
             rel="noopener noreferrer"
             onClick={handleLinkClick}

@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useRef,
 } from "react";
 import defaultMap from "../../public/default_map.json";
 import {
@@ -70,6 +71,35 @@ interface SimulatedGameDisplayProps {
   tutorialContext: TutorialContextValue;
   /** Called when user clicks back; exits tutorial and returns to Info tab. */
   onBack?: () => void;
+}
+
+function toMobileTouchCopy(text: string): string {
+  return text
+    .replace(/\bHover\b/g, "Tap")
+    .replace(/\bhover\b/g, "tap")
+    .replace(/\bClick\b/g, "Tap")
+    .replace(/\bclick\b/g, "tap");
+}
+
+function mapNodeToMobileTouchCopy(node: React.ReactNode): React.ReactNode {
+  if (typeof node === "string") {
+    return toMobileTouchCopy(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map((child, idx) => (
+      <React.Fragment key={idx}>{mapNodeToMobileTouchCopy(child)}</React.Fragment>
+    ));
+  }
+  if (React.isValidElement(node)) {
+    const props = node.props as { children?: React.ReactNode };
+    if (props.children === undefined) return node;
+    return React.cloneElement(
+      node as React.ReactElement,
+      undefined,
+      mapNodeToMobileTouchCopy(props.children),
+    );
+  }
+  return node;
 }
 
 const GRID_WIDTH = 17;
@@ -1054,6 +1084,22 @@ export function SimulatedGameDisplay({
   } | null>(null);
   const [isLastMovePanelMinimized, setIsLastMovePanelMinimized] =
     useState(true);
+  const [mobileLeftPanelTab, setMobileLeftPanelTab] = useState<
+    "tutorial" | "status" | "actions" | "events"
+  >("tutorial");
+  const [isMobileFleetModalOpen, setIsMobileFleetModalOpen] = useState(false);
+  const [isMobileWeaponMenuOpen, setIsMobileWeaponMenuOpen] = useState(false);
+  const [isMobileFleeOpen, setIsMobileFleeOpen] = useState(false);
+  const mobileTutorialScrollRef = useRef<HTMLDivElement | null>(null);
+  const mobileTutorialContentRef = useRef<HTMLDivElement | null>(null);
+  const [mobileTutorialMoreBelow, setMobileTutorialMoreBelow] = useState(false);
+  useEffect(() => {
+    // Keep mobile tutorial chrome aligned with desktop: each step starts on the
+    // tutorial briefing tab to avoid stale tab-specific highlights/copy.
+    setMobileLeftPanelTab("tutorial");
+    setIsMobileWeaponMenuOpen(false);
+  }, [currentStepIndex]);
+
   const gameViewRootRef = React.useRef<HTMLDivElement | null>(null);
   const gridContainerRef = React.useRef<HTMLDivElement | null>(null);
   const chromeLayout = useGameViewChromeLayout(
@@ -1063,13 +1109,18 @@ export function SimulatedGameDisplay({
   const chromeOnSide = chromeLayout === "side";
   const [requiresLandscapeMode, setRequiresLandscapeMode] =
     React.useState(false);
+  const [isLandscapeMobile, setIsLandscapeMobile] = React.useState(false);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const orientationMq = window.matchMedia("(orientation: landscape)");
     const mobileMq = window.matchMedia("(max-width: 1023px)");
-    const sync = () =>
-      setRequiresLandscapeMode(mobileMq.matches && !orientationMq.matches);
+    const sync = () => {
+      const isMobile = mobileMq.matches;
+      const isLandscape = orientationMq.matches;
+      setRequiresLandscapeMode(isMobile && !isLandscape);
+      setIsLandscapeMobile(isMobile && isLandscape);
+    };
     sync();
     orientationMq.addEventListener("change", sync);
     mobileMq.addEventListener("change", sync);
@@ -1078,6 +1129,18 @@ export function SimulatedGameDisplay({
       mobileMq.removeEventListener("change", sync);
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!isLandscapeMobile) return;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [isLandscapeMobile]);
 
   const proposedMoveTargetListClass = chromeOnSide
     ? "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
@@ -3285,6 +3348,83 @@ export function SimulatedGameDisplay({
     runTutorialClaimTx,
   ]);
 
+  const isMobileJoiner =
+    gameState.metadata.joiner.toLowerCase() ===
+    TUTORIAL_PLAYER_ADDRESS.toLowerCase();
+  const myScore = isMobileJoiner
+    ? gameState.joinerScore.toString()
+    : gameState.creatorScore.toString();
+  const opponentScore = isMobileJoiner
+    ? gameState.creatorScore.toString()
+    : gameState.joinerScore.toString();
+  const maxScore = gameState.maxScore.toString();
+  const mobileTurnLabel = isMyTurn ? "YOUR TURN" : "OPPONENT'S TURN";
+  const mobileTurnTime = "99:99";
+  const mobileTurnPct = 100;
+  const mobileSelectedShipAttributes =
+    selectedShip ? getShipAttributes(selectedShip.id) : null;
+  const mobileSelectedShipPosition =
+    selectedShip
+      ? gameState.shipPositions.find(
+          (position) => position.shipId === selectedShip.id.toString(),
+        )
+      : undefined;
+  const mobileCanUseSpecial = Boolean(
+    selectedShip &&
+      selectedShip.equipment.special > 0 &&
+      (mobileSelectedShipAttributes?.hullPoints ?? 0) > 0,
+  );
+  const mobileWeaponDisplayName =
+    selectedWeaponType === "special" && selectedShip
+      ? getSpecialName(selectedShip.equipment.special)
+      : selectedShip
+        ? getMainWeaponName(selectedShip.equipment.mainWeapon)
+        : "Weapon";
+  const tutorialDefaultLabel = isLandscapeMobile ? "Tap here" : "Click here";
+  const shouldHighlightMobileCloseButton =
+    isLandscapeMobile &&
+    selectedShip !== null &&
+    (currentStep?.id === "select-ship" || currentStep?.id === "view-enemy");
+
+  const updateMobileTutorialScrollHint = useCallback(() => {
+    const el = mobileTutorialScrollRef.current;
+    if (!el) return;
+    const remaining = el.scrollHeight - (el.scrollTop + el.clientHeight);
+    const canScrollDown = el.scrollHeight > el.clientHeight + 8 && remaining > 16;
+    setMobileTutorialMoreBelow((prev) =>
+      prev === canScrollDown ? prev : canScrollDown,
+    );
+  }, []);
+
+  useEffect(() => {
+    if (mobileLeftPanelTab !== "tutorial") return;
+    const el = mobileTutorialScrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    setMobileTutorialMoreBelow(false);
+    requestAnimationFrame(updateMobileTutorialScrollHint);
+  }, [
+    mobileLeftPanelTab,
+    currentStepIndex,
+    updateMobileTutorialScrollHint,
+  ]);
+
+  useEffect(() => {
+    if (mobileLeftPanelTab !== "tutorial") return;
+    const scrollEl = mobileTutorialScrollRef.current;
+    const contentEl = mobileTutorialContentRef.current;
+    if (!scrollEl) return;
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(updateMobileTutorialScrollHint);
+    });
+    if (contentEl) ro.observe(contentEl);
+    window.addEventListener("resize", updateMobileTutorialScrollHint);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", updateMobileTutorialScrollHint);
+    };
+  }, [mobileLeftPanelTab, updateMobileTutorialScrollHint]);
+
   if (requiresLandscapeMode) {
     return (
       <div className="mx-auto flex min-h-[70vh] w-full max-w-4xl items-center justify-center px-4 py-10">
@@ -3314,14 +3454,930 @@ export function SimulatedGameDisplay({
     );
   }
 
+  if (isLandscapeMobile) {
+    return (
+      <div className="mx-auto h-full w-full overflow-hidden" style={{ height: "100dvh" }}>
+        <div className="flex h-full min-h-0 items-stretch gap-2 overflow-hidden">
+          <div
+            className={`flex h-full min-h-0 min-w-0 flex-1 items-center justify-center ${
+              isMobileJoiner ? "order-2" : "order-1"
+            }`}
+          >
+            <div className="relative flex h-[min(100%,39rem)] min-h-0 w-full max-w-[18rem] flex-col pl-1 pr-2 py-2">
+              <div
+                className="mb-2 border border-solid px-1.5 py-1"
+                style={{
+                  backgroundColor: "rgba(8, 12, 22, 0.96)",
+                  borderColor: "var(--color-gunmetal)",
+                  borderTopColor: "var(--color-steel)",
+                  borderLeftColor: "var(--color-steel)",
+                }}
+              >
+                <div className="flex items-center gap-1.5">
+                  {onBack ? (
+                    <button
+                      onClick={onBack}
+                      className="shrink-0 px-1.5 py-0.5 border border-solid text-[10px] uppercase font-semibold tracking-wider"
+                      style={{
+                        fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                        borderColor: "var(--color-gunmetal)",
+                        color: "var(--color-text-secondary)",
+                        backgroundColor: "var(--color-steel)",
+                        borderRadius: 0,
+                      }}
+                    >
+                      Back
+                    </button>
+                  ) : null}
+                  <div className="min-w-0 flex-1 text-center">
+                    <p className="truncate text-[10px] uppercase tracking-wider text-gray-300">
+                      Game 0 | Round {gameState.turnState.currentRound.toString()}
+                    </p>
+                    <p
+                      className="truncate text-[10px] uppercase tracking-wider"
+                      style={{
+                        color: isMyTurn
+                          ? "var(--color-cyan)"
+                          : "var(--color-warning-red)",
+                      }}
+                    >
+                      {mobileTurnLabel} | {mobileTurnTime}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {}}
+                    className="shrink-0 px-1.5 py-0.5 border border-solid text-[10px] uppercase font-semibold tracking-wider"
+                    style={{
+                      fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      borderColor: "var(--color-cyan)",
+                      color: "var(--color-cyan)",
+                      backgroundColor: "var(--color-near-black)",
+                      borderRadius: 0,
+                    }}
+                  >
+                    Sync
+                  </button>
+                </div>
+                <div className="mt-1 h-1 w-full overflow-hidden" style={{ backgroundColor: "var(--color-gunmetal)" }}>
+                  <div className="h-full transition-all duration-1000 ease-linear" style={{ width: `${mobileTurnPct}%`, backgroundColor: "var(--color-warning-red)" }} />
+                </div>
+              </div>
+
+              <div className="mb-2 grid grid-cols-5 gap-1">
+                {(["tutorial", "status", "actions", "events"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setMobileLeftPanelTab(tab)}
+                    className="px-1 py-1 text-[10px] uppercase tracking-wider border border-solid"
+                    style={{
+                      fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                      borderColor:
+                        mobileLeftPanelTab === tab
+                          ? "var(--color-cyan)"
+                          : "var(--color-gunmetal)",
+                      color:
+                        mobileLeftPanelTab === tab
+                          ? "var(--color-cyan)"
+                          : "var(--color-text-secondary)",
+                      backgroundColor:
+                        mobileLeftPanelTab === tab
+                          ? "rgba(86, 214, 255, 0.12)"
+                          : "var(--color-steel)",
+                      borderRadius: 0,
+                    }}
+                  >
+                    {tab}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFleetModalOpen(true)}
+                  className="px-1 py-1 text-[10px] uppercase tracking-wider border border-solid"
+                  style={{
+                    fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                    borderColor: "var(--color-phosphor-green)",
+                    color: "var(--color-phosphor-green)",
+                    backgroundColor: "var(--color-steel)",
+                    borderRadius: 0,
+                  }}
+                >
+                  Fleets
+                </button>
+              </div>
+
+              <div
+                className={`min-h-0 flex-1 ${
+                  mobileLeftPanelTab === "tutorial"
+                    ? "overflow-hidden"
+                    : "overflow-y-auto"
+                }`}
+              >
+                {mobileLeftPanelTab === "tutorial" ? (
+                  tutorialGridPanelConfig ? (
+                    <div
+                      className="flex h-full min-h-0 flex-col border border-solid p-2"
+                      style={{
+                        borderColor: "var(--color-gunmetal)",
+                        backgroundColor: "rgba(8, 12, 22, 0.85)",
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <h3
+                          className="min-w-0 text-sm font-bold uppercase tracking-wide text-cyan-300 leading-tight"
+                          style={{
+                            fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
+                          }}
+                        >
+                          {tutorialGridPanelConfig.title}
+                        </h3>
+                        <span className="shrink-0 text-[10px] font-mono text-gray-400">
+                          {displayStepNumber}/{displayTotalSteps}
+                        </span>
+                      </div>
+
+                      <div className="h-1 w-full bg-gray-700">
+                        <div
+                          className="h-1 bg-cyan-400 transition-all duration-300"
+                          style={{
+                            width: `${(displayStepNumber / displayTotalSteps) * 100}%`,
+                          }}
+                        />
+                      </div>
+
+                      <div className="relative mt-2 min-h-0 flex-1">
+                        <div
+                          ref={mobileTutorialScrollRef}
+                          onScroll={updateMobileTutorialScrollHint}
+                          className="h-full overflow-y-auto overscroll-contain pr-0.5 [touch-action:pan-y]"
+                        >
+                          <div
+                            ref={mobileTutorialContentRef}
+                            className="space-y-2.5"
+                          >
+                            {typeof tutorialGridPanelConfig.brief === "string" ? (
+                              <p
+                                className="text-[11px] leading-relaxed whitespace-pre-line text-gray-200"
+                                style={{
+                                  fontFamily:
+                                    "var(--font-jetbrains-mono), 'Courier New', monospace",
+                                }}
+                              >
+                                {toMobileTouchCopy(tutorialGridPanelConfig.brief)}
+                              </p>
+                            ) : (
+                              <div
+                                className="space-y-1 text-[11px] leading-relaxed text-gray-200"
+                                style={{
+                                  fontFamily:
+                                    "var(--font-jetbrains-mono), 'Courier New', monospace",
+                                }}
+                              >
+                                {mapNodeToMobileTouchCopy(tutorialGridPanelConfig.brief)}
+                              </div>
+                            )}
+
+                            {tutorialGridPanelConfig.tasks &&
+                            tutorialGridPanelConfig.tasks.length > 0 ? (
+                              <div className="space-y-1">
+                                <p
+                                  className="text-[10px] uppercase tracking-wider text-cyan-400"
+                                  style={{
+                                    fontFamily:
+                                      "var(--font-jetbrains-mono), 'Courier New', monospace",
+                                  }}
+                                >
+                                  {mapNodeToMobileTouchCopy(
+                                    tutorialGridPanelConfig.tasksSectionLabel ?? "Orders",
+                                  )}
+                                </p>
+                                <ol
+                                  className="list-decimal list-outside pl-4 space-y-0.5 text-[11px] leading-snug text-gray-200"
+                                  style={{
+                                    fontFamily:
+                                      "var(--font-jetbrains-mono), 'Courier New', monospace",
+                                  }}
+                                >
+                                  {tutorialGridPanelConfig.tasks.map((task, idx) => (
+                                    <li key={idx}>{mapNodeToMobileTouchCopy(task)}</li>
+                                  ))}
+                                </ol>
+                              </div>
+                            ) : null}
+
+                            {tutorialGridPanelConfig.primaryCta ? (
+                              <div className="space-y-1.5 border border-solid p-2" style={{ borderColor: "var(--color-cyan)", backgroundColor: "rgba(0, 38, 54, 0.35)" }}>
+                                <p
+                                  className="text-[10px] uppercase tracking-wider text-cyan-300"
+                                  style={{
+                                    fontFamily:
+                                      "var(--font-jetbrains-mono), 'Courier New', monospace",
+                                  }}
+                                >
+                                  {tutorialGridPanelConfig.primaryCta.eyebrow}
+                                </p>
+                                <p
+                                  className="text-sm font-bold uppercase tracking-wide text-white"
+                                  style={{
+                                    fontFamily:
+                                      "var(--font-rajdhani), 'Arial Black', sans-serif",
+                                  }}
+                                >
+                                  {tutorialGridPanelConfig.primaryCta.headline}
+                                </p>
+                                <div
+                                  className="text-[11px] leading-relaxed text-gray-200"
+                                  style={{
+                                    fontFamily:
+                                      "var(--font-jetbrains-mono), 'Courier New', monospace",
+                                  }}
+                                >
+                                  {tutorialGridPanelConfig.primaryCta.supporting}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={tutorialGridPanelConfig.primaryCta.onClick}
+                                  className="w-full border border-solid px-2 py-1 text-xs uppercase tracking-wider"
+                                  style={{
+                                    borderColor: "var(--color-cyan)",
+                                    color: "var(--color-cyan)",
+                                    backgroundColor: "var(--color-near-black)",
+                                    borderRadius: 0,
+                                  }}
+                                >
+                                  {tutorialGridPanelConfig.primaryCta.buttonLabel}
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                        {mobileTutorialMoreBelow ? (
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-10 items-end justify-center bg-gradient-to-t from-[rgb(15,23,42)] from-30% via-[rgb(15,23,42)]/75 to-transparent pb-1">
+                            <span className="rounded border border-cyan-500/40 bg-slate-950/95 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-cyan-300 shadow-sm shadow-cyan-950/50">
+                              Scroll for more
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="grid shrink-0 grid-cols-2 gap-1.5 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => previousStep()}
+                          disabled={currentStepIndex === 0}
+                          className="px-2 py-1 border border-solid text-[10px] uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                          style={{
+                            borderColor: "var(--color-gunmetal)",
+                            color: "var(--color-text-secondary)",
+                            backgroundColor: "var(--color-steel)",
+                            borderRadius: 0,
+                          }}
+                        >
+                          ← Prev
+                        </button>
+                        {!isVisibleLastStep ? (
+                          <button
+                            type="button"
+                            onClick={() => nextStep()}
+                            disabled={!isStepComplete}
+                            className="px-2 py-1 border border-solid text-[10px] uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{
+                              borderColor: "var(--color-cyan)",
+                              color: "var(--color-cyan)",
+                              backgroundColor: "var(--color-near-black)",
+                              borderRadius: 0,
+                            }}
+                          >
+                            Next →
+                          </button>
+                        ) : (
+                          <div />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => resetTutorial()}
+                          className="px-2 py-1 border border-solid text-[10px] uppercase tracking-wider"
+                          style={{
+                            borderColor: "rgb(180 138 32 / 0.85)",
+                            color: "rgb(253 224 71)",
+                            backgroundColor: "rgba(113, 63, 18, 0.25)",
+                            borderRadius: 0,
+                          }}
+                        >
+                          Reset
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onBack?.()}
+                          className="px-2 py-1 border border-solid text-[10px] uppercase tracking-wider"
+                          style={{
+                            borderColor: "var(--color-gunmetal)",
+                            color: "var(--color-text-secondary)",
+                            backgroundColor: "var(--color-slate)",
+                            borderRadius: 0,
+                          }}
+                        >
+                          Quit
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-300">
+                      Tutorial briefing unavailable for this step.
+                    </div>
+                  )
+                ) : null}
+                {mobileLeftPanelTab === "actions" ? (
+                  isShowingProposedMove ? (
+                    <div className="space-y-2">
+                      <div className="text-sm text-gray-300">
+                        Submit your selected move or cancel and pick again.
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleCancelMove}
+                          className="flex-1 px-2 py-1 border border-solid text-xs uppercase tracking-wider"
+                          style={{
+                            borderColor: "var(--color-gunmetal)",
+                            color: "var(--color-text-secondary)",
+                            backgroundColor: "var(--color-steel)",
+                            borderRadius: 0,
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <div className="relative flex-1">
+                          {shouldPulseSubmitMoveButton && (
+                            <div className="absolute -top-7 left-1/2 z-[280] -translate-x-1/2 pointer-events-none">
+                              <div className="relative inline-block">
+                                <div
+                                  className="absolute inset-0 rounded-none bg-black"
+                                  style={{ opacity: 1 }}
+                                  aria-hidden
+                                />
+                                <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                                  Tap here
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleSubmitMove}
+                            className={`w-full px-2 py-1 border border-solid text-xs uppercase tracking-wider ${
+                              shouldPulseSubmitMoveButton
+                                ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                                : ""
+                            }`}
+                            style={{
+                              borderColor: shouldPulseSubmitMoveButton
+                                ? "rgb(250 204 21 / 0.9)"
+                                : "var(--color-phosphor-green)",
+                              color: shouldPulseSubmitMoveButton
+                                ? "rgb(250 204 21)"
+                                : "var(--color-phosphor-green)",
+                              backgroundColor: shouldPulseSubmitMoveButton
+                                ? "rgba(113, 63, 18, 0.35)"
+                                : "var(--color-near-black)",
+                              borderRadius: 0,
+                            }}
+                          >
+                            Submit
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-300">
+                      Select a ship and choose a destination to open actions.
+                    </div>
+                  )
+                ) : null}
+                {mobileLeftPanelTab === "status" ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div className="border border-solid px-1.5 py-1 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
+                        <span className="text-gray-400">Me </span>
+                        <span className="font-mono text-white">{myScore}/{maxScore}</span>
+                      </div>
+                      <div className="border border-solid px-1.5 py-1 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
+                        <span className="text-gray-400">Opp </span>
+                        <span className="font-mono text-white">{opponentScore}/{maxScore}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+                {mobileLeftPanelTab === "events" ? (
+                  <GameEvents
+                    lastMove={selectedShipId !== null ? undefined : lastMoveForEvents}
+                    shipMap={shipMap}
+                    address={TUTORIAL_PLAYER_ADDRESS}
+                    appendDestroyedText={
+                      currentStep?.id === "ship-destruction" ||
+                      currentStep?.id === "rescue"
+                    }
+                  />
+                ) : null}
+              </div>
+
+              {selectedShip ? (
+                <div
+                  className="absolute inset-0 z-[260] overflow-y-auto px-1 pb-1 pt-0.5"
+                  style={{
+                    backgroundColor: "rgba(3, 8, 16, 0.97)",
+                  }}
+                >
+                  <div className="mb-1 flex items-center justify-between">
+                    <div className="relative min-w-0">
+                      {shouldHighlightSpecialEmpWeaponDropdown ? (
+                        <div className="absolute -top-7 left-1/2 z-[280] -translate-x-1/2 pointer-events-none">
+                          <div className="relative inline-block">
+                            <div
+                              className="absolute inset-0 rounded-none bg-black"
+                              style={{ opacity: 1 }}
+                              aria-hidden
+                            />
+                            <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                              Tap here
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setIsMobileWeaponMenuOpen((prev) => !prev)}
+                        disabled={!selectedShip}
+                        className={`flex min-w-[7.5rem] max-w-[10.5rem] items-center justify-between gap-2 border border-solid px-2 py-1 text-[10px] uppercase tracking-wider text-cyan-300 disabled:opacity-50 ${
+                          shouldHighlightSpecialEmpWeaponDropdown
+                            ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                            : "bg-black/40"
+                        }`}
+                        style={{
+                          borderColor: shouldHighlightSpecialEmpWeaponDropdown
+                            ? "rgb(250 204 21 / 0.9)"
+                            : "var(--color-gunmetal)",
+                          backgroundColor: shouldHighlightSpecialEmpWeaponDropdown
+                            ? "rgba(113, 63, 18, 0.35)"
+                            : "rgba(0, 0, 0, 0.4)",
+                          borderRadius: 0,
+                        }}
+                      >
+                        <span className="truncate">{mobileWeaponDisplayName}</span>
+                        <span>{isMobileWeaponMenuOpen ? "▲" : "▼"}</span>
+                      </button>
+                      {isMobileWeaponMenuOpen ? (
+                        <div
+                          className="absolute left-0 top-[calc(100%+4px)] z-[270] w-full border border-solid bg-[var(--color-near-black)]"
+                          style={{
+                            borderColor: "var(--color-gunmetal)",
+                            borderRadius: 0,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWeaponTypeFromGrid("weapon");
+                              setIsMobileWeaponMenuOpen(false);
+                            }}
+                            className="flex w-full items-center justify-between border-b border-solid px-2 py-1 text-left text-[10px] uppercase tracking-wider"
+                            style={{
+                              borderColor: "var(--color-gunmetal)",
+                              color:
+                                selectedWeaponType === "weapon"
+                                  ? "var(--color-cyan)"
+                                  : "var(--color-text-secondary)",
+                              backgroundColor:
+                                selectedWeaponType === "weapon"
+                                  ? "rgba(86, 214, 255, 0.12)"
+                                  : "transparent",
+                            }}
+                          >
+                            <span className="truncate">
+                              {selectedShip
+                                ? getMainWeaponName(selectedShip.equipment.mainWeapon)
+                                : "Weapon"}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!mobileCanUseSpecial}
+                            onClick={() => {
+                              if (!mobileCanUseSpecial) return;
+                              setWeaponTypeFromGrid("special");
+                              setIsMobileWeaponMenuOpen(false);
+                            }}
+                            className="flex w-full items-center justify-between px-2 py-1 text-left text-[10px] uppercase tracking-wider disabled:opacity-40"
+                            style={{
+                              color:
+                                selectedWeaponType === "special"
+                                  ? "var(--color-cyan)"
+                                  : "var(--color-text-secondary)",
+                              backgroundColor:
+                                selectedWeaponType === "special"
+                                  ? "rgba(86, 214, 255, 0.12)"
+                                  : "transparent",
+                            }}
+                          >
+                            <span className="truncate">
+                              {selectedShip
+                                ? getSpecialName(selectedShip.equipment.special)
+                                : "Special"}
+                            </span>
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="relative">
+                      {shouldHighlightMobileCloseButton ? (
+                        <div className="absolute top-[calc(100%+4px)] right-0 z-[280] pointer-events-none">
+                          <div className="relative inline-block">
+                            <div
+                              className="absolute inset-0 rounded-none bg-black"
+                              style={{ opacity: 1 }}
+                              aria-hidden
+                            />
+                            <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                              Tap here
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileWeaponMenuOpen(false);
+                          setSelectedShipId(null);
+                        }}
+                        className={`px-1.5 py-0.5 text-[10px] uppercase border border-solid ${
+                          shouldHighlightMobileCloseButton
+                            ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                            : ""
+                        }`}
+                        style={{
+                          borderColor: shouldHighlightMobileCloseButton
+                            ? "rgb(250 204 21 / 0.9)"
+                            : "var(--color-gunmetal)",
+                          color: shouldHighlightMobileCloseButton
+                            ? "rgb(250 204 21)"
+                            : "var(--color-text-secondary)",
+                          backgroundColor: shouldHighlightMobileCloseButton
+                            ? "rgba(113, 63, 18, 0.35)"
+                            : "var(--color-steel)",
+                          borderRadius: 0,
+                        }}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="origin-top scale-[0.9] transform-gpu">
+                      <ShipCard
+                        ship={selectedShip}
+                        isStarred={false}
+                        onToggleStar={() => {}}
+                        isSelected={true}
+                        onToggleSelection={() => {}}
+                        onRecycleClick={() => {}}
+                        showInGameProperties={true}
+                        inGameAttributes={mobileSelectedShipAttributes}
+                        attributesLoading={false}
+                        hideRecycle={true}
+                        hideCheckbox={true}
+                        isCurrentPlayerShip={isShipOwnedByCurrentPlayer(selectedShip.id)}
+                        flipShip={Boolean(mobileSelectedShipPosition?.isCreator)}
+                        reactorCriticalStatus={
+                          mobileSelectedShipAttributes.reactorCriticalTimer > 0 &&
+                          mobileSelectedShipAttributes.hullPoints === 0
+                            ? "critical"
+                            : mobileSelectedShipAttributes.reactorCriticalTimer > 0
+                              ? "warning"
+                              : "none"
+                        }
+                        hasMoved={movedShipIdsSet.has(selectedShip.id.toString() as TutorialShipId)}
+                        gameViewMode={true}
+                        hideRarityLabel={true}
+                        hideRankLabel={true}
+                        hideOuterFrame={true}
+                        layoutShipId={selectedShip.id.toString()}
+                      />
+                    </div>
+                    {isShowingProposedMove ? (
+                      <div className="pt-0.5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCancelMove}
+                            className="flex-1 px-2 py-1 border border-solid text-[10px] uppercase tracking-wider"
+                            style={{
+                              borderColor: "var(--color-gunmetal)",
+                              color: "var(--color-text-secondary)",
+                              backgroundColor: "var(--color-steel)",
+                              borderRadius: 0,
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <div className="relative flex-1">
+                            {shouldPulseSubmitMoveButton && (
+                              <div className="absolute -top-7 left-1/2 z-[280] -translate-x-1/2 pointer-events-none">
+                                <div className="relative inline-block">
+                                  <div
+                                    className="absolute inset-0 rounded-none bg-black"
+                                    style={{ opacity: 1 }}
+                                    aria-hidden
+                                  />
+                                  <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                                    Tap here
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={handleSubmitMove}
+                              className={`w-full px-2 py-1 border border-solid text-[10px] uppercase tracking-wider ${
+                                shouldPulseSubmitMoveButton
+                                  ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                                  : ""
+                              }`}
+                              style={{
+                                borderColor: shouldPulseSubmitMoveButton
+                                  ? "rgb(250 204 21 / 0.9)"
+                                  : "var(--color-phosphor-green)",
+                                color: shouldPulseSubmitMoveButton
+                                  ? "rgb(250 204 21)"
+                                  : "var(--color-phosphor-green)",
+                                backgroundColor: shouldPulseSubmitMoveButton
+                                  ? "rgba(113, 63, 18, 0.35)"
+                                  : "var(--color-near-black)",
+                                borderRadius: 0,
+                              }}
+                            >
+                              Submit
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div
+            className={`relative h-full min-h-0 shrink-0 overflow-hidden ${
+              isMobileJoiner ? "order-1" : "order-2"
+            }`}
+            style={{
+              aspectRatio: `${GRID_WIDTH} / ${GRID_HEIGHT}`,
+            }}
+          >
+            <div
+              className="h-full max-h-full"
+              style={{
+                height: "100%",
+                width: "auto",
+                aspectRatio: `${GRID_WIDTH} / ${GRID_HEIGHT}`,
+              }}
+            >
+              <GameBoardLayout
+                isCurrentPlayerTurn={isMyTurn}
+                containerRef={gridContainerRef}
+                onBoardChromeMouseDown={handleBoardChromeMouseDown}
+              >
+                <div
+                  className="relative h-full [contain:layout]"
+                  style={{ aspectRatio: `${GRID_WIDTH} / ${GRID_HEIGHT}` }}
+                >
+                  <div className="absolute inset-0 min-h-0 overflow-hidden">
+                    <GameGrid
+                      grid={grid}
+                      allShipPositions={allShipPositionsForGrid}
+                      shipMap={shipMap}
+                      selectedShipId={selectedShipId}
+                      previewPosition={previewPosition}
+                      targetShipId={targetShipId}
+                      selectedWeaponType={selectedWeaponType}
+                      hoveredCell={hoveredCell}
+                      draggedShipId={draggedShipId}
+                      dragOverCell={dragOverCell}
+                      movementRange={movementRange}
+                      shootingRange={shootingRange}
+                      validTargets={gridValidTargets}
+                      assistableTargets={gridAssistableTargets}
+                      assistableTargetsFromStart={gridAssistableTargetsFromStart}
+                      dragShootingRange={dragShootingRange}
+                      dragValidTargets={dragValidTargets}
+                      isCurrentPlayerTurn={isMyTurn}
+                      isShipOwnedByCurrentPlayer={isShipOwnedByCurrentPlayer}
+                      movedShipIdsSet={gridMovedShipIdsSet}
+                      specialType={specialType}
+                      blockedGrid={blockedGrid}
+                      scoringGrid={scoringGrid}
+                      onlyOnceGrid={onlyOnceGrid}
+                      calculateDamage={calculateDamage}
+                      getShipAttributes={getShipAttributes}
+                      disableTooltips={true}
+                      address={TUTORIAL_PLAYER_ADDRESS}
+                      currentTurn={gameState.turnState.currentTurn}
+                      highlightedMovePosition={highlightedMovePosition}
+                      lastMoveShipId={lastMoveProps.lastMoveShipId}
+                      lastMoveOldPosition={lastMoveProps.lastMoveOldPosition}
+                      lastMoveNewPosition={lastMoveProps.lastMoveNewPosition}
+                      lastMoveActionType={lastMoveProps.lastMoveActionType}
+                      lastMoveTargetShipId={lastMoveProps.lastMoveTargetShipId}
+                      lastMoveIsCurrentPlayer={lastMoveProps.lastMoveIsCurrentPlayer}
+                      showLastMoveEmpReplayWhenSelected={
+                        currentStep?.id === "ship-destruction" ||
+                        currentStep?.id === "destroy-disabled"
+                      }
+                      retreatPrepShipId={retreatPrepShipId}
+                      retreatPrepIsCreator={retreatPrepIsCreator}
+                      tutorialHighlightCells={tutorialHighlightCells}
+                      tutorialDefaultLabel={tutorialDefaultLabel}
+                      onGridRightClickDeselect={handleGridRightClickDeselect}
+                      setSelectedShipId={wrappedSetSelectedShipId}
+                      setPreviewPosition={wrappedSetPreviewPosition}
+                      setTargetShipId={wrappedSetTargetShipId}
+                      setSelectedWeaponType={setWeaponTypeFromGrid}
+                      setHoveredCell={setHoveredCell}
+                      setDraggedShipId={setDraggedShipId}
+                      setDragOverCell={setDragOverCell}
+                    />
+                  </div>
+                  <div
+                    className={`pointer-events-none absolute top-1 z-[230] ${
+                      isMobileJoiner ? "left-1" : "right-1"
+                    }`}
+                  >
+                    <div className="pointer-events-auto relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsMobileFleeOpen((prev) => !prev)}
+                        className="flex h-7 w-7 items-center justify-center border border-solid text-xs font-bold"
+                        style={{
+                          borderColor: "var(--color-warning-red)",
+                          color: "var(--color-warning-red)",
+                          backgroundColor: "rgba(10, 10, 15, 0.92)",
+                          borderRadius: 0,
+                        }}
+                        title="Battle menu"
+                        aria-label="Open battle menu"
+                      >
+                        ⚑
+                      </button>
+                      {isMobileFleeOpen ? (
+                        <div
+                          className="absolute right-0 top-[calc(100%+6px)] w-[13.25rem] border border-solid p-1"
+                          style={{
+                            backgroundColor: "rgba(3, 8, 16, 0.98)",
+                            borderColor: "var(--color-warning-red)",
+                            borderRadius: 0,
+                          }}
+                        >
+                          <FleeSafetySwitch gameId={0n} locked />
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </GameBoardLayout>
+            </div>
+          </div>
+        </div>
+
+        {isMobileFleetModalOpen ? (
+          <div className="fixed inset-0 z-[310] flex flex-col bg-[rgba(4,8,15,0.98)] p-3">
+            <div className="mb-3 flex items-center justify-between border border-solid px-3 py-2" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
+              <h3 className="text-sm uppercase tracking-wider text-cyan-300">Fleet Intel</h3>
+              <button
+                type="button"
+                onClick={() => setIsMobileFleetModalOpen(false)}
+                className="px-2 py-1 text-xs uppercase border border-solid"
+                style={{
+                  borderColor: "var(--color-gunmetal)",
+                  color: "var(--color-text-secondary)",
+                  backgroundColor: "var(--color-steel)",
+                  borderRadius: 0,
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto border border-solid p-3" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="mb-2 text-xs uppercase tracking-wider text-cyan-300">My Fleet</h4>
+                  <div className="space-y-2">
+                    {gameState.creatorActiveShipIds
+                      .filter(() => !isMobileJoiner)
+                      .concat(gameState.joinerActiveShipIds.filter(() => isMobileJoiner))
+                      .map((shipId) => {
+                        const ship = shipMap.get(BigInt(shipId));
+                        const attrs = getShipAttributes(shipId);
+                        const hasMoved = movedShipIdsSet.has(shipId);
+                        if (!ship || !attrs) return null;
+                        return (
+                          <ShipCard
+                            key={`my-${shipId}`}
+                            ship={ship}
+                            isStarred={false}
+                            onToggleStar={() => {}}
+                            isSelected={false}
+                            onToggleSelection={() => {}}
+                            onRecycleClick={() => {}}
+                            showInGameProperties={true}
+                            inGameAttributes={attrs}
+                            attributesLoading={false}
+                            hideRecycle={true}
+                            hideCheckbox={true}
+                            isCurrentPlayerShip={true}
+                            flipShip={ship.owner === gameState.metadata.creator}
+                            reactorCriticalStatus={
+                              attrs.reactorCriticalTimer > 0 && attrs.hullPoints === 0
+                                ? "critical"
+                                : attrs.reactorCriticalTimer > 0
+                                  ? "warning"
+                                  : "none"
+                            }
+                            hasMoved={hasMoved}
+                            gameViewMode={true}
+                          />
+                        );
+                      })}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="mb-2 text-xs uppercase tracking-wider text-red-300">Opponent&apos;s Fleet</h4>
+                  <div className="space-y-2">
+                    {gameState.creatorActiveShipIds
+                      .filter(() => isMobileJoiner)
+                      .concat(gameState.joinerActiveShipIds.filter(() => !isMobileJoiner))
+                      .map((shipId) => {
+                        const ship = shipMap.get(BigInt(shipId));
+                        const attrs = getShipAttributes(shipId);
+                        const hasMoved = movedShipIdsSet.has(shipId);
+                        if (!ship || !attrs) return null;
+                        return (
+                          <ShipCard
+                            key={`opp-${shipId}`}
+                            ship={ship}
+                            isStarred={false}
+                            onToggleStar={() => {}}
+                            isSelected={false}
+                            onToggleSelection={() => {}}
+                            onRecycleClick={() => {}}
+                            showInGameProperties={true}
+                            inGameAttributes={attrs}
+                            attributesLoading={false}
+                            hideRecycle={true}
+                            hideCheckbox={true}
+                            isCurrentPlayerShip={false}
+                            flipShip={ship.owner === gameState.metadata.creator}
+                            reactorCriticalStatus={
+                              attrs.reactorCriticalTimer > 0 && attrs.hullPoints === 0
+                                ? "critical"
+                                : attrs.reactorCriticalTimer > 0
+                                  ? "warning"
+                                  : "none"
+                            }
+                            hasMoved={hasMoved}
+                            gameViewMode={true}
+                          />
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={gameViewRootRef}
-      className={`flex flex-col gap-6 ${
+      className={`flex flex-col ${
+        isLandscapeMobile ? "h-[100dvh] overflow-hidden" : ""
+      } ${
+        isLandscapeMobile ? "gap-2 pb-2" : "gap-6"
+      } ${
         chromeOnSide ? GAME_VIEW_SIDE_ROOT_CLASS : "mx-auto w-full"
       }`}
       style={
-        chromeOnSide
+        isLandscapeMobile
+          ? {
+              marginLeft: 0,
+              width: "100%",
+              maxWidth: "none",
+            }
+          : chromeOnSide
           ? {
               marginLeft: "8px",
             }
@@ -3979,6 +5035,7 @@ export function SimulatedGameDisplay({
                   retreatPrepShipId={retreatPrepShipId}
                   retreatPrepIsCreator={retreatPrepIsCreator}
                   tutorialHighlightCells={tutorialHighlightCells}
+                  tutorialDefaultLabel={tutorialDefaultLabel}
                   onGridRightClickDeselect={handleGridRightClickDeselect}
                   setSelectedShipId={wrappedSetSelectedShipId}
                   setPreviewPosition={wrappedSetPreviewPosition}
@@ -4099,17 +5156,18 @@ export function SimulatedGameDisplay({
       </div>
 
       {/* Ship Details panel - mirror live game fleet layout using tutorial data */}
-      <div
-        className="p-4 border border-solid w-full"
-        style={{
-          backgroundColor: "var(--color-slate)",
-          borderColor: "var(--color-gunmetal)",
-          borderTopColor: "var(--color-steel)",
-          borderLeftColor: "var(--color-steel)",
-          borderRadius: 0,
-        }}
-      >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {!isLandscapeMobile && (
+        <div
+          className="p-4 border border-solid w-full"
+          style={{
+            backgroundColor: "var(--color-slate)",
+            borderColor: "var(--color-gunmetal)",
+            borderTopColor: "var(--color-steel)",
+            borderLeftColor: "var(--color-steel)",
+            borderRadius: 0,
+          }}
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* My Fleet - Left (tutorial player) */}
           <div>
             <h4
@@ -4249,8 +5307,9 @@ export function SimulatedGameDisplay({
               })}
             </div>
           </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {selectedShipId && (
         <div className="mt-4 bg-black/40 border border-cyan-400 rounded-none p-4">

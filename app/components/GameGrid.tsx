@@ -308,7 +308,8 @@ interface GameGridProps {
   /**
    * **Tutorial highlight**: cells that show a gentle pulsing yellow tint under ships
    * (e.g. select-ship until a player ship is selected; view-enemy until an enemy ship).
-   * Optional `label` overrides the floating badge text (default "Click here").
+   * Optional `label` overrides the floating badge text.
+   * `tutorialDefaultLabel` sets fallback text when label is omitted (default "Click here").
    * Set `hideLabel` to pulse the cell without rendering the badge.
    */
   tutorialHighlightCells?: readonly {
@@ -317,6 +318,7 @@ interface GameGridProps {
     label?: string;
     hideLabel?: boolean;
   }[];
+  tutorialDefaultLabel?: string;
   /** Extra clears (e.g. retreat override) after right-click deselect on the grid. */
   onGridRightClickDeselect?: () => void;
   setSelectedShipId: (shipId: bigint | null) => void;
@@ -381,6 +383,7 @@ export function GameGrid({
   retreatPrepShipId,
   retreatPrepIsCreator,
   tutorialHighlightCells,
+  tutorialDefaultLabel = "Click here",
   onGridRightClickDeselect,
   setSelectedShipId,
   setPreviewPosition,
@@ -1385,6 +1388,7 @@ export function GameGrid({
                       <div className="absolute inset-0 z-[11] pointer-events-none border border-yellow-400/90 bg-yellow-400/24 animate-pulse" />
                     )}
                     {shouldRenderShipContent && ship ? (
+                      <>
                       <div
                         className="w-full h-full relative z-[12]"
                         draggable={
@@ -1751,61 +1755,6 @@ export function GameGrid({
                             M
                           </div>
                         )}
-                        {/* Reactor damage skulls */}
-                        {(() => {
-                          const attributes = getShipAttributes(cell.shipId);
-                          if (!attributes) return null;
-
-                          const isRammingToCell =
-                            isRammingMovePreview &&
-                            rammingPreviewPosition != null &&
-                            rowIndex === rammingPreviewPosition.row &&
-                            colIndex === rammingPreviewPosition.col;
-                          const previewReactorLevel =
-                            attributes.reactorCriticalTimer +
-                            (isRammingToCell ? 1 : 0);
-                          if (previewReactorLevel <= 0) return null;
-                          const skullCount = Math.min(previewReactorLevel, 3);
-                          const skullLevels = Array.from(
-                            { length: skullCount },
-                            (_, index) => index,
-                          );
-
-                          const skullAnchorIsCreator = isRammingToCell
-                            ? (selectedShipCreatorSide ?? cell.isCreator)
-                            : cell.isCreator;
-                          return (
-                            <div
-                              className={`absolute z-20 [container-type:size] ${
-                                skullAnchorIsCreator
-                                  ? "bottom-0 left-0"
-                                  : "bottom-0 right-0"
-                              } flex items-center`}
-                              style={{
-                                margin: "clamp(1px, 2cqw, 2px)",
-                                gap: "clamp(1px, 2cqw, 2px)",
-                              }}
-                            >
-                              {skullLevels.map((level) => (
-                                <div
-                                  key={level}
-                                  className="flex items-center justify-center rounded-full bg-red-500/90"
-                                  style={{
-                                    width: "clamp(8px, 15cqw, 12px)",
-                                    height: "clamp(8px, 15cqw, 12px)",
-                                  }}
-                                >
-                                  <span
-                                    className="leading-none font-mono"
-                                    style={{ fontSize: "clamp(6px, 9cqw, 8px)" }}
-                                  >
-                                    💀
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })()}
                         {/* Team dot + rank stars: same top row, opposite corners (not inside mirrored ShipImage) */}
                         {(() => {
                           const isProposedMoveOriginal =
@@ -2004,6 +1953,63 @@ export function GameGrid({
                           );
                         })()}
                       </div>
+                        {/* Reactor damage skulls: anchor to the grid cell (not the ship stack) so bottom-0
+                            stays correct when the inner stack height is ambiguous on small viewports. */}
+                        {(() => {
+                          const attributes = getShipAttributes(cell.shipId);
+                          if (!attributes) return null;
+
+                          const isRammingToCell =
+                            isRammingMovePreview &&
+                            rammingPreviewPosition != null &&
+                            rowIndex === rammingPreviewPosition.row &&
+                            colIndex === rammingPreviewPosition.col;
+                          const previewReactorLevel =
+                            attributes.reactorCriticalTimer +
+                            (isRammingToCell ? 1 : 0);
+                          if (previewReactorLevel <= 0) return null;
+                          const skullCount = Math.min(previewReactorLevel, 3);
+                          const skullLevels = Array.from(
+                            { length: skullCount },
+                            (_, index) => index,
+                          );
+
+                          const skullAnchorIsCreator = isRammingToCell
+                            ? (selectedShipCreatorSide ?? cell.isCreator)
+                            : cell.isCreator;
+                          return (
+                            <div
+                              className={`pointer-events-none absolute z-[22] ${
+                                skullAnchorIsCreator
+                                  ? "bottom-0 left-0"
+                                  : "bottom-0 right-0"
+                              } flex items-end`}
+                              style={{
+                                margin: "clamp(1px, 0.35vmin, 2px)",
+                                gap: "clamp(1px, 0.35vmin, 2px)",
+                              }}
+                            >
+                              {skullLevels.map((level) => (
+                                <div
+                                  key={level}
+                                  className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-500/90 leading-none"
+                                  style={{
+                                    width: "clamp(8px, 2.2vmin, 12px)",
+                                    height: "clamp(8px, 2.2vmin, 12px)",
+                                  }}
+                                >
+                                  <span
+                                    className="font-mono leading-none"
+                                    style={{ fontSize: "clamp(6px, 1.6vmin, 8px)" }}
+                                  >
+                                    💀
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </>
                     ) : null}
                   </div>
                 );
@@ -3252,7 +3258,7 @@ export function GameGrid({
                           transform: tutorialTransform,
                         }}
                       >
-                        {p.label ?? "Click here"}
+                        {p.label ?? tutorialDefaultLabel}
                       </div>
                     );
                   })}

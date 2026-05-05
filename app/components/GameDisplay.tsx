@@ -2239,6 +2239,18 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     }
   }, [isLandscapeMobile, isShowingProposedMove, mobileActivePanel]);
 
+  React.useEffect(() => {
+    if (!isLandscapeMobile) return;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [isLandscapeMobile]);
+
   const isSelectedShipDisabled = React.useMemo(() => {
     if (!selectedShipId) return false;
     const attrs = getShipAttributes(selectedShipId);
@@ -3384,6 +3396,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
       : selectedShip && selectedWeaponType === "special"
         ? getSpecialName(selectedShip.equipment.special)
         : "Weapon";
+  const tutorialDefaultLabel = isLandscapeMobile ? "Tap here" : "Click here";
 
   const renderFleetColumn = ({
       title,
@@ -3465,7 +3478,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   if (isLandscapeMobile) {
     return (
       <div className="mx-auto h-full w-full overflow-hidden" style={{ height: "100dvh" }}>
-        <div className="flex h-full min-h-0 items-start gap-2">
+        <div className="flex h-full min-h-0 items-stretch gap-2 overflow-hidden">
           <div
             className={`flex h-full min-h-0 min-w-0 flex-1 items-center justify-center ${
               isMobileJoiner ? "order-2" : "order-1"
@@ -3617,7 +3630,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
               ) : null}
             </div>
 
-            {selectedShip && mobileSelectedShipAttributes ? (
+            {selectedShip ? (
               <div
                 className="absolute inset-0 z-[260] overflow-y-auto pl-0.5 pr-1.5 pt-1 pb-2"
                 style={{
@@ -3830,6 +3843,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       isRammingMovePreview={isRammingMovePreview}
                       retreatPrepShipId={retreatPrepShipId}
                       retreatPrepIsCreator={retreatPrepIsCreator}
+                      tutorialDefaultLabel={tutorialDefaultLabel}
                       onGridRightClickDeselect={handleGridRightClickDeselect}
                       setSelectedShipId={setSelectedShipId}
                       setPreviewPosition={setPreviewPosition}
@@ -4580,6 +4594,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           isRammingMovePreview={isRammingMovePreview}
           retreatPrepShipId={retreatPrepShipId}
           retreatPrepIsCreator={retreatPrepIsCreator}
+          tutorialDefaultLabel={tutorialDefaultLabel}
           onGridRightClickDeselect={handleGridRightClickDeselect}
           setSelectedShipId={setSelectedShipId}
           setPreviewPosition={setPreviewPosition}

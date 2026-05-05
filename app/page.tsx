@@ -50,6 +50,9 @@ export default function Home() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [isInfoTutorialActive, setIsInfoTutorialActive] = useState(false);
   const [isGamesDetailActive, setIsGamesDetailActive] = useState(false);
+  const [isManageNavyPurchaseActive, setIsManageNavyPurchaseActive] =
+    useState(false);
+  const [isLandscapeMobile, setIsLandscapeMobile] = useState(false);
 
   const tabScrollRef = useRef<HTMLDivElement>(null);
   const [tabScrollMore, setTabScrollMore] = useState({ left: false, right: false });
@@ -166,6 +169,25 @@ export default function Home() {
     };
   }, []);
 
+  // Listen for Manage Navy mobile purchase takeover activation.
+  useEffect(() => {
+    const handleManageNavyPurchaseActive = (event: Event) => {
+      const custom = event as CustomEvent<{ active?: boolean }>;
+      setIsManageNavyPurchaseActive(Boolean(custom.detail?.active));
+    };
+
+    window.addEventListener(
+      "void-tactics-manage-navy-purchase-active",
+      handleManageNavyPurchaseActive as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "void-tactics-manage-navy-purchase-active",
+        handleManageNavyPurchaseActive as EventListener,
+      );
+    };
+  }, []);
+
   // Listen for navigation events from Info (and elsewhere)
   useEffect(() => {
     const handleNavigateToLobbies = () => {
@@ -209,8 +231,27 @@ export default function Home() {
     }
   }, [activeTab, isHydrated]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const orientationMq = window.matchMedia("(orientation: landscape)");
+    const mobileMq = window.matchMedia("(max-width: 1023px)");
+    const sync = () => {
+      setIsLandscapeMobile(mobileMq.matches && orientationMq.matches);
+    };
+    sync();
+    orientationMq.addEventListener("change", sync);
+    mobileMq.addEventListener("change", sync);
+    return () => {
+      orientationMq.removeEventListener("change", sync);
+      mobileMq.removeEventListener("change", sync);
+    };
+  }, []);
+
   /** Hide site header (0px row) during Info onboarding tutorial or Games detail; not tied to wallet state. */
-  const hideGlobalChrome = isInfoTutorialActive || isGamesDetailActive;
+  const hideGlobalChrome =
+    isInfoTutorialActive || isGamesDetailActive || isManageNavyPurchaseActive;
+  const shouldHideFooterInLandscapeGameView =
+    isLandscapeMobile && (isInfoTutorialActive || isGamesDetailActive);
 
   useLayoutEffect(() => {
     updateTabScrollHints();
@@ -277,8 +318,8 @@ export default function Home() {
           <Header />
         </div>
         <main
-          className={`flex min-h-0 flex-1 flex-col gap-4 px-2 pb-16 md:gap-8 md:px-10 md:pb-20 lg:px-20 w-full max-w-7xl mx-auto ${
-            hideGlobalChrome ? "pt-0" : "pt-4"
+          className={`flex min-h-0 flex-1 flex-col gap-4 px-2 md:gap-8 md:px-10 lg:px-20 w-full max-w-7xl mx-auto ${
+            hideGlobalChrome ? "pt-0 pb-0" : "pt-4 pb-16 md:pb-20"
           }`}
         >
           <div
@@ -304,9 +345,11 @@ export default function Home() {
             </div>
           </div>
         </main>
-        <div className="shrink-0">
-          <SiteFooter />
-        </div>
+        {!shouldHideFooterInLandscapeGameView && (
+          <div className="shrink-0">
+            <SiteFooter />
+          </div>
+        )}
       </div>
     );
   }
@@ -338,8 +381,8 @@ export default function Home() {
         <Header />
       </div>
       <main
-        className={`flex min-h-0 flex-1 flex-col gap-4 pb-16 w-full md:gap-8 md:pb-20 ${
-          hideGlobalChrome ? "pt-0" : "pt-4"
+        className={`flex min-h-0 flex-1 flex-col gap-4 w-full md:gap-8 ${
+          hideGlobalChrome ? "pt-0 pb-0" : "pt-4 pb-16 md:pb-20"
         } ${
           activeTab === "Games" || isInfoTutorialActive
             ? "px-0"
@@ -517,11 +560,21 @@ export default function Home() {
             </div>
           ) : (
             <div
-              className="border-0 bg-transparent p-0 md:border md:border-solid md:bg-[var(--color-slate)] md:p-8"
+              className={
+                isInfoTutorialActive
+                  ? "border-0 bg-transparent p-0"
+                  : "border-0 bg-transparent p-0 md:border md:border-solid md:bg-[var(--color-slate)] md:p-8"
+              }
               style={{
-                borderColor: "var(--color-gunmetal)",
-                borderTopColor: "var(--color-steel)",
-                borderLeftColor: "var(--color-steel)",
+                borderColor: isInfoTutorialActive
+                  ? "transparent"
+                  : "var(--color-gunmetal)",
+                borderTopColor: isInfoTutorialActive
+                  ? "transparent"
+                  : "var(--color-steel)",
+                borderLeftColor: isInfoTutorialActive
+                  ? "transparent"
+                  : "var(--color-steel)",
               }}
             >
               {activeTab === "Manage Navy" && <ManageNavy />}
@@ -535,9 +588,11 @@ export default function Home() {
           )}
         </div>
       </main>
-      <div className="shrink-0">
-        <SiteFooter />
-      </div>
+      {!shouldHideFooterInLandscapeGameView && (
+        <div className="shrink-0">
+          <SiteFooter />
+        </div>
+      )}
     </div>
   );
 }

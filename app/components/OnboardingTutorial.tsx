@@ -68,9 +68,9 @@ export function OnboardingTutorial({
 
   return (
     <TutorialContext.Provider value={tutorialContext}>
-      <div className="relative w-full h-full min-h-screen">
+      <div className="relative h-full w-full overflow-hidden">
         {!currentStep ? (
-          <div className="flex items-center justify-center min-h-screen">
+          <div className="flex min-h-[70vh] items-center justify-center">
             <div className="text-cyan-300 font-mono">Loading tutorial...</div>
           </div>
         ) : (

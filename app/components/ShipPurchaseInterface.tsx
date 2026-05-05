@@ -17,13 +17,6 @@ interface ShipPurchaseInterfaceProps {
 
 const TIER_COLOR_SCHEMES = [
   {
-    border: "border-amber-400",
-    text: "text-amber-400",
-    hoverBorder: "hover:border-amber-300",
-    hoverText: "hover:text-amber-300",
-    hoverBg: "hover:bg-amber-400/10",
-  },
-  {
     border: "border-gray-400",
     text: "text-gray-400",
     hoverBorder: "hover:border-gray-300",
@@ -50,6 +43,13 @@ const TIER_COLOR_SCHEMES = [
     hoverBorder: "hover:border-purple-300",
     hoverText: "hover:text-purple-300",
     hoverBg: "hover:bg-purple-400/10",
+  },
+  {
+    border: "border-amber-400",
+    text: "text-amber-400",
+    hoverBorder: "hover:border-amber-300",
+    hoverText: "hover:text-amber-300",
+    hoverBg: "hover:bg-amber-400/10",
   },
 ] as const;
 

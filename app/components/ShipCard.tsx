@@ -87,6 +87,12 @@ const ShipCard: React.FC<ShipCardProps> = ({
   hideOuterFrame = false,
 }) => {
   const useCompactStatGrid = gameViewMode && hideRarityLabel && hideRankLabel;
+  const useTeamArtBorder = gameViewMode && hideOuterFrame;
+  const shipArtBorderColor = useTeamArtBorder
+    ? isCurrentPlayerShip
+      ? "var(--color-cyan)"
+      : "var(--color-warning-red)"
+    : "var(--color-gunmetal)";
   // Determine border class based on selection mode and ship state
   const getBorderClass = () => {
     const isInGameView = tooltipMode || gameViewMode;
@@ -355,7 +361,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
           ship={ship}
           className="h-full w-full border border-solid"
           style={{
-            borderColor: "var(--color-gunmetal)",
+            borderColor: shipArtBorderColor,
             borderRadius: 0, // Square corners
           }}
           showLoadingState={true}
@@ -474,9 +480,15 @@ const ShipCard: React.FC<ShipCardProps> = ({
         )}
       </div>
 
-      <div className="flex justify-between items-start mb-3">
+      <div
+        className={`flex justify-between items-start ${
+          useCompactStatGrid ? "mb-1.5" : "mb-3"
+        }`}
+      >
         <div
-          className="flex items-start gap-2 min-w-0"
+          className={`flex items-start min-w-0 ${
+            useCompactStatGrid ? "gap-1.5" : "gap-2"
+          }`}
           {...(layoutShipId ? { "data-ship-name-block": "" } : {})}
           style={
             nameBlockMinHeightPx && nameBlockMinHeightPx > 0
@@ -490,7 +502,9 @@ const ShipCard: React.FC<ShipCardProps> = ({
               e.stopPropagation();
               onToggleStar();
             }}
-            className="p-1 shrink-0 mt-0.5 hover:bg-yellow-400/10 rounded-none transition-all duration-200"
+            className={`shrink-0 hover:bg-yellow-400/10 rounded-none transition-all duration-200 ${
+              useCompactStatGrid ? "p-0.5 mt-0" : "p-1 mt-0.5"
+            }`}
           >
             <svg
               className={`w-4 h-4 ${
@@ -511,7 +525,11 @@ const ShipCard: React.FC<ShipCardProps> = ({
               />
             </svg>
           </button>
-          <h5 className="font-bold text-lg min-w-0 break-words">
+          <h5
+            className={`font-bold min-w-0 break-words leading-tight ${
+              useCompactStatGrid ? "text-base" : "text-lg"
+            }`}
+          >
             {ship.name || `Ship #${ship.id}`}
           </h5>
         </div>
