@@ -3374,6 +3374,15 @@ export function SimulatedGameDisplay({
       selectedShip.equipment.special > 0 &&
       (mobileSelectedShipAttributes?.hullPoints ?? 0) > 0,
   );
+  const mobileReactorCriticalStatus: "none" | "warning" | "critical" =
+    mobileSelectedShipAttributes &&
+    mobileSelectedShipAttributes.reactorCriticalTimer > 0 &&
+    mobileSelectedShipAttributes.hullPoints === 0
+      ? "critical"
+      : mobileSelectedShipAttributes &&
+          mobileSelectedShipAttributes.reactorCriticalTimer > 0
+        ? "warning"
+        : "none";
   const mobileWeaponDisplayName =
     selectedWeaponType === "special" && selectedShip
       ? getSpecialName(selectedShip.equipment.special)
@@ -4042,20 +4051,13 @@ export function SimulatedGameDisplay({
                         onToggleSelection={() => {}}
                         onRecycleClick={() => {}}
                         showInGameProperties={true}
-                        inGameAttributes={mobileSelectedShipAttributes}
+                        inGameAttributes={mobileSelectedShipAttributes ?? undefined}
                         attributesLoading={false}
                         hideRecycle={true}
                         hideCheckbox={true}
                         isCurrentPlayerShip={isShipOwnedByCurrentPlayer(selectedShip.id)}
                         flipShip={Boolean(mobileSelectedShipPosition?.isCreator)}
-                        reactorCriticalStatus={
-                          mobileSelectedShipAttributes.reactorCriticalTimer > 0 &&
-                          mobileSelectedShipAttributes.hullPoints === 0
-                            ? "critical"
-                            : mobileSelectedShipAttributes.reactorCriticalTimer > 0
-                              ? "warning"
-                              : "none"
-                        }
+                        reactorCriticalStatus={mobileReactorCriticalStatus}
                         hasMoved={movedShipIdsSet.has(selectedShip.id.toString() as TutorialShipId)}
                         gameViewMode={true}
                         hideRarityLabel={true}
