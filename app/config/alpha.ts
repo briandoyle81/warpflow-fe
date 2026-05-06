@@ -3,4 +3,4 @@
  */
 export const ALPHA_DISCORD_INVITE_URL =
   process.env.NEXT_PUBLIC_ALPHA_DISCORD_URL?.trim() ||
-  "https://discord.gg/voidtactics";
+  "https://discord.gg/SPzndFWvHZ";

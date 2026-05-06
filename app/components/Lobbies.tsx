@@ -105,7 +105,7 @@ function formatLobbyMaxScoreDisplay(maxScore: bigint): string {
   return n.toLocaleString();
 }
 
-const VOID_TACTICS_ALPHA_DISCORD_INVITE = "https://discord.gg/Zu25XwfrA";
+const VOID_TACTICS_ALPHA_DISCORD_INVITE = "https://discord.gg/SPzndFWvHZ";
 
 /** Minimum owned and constructed ships required to use lobbies. */
 const MIN_SHIPS_FOR_LOBBIES = 10;

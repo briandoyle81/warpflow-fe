@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useState } from "react";
 const STORAGE_KEY = "void-tactics-flow-wallet-notice-dismissed";
 
 const FLOW_WALLET_STATUS_URL =
-  "https://discord.gg/Zu25XwfrA";
+  "https://discord.gg/SPzndFWvHZ";
 
 function persistDismissed() {
   try {

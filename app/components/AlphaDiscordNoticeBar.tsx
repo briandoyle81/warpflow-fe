@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 
 const STORAGE_KEY = "void-tactics-alpha-discord-notice-dismissed";
 
-const VOID_TACTICS_ALPHA_DISCORD_INVITE = "https://discord.gg/Zu25XwfrA";
+const VOID_TACTICS_ALPHA_DISCORD_INVITE = "https://discord.gg/SPzndFWvHZ";
 
 function persistDismissed() {
   try {
