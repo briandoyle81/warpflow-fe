@@ -101,7 +101,7 @@ export default function MobileAlphaNoticeModal() {
             fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
           }}
         >
-          Desktop recommended
+          Mobile client in development
         </h2>
         <p
           className="mb-3 text-sm leading-relaxed"
@@ -111,8 +111,8 @@ export default function MobileAlphaNoticeModal() {
             color: "var(--color-text-secondary)",
           }}
         >
-          Void Tactics alpha is easiest on a computer. A larger screen helps
-          with the grid, fleets, and wallet steps.
+          Our mobile client is currently under development. For the best
+          experience right now, we recommend playing on desktop.
         </p>
         <p
           className="mb-4 border border-solid px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider"
@@ -124,7 +124,7 @@ export default function MobileAlphaNoticeModal() {
             borderRadius: 0,
           }}
         >
-          Mobile client coming soon
+          Please give us feedback on Discord
         </p>
         <button
           type="button"
