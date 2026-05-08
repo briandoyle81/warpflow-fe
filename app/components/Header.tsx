@@ -32,6 +32,9 @@ import {
 } from "../config/networks";
 import { switchWalletToAppChain } from "../utils/switchWalletChain";
 import { readRpcErrorCode } from "../utils/ensureUiChainsInWallet";
+import { ALPHA_DISCORD_INVITE_URL } from "../config/alpha";
+
+const VOID_TACTICS_X_URL = "https://x.com/voidtacticsxyz";
 
 function resolveChainIdFromQueryParam(value: string | null): number | null {
   if (!value) return null;
@@ -192,6 +195,82 @@ function HeaderTitleBlock({ variant }: { variant?: "mobile" | "desktop" }) {
         style={{ backgroundColor: "var(--color-cyan)" }}
       />
     </div>
+  );
+}
+
+function HeaderXLink({ compact = false }: { compact?: boolean }) {
+  return (
+    <a
+      href={VOID_TACTICS_X_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Void Tactics on X"
+      title="Follow on X"
+      className={`inline-flex shrink-0 items-center justify-center border border-solid transition-colors duration-150 ${
+        compact ? "h-8 w-8" : "h-9 w-9"
+      }`}
+      style={{
+        color: "var(--color-cyan)",
+        backgroundColor: "rgba(13, 17, 23, 0.75)",
+        borderColor: "rgba(86, 214, 255, 0.75)",
+        borderTopColor: "var(--color-steel)",
+        borderLeftColor: "var(--color-steel)",
+        borderRadius: 0,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = "var(--color-slate)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = "rgba(13, 17, 23, 0.75)";
+      }}
+    >
+      <svg
+        className={compact ? "h-3.5 w-3.5" : "h-4 w-4"}
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M18.244 2H21.5l-7.108 8.124L22.75 22h-6.547l-5.128-6.703L5.21 22H1.95l7.604-8.692L1.25 2h6.713l4.636 6.112L18.244 2Zm-1.147 18.04h1.803L6.982 3.86H5.047L17.097 20.04Z" />
+      </svg>
+    </a>
+  );
+}
+
+function HeaderDiscordLink({ compact = false }: { compact?: boolean }) {
+  return (
+    <a
+      href={ALPHA_DISCORD_INVITE_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Join Void Tactics Discord"
+      title="Join Discord"
+      className={`inline-flex shrink-0 items-center justify-center border border-solid transition-colors duration-150 ${
+        compact ? "h-8 w-8" : "h-9 w-9"
+      }`}
+      style={{
+        color: "var(--color-cyan)",
+        backgroundColor: "rgba(13, 17, 23, 0.75)",
+        borderColor: "rgba(86, 214, 255, 0.75)",
+        borderTopColor: "var(--color-steel)",
+        borderLeftColor: "var(--color-steel)",
+        borderRadius: 0,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = "var(--color-slate)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = "rgba(13, 17, 23, 0.75)";
+      }}
+    >
+      <svg
+        className={compact ? "h-3.5 w-3.5" : "h-4 w-4"}
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M20.32 4.37A19.79 19.79 0 0 0 15.4 2.8a13.92 13.92 0 0 0-.63 1.3 18.35 18.35 0 0 0-5.55 0 13.5 13.5 0 0 0-.63-1.3A19.66 19.66 0 0 0 3.68 4.37C.56 8.98-.27 13.47.15 17.9a20.04 20.04 0 0 0 6.07 3.08c.5-.69.95-1.42 1.33-2.19-.73-.27-1.42-.61-2.08-1.01.17-.12.34-.25.5-.39 4.01 1.88 8.35 1.88 12.31 0 .17.14.34.27.5.39-.66.4-1.36.74-2.09 1.01.38.76.83 1.49 1.34 2.18a19.96 19.96 0 0 0 6.06-3.08c.5-5.13-.86-9.58-3.77-13.53ZM8.02 15.15c-1.2 0-2.18-1.1-2.18-2.45s.96-2.45 2.18-2.45c1.22 0 2.2 1.1 2.18 2.45 0 1.35-.97 2.45-2.18 2.45Zm7.96 0c-1.2 0-2.18-1.1-2.18-2.45s.96-2.45 2.18-2.45c1.22 0 2.2 1.1 2.18 2.45 0 1.35-.96 2.45-2.18 2.45Z" />
+      </svg>
+    </a>
   );
 }
 
@@ -576,7 +655,9 @@ const Header: React.FC = () => {
                   <HeaderTitleBlock variant="mobile" />
                   <HeaderAlphaBadge compact />
                 </div>
-                <div className="flex shrink-0 items-center">
+                <div className="flex shrink-0 items-center gap-2">
+                  <HeaderDiscordLink compact />
+                  <HeaderXLink compact />
                   {renderMobileTrailingSlot()}
                 </div>
               </div>
@@ -586,6 +667,8 @@ const Header: React.FC = () => {
             <div className="hidden md:flex md:flex-row md:items-end md:gap-3">
               <HeaderTitleBlock />
               <HeaderAlphaBadge />
+              <HeaderDiscordLink />
+              <HeaderXLink />
             </div>
           </div>
 
