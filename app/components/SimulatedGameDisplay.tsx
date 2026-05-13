@@ -766,7 +766,7 @@ function getTutorialGridPanelConfig(
         tasks: TUTORIAL_RESCUE_GRID_TASKS,
         tasksSectionLabel: (
           <span
-            className="text-red-400 drop-shadow-[0_0_14px_rgba(248,113,113,0.8)] animate-tutorial-decision-label font-black"
+            className="text-warning-red drop-shadow-[0_0_14px_rgba(248,113,113,0.8)] animate-tutorial-decision-label font-black"
             style={{
               fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
             }}
@@ -3484,14 +3484,14 @@ export function SimulatedGameDisplay({
   if (requiresLandscapeMode) {
     return (
       <div className="mx-auto flex min-h-[70vh] w-full max-w-4xl items-center justify-center px-4 py-10">
-        <div className="w-full max-w-md border-2 border-cyan-400 bg-black/85 p-6 text-center">
+        <div className="w-full max-w-md border-2 bg-near-black/85 p-6 text-center" style={{ borderColor: "var(--color-cyan)" }}>
           <h2
-            className="text-xl font-bold uppercase tracking-wider text-cyan-300"
+            className="text-xl font-bold uppercase tracking-wider text-cyan"
             style={{ fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif" }}
           >
             Rotate to Landscape
           </h2>
-          <p className="mt-3 text-sm text-gray-300">
+          <p className="mt-3 text-sm text-text-secondary">
             The tutorial battle view requires landscape mode on mobile. Rotate
             your device to continue.
           </p>
@@ -3499,7 +3499,7 @@ export function SimulatedGameDisplay({
             <button
               type="button"
               onClick={onBack}
-              className="mt-5 border border-gray-500 px-4 py-2 text-sm font-semibold uppercase tracking-wider text-gray-200 transition-colors hover:border-cyan-300 hover:text-cyan-300"
+              className="mt-5 border border-steel px-4 py-2 text-sm font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-cyan hover:text-cyan"
               style={{ borderRadius: 0 }}
             >
               Back
@@ -3546,7 +3546,7 @@ export function SimulatedGameDisplay({
                     </button>
                   ) : null}
                   <div className="min-w-0 flex-1 text-center">
-                    <p className="truncate text-[10px] uppercase tracking-wider text-gray-300">
+                    <p className="truncate text-[10px] uppercase tracking-wider text-text-secondary">
                       Game 0 | Round {gameState.turnState.currentRound.toString()}
                     </p>
                     <p
@@ -3641,21 +3641,21 @@ export function SimulatedGameDisplay({
                     >
                       <div className="flex items-start justify-between gap-2">
                         <h3
-                          className="min-w-0 text-sm font-bold uppercase tracking-wide text-cyan-300 leading-tight"
+                          className="min-w-0 text-sm font-bold uppercase tracking-wide text-cyan leading-tight"
                           style={{
                             fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                           }}
                         >
                           {tutorialGridPanelConfig.title}
                         </h3>
-                        <span className="shrink-0 text-[10px] font-mono text-gray-400">
+                        <span className="shrink-0 text-[10px] font-mono text-text-muted">
                           {displayStepNumber}/{displayTotalSteps}
                         </span>
                       </div>
 
-                      <div className="h-1 w-full bg-gray-700">
+                      <div className="h-1 w-full bg-gunmetal">
                         <div
-                          className="h-1 bg-cyan-400 transition-all duration-300"
+                          className="h-1 bg-cyan transition-all duration-300"
                           style={{
                             width: `${(displayStepNumber / displayTotalSteps) * 100}%`,
                           }}
@@ -3674,7 +3674,7 @@ export function SimulatedGameDisplay({
                           >
                             {typeof tutorialGridPanelConfig.brief === "string" ? (
                               <p
-                                className="text-[11px] leading-relaxed whitespace-pre-line text-gray-200"
+                                className="text-[11px] leading-relaxed whitespace-pre-line text-text-primary"
                                 style={{
                                   fontFamily:
                                     "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -3684,7 +3684,7 @@ export function SimulatedGameDisplay({
                               </p>
                             ) : (
                               <div
-                                className="space-y-1 text-[11px] leading-relaxed text-gray-200"
+                                className="space-y-1 text-[11px] leading-relaxed text-text-primary"
                                 style={{
                                   fontFamily:
                                     "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -3698,7 +3698,7 @@ export function SimulatedGameDisplay({
                             tutorialGridPanelConfig.tasks.length > 0 ? (
                               <div className="space-y-1">
                                 <p
-                                  className="text-[10px] uppercase tracking-wider text-cyan-400"
+                                  className="text-[10px] uppercase tracking-wider text-cyan/90"
                                   style={{
                                     fontFamily:
                                       "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -3709,7 +3709,7 @@ export function SimulatedGameDisplay({
                                   )}
                                 </p>
                                 <ol
-                                  className="list-decimal list-outside pl-4 space-y-0.5 text-[11px] leading-snug text-gray-200"
+                                  className="list-decimal list-outside pl-4 space-y-0.5 text-[11px] leading-snug text-text-primary"
                                   style={{
                                     fontFamily:
                                       "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -3725,7 +3725,7 @@ export function SimulatedGameDisplay({
                             {tutorialGridPanelConfig.primaryCta ? (
                               <div className="space-y-1.5 border border-solid p-2" style={{ borderColor: "var(--color-cyan)", backgroundColor: "rgba(0, 38, 54, 0.35)" }}>
                                 <p
-                                  className="text-[10px] uppercase tracking-wider text-cyan-300"
+                                  className="text-[10px] uppercase tracking-wider text-cyan/95"
                                   style={{
                                     fontFamily:
                                       "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -3743,7 +3743,7 @@ export function SimulatedGameDisplay({
                                   {tutorialGridPanelConfig.primaryCta.headline}
                                 </p>
                                 <div
-                                  className="text-[11px] leading-relaxed text-gray-200"
+                                  className="text-[11px] leading-relaxed text-text-primary"
                                   style={{
                                     fontFamily:
                                       "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -3769,8 +3769,8 @@ export function SimulatedGameDisplay({
                           </div>
                         </div>
                         {mobileTutorialMoreBelow ? (
-                          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-10 items-end justify-center bg-gradient-to-t from-[rgb(15,23,42)] from-30% via-[rgb(15,23,42)]/75 to-transparent pb-1">
-                            <span className="rounded border border-cyan-500/40 bg-slate-950/95 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-cyan-300 shadow-sm shadow-cyan-950/50">
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-10 items-end justify-center bg-gradient-to-t from-near-black from-30% via-near-black/75 to-transparent pb-1">
+                            <span className="border border-cyan/40 bg-near-black/95 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-cyan">
                               Scroll for more
                             </span>
                           </div>
@@ -3815,9 +3815,9 @@ export function SimulatedGameDisplay({
                           onClick={() => resetTutorial()}
                           className="px-2 py-1 border border-solid text-[10px] uppercase tracking-wider"
                           style={{
-                            borderColor: "rgb(180 138 32 / 0.85)",
-                            color: "rgb(253 224 71)",
-                            backgroundColor: "rgba(113, 63, 18, 0.25)",
+                            borderColor: "var(--color-amber)",
+                            color: "var(--color-amber)",
+                            backgroundColor: "var(--color-steel)",
                             borderRadius: 0,
                           }}
                         >
@@ -3839,7 +3839,7 @@ export function SimulatedGameDisplay({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-300">
+                    <div className="text-sm text-text-secondary">
                       Tutorial briefing unavailable for this step.
                     </div>
                   )
@@ -3847,7 +3847,7 @@ export function SimulatedGameDisplay({
                 {mobileLeftPanelTab === "actions" ? (
                   isShowingProposedMove ? (
                     <div className="space-y-2">
-                      <div className="text-sm text-gray-300">
+                      <div className="text-sm text-text-secondary">
                         Submit your selected move or cancel and pick again.
                       </div>
                       <div className="flex items-center gap-2">
@@ -3869,11 +3869,11 @@ export function SimulatedGameDisplay({
                             <div className="absolute -top-7 left-1/2 z-[280] -translate-x-1/2 pointer-events-none">
                               <div className="relative inline-block">
                                 <div
-                                  className="absolute inset-0 rounded-none bg-black"
+                                  className="absolute inset-0 bg-near-black"
                                   style={{ opacity: 1 }}
                                   aria-hidden
                                 />
-                                <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                                <div className="relative border border-amber bg-steel px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
                                   Tap here
                                 </div>
                               </div>
@@ -3884,18 +3884,18 @@ export function SimulatedGameDisplay({
                             onClick={handleSubmitMove}
                             className={`w-full px-2 py-1 border border-solid text-xs uppercase tracking-wider ${
                               shouldPulseSubmitMoveButton
-                                ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                                ? "animate-pulse ring-2 ring-amber ring-offset-2 ring-offset-[var(--color-near-black)]"
                                 : ""
                             }`}
                             style={{
                               borderColor: shouldPulseSubmitMoveButton
-                                ? "rgb(250 204 21 / 0.9)"
+                                ? "var(--color-amber)"
                                 : "var(--color-phosphor-green)",
                               color: shouldPulseSubmitMoveButton
-                                ? "rgb(250 204 21)"
+                                ? "var(--color-amber)"
                                 : "var(--color-phosphor-green)",
                               backgroundColor: shouldPulseSubmitMoveButton
-                                ? "rgba(113, 63, 18, 0.35)"
+                                ? "rgba(47, 47, 54, 0.5)"
                                 : "var(--color-near-black)",
                               borderRadius: 0,
                             }}
@@ -3906,7 +3906,7 @@ export function SimulatedGameDisplay({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-300">
+                    <div className="text-sm text-text-secondary">
                       Select a ship and choose a destination to open actions.
                     </div>
                   )
@@ -3915,11 +3915,11 @@ export function SimulatedGameDisplay({
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-1.5">
                       <div className="border border-solid px-1.5 py-1 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
-                        <span className="text-gray-400">Me </span>
+                        <span className="text-text-muted">Me </span>
                         <span className="font-mono text-white">{myScore}/{maxScore}</span>
                       </div>
                       <div className="border border-solid px-1.5 py-1 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
-                        <span className="text-gray-400">Opp </span>
+                        <span className="text-text-muted">Opp </span>
                         <span className="font-mono text-white">{opponentScore}/{maxScore}</span>
                       </div>
                     </div>
@@ -3951,11 +3951,11 @@ export function SimulatedGameDisplay({
                         <div className="absolute -top-7 left-1/2 z-[280] -translate-x-1/2 pointer-events-none">
                           <div className="relative inline-block">
                             <div
-                              className="absolute inset-0 rounded-none bg-black"
+                              className="absolute inset-0 bg-near-black"
                               style={{ opacity: 1 }}
                               aria-hidden
                             />
-                            <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                            <div className="relative border border-amber bg-steel px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
                               Tap here
                             </div>
                           </div>
@@ -3965,17 +3965,17 @@ export function SimulatedGameDisplay({
                         type="button"
                         onClick={() => setIsMobileWeaponMenuOpen((prev) => !prev)}
                         disabled={!selectedShip}
-                        className={`flex min-w-[7.5rem] max-w-[10.5rem] items-center justify-between gap-2 border border-solid px-2 py-1 text-[10px] uppercase tracking-wider text-cyan-300 disabled:opacity-50 ${
+                        className={`flex min-w-[7.5rem] max-w-[10.5rem] items-center justify-between gap-2 border border-solid px-2 py-1 text-[10px] uppercase tracking-wider text-cyan disabled:opacity-50 ${
                           shouldHighlightSpecialEmpWeaponDropdown
-                            ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                            ? "animate-pulse ring-2 ring-amber ring-offset-2 ring-offset-[var(--color-near-black)]"
                             : "bg-black/40"
                         }`}
                         style={{
                           borderColor: shouldHighlightSpecialEmpWeaponDropdown
-                            ? "rgb(250 204 21 / 0.9)"
+                            ? "var(--color-amber)"
                             : "var(--color-gunmetal)",
                           backgroundColor: shouldHighlightSpecialEmpWeaponDropdown
-                            ? "rgba(113, 63, 18, 0.35)"
+                            ? "rgba(47, 47, 54, 0.5)"
                             : "rgba(0, 0, 0, 0.4)",
                           borderRadius: 0,
                         }}
@@ -4050,11 +4050,11 @@ export function SimulatedGameDisplay({
                         <div className="absolute top-[calc(100%+4px)] right-0 z-[280] pointer-events-none">
                           <div className="relative inline-block">
                             <div
-                              className="absolute inset-0 rounded-none bg-black"
+                              className="absolute inset-0 bg-near-black"
                               style={{ opacity: 1 }}
                               aria-hidden
                             />
-                            <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                            <div className="relative border border-amber bg-steel px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
                               Tap here
                             </div>
                           </div>
@@ -4068,18 +4068,18 @@ export function SimulatedGameDisplay({
                         }}
                         className={`px-1.5 py-0.5 text-[10px] uppercase border border-solid ${
                           shouldHighlightMobileCloseButton
-                            ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                            ? "animate-pulse ring-2 ring-amber ring-offset-2 ring-offset-[var(--color-near-black)]"
                             : ""
                         }`}
                         style={{
                           borderColor: shouldHighlightMobileCloseButton
-                            ? "rgb(250 204 21 / 0.9)"
+                            ? "var(--color-amber)"
                             : "var(--color-gunmetal)",
                           color: shouldHighlightMobileCloseButton
-                            ? "rgb(250 204 21)"
+                            ? "var(--color-amber)"
                             : "var(--color-text-secondary)",
                           backgroundColor: shouldHighlightMobileCloseButton
-                            ? "rgba(113, 63, 18, 0.35)"
+                            ? "var(--color-steel)"
                             : "var(--color-steel)",
                           borderRadius: 0,
                         }}
@@ -4134,11 +4134,11 @@ export function SimulatedGameDisplay({
                               <div className="absolute -top-7 left-1/2 z-[280] -translate-x-1/2 pointer-events-none">
                                 <div className="relative inline-block">
                                   <div
-                                    className="absolute inset-0 rounded-none bg-black"
+                                    className="absolute inset-0 bg-near-black"
                                     style={{ opacity: 1 }}
                                     aria-hidden
                                   />
-                                  <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                                  <div className="relative border border-amber bg-steel px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
                                     Tap here
                                   </div>
                                 </div>
@@ -4149,18 +4149,18 @@ export function SimulatedGameDisplay({
                               onClick={handleSubmitMove}
                               className={`w-full px-2 py-1 border border-solid text-[10px] uppercase tracking-wider ${
                                 shouldPulseSubmitMoveButton
-                                  ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                                  ? "animate-pulse ring-2 ring-amber ring-offset-2 ring-offset-[var(--color-near-black)]"
                                   : ""
                               }`}
                               style={{
                                 borderColor: shouldPulseSubmitMoveButton
-                                  ? "rgb(250 204 21 / 0.9)"
+                                  ? "var(--color-amber)"
                                   : "var(--color-phosphor-green)",
                                 color: shouldPulseSubmitMoveButton
-                                  ? "rgb(250 204 21)"
+                                  ? "var(--color-amber)"
                                   : "var(--color-phosphor-green)",
                                 backgroundColor: shouldPulseSubmitMoveButton
-                                  ? "rgba(113, 63, 18, 0.35)"
+                                  ? "var(--color-steel)"
                                   : "var(--color-near-black)",
                                 borderRadius: 0,
                               }}
@@ -4302,7 +4302,7 @@ export function SimulatedGameDisplay({
         {isMobileFleetModalOpen ? (
           <div className="fixed inset-0 z-[310] flex flex-col bg-[rgba(4,8,15,0.98)] p-3">
             <div className="mb-3 flex items-center justify-between border border-solid px-3 py-2" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
-              <h3 className="text-sm uppercase tracking-wider text-cyan-300">Fleet Intel</h3>
+              <h3 className="text-sm uppercase tracking-wider text-cyan">Fleet Intel</h3>
               <button
                 type="button"
                 onClick={() => setIsMobileFleetModalOpen(false)}
@@ -4320,7 +4320,7 @@ export function SimulatedGameDisplay({
             <div className="min-h-0 flex-1 overflow-y-auto border border-solid p-3" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="mb-2 text-xs uppercase tracking-wider text-cyan-300">My Fleet</h4>
+                  <h4 className="mb-2 text-xs uppercase tracking-wider text-cyan">My Fleet</h4>
                   <div className="space-y-2">
                     {gameState.creatorActiveShipIds
                       .filter(() => !isMobileJoiner)
@@ -4361,7 +4361,7 @@ export function SimulatedGameDisplay({
                   </div>
                 </div>
                 <div>
-                  <h4 className="mb-2 text-xs uppercase tracking-wider text-red-300">Opponent&apos;s Fleet</h4>
+                  <h4 className="mb-2 text-xs uppercase tracking-wider text-warning-red">Opponent&apos;s Fleet</h4>
                   <div className="space-y-2">
                     {gameState.creatorActiveShipIds
                       .filter(() => isMobileJoiner)
@@ -4496,7 +4496,7 @@ export function SimulatedGameDisplay({
               <div className="flex flex-col">
                 <h1 className="text-2xl font-mono text-white flex items-center gap-3">
                   <span>Game 0</span>
-                  <span className="text-gray-400 text-base">
+                  <span className="text-text-muted text-base">
                     Round {gameState.turnState.currentRound.toString()}
                   </span>
                 </h1>
@@ -4561,31 +4561,31 @@ export function SimulatedGameDisplay({
                   chromeOnSide
                     ? `w-full shrink-0 border border-solid p-2 text-lg ${
                         currentStep?.id === "goals"
-                          ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                          ? "animate-pulse ring-2 ring-amber ring-offset-2 ring-offset-[var(--color-near-black)]"
                           : ""
                       }`
                     : `w-48 shrink-0 border border-solid p-2 text-lg ${
                         currentStep?.id === "goals"
-                          ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                          ? "animate-pulse ring-2 ring-amber ring-offset-2 ring-offset-[var(--color-near-black)]"
                           : ""
                       }`
                 }
                 style={{
                   backgroundColor:
                     currentStep?.id === "goals"
-                      ? "rgba(113, 63, 18, 0.35)"
+                      ? "var(--color-steel)"
                       : "var(--color-slate)",
                   borderColor:
                     currentStep?.id === "goals"
-                      ? "rgb(250 204 21 / 0.9)"
+                      ? "var(--color-amber)"
                       : "var(--color-gunmetal)",
                   borderTopColor:
                     currentStep?.id === "goals"
-                      ? "rgb(250 204 21 / 0.95)"
+                      ? "var(--color-amber)"
                       : "var(--color-steel)",
                   borderLeftColor:
                     currentStep?.id === "goals"
-                      ? "rgb(250 204 21 / 0.95)"
+                      ? "var(--color-amber)"
                       : "var(--color-steel)",
                   borderRadius: 0,
                 }}
@@ -4674,11 +4674,11 @@ export function SimulatedGameDisplay({
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
                         <div className="relative inline-block">
                           <div
-                            className="absolute inset-0 rounded-none bg-black"
+                            className="absolute inset-0 bg-near-black"
                             style={{ opacity: 1 }}
                             aria-hidden
                           />
-                          <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                          <div className="relative border border-amber bg-steel px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
                             Click here
                           </div>
                         </div>
@@ -4689,7 +4689,7 @@ export function SimulatedGameDisplay({
                       onClick={handleSubmitMove}
                       className={`w-full px-4 py-1.5 text-sm uppercase font-semibold tracking-wider transition-colors duration-150 min-w-0 ${
                         shouldPulseSubmitMoveButton
-                          ? "animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                          ? "animate-pulse ring-2 ring-amber ring-offset-2 ring-offset-[var(--color-near-black)]"
                           : ""
                       }`}
                       style={{
@@ -4757,7 +4757,7 @@ export function SimulatedGameDisplay({
                             <div className="text-sm font-semibold text-white">
                               {name}
                             </div>
-                            <div className="text-sm font-mono text-gray-300">
+                            <div className="text-sm font-mono text-text-secondary">
                               ({fromRow}, {fromCol}) → ({toRow}, {toCol})
                             </div>
                           </div>
@@ -4775,11 +4775,11 @@ export function SimulatedGameDisplay({
                               <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
                                 <div className="relative inline-block">
                                   <div
-                                    className="absolute inset-0 rounded-none bg-black"
+                                    className="absolute inset-0 bg-near-black"
                                     style={{ opacity: 1 }}
                                     aria-hidden
                                   />
-                                  <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                                  <div className="relative border border-amber bg-steel px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
                                     Click here
                                   </div>
                                 </div>
@@ -4788,7 +4788,7 @@ export function SimulatedGameDisplay({
                             <div
                               className={
                                 shouldHighlightSpecialEmpWeaponDropdown
-                                  ? "animate-pulse rounded-sm ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                                  ? "animate-pulse ring-2 ring-amber ring-offset-2 ring-offset-[var(--color-near-black)]"
                                   : ""
                               }
                             >
@@ -4910,18 +4910,18 @@ export function SimulatedGameDisplay({
                                     <div className="mb-1 flex justify-center pointer-events-none">
                                       <div className="relative inline-block">
                                         <div
-                                          className="absolute inset-0 rounded-none bg-black"
+                                          className="absolute inset-0 bg-near-black"
                                           style={{ opacity: 1 }}
                                           aria-hidden
                                         />
-                                        <div className="relative rounded-none border border-yellow-400 bg-yellow-900 px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
+                                        <div className="relative border border-amber bg-steel px-2 py-1 text-center font-mono text-xs text-white whitespace-nowrap">
                                           Click here
                                         </div>
                                       </div>
                                     </div>
                                   )}
                                   {isHammerTargetTutorialHighlight ? (
-                                    <div className="w-full rounded-none border-2 border-yellow-400 animate-pulse">
+                                    <div className="w-full border-2 border-amber animate-pulse">
                                       {targetButton}
                                     </div>
                                   ) : (
@@ -5032,7 +5032,7 @@ export function SimulatedGameDisplay({
                   aria-busy
                   aria-live="polite"
                 >
-                  <span className="text-cyan-300 font-mono">
+                  <span className="text-cyan font-mono">
                     Preparing tutorial step...
                   </span>
                 </div>
@@ -5361,36 +5361,36 @@ export function SimulatedGameDisplay({
       )}
 
       {selectedShipId && (
-        <div className="mt-4 bg-black/40 border border-cyan-400 rounded-none p-4">
-          <p className="text-cyan-300 font-mono">
+        <div className="mt-4 bg-black/40 border p-4" style={{ borderColor: "var(--color-cyan)" }}>
+          <p className="text-cyan font-mono">
             Selected Ship:{" "}
             {shipMap.get(selectedShipId)?.name || selectedShipId.toString()}
           </p>
           {currentStep?.allowedActions.moveShip &&
             selectedShipId.toString() ===
               currentStep.allowedActions.moveShip.shipId && (
-              <p className="text-yellow-300 text-sm mt-2">
+              <p className="text-amber text-sm mt-2">
                 Click a highlighted grid cell to move.
               </p>
             )}
           {currentStep?.allowedActions.shoot &&
             selectedShipId.toString() ===
               currentStep.allowedActions.shoot.shipId && (
-              <p className="text-yellow-300 text-sm mt-2">
+              <p className="text-amber text-sm mt-2">
                 Click a highlighted enemy ship to shoot.
               </p>
             )}
           {currentStep?.allowedActions.useSpecial &&
             selectedShipId.toString() ===
               currentStep.allowedActions.useSpecial.shipId && (
-              <p className="text-yellow-300 text-sm mt-2">
+              <p className="text-amber text-sm mt-2">
                 Click a highlighted ship to use your special ability.
               </p>
             )}
           {currentStep?.allowedActions.assist &&
             selectedShipId.toString() ===
               currentStep.allowedActions.assist.shipId && (
-              <p className="text-yellow-300 text-sm mt-2">
+              <p className="text-amber text-sm mt-2">
                 Click the highlighted friendly ship to assist it.
               </p>
             )}

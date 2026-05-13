@@ -2755,7 +2755,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     isRail ? "min-w-0 flex-[2] h-full w-full" : ""
                   } ${isRail ? "order-2" : "order-2"}${
                     shouldPulseSubmitMoveButton
-                      ? " animate-pulse ring-2 ring-yellow-400 ring-offset-2 ring-offset-[var(--color-near-black)]"
+                      ? " animate-pulse ring-2 ring-amber ring-offset-2 ring-offset-[var(--color-near-black)]"
                       : ""
                   }`}
                   loadingText="Submitting..."
@@ -2982,23 +2982,23 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         style={{ backgroundColor: "var(--color-near-black)" }}
       >
         <div
-          className="border-2 border-cyan-400 bg-black/85 p-4 text-center sm:p-5"
-          style={{ width: "min(90vw, 22rem)" }}
+          className="border-2 bg-near-black/85 p-4 text-center sm:p-5"
+          style={{ width: "min(90vw, 22rem)", borderColor: "var(--color-cyan)" }}
         >
           <h2
-            className="text-lg font-bold uppercase tracking-wider text-cyan-300 sm:text-xl"
+            className="text-lg font-bold uppercase tracking-wider text-cyan sm:text-xl"
             style={{ fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif" }}
           >
             Rotate to Landscape
           </h2>
-          <p className="mt-2 text-sm text-gray-300 sm:mt-3">
+          <p className="mt-2 text-sm text-text-secondary sm:mt-3">
             This battle view requires landscape mode on mobile. Rotate your
             device to continue.
           </p>
           <button
             type="button"
             onClick={onBack}
-            className="mt-4 border border-gray-500 px-4 py-2 text-sm font-semibold uppercase tracking-wider text-gray-200 transition-colors hover:border-cyan-300 hover:text-cyan-300 sm:mt-5"
+            className="mt-4 border border-steel px-4 py-2 text-sm font-semibold uppercase tracking-wider text-text-primary transition-colors hover:border-cyan hover:text-cyan sm:mt-5"
             style={{ borderRadius: 0 }}
           >
             Back
@@ -3038,7 +3038,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           </button>
         </div>
         <div className="text-center py-8">
-          <p className="text-gray-400">Loading game data...</p>
+          <p className="text-text-muted">Loading game data...</p>
         </div>
       </div>
     );
@@ -3074,7 +3074,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           </button>
         </div>
         <div className="text-center py-8">
-          <p className="text-red-400">
+          <p className="text-warning-red">
             Error loading game data: {gameError.message}
           </p>
           <button
@@ -3132,7 +3132,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             </button>
             <h1 className="text-2xl font-mono text-white flex items-center gap-3">
               <span>Game {game.metadata.gameId.toString()}</span>
-              <span className="text-gray-400 text-base">
+              <span className="text-text-muted text-base">
                 Round {game.turnState.currentRound.toString()}
               </span>
             </h1>
@@ -3148,7 +3148,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 borderRadius: 0, // Square spinner
               }}
             ></div>
-            <p className="text-cyan-400 font-mono">Loading ship data...</p>
+            <p className="text-cyan font-mono">Loading ship data...</p>
           </div>
         </div>
       </div>
@@ -3193,7 +3193,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
   return (
               <div className="flex min-w-0 flex-col gap-0.5">
                 <div className="text-sm font-semibold text-white">{name}</div>
-                <div className="text-sm font-mono text-gray-300">
+                <div className="text-sm font-mono text-text-secondary">
                   ({fromRow}, {fromCol}) → ({toRow}, {toCol})
                 </div>
               </div>
@@ -3544,7 +3544,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   Back
                 </button>
                 <div className="min-w-0 flex-1 text-center">
-                  <p className="truncate text-[10px] uppercase tracking-wider text-gray-300">
+                  <p className="truncate text-[10px] uppercase tracking-wider text-text-secondary">
                     Game {game.metadata.gameId.toString()} | Round{" "}
                     {game.turnState.currentRound.toString()}
                   </p>
@@ -3630,7 +3630,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 isShowingProposedMove ? (
                   renderProposedMoveActivePanel()
                 ) : (
-                  <div className="text-sm text-gray-300">
+                  <div className="text-sm text-text-secondary">
                     Select a ship and choose a destination to open actions.
                   </div>
                 )
@@ -3639,16 +3639,16 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-1.5">
                     <div className="border border-solid px-1.5 py-1 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
-                      <span className="text-gray-400">Me </span>
+                      <span className="text-text-muted">Me </span>
                       <span className="font-mono text-white">{myScore}/{maxScore}</span>
                     </div>
                     <div className="border border-solid px-1.5 py-1 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
-                      <span className="text-gray-400">Opp </span>
+                      <span className="text-text-muted">Opp </span>
                       <span className="font-mono text-white">{opponentScore}/{maxScore}</span>
                     </div>
                   </div>
                   {game.metadata.winner !== "0x0000000000000000000000000000000000000000" ? (
-                    <div className="text-sm text-gray-200">
+                    <div className="text-sm text-text-primary">
                       Result: {game.metadata.winner === address ? "Victory" : "Defeat"}
                     </div>
                   ) : null}
@@ -3678,7 +3678,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       type="button"
                       onClick={() => setIsMobileWeaponMenuOpen((prev) => !prev)}
                       disabled={!selectedShip}
-                      className="flex min-w-[7.5rem] max-w-[10.5rem] items-center justify-between gap-2 border border-solid bg-black/40 px-2 py-1 text-[10px] uppercase tracking-wider text-cyan-300 disabled:opacity-50"
+                      className="flex min-w-[7.5rem] max-w-[10.5rem] items-center justify-between gap-2 border border-solid bg-black/40 px-2 py-1 text-[10px] uppercase tracking-wider text-cyan disabled:opacity-50"
                       style={{
                         borderColor: "var(--color-gunmetal)",
                         borderRadius: 0,
@@ -3935,7 +3935,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         {isMobileFleetModalOpen ? (
           <div className="fixed inset-0 z-[310] flex flex-col bg-[rgba(4,8,15,0.98)] p-3">
             <div className="mb-3 flex items-center justify-between border border-solid px-3 py-2" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
-              <h3 className="text-sm uppercase tracking-wider text-cyan-300">Fleet Intel</h3>
+              <h3 className="text-sm uppercase tracking-wider text-cyan">Fleet Intel</h3>
               <button
                 type="button"
                 onClick={() => setIsMobileFleetModalOpen(false)}
@@ -4048,7 +4048,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 Back
               </button>
               <div className="min-w-0 text-center">
-                <p className="truncate text-[11px] uppercase tracking-wider text-gray-300">
+                <p className="truncate text-[11px] uppercase tracking-wider text-text-secondary">
                   Game {game.metadata.gameId.toString()} | Round{" "}
                   {game.turnState.currentRound.toString()}
                 </p>
@@ -4083,11 +4083,11 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             </div>
             <div className="mt-1.5 flex items-center gap-1.5">
               <div className="border border-solid px-1.5 py-0.5 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
-                <span className="text-gray-400">Me </span>
+                <span className="text-text-muted">Me </span>
                 <span className="font-mono text-white">{myScore}/{maxScore}</span>
               </div>
               <div className="border border-solid px-1.5 py-0.5 text-[11px]" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
-                <span className="text-gray-400">Opp </span>
+                <span className="text-text-muted">Opp </span>
                 <span className="font-mono text-white">{opponentScore}/{maxScore}</span>
               </div>
               <div className="ml-auto text-[11px] font-mono" style={{ color: isMyTurnEffective ? "var(--color-cyan)" : "var(--color-warning-red)" }}>
@@ -4167,7 +4167,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             <div className="flex w-full min-w-0 items-center gap-2">
               <div className="w-1/5 shrink-0" aria-hidden />
               <div className="w-4/5 min-w-0 text-right">
-                <div className="text-sm text-gray-400">
+                <div className="text-sm text-text-muted">
                   {game.metadata.winner !==
                     "0x0000000000000000000000000000000000000000" && (
                     <span
@@ -4196,7 +4196,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           <div className="flex flex-col">
             <h1 className="text-2xl font-mono text-white flex items-center gap-3">
               <span>Game {game.metadata.gameId.toString()}</span>
-              <span className="text-gray-400 text-base">
+              <span className="text-text-muted text-base">
                 Round {game.turnState.currentRound.toString()}
               </span>
             </h1>
@@ -4268,7 +4268,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             lastPollTimeRef.current = Date.now();
                             refetchGame();
                           }}
-                          className="p-1 text-gray-400 hover:text-cyan-400 transition-colors"
+                          className="p-1 text-text-muted hover:text-cyan transition-colors"
                           title="Refresh game state"
                         >
                           <svg
@@ -4351,7 +4351,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             lastPollTimeRef.current = Date.now();
                             refetchGame();
                           }}
-                          className="p-1 text-gray-400 hover:text-cyan-400 transition-colors"
+                          className="p-1 text-text-muted hover:text-cyan transition-colors"
                           title="Refresh game state"
                         >
                           <svg
@@ -4431,7 +4431,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                           lastPollTimeRef.current = Date.now();
                           refetchGame();
                         }}
-                        className="p-1 text-gray-400 hover:text-cyan-400 transition-colors"
+                        className="p-1 text-text-muted hover:text-cyan transition-colors"
                         title="Refresh game state"
                       >
                         <svg
@@ -4687,7 +4687,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         style={{ borderColor: "var(--color-cyan)" }}
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-                          <label className="flex cursor-pointer items-center space-x-2 text-xs text-gray-400">
+                          <label className="flex cursor-pointer items-center space-x-2 text-xs text-text-muted">
                 <input
                   type="checkbox"
                   checked={showDebug}
@@ -4710,7 +4710,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 />
                 <span>Show Debug</span>
               </label>
-                          <label className="flex cursor-pointer items-center space-x-2 text-xs text-gray-400">
+                          <label className="flex cursor-pointer items-center space-x-2 text-xs text-text-muted">
                 <input
                   type="checkbox"
                   checked={disableTooltips}
@@ -4875,14 +4875,14 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
             isShowingProposedMove ? (
               renderProposedMoveActivePanel()
             ) : (
-              <div className="text-sm text-gray-300">
+              <div className="text-sm text-text-secondary">
                 Select a ship and choose a destination to open actions.
               </div>
             )
           ) : null}
           {mobileActivePanel === "status" ? (
             <div className="space-y-3">
-              <div className="text-xs uppercase tracking-wider text-gray-400">
+              <div className="text-xs uppercase tracking-wider text-text-muted">
                 Turn Timer
               </div>
               <div
@@ -4907,7 +4907,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                   }}
                 />
               ) : (
-                <div className="text-sm text-gray-200">
+                <div className="text-sm text-text-primary">
                   Result: {game.metadata.winner === address ? "Victory" : "Defeat"}
                 </div>
               )}
