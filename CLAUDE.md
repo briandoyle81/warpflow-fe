@@ -84,3 +84,9 @@ Only true dependencies belong in dependency arrays — don't include stable refe
 ## Path Aliases
 
 `@/*` maps to the repo root (e.g., `@/app/config/contracts` resolves to `./app/config/contracts`).
+
+## Game Display Parity Rule
+
+`SimulatedGameDisplay.tsx` (tutorial game view) and `GameDisplay.tsx` (live game view) must always look and feel identical. Any visual or layout change to one must be applied to the other.
+
+The only permitted differences are elements that exist solely in `SimulatedGameDisplay` to support the tutorial: overlay panels, task lists, step-driven highlights, and simulated action feedback. Everything else — colors, spacing, typography, component structure — must stay in sync.

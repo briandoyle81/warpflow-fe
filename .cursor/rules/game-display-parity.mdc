@@ -1,0 +1,19 @@
+---
+description: SimulatedGameDisplay must stay visually identical to GameDisplay except for tutorial additions
+globs: app/components/SimulatedGameDisplay.tsx,app/components/GameDisplay.tsx
+alwaysApply: false
+---
+
+# Game Display Visual Parity
+
+`SimulatedGameDisplay.tsx` (the tutorial game view) and `GameDisplay.tsx` (the live game view) must always look and feel identical. Any visual or layout change to one must be reflected in the other.
+
+The only allowed differences are elements that exist **only** in SimulatedGameDisplay to support the tutorial:
+- Tutorial overlay panels and task lists
+- Step-driven highlight or highlight-mask elements
+- Simulated action feedback that doesn't exist in a live game
+
+When editing either file:
+1. Identify whether the change is game-UI (applies to both) or tutorial-only (SimulatedGameDisplay only).
+2. Apply game-UI changes to **both** files.
+3. Do not let styling, spacing, color tokens, or layout diverge between the two.
