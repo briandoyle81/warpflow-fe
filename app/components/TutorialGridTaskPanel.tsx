@@ -73,7 +73,7 @@ const SCROLL_EPS_PX = 4;
 function ScrollMoreCue({ variant }: { variant: "overlay" | "sticky" }) {
   const inner = (
     <span
-      className="rounded border border-cyan-500/40 bg-slate-950/95 px-2 py-0.5 text-xs font-mono uppercase tracking-wider text-cyan-300 shadow-sm shadow-cyan-950/50"
+      className="border border-cyan/40 bg-near-black/95 px-2 py-0.5 text-xs font-mono uppercase tracking-wider text-cyan"
       id="tutorial-panel-scroll-hint"
     >
       Scroll for more
@@ -82,14 +82,14 @@ function ScrollMoreCue({ variant }: { variant: "overlay" | "sticky" }) {
 
   if (variant === "sticky") {
     return (
-      <div className="pointer-events-none sticky bottom-0 z-[5] -mt-10 flex h-10 shrink-0 items-end justify-center bg-gradient-to-t from-[rgb(15,23,42)] from-30% via-[rgb(15,23,42)]/75 to-transparent pb-1">
+      <div className="pointer-events-none sticky bottom-0 z-[5] -mt-10 flex h-10 shrink-0 items-end justify-center bg-gradient-to-t from-near-black from-30% via-near-black/75 to-transparent pb-1">
         {inner}
       </div>
     );
   }
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex h-12 items-end justify-center bg-gradient-to-t from-[rgb(15,23,42)] from-25% via-[rgb(15,23,42)]/70 to-transparent pb-1">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex h-12 items-end justify-center bg-gradient-to-t from-near-black from-25% via-near-black/70 to-transparent pb-1">
       {inner}
     </div>
   );
@@ -179,14 +179,14 @@ export function TutorialGridTaskPanel({
     <>
       {typeof brief === "string" ? (
         <p
-          className="text-sm leading-relaxed text-gray-200 whitespace-pre-line"
+          className="text-sm leading-relaxed text-text-primary whitespace-pre-line"
           style={mono}
         >
           {brief}
         </p>
       ) : (
         <div
-          className="space-y-2 text-sm leading-relaxed text-gray-200"
+          className="space-y-2 text-sm leading-relaxed text-text-primary"
           style={mono}
         >
           {brief}
@@ -196,13 +196,13 @@ export function TutorialGridTaskPanel({
       {tasks && tasks.length > 0 ? (
         <div>
           <p
-            className="text-sm uppercase tracking-widest text-cyan-400/90 mb-1"
+            className="text-sm uppercase tracking-widest text-cyan/90 mb-1"
             style={mono}
           >
             {tasksSectionLabel}
           </p>
           <ol
-            className="list-decimal list-outside pl-4 space-y-1 text-sm leading-snug text-gray-200"
+            className="list-decimal list-outside pl-4 space-y-1 text-sm leading-snug text-text-primary"
             style={mono}
           >
             {tasks.map((t, i) => (
@@ -214,12 +214,12 @@ export function TutorialGridTaskPanel({
 
       {primaryCta ? (
         <div
-          className="mt-2 overflow-hidden border-2 border-cyan-400/70 bg-gradient-to-b from-cyan-950/50 to-slate-950/80 shadow-[0_0_24px_rgba(34,211,238,0.18)]"
-          style={{ borderRadius: 0 }}
+          className="mt-2 overflow-hidden border-2 bg-near-black"
+          style={{ borderRadius: 0, borderColor: "var(--color-cyan)" }}
         >
           <div className="space-y-1.5 px-2.5 pb-2 pt-2.5">
             <p
-              className="text-sm uppercase tracking-[0.22em] text-cyan-300/95"
+              className="text-sm uppercase tracking-[0.22em] text-cyan/95"
               style={mono}
             >
               {primaryCta.eyebrow}
@@ -234,7 +234,7 @@ export function TutorialGridTaskPanel({
               {primaryCta.headline}
             </p>
             <div
-              className="text-sm leading-relaxed text-gray-200"
+              className="text-sm leading-relaxed text-text-primary"
               style={mono}
             >
               {primaryCta.supporting}
@@ -243,11 +243,11 @@ export function TutorialGridTaskPanel({
           <button
             type="button"
             onClick={primaryCta.onClick}
-            className="w-full border-t-2 border-cyan-400/50 bg-cyan-600 py-3.5 px-3 text-center text-base font-bold uppercase tracking-wide text-white transition-colors hover:bg-cyan-500 active:bg-cyan-700"
+            className="w-full border-t-2 bg-steel py-3.5 px-3 text-center text-base font-bold uppercase tracking-wide text-phosphor-green transition-colors hover:bg-gunmetal"
             style={{
-              fontFamily:
-                "var(--font-rajdhani), 'Arial Black', sans-serif",
+              fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
               borderRadius: 0,
+              borderColor: "var(--color-phosphor-green)",
             }}
           >
             {primaryCta.buttonLabel}
@@ -263,15 +263,16 @@ export function TutorialGridTaskPanel({
       onScroll={panelFitToContent ? updateScrollHint : undefined}
       className={`pointer-events-auto absolute ${
         panelVerticalAnchor === "bottom" ? "bottom-2" : "top-2"
-      } ${panelAnchor === "left" ? "left-2" : "right-2"} z-[190] flex min-h-0 w-[min(117.5%,28.75rem)] flex-col border-2 border-cyan-400/90 ${
+      } ${panelAnchor === "left" ? "left-2" : "right-2"} z-[190] flex min-h-0 w-[min(117.5%,28.75rem)] flex-col border-2 ${
         isCompactWelcome ? "p-2.5" : "p-3"
-      } shadow-lg shadow-cyan-500/15 ${
+      } ${
         panelFitToContent
           ? "overflow-y-auto overflow-x-hidden"
           : "overflow-hidden"
       }`}
       style={{
-        backgroundColor: "rgba(15, 23, 42, 0.94)",
+        backgroundColor: "rgba(12, 17, 23, 0.94)",
+        borderColor: "var(--color-cyan)",
         borderRadius: 0,
         ...(panelFitToContent
           ? {
@@ -293,7 +294,7 @@ export function TutorialGridTaskPanel({
       >
         <div className="min-w-0 flex-1">
           <h3
-            className={`font-bold uppercase tracking-wide text-cyan-300 leading-tight ${
+            className={`font-bold uppercase tracking-wide text-cyan leading-tight ${
               isCompactWelcome ? "text-base" : "text-lg"
             }`}
             style={{
@@ -307,7 +308,7 @@ export function TutorialGridTaskPanel({
           <button
             type="button"
             onClick={onReset}
-            className={`bg-yellow-800/90 text-yellow-100 rounded-none font-mono hover:bg-yellow-700 whitespace-nowrap ${
+            className={`bg-steel text-amber rounded-none font-mono hover:bg-gunmetal whitespace-nowrap ${
               isCompactWelcome ? "px-1.5 py-0.5 text-xs" : "px-2 py-0.5 text-sm"
             }`}
           >
@@ -317,7 +318,7 @@ export function TutorialGridTaskPanel({
             <button
               type="button"
               onClick={onQuit}
-              className={`bg-gray-700 text-gray-300 rounded-none font-mono hover:bg-gray-600 whitespace-nowrap ${
+              className={`bg-steel text-text-secondary rounded-none font-mono hover:bg-gunmetal whitespace-nowrap ${
                 isCompactWelcome ? "px-1.5 py-0.5 text-xs" : "px-2 py-0.5 text-sm"
               }`}
             >
@@ -327,9 +328,9 @@ export function TutorialGridTaskPanel({
         </div>
       </div>
 
-      <div className={`${isCompactWelcome ? "mb-1.5" : "mb-2"} h-1 w-full shrink-0 bg-gray-700`}>
+      <div className={`${isCompactWelcome ? "mb-1.5" : "mb-2"} h-1 w-full shrink-0 bg-gunmetal`}>
         <div
-          className="h-1 bg-cyan-400 transition-all duration-300"
+          className="h-1 bg-cyan transition-all duration-300"
           style={{
             width: `${(displayStepNumber / displayTotalSteps) * 100}%`,
           }}
@@ -375,7 +376,7 @@ export function TutorialGridTaskPanel({
           type="button"
           onClick={onPrevious}
           disabled={currentStepIndex === 0}
-          className={`bg-gray-700 text-white rounded-none font-mono hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`bg-steel text-text-primary rounded-none font-mono hover:bg-gunmetal transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
             isCompactWelcome ? "px-2 py-1 text-xs" : "px-2.5 py-1 text-sm"
           }`}
         >
@@ -388,7 +389,7 @@ export function TutorialGridTaskPanel({
             onChange={(e) => setDebugEnabled(e.target.checked)}
           />
           <span
-            className={`font-mono text-gray-300 ${
+            className={`font-mono text-text-secondary ${
               isCompactWelcome ? "text-xs" : "text-sm"
             }`}
           >
@@ -400,7 +401,7 @@ export function TutorialGridTaskPanel({
             type="button"
             disabled={tutorialRewardCacheDebug.disabled}
             onClick={tutorialRewardCacheDebug.onClear}
-            className={`bg-amber-900/80 text-amber-100 rounded-none font-mono border border-amber-600/60 hover:bg-amber-800/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`bg-steel text-amber rounded-none font-mono border border-amber/60 hover:bg-gunmetal transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
               isCompactWelcome ? "px-1.5 py-1 text-[11px]" : "px-2 py-1 text-xs"
             }`}
           >
@@ -412,7 +413,7 @@ export function TutorialGridTaskPanel({
             type="button"
             onClick={onNext}
             disabled={nextDisabled}
-            className={`ml-auto bg-cyan-600 text-white rounded-none font-mono hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`ml-auto bg-steel text-cyan rounded-none font-mono border border-cyan hover:bg-gunmetal transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
               isCompactWelcome ? "px-2 py-1 text-xs" : "px-2.5 py-1 text-sm"
             }`}
           >
