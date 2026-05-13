@@ -6,14 +6,8 @@ import {
   useShipDetails,
   useContractEvents,
   useFreeShipClaiming,
-  clearShipImageCacheForShip,
-  clearBrokenImageCache,
+  clearAllShipDataCache,
   clearAllShipImageCache,
-  resetAllShipRequestStates,
-  clearAllShipRetryTimeouts,
-  restartQueueProcessing,
-  getQueueStatus,
-  clearCacheOnLogout,
 } from "../hooks";
 import { useAccount, usePublicClient } from "wagmi";
 import { formatEther } from "viem";
@@ -918,7 +912,8 @@ const ManageNavy: React.FC = () => {
   // Clear cache when user disconnects
   useEffect(() => {
     if (!address) {
-      clearCacheOnLogout();
+      clearAllShipDataCache();
+      clearAllShipImageCache();
     }
   }, [address]);
 
@@ -1936,9 +1931,6 @@ const ManageNavy: React.FC = () => {
                           setShowConstructDeliveryTutorial(false);
                         }
                         toast.success("150 ships construction started!");
-                        ships.forEach((ship) => {
-                          clearShipImageCacheForShip(ship.id.toString());
-                        });
                         refetch();
                       }}
                     >
@@ -1958,9 +1950,6 @@ const ManageNavy: React.FC = () => {
                           setShowConstructDeliveryTutorial(false);
                         }
                         toast.success("Ships constructed successfully!");
-                        ships.forEach((ship) => {
-                          clearShipImageCacheForShip(ship.id.toString());
-                        });
                         refetch();
                       }}
                     >
@@ -2009,9 +1998,6 @@ const ManageNavy: React.FC = () => {
                   disabled={fleetStats.unconstructedShips === 0}
                   onSuccess={() => {
                     toast.success("150 ships construction started!");
-                    ships.forEach((ship) => {
-                      clearShipImageCacheForShip(ship.id.toString());
-                    });
                     refetch();
                   }}
                 >
@@ -2024,9 +2010,6 @@ const ManageNavy: React.FC = () => {
                   disabled={fleetStats.unconstructedShips === 0}
                   onSuccess={() => {
                     toast.success("Ships constructed successfully!");
-                    ships.forEach((ship) => {
-                      clearShipImageCacheForShip(ship.id.toString());
-                    });
                     refetch();
                   }}
                 >
@@ -2085,9 +2068,6 @@ const ManageNavy: React.FC = () => {
                   disabled={fleetStats.unconstructedShips === 0}
                   onSuccess={() => {
                     toast.success("150 ships construction started!");
-                    ships.forEach((ship) => {
-                      clearShipImageCacheForShip(ship.id.toString());
-                    });
                     refetch();
                   }}
                 >
@@ -2100,9 +2080,6 @@ const ManageNavy: React.FC = () => {
                   disabled={fleetStats.unconstructedShips === 0}
                   onSuccess={() => {
                     toast.success("Ships constructed successfully!");
-                    ships.forEach((ship) => {
-                      clearShipImageCacheForShip(ship.id.toString());
-                    });
                     refetch();
                   }}
                 >
@@ -2163,50 +2140,14 @@ const ManageNavy: React.FC = () => {
           <div className="hidden w-full flex-col flex-wrap gap-2 md:flex md:flex-row md:justify-center md:gap-2">
             <button
               onClick={() => {
-                const cleared = clearBrokenImageCache();
-                toast.success(`Cleared ${cleared} broken images from cache`);
-              }}
-              className="px-4 py-2 rounded-none border border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold text-sm transition-all duration-200"
-            >
-              [CLEAR BROKEN CACHE]
-            </button>
-
-            <button
-              onClick={() => {
-                const cleared = clearAllShipImageCache();
-                resetAllShipRequestStates();
-                clearAllShipRetryTimeouts();
-                toast.success(
-                  `Cleared all ${cleared} images from cache and reset all states`,
-                );
-                // Force refresh by reloading the page
+                clearAllShipDataCache();
+                clearAllShipImageCache();
+                toast.success(`Cleared all ship cache`);
                 window.location.reload();
               }}
               className="px-4 py-2 rounded-none border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
             >
               [CLEAR ALL CACHE]
-            </button>
-
-            <button
-              onClick={() => {
-                resetAllShipRequestStates();
-                toast.success(
-                  `Reset all request states - try loading images again`,
-                );
-              }}
-              className="px-4 py-2 rounded-none border border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold text-sm transition-all duration-200"
-            >
-              [RESET REQUEST STATES]
-            </button>
-
-            <button
-              onClick={() => {
-                restartQueueProcessing();
-                toast.success(`Restarted queue processing`);
-              }}
-              className="px-4 py-2 rounded-none border border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold text-sm transition-all duration-200"
-            >
-              [RESTART QUEUE]
             </button>
 
             <button
@@ -2228,18 +2169,6 @@ const ManageNavy: React.FC = () => {
 
             <button
               onClick={() => {
-                const status = getQueueStatus();
-                toast.success(
-                  `Queue: ${status.queueLength} pending, ${status.activeRequests} active`,
-                );
-              }}
-              className="px-4 py-2 rounded-none border border-purple-400 text-purple-400 hover:border-purple-300 hover:text-purple-300 hover:bg-purple-400/10 font-mono font-bold text-sm transition-all duration-200"
-            >
-              [QUEUE STATUS]
-            </button>
-
-            <button
-              onClick={() => {
                 invalidateAllShipPurchasePriceCachesForChain(chainId);
                 toast.success(
                   "Cleared purchase price cache (native + UTC) for this network",
@@ -2250,15 +2179,6 @@ const ManageNavy: React.FC = () => {
               [CLEAR PRICE CACHE]
             </button>
 
-            <button
-              onClick={() => {
-                clearCacheOnLogout();
-                toast.success(`Cleared cache and stopped queue processing`);
-              }}
-              className="px-4 py-2 rounded-none border border-red-400 text-red-400 hover:border-red-300 hover:text-red-300 hover:bg-red-400/10 font-mono font-bold text-sm transition-all duration-200"
-            >
-              [CLEAR ON LOGOUT]
-            </button>
           </div>
         )}
 

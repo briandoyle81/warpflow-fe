@@ -32,21 +32,9 @@ export { useShipsPurchaseInfo } from "./useShipsPurchaseInfo";
 export { useShipPurchaserPurchaseInfo } from "./useShipPurchaserPurchaseInfo";
 export { useFreeShipClaiming } from "./useFreeShipClaiming";
 
-// Ship Image Caching (legacy - kept for backward compatibility)
+// Legacy image cache utilities (clears old localStorage entries from pre-renderer system)
 export {
-  useShipImageCache,
-  clearShipImageCache,
-  clearShipImageCacheForShip,
-  clearBrokenImageCache,
   clearAllShipImageCache,
-  resetShipRequestState,
-  resetAllShipRequestStates,
-  clearShipRetryTimeout,
-  clearAllShipRetryTimeouts,
-  restartQueueProcessing,
-  getQueueStatus,
-  clearCacheOnLogout,
-  getShipImageCacheStats,
   getUseLocalRendering,
   setUseLocalRendering,
 } from "./useShipImageCache";

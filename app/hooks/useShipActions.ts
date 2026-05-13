@@ -8,7 +8,6 @@ import { getContractAddresses } from "../config/contracts";
 import { useEffect } from "react";
 import { useSelectedChainId } from "./useSelectedChainId";
 import { useSwitchToSelectedChainIfNeeded } from "./useSwitchToSelectedChainIfNeeded";
-import { clearShipImageCacheForShip } from "./useShipImageCache";
 
 export function useShipActions() {
   const { address } = useAccount();
@@ -73,7 +72,6 @@ export function useShipActions() {
         chainId: activeChainId,
       });
 
-      clearShipImageCacheForShip(shipId.toString());
       toast.success("Ship constructed!");
       await refetch();
       setTimeout(() => {

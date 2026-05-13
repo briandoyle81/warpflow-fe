@@ -2581,27 +2581,6 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
     );
     if (targetExists) return;
 
-    console.log(
-      "[GameDisplay debug] lastMove target missing in game.shipPositions",
-      {
-        gameId: game.metadata.gameId.toString(),
-        lastMove: {
-          shipId: displayedLastMove.shipId.toString(),
-          targetShipId: displayedLastMove.targetShipId.toString(),
-          actionType: displayedLastMove.actionType,
-          oldRow: displayedLastMove.oldRow,
-          oldCol: displayedLastMove.oldCol,
-          newRow: displayedLastMove.newRow,
-          newCol: displayedLastMove.newCol,
-        },
-        shipPositions: game.shipPositions.map((sp) => ({
-          shipId: sp.shipId.toString(),
-          row: sp.position.row,
-          col: sp.position.col,
-          isCreator: sp.isCreator,
-        })),
-      },
-    );
   }, [displayedLastMove, game.metadata.gameId, game.shipPositions]);
 
   const retreatPrepShipId =
