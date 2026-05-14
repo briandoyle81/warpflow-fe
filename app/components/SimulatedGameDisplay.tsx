@@ -241,22 +241,22 @@ const TUTORIAL_COMPLETION_ENDPOINT_PANEL_MAX_ROWS = 10;
 const TUTORIAL_WELCOME_GRID_BRIEF = (
   <>
     <p>
-      <span className="font-bold text-cyan-300">Admiral</span>
+      <span className="font-bold text-cyan">Admiral</span>
       {", you're late. We've traded losses with the "}
-      <span className="font-semibold text-red-300">enemy</span>
+      <span className="font-semibold text-warning-red">enemy</span>
       {", and we're "}
-      <span className="font-semibold text-amber-300">behind on the board</span>
+      <span className="font-semibold text-amber">behind on the board</span>
       {", but with "}
-      <span className="font-bold text-cyan-300">you on station</span>
+      <span className="font-bold text-cyan">you on station</span>
       {" we can turn this around."}
     </p>
     <p>
       {"We're fighting through the "}
-      <span className="font-semibold text-amber-200">outer dust belts</span>
+      <span className="font-semibold text-amber/70">outer dust belts</span>
       {" over "}
-      <span className="font-semibold text-yellow-300">sparse resources</span>
+      <span className="font-semibold text-amber">sparse resources</span>
       {". Under "}
-      <span className="font-semibold text-orange-300">space law</span>
+      <span className="font-semibold text-amber">space law</span>
       {
         ", whoever exploits a site first keeps it. Out here, that's the rule that matters."
       }
@@ -269,21 +269,21 @@ const TUTORIAL_GOALS_GRID_BRIEF = (
   <>
     <p>
       Each round, ships can mine the resources in the area they control.{" "}
-      <span className="font-semibold text-cyan-300">Central</span> has set the
-      claim minimum at <span className="font-bold text-yellow-300">100</span>{" "}
+      <span className="font-semibold text-cyan">Central</span> has set the
+      claim minimum at <span className="font-bold text-amber">100</span>{" "}
       tons for this{" "}
-      <span className="font-semibold text-amber-200">resource cluster</span>.
+      <span className="font-semibold text-amber/70">resource cluster</span>.
       {"  "}
       Whoever gets there first gets{" "}
-      <span className="font-semibold text-orange-300">legal control</span> of
+      <span className="font-semibold text-amber">legal control</span> of
       the site.
     </p>
     <p>
-      Current tally: <span className="font-semibold text-cyan-300">60</span>{" "}
-      tons us, <span className="font-semibold text-red-300">70</span> tons them.
+      Current tally: <span className="font-semibold text-cyan">60</span>{" "}
+      tons us, <span className="font-semibold text-warning-red">70</span> tons them.
       We&apos;re{" "}
-      <span className="font-semibold text-amber-300">in the hole</span>, but{" "}
-      <span className="font-bold text-cyan-300">
+      <span className="font-semibold text-amber">in the hole</span>, but{" "}
+      <span className="font-bold text-cyan">
         the fight is still yours to take
       </span>
       .
@@ -295,9 +295,9 @@ const TUTORIAL_GOALS_GRID_BRIEF = (
 const TUTORIAL_SELECT_SHIP_GRID_BRIEF = (
   <>
     <p>
-      <span className="font-semibold text-amber-300">What&apos;s left of</span>{" "}
-      our <span className="font-semibold text-cyan-300">fleet</span> is ready
-      for your <span className="font-semibold text-yellow-300">inspection</span>
+      <span className="font-semibold text-amber">What&apos;s left of</span>{" "}
+      our <span className="font-semibold text-cyan">fleet</span> is ready
+      for your <span className="font-semibold text-amber">inspection</span>
       .
     </p>
   </>
@@ -307,13 +307,13 @@ const TUTORIAL_SELECT_SHIP_GRID_TASKS: React.ReactNode[] = [
   <>Hover over our ships to view their stats and abilities.</>,
   <>
     Click on our ships to see their{" "}
-    <span className="font-semibold text-green-400">movement</span>
+    <span className="font-semibold text-phosphor-green">movement</span>
     {" and "}
-    <span className="font-semibold text-orange-400">threat range</span>.
+    <span className="font-semibold text-amber">threat range</span>.
   </>,
   <>
     Click a ship again to see its{" "}
-    <span className="font-semibold text-orange-400">weapons range</span> from
+    <span className="font-semibold text-amber">weapons range</span> from
     the current position.
   </>,
 ];
@@ -322,8 +322,8 @@ const TUTORIAL_SELECT_SHIP_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_VIEW_ENEMY_GRID_BRIEF = (
   <>
     <p>
-      The <span className="font-semibold text-red-300">enemy</span> holds the{" "}
-      <span className="font-semibold text-amber-200">right side</span> of the
+      The <span className="font-semibold text-warning-red">enemy</span> holds the{" "}
+      <span className="font-semibold text-amber/70">right side</span> of the
       map. Our sensors can show us their stats and abilities.
     </p>
   </>
@@ -333,13 +333,13 @@ const TUTORIAL_VIEW_ENEMY_GRID_TASKS: React.ReactNode[] = [
   <>Hover over enemy ships to view their stats and abilities.</>,
   <>
     Click on enemy ships to see their{" "}
-    <span className="font-semibold text-green-400">movement</span>
+    <span className="font-semibold text-phosphor-green">movement</span>
     {" and "}
-    <span className="font-semibold text-orange-400">threat range</span>.
+    <span className="font-semibold text-amber">threat range</span>.
   </>,
   <>
     Click an enemy ship again to see its{" "}
-    <span className="font-semibold text-orange-400">weapons range</span> from
+    <span className="font-semibold text-amber">weapons range</span> from
     the current position.
   </>,
 ];
@@ -348,14 +348,14 @@ const TUTORIAL_VIEW_ENEMY_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_MOVE_SHIP_GRID_BRIEF = (
   <>
     <p>
-      The <span className="font-semibold text-cyan-300">Sentinel</span> is
+      The <span className="font-semibold text-cyan">Sentinel</span> is
       damaged. You can protect it by moving it into a{" "}
       <span className="font-semibold text-purple-300">nebula</span>.
     </p>
     <p>
       Nebula tiles block line of sight. Inside a nebula, ships can only shoot or
       be shot by ships exactly{" "}
-      <span className="font-semibold text-yellow-300">1 tile</span> away.
+      <span className="font-semibold text-amber">1 tile</span> away.
     </p>
   </>
 );
@@ -364,11 +364,11 @@ const TUTORIAL_MOVE_SHIP_GRID_TASKS: React.ReactNode[] = [
   <>Select the Sentinel.</>,
   <>
     With it selected, click a highlighted tile to stage a move.{" "}
-    <span className="font-semibold text-green-400">Green</span> tiles show{" "}
-    <span className="font-semibold text-green-400">movement</span> range.
+    <span className="font-semibold text-phosphor-green">Green</span> tiles show{" "}
+    <span className="font-semibold text-phosphor-green">movement</span> range.
   </>,
   <>
-    <span className="font-semibold text-green-400">Submit</span> the move from
+    <span className="font-semibold text-phosphor-green">Submit</span> the move from
     the left panel and approve the transaction.
   </>,
 ];
@@ -391,7 +391,7 @@ const TUTORIAL_WAIT_FOR_OPPONENT_GRID_BRIEF = (
 const TUTORIAL_WAIT_FOR_OPPONENT_GRID_TASKS: React.ReactNode[] = [
   <>
     Your move is in. In a live match you wait on the opponent. Click{" "}
-    <span className="font-semibold text-cyan-300">Next</span> to advance and see
+    <span className="font-semibold text-cyan">Next</span> to advance and see
     their response.
   </>,
 ];
@@ -401,12 +401,12 @@ const TUTORIAL_SCORE_POINTS_GRID_BRIEF = (
   <>
     <p>
       At round end, each scoring zone we{" "}
-      <span className="font-semibold text-yellow-300">controlled</span> by a
+      <span className="font-semibold text-amber">controlled</span> by a
       functioning ship (not disabled) counts toward points.
     </p>
     <p>
       The enemy destroyer moved to capture a resource. Respond by moving the{" "}
-      <span className="font-semibold text-cyan-300">Resolute</span> to claim one
+      <span className="font-semibold text-cyan">Resolute</span> to claim one
       for us.
     </p>
   </>
@@ -414,11 +414,11 @@ const TUTORIAL_SCORE_POINTS_GRID_BRIEF = (
 
 const TUTORIAL_SCORE_POINTS_GRID_TASKS: React.ReactNode[] = [
   <>
-    Select the <span className="font-semibold text-cyan-300">Resolute</span> and
+    Select the <span className="font-semibold text-cyan">Resolute</span> and
     move it to the highlighted central scoring tile.
   </>,
   <>
-    <span className="font-semibold text-green-400">Submit</span> the move and
+    <span className="font-semibold text-phosphor-green">Submit</span> the move and
     approve the transaction.
   </>,
 ];
@@ -427,10 +427,10 @@ const TUTORIAL_SCORE_POINTS_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_SHOOT_GRID_BRIEF = (
   <>
     <p>
-      The <span className="font-semibold text-red-300">Hammer</span> just hit
-      the <span className="font-semibold text-cyan-300">Resolute</span> with a
+      The <span className="font-semibold text-warning-red">Hammer</span> just hit
+      the <span className="font-semibold text-cyan">Resolute</span> with a
       plasma shot! Answer with the{" "}
-      <span className="font-semibold text-cyan-300">Vigilant</span>: move to a
+      <span className="font-semibold text-cyan">Vigilant</span>: move to a
       resource and shoot back.
     </p>
   </>
@@ -438,15 +438,15 @@ const TUTORIAL_SHOOT_GRID_BRIEF = (
 
 const TUTORIAL_SHOOT_GRID_TASKS: React.ReactNode[] = [
   <>
-    Select the <span className="font-semibold text-cyan-300">Vigilant</span> and
+    Select the <span className="font-semibold text-cyan">Vigilant</span> and
     stage a move to the highlighted tile.
   </>,
   <>
-    Click the <span className="font-semibold text-red-300">Hammer</span> to
+    Click the <span className="font-semibold text-warning-red">Hammer</span> to
     target it.
   </>,
   <>
-    <span className="font-semibold text-green-400">Submit</span> to confirm move
+    <span className="font-semibold text-phosphor-green">Submit</span> to confirm move
     and shot together.
   </>,
 ];
@@ -455,10 +455,10 @@ const TUTORIAL_SHOOT_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_END_OF_ROUND_GRID_BRIEF = (
   <>
     <p>
-      When <span className="font-semibold text-yellow-300">both sides</span>{" "}
+      When <span className="font-semibold text-amber">both sides</span>{" "}
       have moved all their ships, the round ends, and points are awarded for
       resources held. Movement markers clear and the{" "}
-      <span className="font-semibold text-cyan-300">first player</span> swaps:
+      <span className="font-semibold text-cyan">first player</span> swaps:
       whoever went second last round leads this one.
     </p>
   </>
@@ -467,7 +467,7 @@ const TUTORIAL_END_OF_ROUND_GRID_BRIEF = (
 const TUTORIAL_END_OF_ROUND_GRID_TASKS: React.ReactNode[] = [
   <>
     You must wait for the opponent to open the new round. Click{" "}
-    <span className="font-semibold text-cyan-300">Next</span> to see their move.
+    <span className="font-semibold text-cyan">Next</span> to see their move.
   </>,
 ];
 
@@ -475,15 +475,15 @@ const TUTORIAL_END_OF_ROUND_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_SPECIAL_EMP_GRID_BRIEF = (
   <>
     <p>
-      The <span className="font-semibold text-red-300">Anvil</span> just blasted
-      the <span className="font-semibold text-cyan-300">Resolute</span>!
+      The <span className="font-semibold text-warning-red">Anvil</span> just blasted
+      the <span className="font-semibold text-cyan">Resolute</span>!
     </p>
     <p>
       We have a powerful gun, but we still can&apos;t knock it out in one hit.
-      Luckily, the <span className="font-semibold text-red-300">Anvil</span> has{" "}
+      Luckily, the <span className="font-semibold text-warning-red">Anvil</span> has{" "}
       <span className="font-semibold text-purple-300">reactor damage</span> (💀)
       from earlier in the fight. We can bypass its defenses and kill it
-      instantly with an <span className="font-semibold text-cyan-300">EMP</span>
+      instantly with an <span className="font-semibold text-cyan">EMP</span>
       !
     </p>
   </>
@@ -491,16 +491,16 @@ const TUTORIAL_SPECIAL_EMP_GRID_BRIEF = (
 
 const TUTORIAL_SPECIAL_EMP_GRID_TASKS: React.ReactNode[] = [
   <>
-    Select the <span className="font-semibold text-cyan-300">Resolute</span> and
-    target the <span className="font-semibold text-red-300">Anvil</span>.
+    Select the <span className="font-semibold text-cyan">Resolute</span> and
+    target the <span className="font-semibold text-warning-red">Anvil</span>.
   </>,
   <>
     In the action bar, switch from{" "}
-    <span className="font-semibold text-cyan-200">Plasma</span> to{" "}
-    <span className="font-semibold text-cyan-200">EMP</span>.
+    <span className="font-semibold text-cyan/80">Plasma</span> to{" "}
+    <span className="font-semibold text-cyan/80">EMP</span>.
   </>,
   <>
-    <span className="font-semibold text-green-400">Submit</span>, then approve
+    <span className="font-semibold text-phosphor-green">Submit</span>, then approve
     the transaction.
   </>,
 ];
@@ -510,18 +510,18 @@ const TUTORIAL_SHIP_DESTRUCTION_GRID_BRIEF = (
   <>
     <p>
       Resolute&apos;s EMP rammed the{" "}
-      <span className="font-semibold text-red-300">Anvil</span>
+      <span className="font-semibold text-warning-red">Anvil</span>
       &apos;s reactor past{" "}
-      <span className="font-semibold text-yellow-300">
+      <span className="font-semibold text-amber">
         three overload points
       </span>
       . The stack detonates in a blinding flash and the ship is destroyed!
     </p>
     <p>
       No ship survives once its reactor reaches three overload points (💀). The{" "}
-      <span className="font-semibold text-cyan-300">owner</span> may recycle the
+      <span className="font-semibold text-cyan">owner</span> may recycle the
       NFT and take half the usual UTC recycle value. The player who{" "}
-      <span className="font-semibold text-cyan-300">destroyed it</span> gets the
+      <span className="font-semibold text-cyan">destroyed it</span> gets the
       matching half.
     </p>
   </>
@@ -529,7 +529,7 @@ const TUTORIAL_SHIP_DESTRUCTION_GRID_BRIEF = (
 
 const TUTORIAL_SHIP_DESTRUCTION_GRID_TASKS: React.ReactNode[] = [
   <>
-    Click <span className="font-semibold text-cyan-300">Next</span> when you are
+    Click <span className="font-semibold text-cyan">Next</span> when you are
     ready.
   </>,
 ];
@@ -538,9 +538,9 @@ const TUTORIAL_SHIP_DESTRUCTION_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_RESCUE_GRID_BRIEF = (
   <>
     <p>
-      The <span className="font-semibold text-red-300">enemy</span> retaliated
+      The <span className="font-semibold text-warning-red">enemy</span> retaliated
       by disabling the{" "}
-      <span className="font-semibold text-cyan-300">Resolute</span>. It also has{" "}
+      <span className="font-semibold text-cyan">Resolute</span>. It also has{" "}
       <span className="font-semibold text-purple-300">reactor damage</span>{" "}
       (💀), so one more hit and it&apos;s gone! Even worse, your repair ship is
       too far away to reach it in time.
@@ -554,16 +554,16 @@ const TUTORIAL_RESCUE_GRID_BRIEF = (
 
 const TUTORIAL_RESCUE_GRID_TASKS: React.ReactNode[] = [
   <>
-    <span className="font-semibold text-cyan-300">Save your ship:</span> select
+    <span className="font-semibold text-cyan">Save your ship:</span> select
     the Resolute and{" "}
-    <span className="font-semibold text-green-400">submit</span> Retreat to
+    <span className="font-semibold text-phosphor-green">submit</span> Retreat to
     leave the map.
   </>,
   <>
-    <span className="font-semibold text-cyan-300">Sacrifice for victory:</span>{" "}
+    <span className="font-semibold text-cyan">Sacrifice for victory:</span>{" "}
     select the Vigilant, target the{" "}
-    <span className="font-semibold text-red-300">Hammer</span>, then{" "}
-    <span className="font-semibold text-green-400">submit</span> the shot.
+    <span className="font-semibold text-warning-red">Hammer</span>, then{" "}
+    <span className="font-semibold text-phosphor-green">submit</span> the shot.
   </>,
 ];
 
@@ -572,28 +572,28 @@ const TUTORIAL_RESCUE_OUTCOME_SNIPER_GRID_BRIEF = (
   <>
     <p>
       As expected, the{" "}
-      <span className="font-semibold text-red-300">Hammer</span> destroyed the{" "}
-      <span className="font-semibold text-cyan-300">Resolute</span>.
+      <span className="font-semibold text-warning-red">Hammer</span> destroyed the{" "}
+      <span className="font-semibold text-cyan">Resolute</span>.
     </p>
     <p>
       You traded that ship for the ability to retake the center resource. The
       resource point is open now. Take it with the{" "}
-      <span className="font-semibold text-cyan-300">Sentinel</span>.
+      <span className="font-semibold text-cyan">Sentinel</span>.
     </p>
   </>
 );
 
 const TUTORIAL_RESCUE_OUTCOME_SNIPER_GRID_TASKS: React.ReactNode[] = [
   <>
-    Select the <span className="font-semibold text-cyan-300">Sentinel</span> and
+    Select the <span className="font-semibold text-cyan">Sentinel</span> and
     stage a move to the highlighted tile.
   </>,
   <>
     Optionally click the{" "}
-    <span className="font-semibold text-red-300">Hammer</span> to stage a shot.
+    <span className="font-semibold text-warning-red">Hammer</span> to stage a shot.
   </>,
   <>
-    <span className="font-semibold text-green-400">Submit</span> to confirm the
+    <span className="font-semibold text-phosphor-green">Submit</span> to confirm the
     move, with or without the shot.
   </>,
 ];
@@ -602,12 +602,12 @@ const TUTORIAL_RESCUE_OUTCOME_SNIPER_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_RESCUE_OUTCOME_RETREAT_GRID_BRIEF = (
   <>
     <p>
-      The <span className="font-semibold text-cyan-300">Resolute</span> is
+      The <span className="font-semibold text-cyan">Resolute</span> is
       safely off the map!
     </p>
     <p>
       You spent your action to save the hull, but the center resource tile is
-      undefended. The <span className="font-semibold text-red-300">Hammer</span>{" "}
+      undefended. The <span className="font-semibold text-warning-red">Hammer</span>{" "}
       can step in and secure it.
     </p>
     <p>
@@ -619,7 +619,7 @@ const TUTORIAL_RESCUE_OUTCOME_RETREAT_GRID_BRIEF = (
 
 const TUTORIAL_RESCUE_OUTCOME_RETREAT_GRID_TASKS: React.ReactNode[] = [
   <>
-    Click <span className="font-semibold text-cyan-300">Next</span> when you are
+    Click <span className="font-semibold text-cyan">Next</span> when you are
     ready to see the opponent&apos;s response.
   </>,
 ];
@@ -628,12 +628,12 @@ const TUTORIAL_RESCUE_OUTCOME_RETREAT_GRID_TASKS: React.ReactNode[] = [
 const TUTORIAL_COMPLETION_SNIPER_GRID_BRIEF = (
   <>
     <p>
-      <span className="font-semibold text-green-400">Victory</span>! You secured
+      <span className="font-semibold text-phosphor-green">Victory</span>! You secured
       the the center resource and guaranteed the win!
     </p>
     <p>
       You gave up the{" "}
-      <span className="font-semibold text-cyan-300">Resolute</span> to earn that
+      <span className="font-semibold text-cyan">Resolute</span> to earn that
       opening. In the outer dust clouds, victory comes at a cost.
     </p>
   </>
@@ -642,7 +642,7 @@ const TUTORIAL_COMPLETION_SNIPER_GRID_BRIEF = (
 const TUTORIAL_COMPLETION_SNIPER_PRIMARY_CTA_SUPPORTING = (
   <>
     You held the line in the battle. Claim{" "}
-    <span className="font-semibold text-yellow-300">2 free ships</span>, put
+    <span className="font-semibold text-amber">2 free ships</span>, put
     this win on your record, and join the fight against other admirals.
   </>
 );
@@ -651,16 +651,16 @@ const TUTORIAL_COMPLETION_SNIPER_PRIMARY_CTA_SUPPORTING = (
 const TUTORIAL_COMPLETION_RETREAT_GRID_BRIEF = (
   <>
     <p>
-      <span className="font-semibold text-amber-400">Live to fight again.</span>{" "}
-      The <span className="font-semibold text-red-300">Hammer</span> claimed the
+      <span className="font-semibold text-amber">Live to fight again.</span>{" "}
+      The <span className="font-semibold text-warning-red">Hammer</span> claimed the
       center resource, which puts the{" "}
-      <span className="font-semibold text-red-300">enemy</span> over the
+      <span className="font-semibold text-warning-red">enemy</span> over the
       threshold.
     </p>
     <p>
-      You <span className="font-semibold text-amber-400">lost</span> this
+      You <span className="font-semibold text-amber">lost</span> this
       engagement, but you kept your most{" "}
-      <span className="font-semibold text-cyan-300">powerful ship</span>.
+      <span className="font-semibold text-cyan">powerful ship</span>.
       Sometimes you must accept the loss of a battle to win the war.
     </p>
   </>
@@ -669,8 +669,8 @@ const TUTORIAL_COMPLETION_RETREAT_GRID_BRIEF = (
 const TUTORIAL_COMPLETION_RETREAT_PRIMARY_CTA_SUPPORTING = (
   <>
     You banked power when it mattered.{" "}
-    <span className="font-semibold text-cyan-300">Log in</span> to claim{" "}
-    <span className="font-semibold text-yellow-300">3 free ships</span>, fight,
+    <span className="font-semibold text-cyan">Log in</span> to claim{" "}
+    <span className="font-semibold text-amber">3 free ships</span>, fight,
     log this loss on your record, and join the fight against other admirals.
   </>
 );
