@@ -4804,8 +4804,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     style={{
                       fontFamily:
                         "var(--font-rajdhani), 'Arial Black', sans-serif",
-                      borderColor: "var(--color-purple, #a855f7)",
-                      color: "var(--color-purple, #d8b4fe)",
+                      borderColor: "var(--color-purple)",
+                      color: "var(--color-purple)",
                       backgroundColor: "rgba(10, 10, 15, 0.88)",
                       borderRadius: 0,
                     }}
@@ -4820,7 +4820,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         style={{
                           fontFamily:
                             "var(--font-rajdhani), 'Arial Black', sans-serif",
-                          color: "var(--color-purple, #d8b4fe)",
+                          color: "var(--color-purple)",
                         }}
                       >
                         Last Move
@@ -4832,8 +4832,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         style={{
                           fontFamily:
                             "var(--font-rajdhani), 'Arial Black', sans-serif",
-                          borderColor: "var(--color-purple, #a855f7)",
-                          color: "var(--color-purple, #d8b4fe)",
+                          borderColor: "var(--color-purple)",
+                          color: "var(--color-purple)",
                           backgroundColor: "var(--color-near-black)",
                           borderRadius: 0,
                         }}

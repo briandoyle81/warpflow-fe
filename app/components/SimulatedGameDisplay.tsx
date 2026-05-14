@@ -350,7 +350,7 @@ const TUTORIAL_MOVE_SHIP_GRID_BRIEF = (
     <p>
       The <span className="font-semibold text-cyan">Sentinel</span> is
       damaged. You can protect it by moving it into a{" "}
-      <span className="font-semibold text-purple-300">nebula</span>.
+      <span className="font-semibold text-purple">nebula</span>.
     </p>
     <p>
       Nebula tiles block line of sight. Inside a nebula, ships can only shoot or
@@ -378,7 +378,7 @@ const TUTORIAL_WAIT_FOR_OPPONENT_GRID_BRIEF = (
   <>
     <p>
       After a ship moves, both you and your opponent can see the{" "}
-      <span className="font-semibold text-purple-300">Last Move</span> of the
+      <span className="font-semibold text-purple">Last Move</span> of the
       ship on the map.
     </p>
     <p>
@@ -481,7 +481,7 @@ const TUTORIAL_SPECIAL_EMP_GRID_BRIEF = (
     <p>
       We have a powerful gun, but we still can&apos;t knock it out in one hit.
       Luckily, the <span className="font-semibold text-warning-red">Anvil</span> has{" "}
-      <span className="font-semibold text-purple-300">reactor damage</span> (💀)
+      <span className="font-semibold text-purple">reactor damage</span> (💀)
       from earlier in the fight. We can bypass its defenses and kill it
       instantly with an <span className="font-semibold text-cyan">EMP</span>
       !
@@ -541,7 +541,7 @@ const TUTORIAL_RESCUE_GRID_BRIEF = (
       The <span className="font-semibold text-warning-red">enemy</span> retaliated
       by disabling the{" "}
       <span className="font-semibold text-cyan">Resolute</span>. It also has{" "}
-      <span className="font-semibold text-purple-300">reactor damage</span>{" "}
+      <span className="font-semibold text-purple">reactor damage</span>{" "}
       (💀), so one more hit and it&apos;s gone! Even worse, your repair ship is
       too far away to reach it in time.
     </p>
@@ -5149,8 +5149,8 @@ export function SimulatedGameDisplay({
                       style={{
                         fontFamily:
                           "var(--font-rajdhani), 'Arial Black', sans-serif",
-                        borderColor: "var(--color-purple, #a855f7)",
-                        color: "var(--color-purple, #d8b4fe)",
+                        borderColor: "var(--color-purple)",
+                        color: "var(--color-purple)",
                         backgroundColor: "rgba(10, 10, 15, 0.88)",
                         borderRadius: 0,
                       }}
@@ -5165,7 +5165,7 @@ export function SimulatedGameDisplay({
                           style={{
                             fontFamily:
                               "var(--font-rajdhani), 'Arial Black', sans-serif",
-                            color: "var(--color-purple, #d8b4fe)",
+                            color: "var(--color-purple)",
                           }}
                         >
                           Last Move
@@ -5177,8 +5177,8 @@ export function SimulatedGameDisplay({
                           style={{
                             fontFamily:
                               "var(--font-rajdhani), 'Arial Black', sans-serif",
-                            borderColor: "var(--color-purple, #a855f7)",
-                            color: "var(--color-purple, #d8b4fe)",
+                            borderColor: "var(--color-purple)",
+                            color: "var(--color-purple)",
                             backgroundColor: "var(--color-near-black)",
                             borderRadius: 0,
                           }}
