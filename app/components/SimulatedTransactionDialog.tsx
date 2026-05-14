@@ -60,17 +60,17 @@ export function SimulatedTransactionDialog({
       <div className="absolute inset-0 bg-black/55" aria-hidden />
       <div className="relative z-10 flex flex-1 justify-end p-4 pt-4 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-md">
-          <div className="bg-gray-900 border-2 border-cyan-400 rounded-none p-6 w-full shadow-lg shadow-cyan-400/20">
+          <div className="bg-near-black border-2 p-6 w-full" style={{ borderColor: "var(--color-cyan)", borderRadius: 0 }}>
             <h3
               id="simulated-tx-title"
-              className="text-xl font-bold text-cyan-300 mb-4 font-mono"
+              className="text-xl font-bold text-cyan mb-4 font-mono"
             >
               [SIMULATED] Transaction Approval
             </h3>
 
             <div className="space-y-3 mb-6">
-              <div className="bg-yellow-400/10 border border-yellow-400/50 rounded-none p-3">
-                <p className="text-yellow-300 text-sm font-mono">
+              <div className="bg-amber/10 border border-amber/50 p-3">
+                <p className="text-amber text-sm font-mono">
                   ⚠️ This is a tutorial simulation. No real transaction will be
                   sent.
                 </p>
@@ -78,18 +78,18 @@ export function SimulatedTransactionDialog({
 
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="text-gray-400">Action Type:</span>
-                  <span className="text-cyan-300 ml-2 font-mono">
+                  <span className="text-text-muted">Action Type:</span>
+                  <span className="text-cyan ml-2 font-mono">
                     {getActionTypeName()}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400">Description:</span>
+                  <span className="text-text-muted">Description:</span>
                   <span className="text-white ml-2">{getActionDescription()}</span>
                 </div>
                 {action.shipId && (
                   <div>
-                    <span className="text-gray-400">Ship ID:</span>
+                    <span className="text-text-muted">Ship ID:</span>
                     <span className="text-white ml-2 font-mono">
                       {action.shipId.toString()}
                     </span>
@@ -97,7 +97,7 @@ export function SimulatedTransactionDialog({
                 )}
                 {action.targetShipId && (
                   <div>
-                    <span className="text-gray-400">Target Ship ID:</span>
+                    <span className="text-text-muted">Target Ship ID:</span>
                     <span className="text-white ml-2 font-mono">
                       {action.targetShipId.toString()}
                     </span>
@@ -105,7 +105,7 @@ export function SimulatedTransactionDialog({
                 )}
                 {action.position && (
                   <div>
-                    <span className="text-gray-400">Position:</span>
+                    <span className="text-text-muted">Position:</span>
                     <span className="text-white ml-2 font-mono">
                       ({action.position.row}, {action.position.col})
                     </span>
@@ -118,7 +118,7 @@ export function SimulatedTransactionDialog({
               <button
                 type="button"
                 onClick={onReject}
-                className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-none font-mono hover:bg-gray-600 transition-colors"
+                className="flex-1 px-4 py-2 bg-steel text-white rounded-none font-mono hover:bg-gunmetal transition-colors"
               >
                 Reject
               </button>

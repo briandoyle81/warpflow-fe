@@ -104,16 +104,16 @@ const ShipCard: React.FC<ShipCardProps> = ({
 
     if (isInGameView && isDisabledInGame) {
       return tooltipMode
-        ? "border-gray-500 bg-gray-900"
-        : "border-gray-500 bg-gray-900";
+        ? "border-steel bg-near-black"
+        : "border-steel bg-near-black";
     }
 
     // Reactor critical status takes priority (for game view)
     if (reactorCriticalStatus === "critical") {
-      return "border-red-500 bg-gray-900";
+      return "border-warning-red bg-near-black";
     }
     if (reactorCriticalStatus === "warning") {
-      return "border-yellow-500 bg-gray-900";
+      return "border-amber bg-near-black";
     }
 
     // Game view (tooltip or Ship Details): blue for current player, red for opponent
@@ -124,32 +124,32 @@ const ShipCard: React.FC<ShipCardProps> = ({
     ) {
       if (!isCurrentPlayerShip && hasMoved) {
         return tooltipMode
-          ? "border-gray-500 bg-gray-900"
-          : "border-gray-500 bg-gray-900";
+          ? "border-steel bg-near-black"
+          : "border-steel bg-near-black";
       }
       return tooltipMode
         ? isCurrentPlayerShip
-          ? "border-blue-400 bg-gray-900"
-          : "border-red-400 bg-gray-900"
+          ? "border-cyan bg-near-black"
+          : "border-warning-red bg-near-black"
         : isCurrentPlayerShip
-        ? "border-blue-400 bg-blue-400/20"
-        : "border-red-400 bg-red-400/20";
+        ? "border-cyan bg-cyan/20"
+        : "border-warning-red bg-warning-red/20";
     }
 
     if (selectionMode && isSelected) {
       return tooltipMode
-        ? "border-green-400 bg-gray-900"
-        : "border-green-400 bg-green-400/20";
+        ? "border-phosphor-green bg-near-black"
+        : "border-phosphor-green bg-phosphor-green/20";
     }
     if (ship.shipData.timestampDestroyed > 0n) {
       return tooltipMode
-        ? "border-red-400 bg-gray-900"
-        : "border-red-400 bg-black/60";
+        ? "border-warning-red bg-near-black"
+        : "border-warning-red bg-black/60";
     }
     if (ship.shipData.inFleet) {
       return tooltipMode
-        ? "border-orange-400 bg-gray-900"
-        : "border-orange-400 bg-orange-400/20";
+        ? "border-amber bg-near-black"
+        : "border-amber bg-amber/20";
     }
     if (
       costsVersionStale &&
@@ -158,26 +158,26 @@ const ShipCard: React.FC<ShipCardProps> = ({
       !ship.shipData.inFleet
     ) {
       return tooltipMode
-        ? "border-orange-400 bg-gray-900"
-        : "border-orange-400 bg-orange-400/20";
+        ? "border-amber bg-near-black"
+        : "border-amber bg-amber/20";
     }
     if (ship.shipData.constructed) {
       if (selectionMode) {
         return tooltipMode
           ? canSelect
-            ? "border-gray-400 bg-gray-900"
-            : "border-gray-400 bg-gray-900 opacity-50 cursor-not-allowed"
+            ? "border-steel bg-near-black"
+            : "border-steel bg-near-black opacity-50 cursor-not-allowed"
           : canSelect
-          ? "border-gray-400 bg-black/40 hover:border-cyan-400 hover:bg-cyan-400/10"
-          : "border-gray-400 bg-black/40 opacity-50 cursor-not-allowed";
+          ? "border-steel bg-black/40 hover:border-cyan hover:bg-cyan/10"
+          : "border-steel bg-black/40 opacity-50 cursor-not-allowed";
       }
       return tooltipMode
-        ? "border-green-400 bg-gray-900"
-        : "border-green-400 bg-black/40";
+        ? "border-phosphor-green bg-near-black"
+        : "border-phosphor-green bg-black/40";
     }
     return tooltipMode
-      ? "border-gray-400 bg-gray-900"
-      : "border-gray-400 bg-black/60";
+      ? "border-steel bg-near-black"
+      : "border-steel bg-black/60";
   };
 
   const handleCardClick = () => {
@@ -416,8 +416,8 @@ const ShipCard: React.FC<ShipCardProps> = ({
                 className={`absolute ${
                   flipShip ? "bottom-0 right-0" : "bottom-0 left-0"
                 } m-1 w-4 h-4 rounded-full text-[10px] font-mono flex items-center justify-center ${
-                  isCurrentPlayerShip ? "bg-blue-700/80" : "bg-red-700/80"
-                } text-white`}
+                  isCurrentPlayerShip ? "bg-cyan/80" : "bg-warning-red/80"
+                } text-text-primary`}
               >
                 M
               </div>
@@ -436,7 +436,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                 ).map((level) => (
                   <div
                     key={level}
-                    className="flex shrink-0 items-center justify-center rounded-full bg-red-500/90"
+                    className="flex shrink-0 items-center justify-center rounded-full bg-warning-red/90"
                     style={{
                       width: SHIP_IMAGE_RANK_STAR_BOX,
                       height: SHIP_IMAGE_RANK_STAR_BOX,
@@ -502,15 +502,15 @@ const ShipCard: React.FC<ShipCardProps> = ({
               e.stopPropagation();
               onToggleStar();
             }}
-            className={`shrink-0 hover:bg-yellow-400/10 rounded-none transition-all duration-200 ${
+            className={`shrink-0 hover:bg-amber/10 rounded-none transition-all duration-200 ${
               useCompactStatGrid ? "p-0.5 mt-0" : "p-1 mt-0.5"
             }`}
           >
             <svg
               className={`w-4 h-4 ${
                 isStarred
-                  ? "text-yellow-400 fill-yellow-400"
-                  : "text-yellow-400"
+                  ? "text-amber fill-amber"
+                  : "text-amber"
               }`}
               fill={isStarred ? "currentColor" : "none"}
               stroke="currentColor"
@@ -542,7 +542,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                 onRecycleClick();
               }}
               disabled={ship.shipData.inFleet}
-              className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 text-warning-red hover:text-warning-red hover:bg-warning-red/10 rounded-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               title={
                 ship.shipData.inFleet
                   ? "Cannot recycle ship in fleet"
@@ -672,7 +672,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
               (() => {
                 if (!inGameAttributes) {
                   return (
-                    <div className="col-span-3 text-center text-gray-400 text-xs">
+                    <div className="col-span-3 text-center text-text-muted text-xs">
                       {attributesLoading
                         ? "Loading attributes..."
                         : "Attributes not available"}
@@ -682,7 +682,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
                 return (
                   <>
                     {tooltipMode && tooltipGridPosition != null && (
-                      <div className="flex justify-between col-span-3 border-b border-gray-600/80 pb-1 mb-0.5">
+                      <div className="flex justify-between col-span-3 border-b border-gunmetal/80 pb-1 mb-0.5">
                         <span className="opacity-60">Position:</span>
                         <span className="ml-2 font-mono">
                           ({tooltipGridPosition.row},{" "}
@@ -737,14 +737,14 @@ const ShipCard: React.FC<ShipCardProps> = ({
                         <span
                           className={`ml-2 ${
                             ship.shipData.timestampDestroyed > 0n
-                              ? "text-red-400"
+                              ? "text-warning-red"
                               : hasMoved
-                              ? "text-orange-400"
+                              ? "text-amber"
                               : gameViewMode || tooltipMode
-                              ? "text-blue-400" // Unmoved in game view
+                              ? "text-cyan" // Unmoved in game view
                               : ship.shipData.inFleet
-                              ? "text-orange-400"
-                              : "text-green-400"
+                              ? "text-amber"
+                              : "text-phosphor-green"
                           }`}
                         >
                           {ship.shipData.timestampDestroyed > 0n
@@ -811,14 +811,14 @@ const ShipCard: React.FC<ShipCardProps> = ({
                     <span
                       className={`ml-2 ${
                         ship.shipData.timestampDestroyed > 0n
-                          ? "text-red-400"
+                          ? "text-warning-red"
                           : hasMoved
-                          ? "text-orange-400"
+                          ? "text-amber"
                           : gameViewMode || tooltipMode
-                          ? "text-blue-400" // Unmoved in game view
+                          ? "text-cyan" // Unmoved in game view
                           : ship.shipData.inFleet
-                          ? "text-orange-400"
-                          : "text-green-400"
+                          ? "text-amber"
+                          : "text-phosphor-green"
                       }`}
                     >
                       {ship.shipData.timestampDestroyed > 0n
@@ -842,7 +842,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
           </div>
         ) : (
           <div className="text-center py-4 px-2">
-            <div className="text-gray-400 text-sm font-mono font-bold">
+            <div className="text-text-muted text-sm font-mono font-bold">
               [CONSTRUCT SHIP]
             </div>
           </div>
@@ -856,7 +856,7 @@ const ShipCard: React.FC<ShipCardProps> = ({
       {/* Selection Indicator */}
       {selectionMode && isSelected && (
         <div className="mt-2 text-center">
-          <span className="text-green-400 text-sm font-bold">✓ SELECTED</span>
+          <span className="text-phosphor-green text-sm font-bold">✓ SELECTED</span>
         </div>
       )}
       {costsVersionStale && costVersionSyncButton && (

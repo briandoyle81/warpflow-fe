@@ -71,10 +71,8 @@ const Info: React.FC = () => {
       </p>
       {/* Hero Section - full width so its inner grid aligns with key features below */}
       <section
-        className="relative overflow-hidden border-2 border-cyan-400 bg-black/60 py-4 md:col-span-12 md:py-8"
-        style={{
-          borderRadius: 0, // Square corners for industrial theme
-        }}
+        className="relative overflow-hidden border-2 bg-black/60 py-4 md:col-span-12 md:py-8"
+        style={{ borderColor: "var(--color-cyan)", borderRadius: 0 }}
         aria-labelledby="info-hero-heading"
       >
         {/* Background pattern/grid effect */}
@@ -171,7 +169,7 @@ const Info: React.FC = () => {
                 {!isConnected && (
                   <button
                     disabled
-                    className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-green-400 text-green-400 font-mono font-bold tracking-wide md:tracking-wider transition-all duration-200 opacity-50 cursor-not-allowed w-full md:w-auto rounded-none text-xs sm:text-sm"
+                    className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-phosphor-green text-phosphor-green font-mono font-bold tracking-wide md:tracking-wider transition-all duration-200 opacity-50 cursor-not-allowed w-full md:w-auto rounded-none text-xs sm:text-sm"
                     style={{ borderRadius: 0 }}
                   >
                     [LOG IN TO CLAIM FREE SHIPS]
@@ -185,7 +183,7 @@ const Info: React.FC = () => {
                     <FreeShipClaimButton
                       isEligible={isEligible}
                       analyticsSurface="info"
-                      className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wide md:tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto text-xs sm:text-sm"
+                      className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-phosphor-green text-phosphor-green hover:bg-phosphor-green/10 font-mono font-bold tracking-wide md:tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto text-xs sm:text-sm"
                       onSuccess={() => refetch()}
                     >
                       [CLAIM FREE SHIPS]
@@ -206,14 +204,14 @@ const Info: React.FC = () => {
                             ),
                           )
                         }
-                        className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-green-400 text-green-400 hover:border-green-300 hover:text-green-300 hover:bg-green-400/10 font-mono font-bold tracking-wide md:tracking-wider transition-all duration-200 w-full md:w-auto rounded-none text-xs sm:text-sm"
+                        className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-phosphor-green text-phosphor-green hover:bg-phosphor-green/10 font-mono font-bold tracking-wide md:tracking-wider transition-all duration-200 w-full md:w-auto rounded-none text-xs sm:text-sm"
                         style={{ borderRadius: 0 }}
                       >
                         [VIEW FLEET]
                       </button>
                       {nextClaimInFormatted != null && (
                         <div
-                          className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-amber-400/80 text-amber-400 font-mono font-bold tracking-wide md:tracking-wider bg-amber-400/5 rounded-none w-full md:w-auto text-xs sm:text-sm text-center"
+                          className="px-5 sm:px-6 md:px-8 py-3.5 md:py-4 border-2 border-amber/80 text-amber font-mono font-bold tracking-wide md:tracking-wider bg-amber/5 rounded-none w-full md:w-auto text-xs sm:text-sm text-center"
                           title="Time until you can claim free ships again"
                         >
                           NEXT CLAIM IN: {nextClaimInFormatted}
@@ -228,9 +226,10 @@ const Info: React.FC = () => {
           {/* Right side - Gameplay clip (above the fold) */}
           <div className="flex justify-center px-0 md:col-span-7 md:justify-end md:pr-8 md:pl-0">
             <div
-              className="w-full max-w-2xl border-2 border-cyan-400 bg-black/40 p-2"
+              className="w-full max-w-2xl border-2 bg-black/40 p-2"
               style={{
                 borderRadius: 0,
+                borderColor: "var(--color-cyan)",
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -291,9 +290,10 @@ const Info: React.FC = () => {
       {/* Key Features - same 12-col grid so left edges align with hero */}
       {/* Feature 1: Build your Navy */}
       <article
-        className="border-2 border-cyan-400 bg-black/40 p-2 md:col-span-6 md:p-6"
+        className="border-2 bg-black/40 p-2 md:col-span-6 md:p-6"
         style={{
-          borderRadius: 0, // Square corners for industrial theme
+          borderRadius: 0,
+          borderColor: "var(--color-cyan)",
         }}
       >
         <h3
@@ -371,7 +371,7 @@ const Info: React.FC = () => {
 
       {/* Feature 3: Tactical Combat */}
       <article
-        className="border-2 border-amber-400 bg-black/40 p-2 md:col-span-6 md:p-6"
+        className="border-2 border-amber bg-black/40 p-2 md:col-span-6 md:p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
         }}
@@ -450,9 +450,10 @@ const Info: React.FC = () => {
 
       {/* Getting Started Section */}
       <section
-        className="border-2 border-cyan-400 bg-black/40 p-2 md:col-span-12 md:p-6"
+        className="border-2 bg-black/40 p-2 md:col-span-12 md:p-6"
         style={{
-          borderRadius: 0, // Square corners for industrial theme
+          borderRadius: 0,
+          borderColor: "var(--color-cyan)",
         }}
         aria-labelledby="info-getting-started-heading"
       >

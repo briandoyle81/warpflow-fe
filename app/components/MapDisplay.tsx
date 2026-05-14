@@ -302,7 +302,7 @@ export function MapDisplay({
       !mapState.scoringTiles[row] ||
       !mapState.onlyOnceTiles[row]
     ) {
-      return `w-full h-full border-0 outline outline-1 outline-gray-600 bg-gray-900 ${
+      return `w-full h-full border-0 outline outline-1 outline-gunmetal bg-near-black ${
         allowSelection ? "cursor-pointer" : "cursor-default"
       }`;
     }
@@ -320,13 +320,13 @@ export function MapDisplay({
     // If selected, use a high-contrast gold inset border that shows on all sides
     if (isSelected) {
       // Subtle gold wash for visibility + strong inset gold border
-      baseClass += " bg-yellow-400/10 shadow-[inset_0_0_0_3px_rgb(250,204,21)]"; // yellow-400
+      baseClass += " bg-amber/10 shadow-[inset_0_0_0_3px_var(--color-amber)]";
     } else {
       // Blocked LOS: nebula art (see cell content), same grid outline as empty tiles
       if (isBlocked) {
-        baseClass += " border-0 outline outline-1 outline-gray-600 overflow-hidden";
+        baseClass += " border-0 outline outline-1 outline-gunmetal overflow-hidden";
       } else {
-        baseClass += " border-0 outline outline-1 outline-gray-600";
+        baseClass += " border-0 outline outline-1 outline-gunmetal";
       }
     }
 
@@ -338,13 +338,13 @@ export function MapDisplay({
           ? " bg-gradient-to-b from-sky-400/65 via-cyan-500/78 to-teal-700/86"
           : " bg-amber-600";
       } else if (isOnlyOnce) {
-        baseClass += " bg-blue-400"; // Cornflower blue for once-only
+        baseClass += " bg-cyan"; // once-only scoring
       } else {
-        baseClass += " bg-yellow-400"; // Gold for reusable
+        baseClass += " bg-amber"; // reusable scoring
       }
     } else if (!isSelected) {
       // Empty (do not override the selection background)
-      baseClass += " bg-gray-900";
+      baseClass += " bg-near-black";
     }
 
     return baseClass;
@@ -353,9 +353,9 @@ export function MapDisplay({
   if (mapId <= 0) {
     return (
       <div
-        className={`bg-gray-900 rounded-lg w-full flex items-center justify-center p-8 ${className}`}
+        className={`bg-near-black w-full flex items-center justify-center p-8 ${className}`}
       >
-        <div className="text-gray-400 text-center">
+        <div className="text-text-muted text-center">
           <p>No map selected</p>
         </div>
       </div>
@@ -364,7 +364,7 @@ export function MapDisplay({
 
   return (
     <div
-      className={`bg-gray-900 rounded-lg relative w-full h-full flex flex-col items-center justify-center ${className}`}
+      className={`bg-near-black relative w-full h-full flex flex-col items-center justify-center ${className}`}
     >
       <div
         className="w-full"
@@ -383,7 +383,7 @@ export function MapDisplay({
               {isCreator ? (
                 /* Creator overlay - left 4 columns (0-3) */
                 <div
-                  className="absolute bg-blue-400"
+                  className="absolute bg-cyan"
                   style={{
                     left: 0,
                     top: 0,
@@ -395,7 +395,7 @@ export function MapDisplay({
               ) : (
                 /* Joiner overlay - right 4 columns (13-16) */
                 <div
-                  className="absolute bg-blue-400"
+                  className="absolute bg-cyan"
                   style={{
                     right: 0,
                     top: 0,
@@ -418,7 +418,7 @@ export function MapDisplay({
                 return (
                 <div
                   key={`${row}-${col}`}
-                  className={`${getTileClass(row, col)} ${isDragOver ? "ring-2 ring-cyan-400 ring-inset" : ""} ${isShipDraggable ? "cursor-move" : ""}`}
+                  className={`${getTileClass(row, col)} ${isDragOver ? "ring-2 ring-cyan ring-inset" : ""} ${isShipDraggable ? "cursor-move" : ""}`}
                   onClick={() => handleCellClick(row, col)}
                   onMouseEnter={(e) => handleCellEnter(row, col, e)}
                   onMouseMove={(e) => handleCellMove(row, col, e)}
@@ -461,8 +461,8 @@ export function MapDisplay({
                       className={`relative z-0 flex items-center justify-center text-lg font-bold w-full h-full ${
                         ship
                           ? mapState.onlyOnceTiles[row][col]
-                            ? "text-cyan-50"
-                            : "text-amber-100"
+                            ? "text-white"
+                            : "text-amber/80"
                           : "text-black"
                       }`}
                     >
@@ -489,7 +489,7 @@ export function MapDisplay({
                             }`}
                           />
                         ) : (
-                          <div className="w-full h-full bg-gray-600 rounded-none flex items-center justify-center text-white text-xs">
+                          <div className="w-full h-full bg-gunmetal rounded-none flex items-center justify-center text-white text-xs">
                             {ship.name}
                           </div>
                         )}
@@ -507,7 +507,7 @@ export function MapDisplay({
             {/* Vertical reference lines */}
             {/* Reference lines for grid zones */}
             <div
-              className="absolute bg-blue-400"
+              className="absolute bg-cyan"
               style={{
                 left: `${(4 / GRID_DIMENSIONS.WIDTH) * 100}%`, // End of creator zone (after column 3)
                 top: 0,
@@ -517,7 +517,7 @@ export function MapDisplay({
               }}
             />
             <div
-              className="absolute bg-blue-400"
+              className="absolute bg-cyan"
               style={{
                 left: `${(8 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Left edge of center column
                 top: 0,
@@ -527,7 +527,7 @@ export function MapDisplay({
               }}
             />
             <div
-              className="absolute bg-blue-400"
+              className="absolute bg-cyan"
               style={{
                 left: `${(9 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Right edge of center column
                 top: 0,
@@ -537,7 +537,7 @@ export function MapDisplay({
               }}
             />
             <div
-              className="absolute bg-blue-400"
+              className="absolute bg-cyan"
               style={{
                 left: `${(13 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Start of joiner zone (columns 13-16)
                 top: 0,
@@ -549,7 +549,7 @@ export function MapDisplay({
 
             {/* Red emphasis lines - Creator/Joiner boundaries */}
             <div
-              className="absolute bg-red-400"
+              className="absolute bg-warning-red"
               style={{
                 left: `${(4 / GRID_DIMENSIONS.WIDTH) * 100}%`, // End of creator zone (after column 3)
                 top: 0,
@@ -559,7 +559,7 @@ export function MapDisplay({
               }}
             />
             <div
-              className="absolute bg-red-400"
+              className="absolute bg-warning-red"
               style={{
                 left: `${(13 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Start of joiner zone (columns 13-16)
                 top: 0,
@@ -588,7 +588,7 @@ export function MapDisplay({
             {/* Horizontal reference lines */}
             {/* Center row edges (top and bottom of row 5) */}
             <div
-              className="absolute bg-blue-400"
+              className="absolute bg-cyan"
               style={{
                 left: 0,
                 top: `${(5 / GRID_DIMENSIONS.HEIGHT) * 100}%`,
@@ -598,7 +598,7 @@ export function MapDisplay({
               }}
             />
             <div
-              className="absolute bg-blue-400"
+              className="absolute bg-cyan"
               style={{
                 left: 0,
                 top: `${(6 / GRID_DIMENSIONS.HEIGHT) * 100}%`,
@@ -766,9 +766,9 @@ export function MapDisplay({
 
       {/* Key/Legend */}
       <div className="mt-4 w-full">
-        <div className="flex flex-wrap gap-4 text-xs text-gray-300">
+        <div className="flex flex-wrap gap-4 text-xs text-text-secondary">
           <div className="flex items-center gap-2">
-            <div className="relative h-5 w-5 shrink-0 overflow-hidden border border-gray-600 bg-gray-900">
+            <div className="relative h-5 w-5 shrink-0 overflow-hidden border border-gunmetal bg-near-black">
               <Image
                 src="/img/nebula-tile.png"
                 alt=""
@@ -780,15 +780,15 @@ export function MapDisplay({
             <span>Blocked (LOS) - Nebula</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-yellow-400 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-amber border border-gunmetal"></div>
             <span>Scoring (reusable)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-blue-400 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-cyan border border-gunmetal"></div>
             <span>Scoring (once only)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative h-5 w-5 shrink-0 overflow-hidden border border-gray-600 bg-blue-400">
+            <div className="relative h-5 w-5 shrink-0 overflow-hidden border border-gunmetal bg-cyan">
               <Image
                 src="/img/nebula-tile.png"
                 alt=""
@@ -800,7 +800,7 @@ export function MapDisplay({
             <span>Blocked + Scoring</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-gray-900 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-near-black border border-gunmetal"></div>
             <span>Empty</span>
           </div>
         </div>

@@ -95,11 +95,11 @@ export function GameEvents({
 }: LastMoveDisplayProps) {
   if (!lastMove || lastMove.shipId === 0n) {
     return (
-      <div className="border border-purple-400 bg-black/40 rounded-lg p-4">
-        <h3 className="text-lg font-bold text-purple-400 mb-2">
+      <div className="border border-purple bg-black/40 p-4">
+        <h3 className="text-lg font-bold text-purple mb-2">
           Last Move
         </h3>
-        <p className="text-gray-400 text-sm">No move yet.</p>
+        <p className="text-text-muted text-sm">No move yet.</p>
       </div>
     );
   }
@@ -115,18 +115,18 @@ export function GameEvents({
   const isMyShip = address && ship?.owner === address;
 
   return (
-    <div className="border border-purple-400 bg-black/40 rounded-lg p-4">
-      <h3 className="text-lg font-bold text-purple-400 mb-2">
+    <div className="border border-purple bg-black/40 p-4">
+      <h3 className="text-lg font-bold text-purple mb-2">
         Last Move
       </h3>
       <div
         className={`p-2 rounded-none text-sm ${
           isMyShip
-            ? "border-l-2 border-l-green-400 bg-gray-800/30"
-            : "border-l-2 border-l-red-400 bg-gray-800/30"
+            ? "border-l-2 border-l-phosphor-green bg-steel/30"
+            : "border-l-2 border-l-warning-red bg-steel/30"
         }`}
       >
-        <span className="text-gray-200">{description}</span>
+        <span className="text-text-primary">{description}</span>
       </div>
     </div>
   );

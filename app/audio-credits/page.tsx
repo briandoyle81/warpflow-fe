@@ -20,7 +20,7 @@ export default function AudioCreditsPage() {
         <p className="mb-8">
           <Link
             href="/"
-            className="text-cyan-400 underline decoration-cyan-400/50 underline-offset-4 hover:text-cyan-300"
+            className="text-cyan underline decoration-cyan/50 underline-offset-4 hover:text-cyan/80"
           >
             Back to Void Tactics
           </Link>
@@ -63,7 +63,7 @@ export default function AudioCreditsPage() {
                 href="https://freesound.org/s/563864/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-cyan-400 underline decoration-cyan-400/50 underline-offset-4 hover:text-cyan-300"
+                className="text-cyan underline decoration-cyan/50 underline-offset-4 hover:text-cyan/80"
               >
                 freesound.org/s/563864/
               </a>
@@ -94,7 +94,7 @@ export default function AudioCreditsPage() {
                 href="https://heylink.me/nickpanek/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-cyan-400 underline decoration-cyan-400/50 underline-offset-4 hover:text-cyan-300"
+                className="text-cyan underline decoration-cyan/50 underline-offset-4 hover:text-cyan/80"
               >
                 (check my other projects)
               </a>
@@ -105,7 +105,7 @@ export default function AudioCreditsPage() {
                 href="https://pixabay.com/service/license-summary/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-cyan-400 underline decoration-cyan-400/50 underline-offset-4 hover:text-cyan-300"
+                className="text-cyan underline decoration-cyan/50 underline-offset-4 hover:text-cyan/80"
               >
                 Pixabay License Summary
               </a>

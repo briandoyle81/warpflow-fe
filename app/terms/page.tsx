@@ -20,7 +20,7 @@ export default function TermsOfServicePage() {
         <p className="mb-8">
           <Link
             href="/"
-            className="text-cyan-400 underline decoration-cyan-400/50 underline-offset-4 hover:text-cyan-300"
+            className="text-cyan underline decoration-cyan/50 underline-offset-4 hover:text-cyan/80"
           >
             Back to Void Tactics
           </Link>

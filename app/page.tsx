@@ -489,7 +489,7 @@ export default function Home() {
               </div>
               </div>
               <div
-                className={`pointer-events-none absolute inset-y-0 left-0 z-[2] flex w-11 items-center justify-start bg-gradient-to-r from-[var(--color-near-black)] from-[35%] to-transparent pl-0.5 text-xl font-black leading-none text-cyan-400/90 transition-opacity duration-200 md:hidden ${
+                className={`pointer-events-none absolute inset-y-0 left-0 z-[2] flex w-11 items-center justify-start bg-gradient-to-r from-[var(--color-near-black)] from-[35%] to-transparent pl-0.5 text-xl font-black leading-none text-cyan/90 transition-opacity duration-200 md:hidden ${
                   tabScrollMore.left ? "opacity-100" : "opacity-0"
                 }`}
                 style={{
@@ -501,7 +501,7 @@ export default function Home() {
                 ‹
               </div>
               <div
-                className={`pointer-events-none absolute inset-y-0 right-0 z-[2] flex w-11 items-center justify-end bg-gradient-to-l from-[var(--color-near-black)] from-[35%] to-transparent pr-0.5 text-xl font-black leading-none text-cyan-400/90 transition-opacity duration-200 md:hidden ${
+                className={`pointer-events-none absolute inset-y-0 right-0 z-[2] flex w-11 items-center justify-end bg-gradient-to-l from-[var(--color-near-black)] from-[35%] to-transparent pr-0.5 text-xl font-black leading-none text-cyan/90 transition-opacity duration-200 md:hidden ${
                   tabScrollMore.right ? "opacity-100" : "opacity-0"
                 }`}
                 style={{

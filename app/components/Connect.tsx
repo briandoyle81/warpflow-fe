@@ -55,7 +55,8 @@ const Connect: React.FC = () => {
                   <button
                     onClick={openConnectModal}
                     type="button"
-                    className="bg-gradient-to-r from-cyan-400 to-purple-500 hover:from-cyan-500 hover:to-purple-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 border border-cyan-300"
+                    className="border-2 border-cyan text-cyan hover:bg-cyan/10 font-mono font-bold py-2 px-6 tracking-wider transition-colors duration-150"
+                    style={{ borderRadius: 0 }}
                   >
                     Connect Wallet
                   </button>
@@ -67,7 +68,8 @@ const Connect: React.FC = () => {
                   <button
                     onClick={openChainModal}
                     type="button"
-                    className="bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 border border-red-300"
+                    className="border-2 border-warning-red text-warning-red hover:bg-warning-red/10 font-mono font-bold py-2 px-6 tracking-wider transition-colors duration-150"
+                    style={{ borderRadius: 0 }}
                   >
                     Wrong network
                   </button>
@@ -78,9 +80,9 @@ const Connect: React.FC = () => {
                 <div style={{ display: "flex", gap: 12 }}>
                   <button
                     onClick={openChainModal}
-                    style={{ display: "flex", alignItems: "center" }}
+                    style={{ display: "flex", alignItems: "center", borderRadius: 0 }}
                     type="button"
-                    className="bg-gradient-to-r from-cyan-400 to-purple-500 hover:from-cyan-500 hover:to-purple-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 border border-cyan-300"
+                    className="border-2 border-cyan text-cyan hover:bg-cyan/10 font-mono font-bold py-2 px-6 tracking-wider transition-colors duration-150"
                   >
                     {chain.hasIcon && (
                       <div
@@ -109,7 +111,8 @@ const Connect: React.FC = () => {
                   <button
                     onClick={openAccountModal}
                     type="button"
-                    className="bg-gradient-to-r from-cyan-400 to-purple-500 hover:from-cyan-500 hover:to-purple-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 border border-cyan-300"
+                    className="border-2 border-cyan text-cyan hover:bg-cyan/10 font-mono font-bold py-2 px-6 tracking-wider transition-colors duration-150"
+                    style={{ borderRadius: 0 }}
                   >
                     {account.displayName}
                     {account.displayBalance

@@ -253,7 +253,7 @@ const Games: React.FC = () => {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-mono text-white">Games</h1>
-        <p className="text-gray-400">
+        <p className="text-text-muted">
           Please connect your wallet to view your games.
         </p>
       </div>
@@ -264,7 +264,7 @@ const Games: React.FC = () => {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-mono text-white">Games</h1>
-        <p className="text-gray-400">Loading your games...</p>
+        <p className="text-text-muted">Loading your games...</p>
       </div>
     );
   }
@@ -273,7 +273,7 @@ const Games: React.FC = () => {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-mono text-white">Games</h1>
-        <p className="text-red-400">Error loading games: {error}</p>
+        <p className="text-warning-red">Error loading games: {error}</p>
       </div>
     );
   }
@@ -283,12 +283,12 @@ const Games: React.FC = () => {
       <h1 className="text-2xl font-mono text-white">Games</h1>
 
       {sortedGames.length === 0 ? (
-        <div className="text-center py-8 text-gray-400">
+        <div className="text-center py-8 text-text-muted">
           <p>No games found. Create a lobby and start playing!</p>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-text-muted">
             Total games: {sortedGames.length}
           </div>
 
@@ -296,7 +296,7 @@ const Games: React.FC = () => {
             {sortedGames.map((game) => (
               <div
                 key={game.metadata.gameId.toString()}
-                className="border border-gray-700 bg-gray-800 p-4 rounded-none"
+                className="border border-gunmetal bg-steel p-4 rounded-none"
               >
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="text-base font-mono text-white sm:text-lg">
@@ -306,10 +306,10 @@ const Games: React.FC = () => {
                     className={`w-fit text-xs px-2 py-1 rounded-none ${
                       game.metadata.winner ===
                       ZERO_ADDRESS
-                        ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/30"
+                        ? "bg-amber/20 text-amber border border-amber/30"
                         : game.metadata.winner === address
-                        ? "bg-green-400/20 text-green-400 border border-green-400/30"
-                        : "bg-red-400/20 text-red-400 border border-red-400/30"
+                        ? "bg-phosphor-green/20 text-phosphor-green border border-phosphor-green/30"
+                        : "bg-warning-red/20 text-warning-red border border-warning-red/30"
                     }`}
                   >
                     {game.metadata.winner ===
@@ -321,7 +321,7 @@ const Games: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="space-y-2 text-sm text-gray-300">
+                <div className="space-y-2 text-sm text-text-secondary">
                   <div className="flex items-start justify-between gap-3">
                     <span className="opacity-60">Lobby ID:</span>
                     <span className="text-right">{game.metadata.lobbyId.toString()}</span>
@@ -380,7 +380,7 @@ const Games: React.FC = () => {
                       return (
                         <span
                           className={`font-mono text-xs ${
-                            remaining <= 10 ? "text-red-400" : "text-gray-300"
+                            remaining <= 10 ? "text-warning-red" : "text-text-secondary"
                           }`}
                         >
                           {isFinished ? "--:--" : formatSeconds(remaining)}
@@ -391,9 +391,9 @@ const Games: React.FC = () => {
                 </div>
 
                 {/* Game Actions */}
-                <div className="mt-4 pt-3 border-t border-gray-700">
+                <div className="mt-4 pt-3 border-t border-gunmetal">
                   <button
-                    className="w-full px-6 py-3 rounded-none border-2 border-cyan-400 text-cyan-400 hover:border-cyan-300 hover:text-cyan-300 hover:bg-cyan-400/10 font-mono font-bold tracking-wider transition-all duration-200"
+                    className="w-full px-6 py-3 rounded-none border-2 border-cyan text-cyan hover:border-cyan hover:text-cyan hover:bg-cyan/10 font-mono font-bold tracking-wider transition-all duration-200"
                     onClick={() => setSelectedGame(game)}
                   >
                     {game.metadata.winner ===

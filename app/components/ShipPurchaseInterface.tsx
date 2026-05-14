@@ -17,39 +17,39 @@ interface ShipPurchaseInterfaceProps {
 
 const TIER_COLOR_SCHEMES = [
   {
-    border: "border-gray-400",
-    text: "text-gray-400",
-    hoverBorder: "hover:border-gray-300",
-    hoverText: "hover:text-gray-300",
-    hoverBg: "hover:bg-gray-400/10",
+    border: "border-text-muted",
+    text: "text-text-muted",
+    hoverBorder: "hover:border-text-secondary",
+    hoverText: "hover:text-text-secondary",
+    hoverBg: "hover:bg-text-muted/10",
   },
   {
-    border: "border-green-400",
-    text: "text-green-400",
-    hoverBorder: "hover:border-green-300",
-    hoverText: "hover:text-green-300",
-    hoverBg: "hover:bg-green-400/10",
+    border: "border-phosphor-green",
+    text: "text-phosphor-green",
+    hoverBorder: "hover:border-phosphor-green",
+    hoverText: "hover:text-phosphor-green",
+    hoverBg: "hover:bg-phosphor-green/10",
   },
   {
-    border: "border-blue-400",
-    text: "text-blue-400",
-    hoverBorder: "hover:border-blue-300",
-    hoverText: "hover:text-blue-300",
-    hoverBg: "hover:bg-blue-400/10",
+    border: "border-cyan",
+    text: "text-cyan",
+    hoverBorder: "hover:border-cyan",
+    hoverText: "hover:text-cyan",
+    hoverBg: "hover:bg-cyan/10",
   },
   {
-    border: "border-purple-400",
-    text: "text-purple-400",
-    hoverBorder: "hover:border-purple-300",
-    hoverText: "hover:text-purple-300",
-    hoverBg: "hover:bg-purple-400/10",
+    border: "border-purple",
+    text: "text-purple",
+    hoverBorder: "hover:border-purple",
+    hoverText: "hover:text-purple",
+    hoverBg: "hover:bg-purple/10",
   },
   {
-    border: "border-amber-400",
-    text: "text-amber-400",
-    hoverBorder: "hover:border-amber-300",
-    hoverText: "hover:text-amber-300",
-    hoverBg: "hover:bg-amber-400/10",
+    border: "border-amber",
+    text: "text-amber",
+    hoverBorder: "hover:border-amber",
+    hoverText: "hover:text-amber",
+    hoverBg: "hover:bg-amber/10",
   },
 ] as const;
 
@@ -75,7 +75,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
   if (paymentMethod === "UTC" && !utcPack.purchaserDeployed) {
     return (
       <div className="w-full py-8 text-center">
-        <p className="text-red-400 font-mono">
+        <p className="text-warning-red font-mono">
           UTC ship packs are not available on this network (ShipPurchaser not
           deployed).
         </p>
@@ -196,7 +196,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
   if (isLoading && tierCount === 0) {
     return (
       <div className="w-full py-8 text-center">
-        <p className="text-gray-400 font-mono">Loading pack configuration…</p>
+        <p className="text-text-muted font-mono">Loading pack configuration…</p>
       </div>
     );
   }
@@ -204,7 +204,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
   if (tierCount === 0) {
     return (
       <div className="w-full py-8 text-center">
-        <p className="text-red-400 font-mono">
+        <p className="text-warning-red font-mono">
           No purchase tiers returned from the contract.
         </p>
       </div>
@@ -213,9 +213,9 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
 
   return (
     <div className="w-full">
-      <header className="mb-6 border-b border-cyan-400/25 pb-5">
+      <header className="mb-6 border-b border-cyan/25 pb-5">
         <h3
-          className="text-xl font-black uppercase tracking-[0.12em] text-cyan-300 sm:text-2xl"
+          className="text-xl font-black uppercase tracking-[0.12em] text-cyan sm:text-2xl"
           style={{
             fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
           }}
@@ -258,7 +258,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
             >
               <div className="flex h-full flex-col gap-2 text-left">
                 {badge && (
-                  <div className="absolute right-2 top-2 border border-solid border-cyan-300 bg-cyan-300/10 px-2 py-0.5 text-[10px] font-bold tracking-[0.12em] text-cyan-300">
+                  <div className="absolute right-2 top-2 border border-solid border-cyan bg-cyan/10 px-2 py-0.5 text-[10px] font-bold tracking-[0.12em] text-cyan">
                     {badge}
                   </div>
                 )}
@@ -334,23 +334,23 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
         })}
 
         <aside
-          className="flex min-h-[420px] flex-col justify-center gap-5 border-2 border-solid border-cyan-400/45 bg-black/25 px-5 py-5 text-left"
+          className="flex min-h-[420px] flex-col justify-center gap-5 border-2 border-solid border-cyan/45 bg-black/25 px-5 py-5 text-left"
           style={{
             fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
           }}
         >
-          <h4 className="text-2xl font-bold leading-tight tracking-wide text-cyan-300 sm:text-3xl">
+          <h4 className="text-2xl font-bold leading-tight tracking-wide text-cyan sm:text-3xl">
             One mint.{" "}
-            <span className="font-semibold text-yellow-300">Full fleet</span>.
+            <span className="font-semibold text-amber">Full fleet</span>.
           </h4>
-          <p className="text-base font-medium leading-snug text-slate-100 sm:text-lg">
+          <p className="text-base font-medium leading-snug text-text-primary sm:text-lg">
             Higher tiers stack more{" "}
-            <span className="font-semibold text-yellow-300">
+            <span className="font-semibold text-amber">
               guaranteed veterans
             </span>{" "}
             and a bigger fleet in one mint.
           </p>
-          <p className="text-sm font-medium leading-relaxed text-cyan-200/90 sm:text-base">
+          <p className="text-sm font-medium leading-relaxed text-cyan/90 sm:text-base">
             <span className="md:hidden">Tap the tier you want</span>
             <span className="hidden md:inline">Click the tier you want</span>
             {" and mint the whole roster."}

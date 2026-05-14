@@ -279,7 +279,7 @@ const ShipPurchasePrices: React.FC = () => {
   if (!isConnected) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-400">Connect your wallet to open this tab.</p>
+        <p className="text-text-muted">Connect your wallet to open this tab.</p>
       </div>
     );
   }
@@ -287,24 +287,25 @@ const ShipPurchasePrices: React.FC = () => {
   if (!canAdminShipPurchasePrices) {
     return (
       <div className="text-center py-8 space-y-2">
-        <p className="text-red-400">
+        <p className="text-warning-red">
           Access denied. Only the Ships or ShipPurchaser contract owner can view
           this admin tab.
         </p>
-        <p className="text-gray-400 text-sm font-mono">
+        <p className="text-text-muted text-sm font-mono">
           Ships owner: {shipsOwner ?? "…"}
         </p>
-        <p className="text-gray-400 text-sm font-mono">
+        <p className="text-text-muted text-sm font-mono">
           ShipPurchaser owner:{" "}
           {purchaserDeployed ? (purchaserOwner ?? "…") : "not deployed"}
         </p>
-        <p className="text-gray-400 text-sm font-mono">You: {address}</p>
+        <p className="text-text-muted text-sm font-mono">You: {address}</p>
       </div>
     );
   }
 
   const btnClass =
-    "px-4 py-2 rounded-none border-2 border-cyan-400 text-cyan-400 font-mono font-bold text-sm tracking-wider transition-colors hover:bg-cyan-400/10 disabled:opacity-50";
+    "px-4 py-2 rounded-none border-2 text-cyan font-mono font-bold text-sm tracking-wider transition-colors hover:bg-cyan/10 disabled:opacity-50";
+  const btnStyle = { borderRadius: 0, borderColor: "var(--color-cyan)" };
 
   const renderSection = (config: {
     title: string;
@@ -329,32 +330,32 @@ const ShipPurchasePrices: React.FC = () => {
   }) => {
     if (config.isLoading && config.tierIndices.length === 0) {
       return (
-        <div className="bg-gray-800 rounded-none p-4 border border-gray-700">
-          <h3 className="text-lg font-mono text-white mb-1">{config.title}</h3>
-          <p className="text-gray-400 text-sm font-mono">Loading…</p>
+        <div className="bg-steel rounded-none p-4 border border-gunmetal">
+          <h3 className="text-lg font-mono text-text-primary mb-1">{config.title}</h3>
+          <p className="text-text-muted text-sm font-mono">Loading…</p>
         </div>
       );
     }
     if (config.tierIndices.length === 0) {
       return (
-        <div className="bg-gray-800 rounded-none p-4 border border-gray-700">
-          <h3 className="text-lg font-mono text-white mb-1">{config.title}</h3>
-          <p className="text-red-400 text-sm font-mono">{config.emptyMessage}</p>
+        <div className="bg-steel rounded-none p-4 border border-gunmetal">
+          <h3 className="text-lg font-mono text-text-primary mb-1">{config.title}</h3>
+          <p className="text-warning-red text-sm font-mono">{config.emptyMessage}</p>
         </div>
       );
     }
 
     return (
-      <div className="bg-gray-800 rounded-none p-4 border border-gray-700">
-        <h3 className="text-lg font-mono text-white mb-1">{config.title}</h3>
-        <p className="text-sm text-gray-400 mb-4">{config.subtitle}</p>
+      <div className="bg-steel rounded-none p-4 border border-gunmetal">
+        <h3 className="text-lg font-mono text-text-primary mb-1">{config.title}</h3>
+        <p className="text-sm text-text-muted mb-4">{config.subtitle}</p>
         {config.belowSubtitle ? (
           <div className="mb-4">{config.belowSubtitle}</div>
         ) : null}
         <div className="overflow-x-auto">
           <table className="w-full text-sm font-mono text-left border-collapse">
             <thead>
-              <tr className="border-b border-gray-600 text-gray-400">
+              <tr className="border-b border-gunmetal text-text-muted">
                 <th className="py-2 pr-4">Tier</th>
                 <th className="py-2 pr-4">Ships / pack</th>
                 <th className="py-2">Price ({config.priceLabel})</th>
@@ -362,8 +363,8 @@ const ShipPurchasePrices: React.FC = () => {
             </thead>
             <tbody>
               {config.tierIndices.map((tier, i) => (
-                <tr key={tier} className="border-b border-gray-700/80">
-                  <td className="py-2 pr-4 text-cyan-300">{tier}</td>
+                <tr key={tier} className="border-b border-gunmetal/80">
+                  <td className="py-2 pr-4 text-cyan">{tier}</td>
                   <td className="py-2 pr-4">
                     {config.canEdit ? (
                       <input
@@ -379,10 +380,10 @@ const ShipPurchasePrices: React.FC = () => {
                             return next;
                           });
                         }}
-                        className="w-24 px-2 py-1 bg-gray-900 border border-gray-600 text-white rounded-none"
+                        className="w-24 px-2 py-1 bg-near-black border border-gunmetal text-text-primary rounded-none"
                       />
                     ) : (
-                      <span className="text-white">{config.ships[i]}</span>
+                      <span className="text-text-primary">{config.ships[i]}</span>
                     )}
                   </td>
                   <td className="py-2">
@@ -399,10 +400,10 @@ const ShipPurchasePrices: React.FC = () => {
                             return next;
                           });
                         }}
-                        className="w-full max-w-[14rem] px-2 py-1 bg-gray-900 border border-gray-600 text-white rounded-none"
+                        className="w-full max-w-[14rem] px-2 py-1 bg-near-black border border-gunmetal text-text-primary rounded-none"
                       />
                     ) : (
-                      <span className="text-white">{config.prices[i]}</span>
+                      <span className="text-text-primary">{config.prices[i]}</span>
                     )}
                   </td>
                 </tr>
@@ -421,7 +422,7 @@ const ShipPurchasePrices: React.FC = () => {
               allowWhenOtherPending
               disabled={!config.built.ok}
               className={btnClass}
-              style={{ borderRadius: 0 }}
+              style={btnStyle}
               validateBeforeTransaction={() =>
                 config.built.ok ? true : config.built.error
               }
@@ -441,7 +442,7 @@ const ShipPurchasePrices: React.FC = () => {
             </TransactionButton>
           </div>
         ) : (
-          <p className="mt-3 text-amber-200/90 text-xs font-mono">
+          <p className="mt-3 text-amber/90 text-xs font-mono">
             Connect as this contract&apos;s owner to submit updates.
           </p>
         )}
@@ -451,23 +452,23 @@ const ShipPurchasePrices: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-900 rounded-none p-4 border border-gray-700">
+      <div className="bg-near-black rounded-none p-4 border border-gunmetal">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-mono text-white mb-2">
+            <h2 className="text-xl font-mono text-text-primary mb-2">
               Ship pack purchase prices
             </h2>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-text-muted">
               Data loads from the chain and is cached in your browser for one
               week. Native purchases use{" "}
-              <span className="text-gray-300">Ships.purchaseWithFlow</span>. UTC
+              <span className="text-text-secondary">Ships.purchaseWithFlow</span>. UTC
               pack purchases use{" "}
-              <span className="text-gray-300">ShipPurchaser.purchaseWithUC</span>.
+              <span className="text-text-secondary">ShipPurchaser.purchaseWithUC</span>.
               Each contract stores tier ship counts and prices with{" "}
-              <span className="text-gray-300">setPurchaseInfo</span>.
+              <span className="text-text-secondary">setPurchaseInfo</span>.
             </p>
             {hasUnsavedChanges ? (
-              <p className="text-amber-300 text-xs font-mono mt-2">
+              <p className="text-amber text-xs font-mono mt-2">
                 Unsaved changes in price entry.
               </p>
             ) : null}
@@ -477,7 +478,8 @@ const ShipPurchasePrices: React.FC = () => {
               type="button"
               onClick={handleClearPriceEntry}
               disabled={!hasUnsavedChanges}
-              className="px-4 py-2 rounded-none border-2 border-red-400/90 text-red-300 font-mono text-xs font-bold uppercase tracking-wider transition-colors hover:bg-red-400/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-none border-2 text-warning-red font-mono text-xs font-bold uppercase tracking-wider transition-colors hover:bg-warning-red/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ borderColor: "var(--color-warning-red)" }}
             >
               [CLEAR PRICE ENTRY]
             </button>
@@ -485,7 +487,8 @@ const ShipPurchasePrices: React.FC = () => {
               type="button"
               onClick={handleClearCacheAndReload}
               disabled={isReloadingFromChain}
-              className="px-4 py-2 rounded-none border-2 border-amber-400/90 text-amber-400 font-mono text-xs font-bold uppercase tracking-wider transition-colors hover:bg-amber-400/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-none border-2 text-amber font-mono text-xs font-bold uppercase tracking-wider transition-colors hover:bg-amber/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ borderColor: "var(--color-amber)" }}
             >
               {isReloadingFromChain
                 ? "[RELOADING…]"
@@ -562,14 +565,14 @@ const ShipPurchasePrices: React.FC = () => {
             utcInfo.refetch();
           },
           belowSubtitle: (
-            <p className="text-red-300/90 text-xs font-mono">
+            <p className="text-warning-red/90 text-xs font-mono">
               Note: it is unusual to change UTC pack prices unless you are
               running a sale.
             </p>
           ),
         })
       ) : (
-        <div className="bg-gray-800 rounded-none p-4 border border-gray-600 text-gray-400 text-sm font-mono">
+        <div className="bg-steel rounded-none p-4 border border-gunmetal text-text-muted text-sm font-mono">
           ShipPurchaser is not deployed on this network. UTC pack pricing is
           unavailable.
         </div>

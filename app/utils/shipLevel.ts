@@ -104,19 +104,19 @@ export function calculateShipTier(ship: Ship): {
 export function getRankColor(rank: number): string {
   switch (rank) {
     case 1:
-      return "text-gray-400 border-gray-400 bg-gray-400/20";
+      return "text-text-muted border-text-muted bg-text-muted/20";
     case 2:
-      return "text-green-400 border-green-400 bg-green-400/20";
+      return "text-phosphor-green border-phosphor-green bg-phosphor-green/20";
     case 3:
-      return "text-blue-400 border-blue-400 bg-blue-400/20";
+      return "text-cyan border-cyan bg-cyan/20";
     case 4:
-      return "text-purple-400 border-purple-400 bg-purple-400/20";
+      return "text-purple border-purple bg-purple/20";
     case 5:
-      return "text-orange-400 border-orange-400 bg-orange-400/20";
+      return "text-amber border-amber bg-amber/20";
     case 6:
-      return "text-red-400 border-red-400 bg-red-400/20";
+      return "text-warning-red border-warning-red bg-warning-red/20";
     default:
-      return "text-gray-400 border-gray-400 bg-gray-400/20";
+      return "text-text-muted border-text-muted bg-text-muted/20";
   }
 }
 
@@ -126,14 +126,14 @@ export function getRankColor(rank: number): string {
 export function getTierColor(tier: string): string {
   switch (tier) {
     case "S":
-      return "text-purple-400 border-purple-400 bg-purple-400/20";
+      return "text-purple border-purple bg-purple/20";
     case "A":
-      return "text-blue-400 border-blue-400 bg-blue-400/20";
+      return "text-cyan border-cyan bg-cyan/20";
     case "B":
-      return "text-green-400 border-green-400 bg-green-400/20";
+      return "text-phosphor-green border-phosphor-green bg-phosphor-green/20";
     case "C":
-      return "text-yellow-400 border-yellow-400 bg-yellow-400/20";
+      return "text-amber border-amber bg-amber/20";
     default:
-      return "text-gray-400 border-gray-400 bg-gray-400/20";
+      return "text-text-muted border-text-muted bg-text-muted/20";
   }
 }

@@ -37,51 +37,51 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
     switch (tier) {
       case 0:
         return {
-          border: "border-amber-400",
-          text: "text-amber-400",
-          hoverBorder: "hover:border-amber-300",
-          hoverText: "hover:text-amber-300",
-          hoverBg: "hover:bg-amber-400/10",
+          border: "border-amber",
+          text: "text-amber",
+          hoverBorder: "hover:border-amber",
+          hoverText: "hover:text-amber",
+          hoverBg: "hover:bg-amber/10",
         };
       case 1:
         return {
-          border: "border-gray-400",
-          text: "text-gray-400",
-          hoverBorder: "hover:border-gray-300",
-          hoverText: "hover:text-gray-300",
-          hoverBg: "hover:bg-gray-400/10",
+          border: "border-text-muted",
+          text: "text-text-muted",
+          hoverBorder: "hover:border-text-secondary",
+          hoverText: "hover:text-text-secondary",
+          hoverBg: "hover:bg-text-muted/10",
         };
       case 2:
         return {
-          border: "border-green-400",
-          text: "text-green-400",
-          hoverBorder: "hover:border-green-300",
-          hoverText: "hover:text-green-300",
-          hoverBg: "hover:bg-green-400/10",
+          border: "border-phosphor-green",
+          text: "text-phosphor-green",
+          hoverBorder: "hover:border-phosphor-green",
+          hoverText: "hover:text-phosphor-green",
+          hoverBg: "hover:bg-phosphor-green/10",
         };
       case 3:
         return {
-          border: "border-blue-400",
-          text: "text-blue-400",
-          hoverBorder: "hover:border-blue-300",
-          hoverText: "hover:text-blue-300",
-          hoverBg: "hover:bg-blue-400/10",
+          border: "border-cyan",
+          text: "text-cyan",
+          hoverBorder: "hover:border-cyan",
+          hoverText: "hover:text-cyan",
+          hoverBg: "hover:bg-cyan/10",
         };
       case 4:
         return {
-          border: "border-purple-400",
-          text: "text-purple-400",
-          hoverBorder: "hover:border-purple-300",
-          hoverText: "hover:text-purple-300",
-          hoverBg: "hover:bg-purple-400/10",
+          border: "border-purple",
+          text: "text-purple",
+          hoverBorder: "hover:border-purple",
+          hoverText: "hover:text-purple",
+          hoverBg: "hover:bg-purple/10",
         };
       default:
         return {
-          border: "border-amber-400",
-          text: "text-amber-400",
-          hoverBorder: "hover:border-amber-300",
-          hoverText: "hover:text-amber-300",
-          hoverBg: "hover:bg-amber-400/10",
+          border: "border-amber",
+          text: "text-amber",
+          hoverBorder: "hover:border-amber",
+          hoverText: "hover:text-amber",
+          hoverBg: "hover:bg-amber/10",
         };
     }
   };
@@ -93,30 +93,30 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-gray-900 border-2 border-cyan-400 p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto rounded-none">
+      <div className="bg-near-black border-2 p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto rounded-none" style={{ borderColor: "var(--color-cyan)" }}>
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-cyan-300 font-mono tracking-wider">
+          <h2 className="text-2xl font-bold text-cyan font-mono tracking-wider">
             [PURCHASE UTC]
           </h2>
           <button
             onClick={onClose}
-            className="text-cyan-300 hover:text-cyan-200 transition-all duration-200 text-2xl font-bold"
+            className="text-cyan hover:text-cyan/80 transition-all duration-200 text-2xl font-bold"
             aria-label="Close modal"
           >
             ×
           </button>
         </div>
 
-        <div className="mb-5 p-4 bg-cyan-400/10 border border-cyan-400/40 rounded-none">
+        <div className="mb-5 p-4 bg-cyan/10 border border-cyan/40 rounded-none">
           <div className="flex justify-between items-center mb-2">
-            <p className="text-cyan-200 text-sm font-mono">Current UTC balance</p>
-            <p className="text-cyan-300 text-sm font-mono font-bold">
+            <p className="text-cyan/80 text-sm font-mono">Current UTC balance</p>
+            <p className="text-cyan text-sm font-mono font-bold">
               {utcBalance
                 ? `${formatEther(utcBalance as bigint)} UTC`
                 : "0.00 UTC"}
             </p>
           </div>
-          <p className="text-cyan-100/85 text-xs font-mono leading-relaxed">
+          <p className="text-cyan/85 text-xs font-mono leading-relaxed">
             Universal Credits (UTC) are the in-game balance token. Buy UTC with
             TOKENS at a 1:1 rate, then spend UTC when you reserve games or
             check out ship packs elsewhere. This purchase only adds UTC to your
@@ -124,9 +124,9 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
           </p>
         </div>
 
-        <header className="mb-5 border-b border-cyan-400/25 pb-4">
+        <header className="mb-5 border-b border-cyan/25 pb-4">
           <h3
-            className="text-lg font-black uppercase tracking-[0.1em] text-cyan-300 sm:text-xl"
+            className="text-lg font-black uppercase tracking-[0.1em] text-cyan sm:text-xl"
             style={{
               fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
             }}
@@ -141,15 +141,15 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
         </header>
 
         {!purchaserDeployed ? (
-          <p className="text-center text-red-400 font-mono py-6">
+          <p className="text-center text-warning-red font-mono py-6">
             ShipPurchaser is not deployed on this network.
           </p>
         ) : isLoadingTiers && tierCount === 0 ? (
-          <p className="text-center text-gray-400 font-mono py-6">
+          <p className="text-center text-text-muted font-mono py-6">
             Loading UTC purchase options…
           </p>
         ) : tierCount === 0 ? (
-          <p className="text-center text-red-400 font-mono py-6">
+          <p className="text-center text-warning-red font-mono py-6">
             No UTC purchase tiers from ShipPurchaser.
           </p>
         ) : (

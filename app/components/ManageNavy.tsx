@@ -74,7 +74,7 @@ function ManageNavyTutorialDismissFooter({
   const [dontShowAgain, setDontShowAgain] = React.useState(false);
   return (
     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-      <label className="flex max-w-[14rem] cursor-pointer items-start gap-2 text-left text-xs text-gray-300 sm:max-w-none">
+      <label className="flex max-w-[14rem] cursor-pointer items-start gap-2 text-left text-xs text-secondary sm:max-w-none">
         <input
           type="checkbox"
           checked={dontShowAgain}
@@ -208,14 +208,14 @@ Use [CLAIM FREE SHIPS] when you are ready to draw from the next batch.`;
             ×
           </button>
         </div>
-        <div className="mb-3 h-1 w-full shrink-0 bg-gray-700">
+        <div className="mb-3 h-1 w-full shrink-0 bg-steel">
           <div
-            className="h-1 bg-cyan-400 transition-all duration-300"
+            className="h-1 bg-cyan transition-all duration-300"
             style={{ width: progressPct }}
           />
         </div>
         <p
-          className="whitespace-pre-line text-sm leading-relaxed text-gray-200"
+          className="whitespace-pre-line text-sm leading-relaxed text-primary"
           style={MANAGE_NAVY_TUTORIAL_MONO}
         >
           {body}
@@ -1634,7 +1634,7 @@ const ManageNavy: React.FC = () => {
         <p className="text-lg opacity-80">
           Please connect your wallet to view your navy
         </p>
-        <div className="mt-4 text-sm text-cyan-400">
+        <div className="mt-4 text-sm text-cyan">
           <p>Address: {address || "undefined"}</p>
           <p>Connected: {isConnected ? "yes" : "no"}</p>
         </div>
@@ -1662,7 +1662,7 @@ const ManageNavy: React.FC = () => {
         <h3 className="text-2xl font-bold mb-6 tracking-wider">
           [MANAGE NAVY]
         </h3>
-        <p className="text-red-400 text-lg">
+        <p className="text-warning-red text-lg">
           Error loading navy: {error.message}
         </p>
       </div>
@@ -1672,9 +1672,9 @@ const ManageNavy: React.FC = () => {
   // Show loading state while wallet is connecting
   if (isConnecting) {
     return (
-      <div className="text-center text-cyan-400 font-mono">
+      <div className="text-center text-cyan font-mono">
         <div className="text-xl mb-4">Connecting to wallet...</div>
-        <div className="text-sm text-cyan-400/60">
+        <div className="text-sm text-cyan/60">
           Please wait while we establish your connection
         </div>
       </div>
@@ -1699,7 +1699,7 @@ const ManageNavy: React.FC = () => {
       {!isLoadingClaimStatus && freeShipError && (
         <button
           disabled
-          className="w-full justify-center px-6 py-3 rounded-none border-2 border-red-400 text-red-400 font-mono font-bold tracking-wider opacity-50 cursor-not-allowed md:w-auto"
+          className="w-full justify-center px-6 py-3 rounded-none border-2 border-warning-red text-warning-red font-mono font-bold tracking-wider opacity-50 cursor-not-allowed md:w-auto"
         >
           [ERROR CLAIMING]
         </button>
@@ -1739,7 +1739,7 @@ const ManageNavy: React.FC = () => {
         !isEligible &&
         nextClaimInFormatted != null && (
           <div
-            className="w-full px-3 py-3 text-center text-xs font-mono font-bold tracking-wider text-amber-400 sm:px-6 sm:text-sm md:w-auto rounded-none border-2 border-amber-400/80 bg-amber-400/5"
+            className="w-full px-3 py-3 text-center text-xs font-mono font-bold tracking-wider text-amber sm:px-6 sm:text-sm md:w-auto rounded-none border-2 border-amber/80 bg-amber/5"
             title="Time until you can claim free ships again"
           >
             NEXT CLAIM IN: {nextClaimInFormatted}
@@ -1903,7 +1903,7 @@ const ManageNavy: React.FC = () => {
             {/* Same pattern as claim tutorial: brief is absolute beside the highlighted control; here to the RIGHT of construct */}
             <div className="relative z-[100] w-full min-w-0 shrink-0 md:w-auto">
               <div
-                className="border border-yellow-400/90 bg-yellow-400/24 animate-pulse p-[3px]"
+                className="border border-amber/90 bg-amber/24 animate-pulse p-[3px]"
                 style={{ borderRadius: 0 }}
               >
                 <div className="flex w-full min-w-0 flex-col gap-3 md:flex-row md:flex-nowrap md:items-center md:justify-center md:gap-4">
@@ -2022,7 +2022,7 @@ const ManageNavy: React.FC = () => {
                 onNotNow={dismissBuyShipsTutorialNotNow}
               />
               <div
-                className="border border-yellow-400/90 bg-yellow-400/24 animate-pulse p-[3px]"
+                className="border border-amber/90 bg-amber/24 animate-pulse p-[3px]"
                 style={{ borderRadius: 0 }}
               >
                 <button
@@ -2118,7 +2118,7 @@ const ManageNavy: React.FC = () => {
               <div
                 className={
                   showDroneFactoryTutorial
-                    ? "border border-yellow-400/90 bg-yellow-400/24 animate-pulse p-[3px]"
+                    ? "border border-amber/90 bg-amber/24 animate-pulse p-[3px]"
                     : "p-0"
                 }
                 style={{ borderRadius: 0 }}
@@ -2222,7 +2222,7 @@ const ManageNavy: React.FC = () => {
             <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start">
               <div className="flex flex-col gap-1">
                 <h4
-                  className="text-xl font-black uppercase tracking-[0.08em] text-cyan-300 sm:text-2xl"
+                  className="text-xl font-black uppercase tracking-[0.08em] text-primary sm:text-2xl"
                   style={{
                     fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                   }}
@@ -2230,7 +2230,7 @@ const ManageNavy: React.FC = () => {
                   Ship purchasing
                 </h4>
                 <p
-                  className="text-xs font-mono font-bold uppercase tracking-[0.08em] text-red-400"
+                  className="text-xs font-mono font-bold uppercase tracking-[0.08em] text-warning-red"
                   style={{
                     fontFamily:
                       "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -2240,7 +2240,7 @@ const ManageNavy: React.FC = () => {
                 </p>
               </div>
               <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                <span className="font-mono text-sm text-gray-300">
+                <span className="font-mono text-sm text-secondary">
                   PAYMENT METHOD:
                 </span>
                 <div className="flex flex-wrap gap-2">
@@ -2248,8 +2248,8 @@ const ManageNavy: React.FC = () => {
                     onClick={() => setPaymentMethod("FLOW")}
                     className={`px-3 py-1 border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
                       paymentMethod === "FLOW"
-                        ? "border-cyan-400 text-cyan-400 bg-cyan-400/10"
-                        : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
+                        ? "border-cyan text-cyan bg-cyan/10"
+                        : "border-gunmetal text-muted hover:border-steel hover:text-secondary"
                     }`}
                     style={{
                       borderRadius: 0, // Square corners for industrial theme
@@ -2261,8 +2261,8 @@ const ManageNavy: React.FC = () => {
                     onClick={() => setPaymentMethod("UTC")}
                     className={`px-3 py-1 border-2 font-mono font-bold tracking-wider transition-all duration-200 text-sm ${
                       paymentMethod === "UTC"
-                        ? "border-yellow-400 text-yellow-400 bg-yellow-400/10"
-                        : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
+                        ? "border-amber text-amber bg-amber/10"
+                        : "border-gunmetal text-muted hover:border-steel hover:text-secondary"
                     }`}
                     style={{
                       borderRadius: 0, // Square corners for industrial theme
@@ -2369,7 +2369,7 @@ const ManageNavy: React.FC = () => {
                         prev.filter((x) => x.id !== criterion.id),
                       )
                     }
-                    className="px-2 py-1 border border-cyan-500/60 text-cyan-200 hover:border-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/10 text-xs tracking-wide"
+                    className="px-2 py-1 border border-cyan/60 text-primary hover:border-cyan hover:text-primary hover:bg-cyan/10 text-xs tracking-wide"
                     style={{
                       fontFamily:
                         "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -2487,13 +2487,13 @@ const ManageNavy: React.FC = () => {
             }}
           >
             <div
-              className="max-h-[78vh] w-[min(96vw,72rem)] overflow-auto border border-cyan-500/70 bg-[#0b1220] p-4 shadow-2xl"
+              className="max-h-[78vh] w-[min(96vw,72rem)] overflow-auto border border-cyan/70 bg-near-black p-4"
               style={{ borderRadius: 0 }}
               onMouseDown={(e) => e.stopPropagation()}
             >
-              <div className="mb-4 flex items-center justify-between border-b border-cyan-500/30 pb-3">
+              <div className="mb-4 flex items-center justify-between border-b border-cyan/30 pb-3">
                 <h4
-                  className="text-lg font-black uppercase tracking-[0.08em] text-cyan-300"
+                  className="text-lg font-black uppercase tracking-[0.08em] text-primary"
                   style={{
                     fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
                   }}
@@ -2503,7 +2503,7 @@ const ManageNavy: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowFilterWindow(false)}
-                  className="px-3 py-1 border border-cyan-500/80 text-cyan-300 hover:bg-cyan-500/10 text-xs uppercase tracking-wider"
+                  className="px-3 py-1 border border-cyan/80 text-primary hover:bg-cyan/10 text-xs uppercase tracking-wider"
                   style={{
                     fontFamily:
                       "var(--font-jetbrains-mono), 'Courier New', monospace",
@@ -2515,15 +2515,15 @@ const ManageNavy: React.FC = () => {
               </div>
 
               <section
-                className="border border-cyan-500/30 p-3"
+                className="border border-cyan/30 p-3"
                 style={{ borderRadius: 0 }}
               >
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <h5 className="text-sm font-bold uppercase tracking-wider text-cyan-300">
+                  <h5 className="text-sm font-bold uppercase tracking-wider text-primary">
                     Select filter criteria
                   </h5>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs uppercase tracking-wider text-gray-400">
+                    <span className="text-xs uppercase tracking-wider text-muted">
                       Threat at or below
                     </span>
                     <input
@@ -2561,7 +2561,7 @@ const ManageNavy: React.FC = () => {
                     ) &&
                     navyFilterDraftCategory !== "data_threat" && (
                     <div className="flex items-center gap-2">
-                      <span className="text-xs uppercase tracking-wider text-gray-400">
+                      <span className="text-xs uppercase tracking-wider text-muted">
                         {navyFilterCategoryLabel(navyFilterDraftCategory)} value
                       </span>
                       {navyFilterDraftCategory === "data_rank" ? (
@@ -2625,10 +2625,10 @@ const ManageNavy: React.FC = () => {
                   {NAVY_FILTER_GROUPS.map((group) => (
                     <div
                       key={group.label}
-                      className="border border-cyan-500/20 p-2"
+                      className="border border-cyan/20 p-2"
                       style={{ borderRadius: 0 }}
                     >
-                      <div className="mb-2 text-xs uppercase tracking-wider text-cyan-400">
+                      <div className="mb-2 text-xs uppercase tracking-wider text-cyan">
                         {group.label}
                       </div>
                       <div className="flex flex-wrap gap-1.5">
@@ -2666,8 +2666,8 @@ const ManageNavy: React.FC = () => {
                               }}
                               className={`px-2 py-1 text-xs uppercase tracking-wide border ${
                                 navyFilterDraftCategory === category
-                                  ? "border-cyan-300 bg-cyan-500/20 text-cyan-100"
-                                  : "border-gray-600 text-gray-300 hover:border-cyan-400 hover:text-cyan-200"
+                                  ? "border-cyan bg-cyan/20 text-primary"
+                                  : "border-gunmetal text-secondary hover:border-cyan hover:text-primary"
                               }`}
                               style={{
                                 fontFamily:
@@ -2699,7 +2699,7 @@ const ManageNavy: React.FC = () => {
                                         className={`px-2 py-0.5 text-[11px] uppercase tracking-wide border ${
                                           isSelected
                                             ? "border-emerald-300 bg-emerald-500/20 text-emerald-100"
-                                            : "border-gray-600 text-gray-300 hover:border-emerald-400 hover:text-emerald-200"
+                                            : "border-gunmetal text-secondary hover:border-emerald-400 hover:text-emerald-200"
                                         }`}
                                         style={{
                                           fontFamily:
@@ -2993,7 +2993,7 @@ const ManageNavy: React.FC = () => {
                     if (destroyed && inComp) {
                       return (
                         <div className="text-center py-3 px-2 space-y-2">
-                          <div className="text-red-400 text-xs font-mono">
+                          <div className="text-warning-red text-xs font-mono">
                             Destroyed: remove from preset
                           </div>
                           {removeBtn}
@@ -3016,15 +3016,15 @@ const ManageNavy: React.FC = () => {
       {showFleetCompositionLocalModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[300] p-4">
           <div
-            className="max-w-md w-full border-2 border-cyan-400/80 bg-[#0f172a] p-5 shadow-lg"
-            style={{ borderRadius: 0 }}
+            className="max-w-md w-full border-2 bg-near-black p-5"
+            style={{ borderRadius: 0, borderColor: "var(--color-cyan)" }}
             role="dialog"
             aria-modal="true"
             aria-labelledby="fleet-composition-local-title"
           >
             <h3
               id="fleet-composition-local-title"
-              className="text-lg font-bold uppercase tracking-wide text-cyan-300 mb-3"
+              className="text-lg font-bold uppercase tracking-wide text-primary mb-3"
               style={{
                 fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
               }}
@@ -3032,7 +3032,7 @@ const ManageNavy: React.FC = () => {
               Local fleet presets
             </h3>
             <p
-              className="text-sm leading-relaxed text-gray-200 mb-5"
+              className="text-sm leading-relaxed text-primary mb-5"
               style={MANAGE_NAVY_TUTORIAL_MONO}
             >
               Fleet compositions are saved only in this browser (local
@@ -3044,7 +3044,7 @@ const ManageNavy: React.FC = () => {
               <button
                 type="button"
                 onClick={cancelFleetCompositionLocalModal}
-                className="px-4 py-2 border border-gray-500 text-gray-300 hover:bg-gray-700/50 font-mono text-sm"
+                className="px-4 py-2 border border-steel text-secondary hover:bg-steel/50 font-mono text-sm"
                 style={{ borderRadius: 0 }}
               >
                 Cancel
@@ -3052,7 +3052,7 @@ const ManageNavy: React.FC = () => {
               <button
                 type="button"
                 onClick={acknowledgeFleetCompositionLocalModal}
-                className="px-4 py-2 border-2 border-cyan-400 text-cyan-400 hover:bg-cyan-400/10 font-mono font-bold text-sm"
+                className="px-4 py-2 border-2 border-cyan text-cyan hover:bg-cyan/10 font-mono font-bold text-sm"
                 style={{ borderRadius: 0 }}
               >
                 Continue
@@ -3065,15 +3065,15 @@ const ManageNavy: React.FC = () => {
       {/* Recycle Confirmation Modal */}
       {showRecycleModal && shipToRecycle && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-red-400 rounded-none p-6 max-w-md mx-4">
+          <div className="bg-near-black border border-warning-red rounded-none p-6 max-w-md mx-4">
             <div className="text-center">
-              <div className="text-red-400 text-4xl mb-4">☠️</div>
+              <div className="text-warning-red text-4xl mb-4">☠️</div>
               {canRecycle ? (
                 <>
-                  <h3 className="text-xl font-bold text-red-400 mb-4">
+                  <h3 className="text-xl font-bold text-warning-red mb-4">
                     DESTROY SHIP PERMANENTLY?
                   </h3>
-                  <div className="text-cyan-300 mb-4">
+                  <div className="text-primary mb-4">
                     <p className="font-bold">
                       {shipToRecycle.name || `Ship #${shipToRecycle.id}`}
                     </p>
@@ -3081,7 +3081,7 @@ const ManageNavy: React.FC = () => {
                     <ul className="text-sm text-left mt-2 space-y-1">
                       <li>
                         •{" "}
-                        <span className="text-red-400">
+                        <span className="text-warning-red">
                           Permanently destroy
                         </span>{" "}
                         this ship
@@ -3099,7 +3099,7 @@ const ManageNavy: React.FC = () => {
                       </li>
                       <li>
                         •{" "}
-                        <span className="text-red-400">Cannot be reversed</span>{" "}
+                        <span className="text-warning-red">Cannot be reversed</span>{" "}
                         - this is permanent
                       </li>
                     </ul>
@@ -3107,10 +3107,10 @@ const ManageNavy: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <h3 className="text-xl font-bold text-yellow-400 mb-4">
+                  <h3 className="text-xl font-bold text-amber mb-4">
                     INSUFFICIENT PURCHASES
                   </h3>
-                  <div className="text-cyan-300 mb-4">
+                  <div className="text-primary mb-4">
                     <p className="font-bold">
                       {shipToRecycle.name || `Ship #${shipToRecycle.id}`}
                     </p>
@@ -3118,7 +3118,7 @@ const ManageNavy: React.FC = () => {
                       You must purchase at least 10 ships before you can recycle
                       any ships.
                     </p>
-                    <p className="text-sm text-yellow-400 mt-2 font-bold">
+                    <p className="text-sm text-amber mt-2 font-bold">
                       Current purchases:{" "}
                       {amountPurchased ? Number(amountPurchased) : 0} / 10
                       required
@@ -3129,7 +3129,7 @@ const ManageNavy: React.FC = () => {
               <div className="flex gap-4 justify-center">
                 <button
                   onClick={handleRecycleCancel}
-                  className="px-6 py-2 border border-gray-400 text-gray-400 hover:border-gray-300 hover:text-gray-300 hover:bg-gray-400/10 rounded-none font-mono font-bold transition-all duration-200"
+                  className="px-6 py-2 border border-steel text-muted hover:border-secondary hover:text-secondary hover:bg-steel/10 rounded-none font-mono font-bold transition-all duration-200"
                 >
                   CANCEL
                 </button>

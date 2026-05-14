@@ -681,11 +681,11 @@ const Header: React.FC = () => {
                 showMobileWalletMenu && isMobileMenuOpen
                   ? "flex md:flex"
                   : "hidden md:flex"
-              } w-[min(92vw,380px)] md:ml-auto md:w-auto flex-col md:flex-row absolute right-0 top-[calc(100%+8px)] z-[360] border border-solid p-3 shadow-xl bg-[var(--color-near-black)] border-[var(--color-gunmetal)] border-t-[var(--color-steel)] border-l-[var(--color-steel)] md:static md:z-auto md:border-0 md:p-0 md:shadow-none md:bg-transparent`}
+              } w-[min(92vw,380px)] md:ml-auto md:w-auto flex-col md:flex-row absolute right-0 top-[calc(100%+8px)] z-[360] border border-solid p-3 bg-[var(--color-near-black)] border-[var(--color-gunmetal)] border-t-[var(--color-steel)] border-l-[var(--color-steel)] md:static md:z-auto md:border-0 md:p-0 md:bg-transparent`}
             >
               {isConnecting && (
                 <div className="flex items-center md:ml-auto py-1">
-                  <div className="text-cyan-400/60 font-mono text-sm">
+                  <div className="text-cyan/60 font-mono text-sm">
                     Connecting...
                   </div>
                 </div>
@@ -825,7 +825,7 @@ const Header: React.FC = () => {
 
                         {isNetworkMenuOpen && (
                           <div
-                            className="absolute left-0 top-[calc(100%+4px)] z-[130] w-32 border border-solid shadow-lg"
+                            className="absolute left-0 top-[calc(100%+4px)] z-[130] w-32 border border-solid"
                             style={{
                               backgroundColor: "var(--color-near-black)",
                               borderColor: "var(--color-cyan)",

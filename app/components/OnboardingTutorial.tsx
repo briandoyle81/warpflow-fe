@@ -71,7 +71,7 @@ export function OnboardingTutorial({
       <div className="relative h-full w-full overflow-hidden">
         {!currentStep ? (
           <div className="flex min-h-[70vh] items-center justify-center">
-            <div className="text-cyan-300 font-mono">Loading tutorial...</div>
+            <div className="text-cyan font-mono">Loading tutorial...</div>
           </div>
         ) : (
           <>

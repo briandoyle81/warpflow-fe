@@ -44,8 +44,8 @@ function SavedOnChainValue({
     <span
       className={
         multiline
-          ? "text-amber-200/90 font-mono text-[10px] leading-tight text-left max-w-[min(12rem,42vw)] break-all shrink-0 border-l border-gray-600 pl-2"
-          : "text-amber-200/90 font-mono text-xs tabular-nums text-right min-w-[2.75rem] shrink-0 border-l border-gray-600 pl-2"
+          ? "text-amber/90 font-mono text-[10px] leading-tight text-left max-w-[min(12rem,42vw)] break-all shrink-0 border-l border-gunmetal pl-2"
+          : "text-amber/90 font-mono text-xs tabular-nums text-right min-w-[2.75rem] shrink-0 border-l border-gunmetal pl-2"
       }
       title={title ?? defaultTitle}
     >
@@ -75,7 +75,7 @@ function CostsArrayCard({
     (newCosts[field] as number[] | undefined) ?? (costs[field] as number[]);
 
   return (
-    <div className="bg-gray-800 rounded-none p-3">
+    <div className="bg-steel rounded-none p-3">
       <h4 className="text-white font-mono mb-2">{title}</h4>
       <div className="space-y-1 text-sm">
         {values.map((cost, index) => (
@@ -83,7 +83,7 @@ function CostsArrayCard({
             key={index}
             className="flex justify-between items-center gap-2 min-h-[2rem]"
           >
-            <span className="text-gray-400 shrink-0">{getLabel(index)}:</span>
+            <span className="text-text-muted shrink-0">{getLabel(index)}:</span>
             {editing ? (
               <div className="flex items-center gap-2 shrink-0">
                 <input
@@ -105,7 +105,7 @@ function CostsArrayCard({
                       return { ...prev, [field]: base };
                     });
                   }}
-                  className="min-w-[5.5rem] w-[5.5rem] px-2 py-1 bg-gray-700 text-white rounded-none font-mono text-left"
+                  className="min-w-[5.5rem] w-[5.5rem] px-2 py-1 bg-steel text-white rounded-none font-mono text-left"
                 />
                 <SavedOnChainValue show>
                   {(costs[field] as number[])[index]}
@@ -192,7 +192,7 @@ const ShipAttributes: React.FC = () => {
   if (!isConnected) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-400">
+        <p className="text-text-muted">
           Please connect your wallet to view ship attributes.
         </p>
       </div>
@@ -202,11 +202,11 @@ const ShipAttributes: React.FC = () => {
   if (!isOwner) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-400">
+        <p className="text-warning-red">
           Access denied. Only the contract owner can edit ship attributes.
         </p>
-        <p className="text-gray-400 text-sm mt-2">Owner: {owner}</p>
-        <p className="text-gray-400 text-sm">Your address: {address}</p>
+        <p className="text-text-muted text-sm mt-2">Owner: {owner}</p>
+        <p className="text-text-muted text-sm">Your address: {address}</p>
       </div>
     );
   }
@@ -233,30 +233,30 @@ const ShipAttributes: React.FC = () => {
   if (isDataLoading) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-400">Loading ship attributes data...</p>
+        <p className="text-text-muted">Loading ship attributes data...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-900 rounded-none-lg p-4 border border-gray-700">
+      <div className="bg-near-black rounded-none p-4 border border-gunmetal">
         <h2 className="text-xl font-mono text-white mb-4">
           Ship Attributes Management
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-gray-800 rounded-none p-3">
+          <div className="bg-steel rounded-none p-3">
             <h3 className="text-white font-mono mb-2">Current Versions</h3>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-400">Attributes Version:</span>
+                <span className="text-text-muted">Attributes Version:</span>
                 <span className="text-white">
                   {currentAttributesVersion?.toString() || "Loading..."}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Costs Version:</span>
+                <span className="text-text-muted">Costs Version:</span>
                 <span className="text-white">
                   {currentCostsVersion?.toString() || "Loading..."}
                 </span>
@@ -264,15 +264,15 @@ const ShipAttributes: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-none p-3">
+          <div className="bg-steel rounded-none p-3">
             <h3 className="text-white font-mono mb-2">Contract Info</h3>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-400">Owner:</span>
+                <span className="text-text-muted">Owner:</span>
                 <span className="text-white font-mono text-xs">{owner}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Your Address:</span>
+                <span className="text-text-muted">Your Address:</span>
                 <span className="text-white font-mono text-xs">{address}</span>
               </div>
             </div>
@@ -281,7 +281,7 @@ const ShipAttributes: React.FC = () => {
       </div>
 
       {/* Costs Management */}
-      <div className="bg-gray-900 rounded-none-lg p-4 border border-gray-700">
+      <div className="bg-near-black rounded-none p-4 border border-gunmetal">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-mono text-white">Costs Management</h3>
           <button
@@ -300,12 +300,12 @@ const ShipAttributes: React.FC = () => {
         {costs && (
           <div className="space-y-4">
             {editingCosts && (
-              <p className="text-xs text-gray-500 font-mono">
+              <p className="text-xs text-text-muted font-mono">
                 Right column: onchain value until Update Costs succeeds.
               </p>
             )}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-gray-800 rounded-none p-3">
+              <div className="bg-steel rounded-none p-3">
                 <h4 className="text-white font-mono mb-2">Base Cost</h4>
                 {editingCosts ? (
                   <div className="flex items-center gap-2">
@@ -322,7 +322,7 @@ const ShipAttributes: React.FC = () => {
                           : Math.max(0, Math.min(255, num));
                         setNewCosts((prev) => ({ ...prev, baseCost: v }));
                       }}
-                      className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                      className="min-w-0 flex-1 px-2 py-1 bg-steel text-white rounded-none font-mono"
                     />
                     <SavedOnChainValue show>{costs.baseCost}</SavedOnChainValue>
                   </div>
@@ -411,7 +411,7 @@ const ShipAttributes: React.FC = () => {
                     setEditingCosts(false);
                     setNewCosts({});
                   }}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-none font-mono hover:bg-gray-700 transition-colors"
+                  className="px-4 py-2 bg-gunmetal text-white rounded-none font-mono hover:bg-steel transition-colors"
                 >
                   Cancel
                 </button>
@@ -449,7 +449,7 @@ const ShipAttributes: React.FC = () => {
       </div>
 
       {/* Attributes Management */}
-      <div className="bg-gray-900 rounded-none-lg p-4 border border-gray-700">
+      <div className="bg-near-black rounded-none p-4 border border-gunmetal">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-mono text-white">
             Attributes Management
@@ -493,7 +493,7 @@ const ShipAttributes: React.FC = () => {
           return (
             <div className="space-y-4">
               {editingAttributes && (
-                <p className="text-xs text-gray-500 font-mono">
+                <p className="text-xs text-text-muted font-mono">
                   Right column: onchain until submit. Comma-separated fields
                   show the string when you opened edit (contract does not expose
                   those arrays for read).
@@ -501,11 +501,11 @@ const ShipAttributes: React.FC = () => {
               )}
               {/* Base Attributes */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-800 rounded-none p-3">
+                <div className="bg-steel rounded-none p-3">
                   <h4 className="text-white font-mono mb-2">Base Attributes</h4>
                   <div className="space-y-2">
                     <div>
-                      <label className="text-gray-400 text-sm">
+                      <label className="text-text-muted text-sm">
                         Base Hull:
                       </label>
                       {editingAttributes ? (
@@ -521,7 +521,7 @@ const ShipAttributes: React.FC = () => {
                                 baseHull: Number(e.target.value),
                               })
                             }
-                            className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                            className="min-w-0 flex-1 px-2 py-1 bg-steel text-white rounded-none font-mono"
                           />
                           <SavedOnChainValue show>
                             {baseData[1]}
@@ -532,7 +532,7 @@ const ShipAttributes: React.FC = () => {
                       )}
                     </div>
                     <div>
-                      <label className="text-gray-400 text-sm">
+                      <label className="text-text-muted text-sm">
                         Base Speed:
                       </label>
                       {editingAttributes ? (
@@ -548,7 +548,7 @@ const ShipAttributes: React.FC = () => {
                                 baseSpeed: Number(e.target.value),
                               })
                             }
-                            className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                            className="min-w-0 flex-1 px-2 py-1 bg-steel text-white rounded-none font-mono"
                           />
                           <SavedOnChainValue show>
                             {baseData[2]}
@@ -561,11 +561,11 @@ const ShipAttributes: React.FC = () => {
                   </div>
                 </div>
                 {editingAttributes && (
-                  <div className="bg-gray-800 rounded-none p-3">
+                  <div className="bg-steel rounded-none p-3">
                     <h4 className="text-white font-mono mb-2">Global Arrays</h4>
                     <div className="space-y-2 text-xs">
                       <div>
-                        <label className="text-gray-400">
+                        <label className="text-text-muted">
                           Fore Accuracy (comma-separated):
                         </label>
                         <div className="flex items-center gap-2 mt-1">
@@ -580,7 +580,7 @@ const ShipAttributes: React.FC = () => {
                                 .map((p) => Number(p));
                               setNewForeAccuracy(parts);
                             }}
-                            className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                            className="min-w-0 flex-1 px-2 py-1 bg-steel text-white rounded-none font-mono"
                           />
                           <SavedOnChainValue show multiline>
                             {globalArraysAtEditStart?.fore ?? "—"}
@@ -588,7 +588,7 @@ const ShipAttributes: React.FC = () => {
                         </div>
                       </div>
                       <div>
-                        <label className="text-gray-400">
+                        <label className="text-text-muted">
                           Hull Bonuses (comma-separated):
                         </label>
                         <div className="flex items-center gap-2 mt-1">
@@ -603,7 +603,7 @@ const ShipAttributes: React.FC = () => {
                                 .map((p) => Number(p));
                               setNewHullBonuses(parts);
                             }}
-                            className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                            className="min-w-0 flex-1 px-2 py-1 bg-steel text-white rounded-none font-mono"
                           />
                           <SavedOnChainValue show multiline>
                             {globalArraysAtEditStart?.hull ?? "—"}
@@ -611,7 +611,7 @@ const ShipAttributes: React.FC = () => {
                         </div>
                       </div>
                       <div>
-                        <label className="text-gray-400">
+                        <label className="text-text-muted">
                           Engine Speeds (comma-separated):
                         </label>
                         <div className="flex items-center gap-2 mt-1">
@@ -626,7 +626,7 @@ const ShipAttributes: React.FC = () => {
                                 .map((p) => Number(p));
                               setNewEngineSpeeds(parts);
                             }}
-                            className="min-w-0 flex-1 px-2 py-1 bg-gray-700 text-white rounded-none font-mono"
+                            className="min-w-0 flex-1 px-2 py-1 bg-steel text-white rounded-none font-mono"
                           />
                           <SavedOnChainValue show multiline>
                             {globalArraysAtEditStart?.engine ?? "—"}
@@ -639,7 +639,7 @@ const ShipAttributes: React.FC = () => {
               </div>
 
               {/* Gun Data */}
-              <div className="bg-gray-800 rounded-none p-3">
+              <div className="bg-steel rounded-none p-3">
                 <h4 className="text-white font-mono mb-2">Gun Data</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
@@ -653,11 +653,11 @@ const ShipAttributes: React.FC = () => {
 
                     if (!gunData) {
                       return (
-                        <div key={index} className="bg-gray-700 rounded-none p-2">
+                        <div key={index} className="bg-gunmetal rounded-none p-2">
                           <h5 className="text-white font-mono text-sm mb-2">
                             {name} (Loading...)
                           </h5>
-                          <div className="text-gray-400 text-xs">
+                          <div className="text-text-muted text-xs">
                             Loading data...
                           </div>
                         </div>
@@ -665,14 +665,14 @@ const ShipAttributes: React.FC = () => {
                     }
 
                     return (
-                      <div key={index} className="bg-gray-700 rounded-none p-2">
+                      <div key={index} className="bg-gunmetal rounded-none p-2">
                         <h5 className="text-white font-mono text-sm mb-2">
                           {name}
                         </h5>
                         {gunData && (
                           <div className="space-y-1 text-xs">
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 shrink-0">
+                              <span className="text-text-muted shrink-0">
                                 Range:
                               </span>
                               {editingAttributes ? (
@@ -690,7 +690,7 @@ const ShipAttributes: React.FC = () => {
                                       };
                                       setNewGunData(updated);
                                     }}
-                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-slate text-white rounded-none text-xs"
                                   />
                                   <SavedOnChainValue show>
                                     {gunData.range}
@@ -703,7 +703,7 @@ const ShipAttributes: React.FC = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 shrink-0">
+                              <span className="text-text-muted shrink-0">
                                 Damage:
                               </span>
                               {editingAttributes ? (
@@ -721,7 +721,7 @@ const ShipAttributes: React.FC = () => {
                                       };
                                       setNewGunData(updated);
                                     }}
-                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-slate text-white rounded-none text-xs"
                                   />
                                   <SavedOnChainValue show>
                                     {gunData.damage}
@@ -734,7 +734,7 @@ const ShipAttributes: React.FC = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 shrink-0">
+                              <span className="text-text-muted shrink-0">
                                 Movement:
                               </span>
                               {editingAttributes ? (
@@ -753,7 +753,7 @@ const ShipAttributes: React.FC = () => {
                                       };
                                       setNewGunData(updated);
                                     }}
-                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-slate text-white rounded-none text-xs"
                                   />
                                   <SavedOnChainValue show>
                                     {gunData.movement}
@@ -774,7 +774,7 @@ const ShipAttributes: React.FC = () => {
               </div>
 
               {/* Armor Data */}
-              <div className="bg-gray-800 rounded-none p-3">
+              <div className="bg-steel rounded-none p-3">
                 <h4 className="text-white font-mono mb-2">Armor Data</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
@@ -788,11 +788,11 @@ const ShipAttributes: React.FC = () => {
 
                     if (!armorData) {
                       return (
-                        <div key={index} className="bg-gray-700 rounded-none p-2">
+                        <div key={index} className="bg-gunmetal rounded-none p-2">
                           <h5 className="text-white font-mono text-sm mb-2">
                             {name} (Loading...)
                           </h5>
-                          <div className="text-gray-400 text-xs">
+                          <div className="text-text-muted text-xs">
                             Loading data...
                           </div>
                         </div>
@@ -800,14 +800,14 @@ const ShipAttributes: React.FC = () => {
                     }
 
                     return (
-                      <div key={index} className="bg-gray-700 rounded-none p-2">
+                      <div key={index} className="bg-gunmetal rounded-none p-2">
                         <h5 className="text-white font-mono text-sm mb-2">
                           {name}
                         </h5>
                         {armorData && (
                           <div className="space-y-1 text-xs">
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 shrink-0">
+                              <span className="text-text-muted shrink-0">
                                 DR:
                               </span>
                               {editingAttributes ? (
@@ -828,7 +828,7 @@ const ShipAttributes: React.FC = () => {
                                       };
                                       setNewArmorData(updated);
                                     }}
-                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-slate text-white rounded-none text-xs"
                                   />
                                   <SavedOnChainValue show>
                                     {armorData.damageReduction}
@@ -841,7 +841,7 @@ const ShipAttributes: React.FC = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 shrink-0">
+                              <span className="text-text-muted shrink-0">
                                 Movement:
                               </span>
                               {editingAttributes ? (
@@ -860,7 +860,7 @@ const ShipAttributes: React.FC = () => {
                                       };
                                       setNewArmorData(updated);
                                     }}
-                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-slate text-white rounded-none text-xs"
                                   />
                                   <SavedOnChainValue show>
                                     {armorData.movement}
@@ -881,7 +881,7 @@ const ShipAttributes: React.FC = () => {
               </div>
 
               {/* Shield Data */}
-              <div className="bg-gray-800 rounded-none p-3">
+              <div className="bg-steel rounded-none p-3">
                 <h4 className="text-white font-mono mb-2">Shield Data</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
@@ -895,11 +895,11 @@ const ShipAttributes: React.FC = () => {
 
                     if (!shieldData) {
                       return (
-                        <div key={index} className="bg-gray-700 rounded-none p-2">
+                        <div key={index} className="bg-gunmetal rounded-none p-2">
                           <h5 className="text-white font-mono text-sm mb-2">
                             {name} (Loading...)
                           </h5>
-                          <div className="text-gray-400 text-xs">
+                          <div className="text-text-muted text-xs">
                             Loading data...
                           </div>
                         </div>
@@ -907,14 +907,14 @@ const ShipAttributes: React.FC = () => {
                     }
 
                     return (
-                      <div key={index} className="bg-gray-700 rounded-none p-2">
+                      <div key={index} className="bg-gunmetal rounded-none p-2">
                         <h5 className="text-white font-mono text-sm mb-2">
                           {name}
                         </h5>
                         {shieldData && (
                           <div className="space-y-1 text-xs">
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 shrink-0">
+                              <span className="text-text-muted shrink-0">
                                 DR:
                               </span>
                               {editingAttributes ? (
@@ -935,7 +935,7 @@ const ShipAttributes: React.FC = () => {
                                       };
                                       setNewShieldData(updated);
                                     }}
-                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-slate text-white rounded-none text-xs"
                                   />
                                   <SavedOnChainValue show>
                                     {shieldData.damageReduction}
@@ -948,7 +948,7 @@ const ShipAttributes: React.FC = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 shrink-0">
+                              <span className="text-text-muted shrink-0">
                                 Movement:
                               </span>
                               {editingAttributes ? (
@@ -967,7 +967,7 @@ const ShipAttributes: React.FC = () => {
                                       };
                                       setNewShieldData(updated);
                                     }}
-                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-slate text-white rounded-none text-xs"
                                   />
                                   <SavedOnChainValue show>
                                     {shieldData.movement}
@@ -988,7 +988,7 @@ const ShipAttributes: React.FC = () => {
               </div>
 
               {/* Special Data */}
-              <div className="bg-gray-800 rounded-none p-3">
+              <div className="bg-steel rounded-none p-3">
                 <h4 className="text-white font-mono mb-2">Special Data</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
@@ -1002,11 +1002,11 @@ const ShipAttributes: React.FC = () => {
 
                     if (!specialData) {
                       return (
-                        <div key={index} className="bg-gray-700 rounded-none p-2">
+                        <div key={index} className="bg-gunmetal rounded-none p-2">
                           <h5 className="text-white font-mono text-sm mb-2">
                             {name} (Loading...)
                           </h5>
-                          <div className="text-gray-400 text-xs">
+                          <div className="text-text-muted text-xs">
                             Loading data...
                           </div>
                         </div>
@@ -1014,14 +1014,14 @@ const ShipAttributes: React.FC = () => {
                     }
 
                     return (
-                      <div key={index} className="bg-gray-700 rounded-none p-2">
+                      <div key={index} className="bg-gunmetal rounded-none p-2">
                         <h5 className="text-white font-mono text-sm mb-2">
                           {name}
                         </h5>
                         {specialData && (
                           <div className="space-y-1 text-xs">
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 shrink-0">
+                              <span className="text-text-muted shrink-0">
                                 Range:
                               </span>
                               {editingAttributes ? (
@@ -1046,7 +1046,7 @@ const ShipAttributes: React.FC = () => {
                                       };
                                       setNewSpecialData(updated);
                                     }}
-                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-slate text-white rounded-none text-xs"
                                   />
                                   <SavedOnChainValue show>
                                     {specialData.range}
@@ -1059,7 +1059,7 @@ const ShipAttributes: React.FC = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 shrink-0">
+                              <span className="text-text-muted shrink-0">
                                 Strength:
                               </span>
                               {editingAttributes ? (
@@ -1084,7 +1084,7 @@ const ShipAttributes: React.FC = () => {
                                       };
                                       setNewSpecialData(updated);
                                     }}
-                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-slate text-white rounded-none text-xs"
                                   />
                                   <SavedOnChainValue show>
                                     {specialData.strength}
@@ -1097,7 +1097,7 @@ const ShipAttributes: React.FC = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-400 shrink-0">
+                              <span className="text-text-muted shrink-0">
                                 Movement:
                               </span>
                               {editingAttributes ? (
@@ -1122,7 +1122,7 @@ const ShipAttributes: React.FC = () => {
                                       };
                                       setNewSpecialData(updated);
                                     }}
-                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-gray-600 text-white rounded-none text-xs"
+                                    className="min-w-[4.25rem] w-[4.25rem] px-1 py-0.5 bg-slate text-white rounded-none text-xs"
                                   />
                                   <SavedOnChainValue show>
                                     {specialData.movement}
@@ -1157,7 +1157,7 @@ const ShipAttributes: React.FC = () => {
                       setNewHullBonuses(null);
                       setNewEngineSpeeds(null);
                     }}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-none font-mono hover:bg-gray-700 transition-colors"
+                    className="px-4 py-2 bg-gunmetal text-white rounded-none font-mono hover:bg-steel transition-colors"
                   >
                     Cancel
                   </button>

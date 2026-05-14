@@ -397,7 +397,7 @@ const ShipConstructor: React.FC = () => {
   return (
     <div className="w-full max-w-7xl mx-auto">
       <div
-        className="border border-cyan-400/30 bg-gray-900 p-3 md:p-6"
+        className="border border-cyan/30 bg-near-black p-3 md:p-6"
         style={{
           borderRadius: 0, // Square corners for industrial theme
         }}
@@ -409,8 +409,8 @@ const ShipConstructor: React.FC = () => {
                 onClick={() => setMode("customize")}
                 className={`w-full border-2 px-3 py-2 text-xs font-mono font-bold tracking-wider transition-all duration-200 sm:w-auto sm:px-4 sm:text-sm ${
                   mode === "customize"
-                    ? "border-yellow-400 text-yellow-400 bg-yellow-400/10"
-                    : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
+                    ? "border-amber text-amber bg-amber/10"
+                    : "border-gunmetal text-text-muted hover:border-steel hover:text-text-muted"
                 }`}
                 style={{
                   borderRadius: 0, // Square corners for industrial theme
@@ -422,8 +422,8 @@ const ShipConstructor: React.FC = () => {
                 onClick={() => setMode("create")}
                 className={`w-full border-2 px-3 py-2 text-xs font-mono font-bold tracking-wider transition-all duration-200 sm:w-auto sm:px-4 sm:text-sm ${
                   mode === "create"
-                    ? "border-cyan-400 text-cyan-400 bg-cyan-400/10"
-                    : "border-gray-600 text-gray-600 hover:border-gray-500 hover:text-gray-500"
+                    ? "border-cyan text-cyan bg-cyan/10"
+                    : "border-gunmetal text-text-muted hover:border-steel hover:text-text-muted"
                 }`}
                 style={{
                   borderRadius: 0, // Square corners for industrial theme
@@ -437,12 +437,12 @@ const ShipConstructor: React.FC = () => {
 
         {mode === "customize" && (
           <div
-            className="mb-4 border border-gray-700 bg-gray-800 p-3 md:mb-6 md:p-4"
+            className="mb-4 border border-gunmetal bg-steel p-3 md:mb-6 md:p-4"
             style={{
               borderRadius: 0, // Square corners for industrial theme
             }}
           >
-            <label className="block text-sm font-bold text-cyan-300 mb-2 font-mono">
+            <label className="block text-sm font-bold text-cyan mb-2 font-mono">
               SELECT SHIP TO CUSTOMIZE:
             </label>
             <select
@@ -452,10 +452,8 @@ const ShipConstructor: React.FC = () => {
                 setSelectedShipId(shipId);
               }}
               disabled={isLoadingShips}
-              className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 font-mono"
-              style={{
-                borderRadius: 0, // Square corners for industrial theme
-              }}
+              className="w-full px-3 py-2 bg-near-black border text-cyan focus:outline-none focus:ring-2 focus:ring-cyan font-mono"
+              style={{ borderRadius: 0, borderColor: "var(--color-cyan)" }}
             >
               <option value="">-- Select a ship --</option>
               {ships
@@ -470,103 +468,99 @@ const ShipConstructor: React.FC = () => {
         )}
 
         {controlsDisabled && (
-          <div className="mb-3 flex items-center gap-2 text-sm font-mono text-yellow-300">
+          <div className="mb-3 flex items-center gap-2 text-sm font-mono text-amber">
             <span>Select a constructed ship to enable controls.</span>
             <div className="relative inline-block">
               <button
                 type="button"
                 onMouseEnter={() => setShowTooltip(true)}
                 onMouseLeave={() => setShowTooltip(false)}
-                className="w-5 h-5 flex items-center justify-center border border-cyan-400 text-cyan-400 hover:bg-cyan-400/10 transition-colors font-bold text-xs"
-                style={{
-                  borderRadius: 0, // Square corners for industrial theme
-                }}
+                className="w-5 h-5 flex items-center justify-center border text-cyan hover:bg-cyan/10 transition-colors font-bold text-xs"
+                style={{ borderRadius: 0, borderColor: "var(--color-cyan)" }}
                 aria-label="Ship modification help"
               >
                 ?
               </button>
               {showTooltip && (
                 <div
-                  className="absolute left-0 top-full z-50 mt-2 max-h-[80vh] w-[min(700px,92vw)] overflow-y-auto border-2 border-cyan-400 bg-black p-3 text-sm font-mono text-cyan-300 shadow-lg md:w-[700px] md:p-4"
-                  style={{
-                    borderRadius: 0, // Square corners for industrial theme
-                  }}
+                  className="absolute left-0 top-full z-50 mt-2 max-h-[80vh] w-[min(700px,92vw)] overflow-y-auto border-2 bg-near-black p-3 text-sm font-mono text-cyan md:w-[700px] md:p-4"
+                  style={{ borderRadius: 0, borderColor: "var(--color-cyan)" }}
                   onMouseEnter={() => setShowTooltip(true)}
                   onMouseLeave={() => setShowTooltip(false)}
                 >
                   <div className="space-y-2">
-                    <div className="font-bold text-cyan-400 mb-3 text-center">
+                    <div className="font-bold text-cyan mb-3 text-center">
                       SHIP MODIFICATION
                     </div>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                       {/* Left Column - Cost Information */}
-                      <div className="space-y-2 border-b border-cyan-400/30 pb-3 text-xs md:border-b-0 md:border-r md:pb-0 md:pr-4">
-                        <p className="font-bold text-yellow-400">
+                      <div className="space-y-2 border-b border-cyan/30 pb-3 text-xs md:border-b-0 md:border-r md:pb-0 md:pr-4">
+                        <p className="font-bold text-amber">
                           EXACT COST CALCULATION:
                         </p>
                         <p>
                           Base cost = Tier 0 price ÷ 5 = 4.99 UTC ÷ 5 ={" "}
-                          <strong className="text-cyan-400">0.998 UTC</strong>
+                          <strong className="text-cyan">0.998 UTC</strong>
                         </p>
                         <p className="mt-1">
                           Total cost = Base cost × 2
                           <sup>(total modifications)</sup>
                         </p>
 
-                        <p className="mt-3 font-bold text-yellow-400">
+                        <p className="mt-3 font-bold text-amber">
                           COST BY MODIFICATION COUNT:
                         </p>
                         <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 font-mono text-xs">
                           <li>
                             0 modifications:{" "}
-                            <strong className="text-green-400">
+                            <strong className="text-phosphor-green">
                               0.998 UTC
                             </strong>{" "}
                             (base)
                           </li>
                           <li>
                             1 modification:{" "}
-                            <strong className="text-green-400">
+                            <strong className="text-phosphor-green">
                               1.996 UTC
                             </strong>{" "}
                             (×2)
                           </li>
                           <li>
                             2 modifications:{" "}
-                            <strong className="text-yellow-400">
+                            <strong className="text-amber">
                               3.992 UTC
                             </strong>{" "}
                             (×4)
                           </li>
                           <li>
                             3 modifications:{" "}
-                            <strong className="text-yellow-400">
+                            <strong className="text-amber">
                               7.984 UTC
                             </strong>{" "}
                             (×8)
                           </li>
                           <li>
                             4 modifications:{" "}
-                            <strong className="text-orange-400">
+                            <strong className="text-amber">
                               15.968 UTC
                             </strong>{" "}
                             (×16)
                           </li>
                           <li>
                             5 modifications:{" "}
-                            <strong className="text-orange-400">
+                            <strong className="text-amber">
                               31.936 UTC
                             </strong>{" "}
                             (×32)
                           </li>
                           <li>
                             6 modifications:{" "}
-                            <strong className="text-red-400">63.872 UTC</strong>{" "}
+                            <strong className="text-warning-red">63.872 UTC</strong>{" "}
                             (×64)
                           </li>
                           <li>
                             7+ modifications:{" "}
-                            <strong className="text-red-400">
+                            <strong className="text-warning-red">
                               Exponentially higher
                             </strong>
                           </li>
@@ -576,7 +570,7 @@ const ShipConstructor: React.FC = () => {
                           ship&apos;s modification count + new changes
                         </p>
 
-                        <p className="mt-3 font-bold text-yellow-400">
+                        <p className="mt-3 font-bold text-amber">
                           WHAT COUNTS AS A MODIFICATION:
                         </p>
                         <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 text-xs">
@@ -595,7 +589,7 @@ const ShipConstructor: React.FC = () => {
                           </li>
                         </ul>
 
-                        <p className="mt-3 font-bold text-yellow-400">
+                        <p className="mt-3 font-bold text-amber">
                           PAYMENT PROCESS:
                         </p>
                         <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 text-xs">
@@ -610,7 +604,7 @@ const ShipConstructor: React.FC = () => {
 
                       {/* Right Column - Property Information */}
                       <div className="space-y-2 text-xs md:pl-4">
-                        <p className="font-bold text-yellow-400">
+                        <p className="font-bold text-amber">
                           PROPERTIES YOU CAN CHANGE:
                         </p>
                         <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 text-xs">
@@ -623,7 +617,7 @@ const ShipConstructor: React.FC = () => {
                           <li>Shiny status (costs 3 modifications)</li>
                         </ul>
 
-                        <p className="mt-3 font-bold text-red-400">
+                        <p className="mt-3 font-bold text-warning-red">
                           PROPERTIES YOU CANNOT CHANGE:
                         </p>
                         <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 text-xs">
@@ -636,7 +630,7 @@ const ShipConstructor: React.FC = () => {
                           </li>
                         </ul>
 
-                        <p className="mt-3 font-bold text-yellow-400">
+                        <p className="mt-3 font-bold text-amber">
                           RESTRICTIONS:
                         </p>
                         <ul className="list-disc list-inside ml-2 space-y-0.5 mt-1 text-xs">
@@ -667,25 +661,26 @@ const ShipConstructor: React.FC = () => {
           >
             {/* Equipment Section */}
             <div
-              className="border border-gray-700 bg-gray-800 p-3 md:p-4"
+              className="border border-gunmetal bg-steel p-3 md:p-4"
               style={{
                 borderRadius: 0, // Square corners for industrial theme
               }}
             >
-              <h3 className="text-lg font-bold text-cyan-300 mb-4 font-mono">
+              <h3 className="text-lg font-bold text-cyan mb-4 font-mono">
                 EQUIPMENT
               </h3>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm text-cyan-300 mb-2">
+                  <label className="block text-sm text-cyan mb-2">
                     Main Weapon
                   </label>
                   <select
                     value={mainWeapon}
                     onChange={(e) => setMainWeapon(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    className="w-full px-3 py-2 bg-near-black border text-cyan focus:outline-none focus:ring-2 focus:ring-cyan"
                     style={{
                       borderRadius: 0, // Square corners for industrial theme
+                      borderColor: "var(--color-cyan)",
                     }}
                   >
                     <option value={0}>Laser</option>
@@ -696,11 +691,11 @@ const ShipConstructor: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-cyan-300 mb-2">
+                  <label className="block text-sm text-cyan mb-2">
                     Defense Type
                   </label>
                   <div className="mb-3 flex flex-wrap gap-3 sm:gap-4">
-                    <label className="flex items-center gap-2 text-sm text-cyan-300 cursor-pointer">
+                    <label className="flex items-center gap-2 text-sm text-cyan cursor-pointer">
                       <input
                         type="radio"
                         name="defenseType"
@@ -709,11 +704,11 @@ const ShipConstructor: React.FC = () => {
                           setArmor(0);
                           setShields(0);
                         }}
-                        className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 focus:ring-cyan-400 focus:ring-2"
+                        className="w-4 h-4 text-cyan bg-black/60 border-cyan focus:ring-cyan focus:ring-2"
                       />
                       <span>None</span>
                     </label>
-                    <label className="flex items-center gap-2 text-sm text-cyan-300 cursor-pointer">
+                    <label className="flex items-center gap-2 text-sm text-cyan cursor-pointer">
                       <input
                         type="radio"
                         name="defenseType"
@@ -722,11 +717,11 @@ const ShipConstructor: React.FC = () => {
                           if (armor === 0) setArmor(1);
                           setShields(0);
                         }}
-                        className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 focus:ring-cyan-400 focus:ring-2"
+                        className="w-4 h-4 text-cyan bg-black/60 border-cyan focus:ring-cyan focus:ring-2"
                       />
                       <span>Armor</span>
                     </label>
-                    <label className="flex items-center gap-2 text-sm text-cyan-300 cursor-pointer">
+                    <label className="flex items-center gap-2 text-sm text-cyan cursor-pointer">
                       <input
                         type="radio"
                         name="defenseType"
@@ -735,14 +730,14 @@ const ShipConstructor: React.FC = () => {
                           if (shields === 0) setShields(1);
                           setArmor(0);
                         }}
-                        className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 focus:ring-cyan-400 focus:ring-2"
+                        className="w-4 h-4 text-cyan bg-black/60 border-cyan focus:ring-cyan focus:ring-2"
                       />
                       <span>Shields</span>
                     </label>
                   </div>
                   {armor > 0 && (
                     <div>
-                      <label className="block text-xs text-cyan-300 mb-1">
+                      <label className="block text-xs text-cyan mb-1">
                         Armor Level
                       </label>
                       <select
@@ -752,9 +747,10 @@ const ShipConstructor: React.FC = () => {
                           setArmor(newArmor);
                           if (newArmor > 0) setShields(0);
                         }}
-                        className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                        className="w-full px-3 py-2 bg-near-black border text-cyan focus:outline-none focus:ring-2 focus:ring-cyan"
                         style={{
                           borderRadius: 0, // Square corners for industrial theme
+                          borderColor: "var(--color-cyan)",
                         }}
                       >
                         <option value={1}>Light</option>
@@ -765,7 +761,7 @@ const ShipConstructor: React.FC = () => {
                   )}
                   {shields > 0 && (
                     <div>
-                      <label className="block text-xs text-cyan-300 mb-1">
+                      <label className="block text-xs text-cyan mb-1">
                         Shield Level
                       </label>
                       <select
@@ -775,9 +771,10 @@ const ShipConstructor: React.FC = () => {
                           setShields(newShields);
                           if (newShields > 0) setArmor(0);
                         }}
-                        className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                        className="w-full px-3 py-2 bg-near-black border text-cyan focus:outline-none focus:ring-2 focus:ring-cyan"
                         style={{
                           borderRadius: 0, // Square corners for industrial theme
+                          borderColor: "var(--color-cyan)",
                         }}
                       >
                         <option value={1}>Basic</option>
@@ -789,15 +786,16 @@ const ShipConstructor: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-cyan-300 mb-2">
+                  <label className="block text-sm text-cyan mb-2">
                     Special
                   </label>
                   <select
                     value={special}
                     onChange={(e) => setSpecial(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    className="w-full px-3 py-2 bg-near-black border text-cyan focus:outline-none focus:ring-2 focus:ring-cyan"
                     style={{
                       borderRadius: 0, // Square corners for industrial theme
+                      borderColor: "var(--color-cyan)",
                     }}
                   >
                     <option value={0}>None</option>
@@ -811,17 +809,17 @@ const ShipConstructor: React.FC = () => {
 
             {/* Traits Section */}
             <div
-              className="border border-gray-700 bg-gray-800 p-3 md:p-4"
+              className="border border-gunmetal bg-steel p-3 md:p-4"
               style={{
                 borderRadius: 0, // Square corners for industrial theme
               }}
             >
-              <h3 className="text-lg font-bold text-cyan-300 mb-4 font-mono">
+              <h3 className="text-lg font-bold text-cyan mb-4 font-mono">
                 TRAITS
               </h3>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm text-cyan-300 mb-2">
+                  <label className="block text-sm text-cyan mb-2">
                     Accuracy: {accuracy}
                   </label>
                   <input
@@ -835,7 +833,7 @@ const ShipConstructor: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-cyan-300 mb-2">
+                  <label className="block text-sm text-cyan mb-2">
                     Hull: {hull}
                   </label>
                   <input
@@ -849,7 +847,7 @@ const ShipConstructor: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-cyan-300 mb-2">
+                  <label className="block text-sm text-cyan mb-2">
                     Speed: {speed}
                   </label>
                   <input
@@ -863,7 +861,7 @@ const ShipConstructor: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-cyan-300 mb-2">
+                  <label className="block text-sm text-cyan mb-2">
                     Variant: {variant}
                   </label>
                   <input
@@ -872,12 +870,10 @@ const ShipConstructor: React.FC = () => {
                     value={variant}
                     onChange={(e) => setVariant(Number(e.target.value))}
                     disabled={isEditingExisting}
-                    className={`w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
+                    className={`w-full px-3 py-2 bg-near-black border text-cyan focus:outline-none focus:ring-2 focus:ring-cyan ${
                       isEditingExisting ? "opacity-50 cursor-not-allowed" : ""
                     }`}
-                    style={{
-                      borderRadius: 0, // Square corners for industrial theme
-                    }}
+                    style={{ borderRadius: 0, borderColor: "var(--color-cyan)" }}
                   />
                 </div>
               </div>
@@ -885,17 +881,17 @@ const ShipConstructor: React.FC = () => {
 
             {/* Colors Section */}
             <div
-              className="border border-gray-700 bg-gray-800 p-3 md:p-4"
+              className="border border-gunmetal bg-steel p-3 md:p-4"
               style={{
                 borderRadius: 0, // Square corners for industrial theme
               }}
             >
-              <h3 className="text-lg font-bold text-cyan-300 mb-4 font-mono">
+              <h3 className="text-lg font-bold text-cyan mb-4 font-mono">
                 COLORS (Primary)
               </h3>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm text-cyan-300 mb-2">
+                  <label className="block text-sm text-cyan mb-2">
                     Hue 1: {h1}
                   </label>
                   <input
@@ -909,7 +905,7 @@ const ShipConstructor: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-cyan-300 mb-2">
+                  <label className="block text-sm text-cyan mb-2">
                     Saturation 1: {s1}
                   </label>
                   <input
@@ -923,7 +919,7 @@ const ShipConstructor: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-cyan-300 mb-2">
+                  <label className="block text-sm text-cyan mb-2">
                     Lightness 1: {l1}
                   </label>
                   <input
@@ -943,18 +939,18 @@ const ShipConstructor: React.FC = () => {
 
             {/* ShipData Section */}
             <div
-              className="border border-gray-700 bg-gray-800 p-3 md:p-4"
+              className="border border-gunmetal bg-steel p-3 md:p-4"
               style={{
                 borderRadius: 0, // Square corners for industrial theme
               }}
             >
-              <h3 className="text-lg font-bold text-cyan-300 mb-4 font-mono">
+              <h3 className="text-lg font-bold text-cyan mb-4 font-mono">
                 SHIP DATA
               </h3>
               <div className="space-y-3">
                 {mode === "customize" && (
                   <div>
-                    <label className="block text-sm text-cyan-300 mb-2">
+                    <label className="block text-sm text-cyan mb-2">
                       Ship Name
                     </label>
                     <input
@@ -962,22 +958,23 @@ const ShipConstructor: React.FC = () => {
                       value={shipName}
                       onChange={(e) => setShipName(e.target.value)}
                       disabled={isEditingExisting}
-                      className={`w-full px-3 py-2 bg-gray-900 border border-cyan-400 text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 font-mono ${
+                      className={`w-full px-3 py-2 bg-near-black border text-cyan focus:outline-none focus:ring-2 focus:ring-cyan font-mono ${
                         isEditingExisting ? "opacity-50 cursor-not-allowed" : ""
                       }`}
                       style={{
                         borderRadius: 0, // Square corners for industrial theme
+                        borderColor: "var(--color-cyan)",
                       }}
                       placeholder="Enter ship name"
                     />
                   </div>
                 )}
-                <label className="flex items-center gap-2 text-sm text-cyan-300 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-cyan cursor-pointer">
                   <input
                     type="checkbox"
                     checked={shiny}
                     onChange={(e) => setShiny(e.target.checked)}
-                    className="w-4 h-4 text-cyan-400 bg-black/60 border-cyan-400 focus:ring-cyan-400 focus:ring-2"
+                    className="w-4 h-4 text-cyan bg-black/60 border-cyan focus:ring-cyan focus:ring-2"
                     style={{
                       borderRadius: 0, // Square corners for industrial theme
                     }}
@@ -992,7 +989,7 @@ const ShipConstructor: React.FC = () => {
               selectedShipId &&
               buildDroneYardShipStruct && (
                 <div
-                  className="border border-yellow-400/50 bg-gray-800 p-3 md:p-4"
+                  className="border border-amber/50 bg-steel p-3 md:p-4"
                   style={{
                     borderRadius: 0, // Square corners for industrial theme
                   }}
@@ -1010,7 +1007,7 @@ const ShipConstructor: React.FC = () => {
                         CONTRACT_ADDRESSES.DRONE_YARD as `0x${string}`,
                         modificationCost ?? 0n,
                       ]}
-                      className="w-full px-6 py-3 mb-3 rounded-none border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full px-6 py-3 mb-3 rounded-none border-2 border-amber text-amber hover:border-amber hover:text-amber hover:bg-amber/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       loadingText="[APPROVING UTC...]"
                       errorText="[ERROR APPROVING]"
                       onSuccess={() => {
@@ -1044,7 +1041,7 @@ const ShipConstructor: React.FC = () => {
                     abi={CONTRACT_ABIS.DRONE_YARD as any}
                     functionName="modifyShip"
                     args={[selectedShipId, buildDroneYardShipStruct]}
-                    className="w-full px-6 py-3 rounded-none border-2 border-yellow-400 text-yellow-400 hover:border-yellow-300 hover:text-yellow-300 hover:bg-yellow-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-6 py-3 rounded-none border-2 border-amber text-amber hover:border-amber hover:text-amber hover:bg-amber/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     loadingText="[CUSTOMIZING SHIP...]"
                     errorText="[ERROR CUSTOMIZING]"
                     disabled={
@@ -1094,16 +1091,16 @@ const ShipConstructor: React.FC = () => {
 
           {/* Preview Panel */}
           <div
-            className="border border-gray-700 bg-gray-800 p-3 md:p-4"
+            className="border border-gunmetal bg-steel p-3 md:p-4"
             style={{
               borderRadius: 0, // Square corners for industrial theme
             }}
           >
-            <h3 className="text-lg font-bold text-cyan-300 mb-4 font-mono">
+            <h3 className="text-lg font-bold text-cyan mb-4 font-mono">
               PREVIEW
             </h3>
             <div
-              className="flex min-h-[260px] flex-col items-center justify-center bg-gray-900 p-3 sm:min-h-[320px] md:min-h-[400px] md:p-4"
+              className="flex min-h-[260px] flex-col items-center justify-center bg-near-black p-3 sm:min-h-[320px] md:min-h-[400px] md:p-4"
               style={{
                 borderRadius: 0, // Square corners for industrial theme
               }}
@@ -1116,15 +1113,15 @@ const ShipConstructor: React.FC = () => {
                   style={{ imageRendering: "pixelated" }}
                 />
               ) : (
-                <div className="text-red-400">Error rendering ship</div>
+                <div className="text-warning-red">Error rendering ship</div>
               )}
             </div>
             {!constructed && (
-              <div className="mt-2 text-xs text-yellow-400 text-center">
+              <div className="mt-2 text-xs text-amber text-center">
                 Note: Unconstructed ships show a placeholder image
               </div>
             )}
-            <div className="mt-4 text-xs text-gray-400 font-mono space-y-1">
+            <div className="mt-4 text-xs text-text-muted font-mono space-y-1">
               <div>
                 Equipment: Weapon={mainWeapon}, Armor={armor}, Shields={shields}
                 , Special={special}
@@ -1144,20 +1141,20 @@ const ShipConstructor: React.FC = () => {
 
             {/* Changes and Cost (only in customize mode) */}
             {mode === "customize" && originalShip && (
-              <div className="mt-6 pt-4 border-t border-gray-700">
-                <h4 className="text-sm font-bold text-yellow-400 mb-3 font-mono">
+              <div className="mt-6 pt-4 border-t border-gunmetal">
+                <h4 className="text-sm font-bold text-amber mb-3 font-mono">
                   CUSTOMIZATION SUMMARY
                 </h4>
                 {changes.length > 0 ? (
                   <div className="space-y-2">
-                    <div className="text-xs font-bold text-cyan-300 mb-2 font-mono">
+                    <div className="text-xs font-bold text-cyan mb-2 font-mono">
                       CHANGES:
                     </div>
                     <div className="space-y-1 max-h-[200px] overflow-y-auto">
                       {changes.map((change, index) => (
                         <div
                           key={index}
-                          className="text-xs text-gray-300 font-mono pl-2 border-l-2 border-cyan-400/30"
+                          className="text-xs text-text-secondary font-mono pl-2 border-l-2 border-cyan/30"
                         >
                           • {change}
                         </div>
@@ -1165,8 +1162,8 @@ const ShipConstructor: React.FC = () => {
                     </div>
                     {modificationCost !== undefined &&
                       modificationCost !== null && (
-                        <div className="mt-4 pt-3 border-t border-gray-700">
-                          <div className="text-sm font-bold text-yellow-300 font-mono">
+                        <div className="mt-4 pt-3 border-t border-gunmetal">
+                          <div className="text-sm font-bold text-amber font-mono">
                             COST TO MODIFY (ON-CHAIN):{" "}
                             {formatEther(modificationCost as bigint)} UTC
                           </div>
@@ -1174,7 +1171,7 @@ const ShipConstructor: React.FC = () => {
                       )}
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-500 font-mono">
+                  <div className="text-xs text-text-muted font-mono">
                     No changes detected
                   </div>
                 )}

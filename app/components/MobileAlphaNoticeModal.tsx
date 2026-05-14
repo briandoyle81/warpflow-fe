@@ -84,7 +84,7 @@ export default function MobileAlphaNoticeModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-full max-w-md border-2 border-solid p-5 shadow-xl"
+        className="w-full max-w-md border-2 border-solid p-5"
         style={{
           backgroundColor: "var(--color-slate)",
           borderColor: "var(--color-cyan)",
@@ -96,7 +96,7 @@ export default function MobileAlphaNoticeModal() {
       >
         <h2
           id={titleId}
-          className="mb-3 text-lg font-bold uppercase tracking-wider text-cyan-400"
+          className="mb-3 text-lg font-bold uppercase tracking-wider text-cyan"
           style={{
             fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
           }}

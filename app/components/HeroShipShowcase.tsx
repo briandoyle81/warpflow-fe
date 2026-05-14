@@ -212,12 +212,12 @@ export const HeroShipShowcase: React.FC<{
         : "";
 
   const accent = side === "enemy" ? "var(--color-warning-red)" : "var(--color-cyan)";
-  const accentBorderClass = side === "enemy" ? "border-red-400" : "border-blue-400";
-  const accentTextClass = side === "enemy" ? "text-red-300" : "text-cyan-300";
+  const accentBorderClass = side === "enemy" ? "border-warning-red" : "border-cyan";
+  const accentTextClass = side === "enemy" ? "text-warning-red" : "text-cyan";
   const accentSoftBorderClass =
-    side === "enemy" ? "border-red-400/30" : "border-blue-400/30";
+    side === "enemy" ? "border-warning-red/30" : "border-cyan/30";
   const accentDividerClass =
-    side === "enemy" ? "border-red-400/20" : "border-blue-400/20";
+    side === "enemy" ? "border-warning-red/20" : "border-cyan/20";
   const accentGlow = side === "enemy" ? "rgba(255, 77, 77, 0.4)" : "rgba(86, 214, 255, 0.4)";
   const accentInset = side === "enemy" ? "rgba(255, 77, 77, 0.1)" : "rgba(86, 214, 255, 0.1)";
   const flipSprite = side === "allied";
@@ -302,7 +302,7 @@ export const HeroShipShowcase: React.FC<{
                     }`}
                   >
                     <span
-                      className="border border-yellow-400 bg-yellow-400/20 px-2 py-0.5 text-xs text-yellow-400 sm:px-2.5 sm:text-sm"
+                      className="border border-amber bg-amber/20 px-2 py-0.5 text-xs text-amber sm:px-2.5 sm:text-sm"
                       style={{
                         borderRadius: 0,
                         fontFamily: "var(--font-mono), monospace",
@@ -371,33 +371,33 @@ export const HeroShipShowcase: React.FC<{
           >
             <div className="flex min-w-0 justify-between gap-2">
               <span className="shrink-0 opacity-60">Range:</span>
-              <span className="truncate text-right font-bold text-green-400">
+              <span className="truncate text-right font-bold text-phosphor-green">
                 {shipAttributes.range}
               </span>
             </div>
             <div className="flex min-w-0 justify-between gap-2">
               <span className="shrink-0 opacity-60">Damage:</span>
-              <span className="truncate text-right font-bold text-red-400">
+              <span className="truncate text-right font-bold text-warning-red">
                 {shipAttributes.gunDamage}
               </span>
             </div>
             <div className="flex min-w-0 justify-between gap-2">
               <span className="shrink-0 opacity-60">Hull:</span>
-              <span className="truncate text-right font-bold text-amber-400">
+              <span className="truncate text-right font-bold text-amber">
                 {shipAttributes.hullPoints}/{shipAttributes.maxHullPoints}
               </span>
             </div>
             <div className="flex min-w-0 justify-between gap-2">
               <span className="shrink-0 opacity-60">Move:</span>
               <span
-                className={`truncate text-right font-bold ${side === "enemy" ? "text-red-400" : "text-cyan-400"}`}
+                className={`truncate text-right font-bold ${side === "enemy" ? "text-warning-red" : "text-cyan"}`}
               >
                 {shipAttributes.movement}
               </span>
             </div>
             <div className="flex min-w-0 justify-between gap-2">
               <span className="shrink-0 opacity-60">Defense:</span>
-              <span className="truncate text-right font-bold text-yellow-400">
+              <span className="truncate text-right font-bold text-amber">
                 {shipAttributes.damageReduction}%
               </span>
             </div>
@@ -438,7 +438,7 @@ export const HeroShipShowcase: React.FC<{
               />
               {heroShip.shipData.constructed && (
                 <div
-                  className="pointer-events-none absolute right-[2.5%] top-[5%] z-10 leading-none text-yellow-400"
+                  className="pointer-events-none absolute right-[2.5%] top-[5%] z-10 leading-none text-amber"
                   style={{
                     fontSize: SHIP_IMAGE_RANK_STAR_BOX,
                   }}

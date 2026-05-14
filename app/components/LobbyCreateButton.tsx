@@ -277,7 +277,7 @@ export function LobbyCreateButton({
 
     return (
       <div className="flex flex-col gap-2">
-        <div className="text-xs text-yellow-400 font-mono">
+        <div className="text-xs text-amber font-mono">
           {feeBreakdown.length > 0 && (
             <div>
               Required: {feeBreakdown.join(" + ")} ={" "}

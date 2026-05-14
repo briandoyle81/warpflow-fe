@@ -54,12 +54,12 @@ const Profile: React.FC = () => {
     if (
       game.metadata.winner === "0x0000000000000000000000000000000000000000"
     ) {
-      return { text: "IN PROGRESS", color: "text-yellow-400" };
+      return { text: "IN PROGRESS", color: "text-amber" };
     }
     if (address && game.metadata.winner.toLowerCase() === address.toLowerCase()) {
-      return { text: "VICTORY", color: "text-green-400" };
+      return { text: "VICTORY", color: "text-phosphor-green" };
     }
-    return { text: "DEFEAT", color: "text-red-400" };
+    return { text: "DEFEAT", color: "text-warning-red" };
   };
 
   const formatDate = (timestamp: bigint) => {
@@ -72,34 +72,32 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="text-cyan-300 font-mono">
+    <div className="text-cyan font-mono">
       <h3 className="text-2xl font-bold mb-6 tracking-wider text-center">
         [PROFILE]
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div
-          className="border border-cyan-400 bg-black/40 p-4"
-          style={{
-            borderRadius: 0, // Square corners for industrial theme
-          }}
+          className="border bg-black/40 p-4"
+          style={{ borderColor: "var(--color-cyan)", borderRadius: 0 }}
         >
-          <h4 className="text-lg font-bold text-cyan-400 mb-2">
+          <h4 className="text-lg font-bold text-cyan mb-2">
             📊 STATISTICS
           </h4>
           {isConnected ? (
             <div className="space-y-1 text-sm">
               <p className="opacity-80">
-                Wins: <span className="text-green-400 font-bold">{stats.wins}</span>
+                Wins: <span className="text-phosphor-green font-bold">{stats.wins}</span>
               </p>
               <p className="opacity-80">
-                Losses: <span className="text-red-400 font-bold">{stats.losses}</span>
+                Losses: <span className="text-warning-red font-bold">{stats.losses}</span>
               </p>
               <p className="opacity-80">
                 Win Rate: <span className="font-bold">{stats.winRate}%</span>
               </p>
               {stats.inProgress > 0 && (
                 <p className="opacity-80">
-                  In Progress: <span className="text-yellow-400 font-bold">{stats.inProgress}</span>
+                  In Progress: <span className="text-amber font-bold">{stats.inProgress}</span>
                 </p>
               )}
               <p className="opacity-60 text-xs mt-2">
@@ -113,12 +111,10 @@ const Profile: React.FC = () => {
           )}
         </div>
         <div
-          className="border border-purple-400 bg-black/40 p-4"
-          style={{
-            borderRadius: 0, // Square corners for industrial theme
-          }}
+          className="border border-purple bg-black/40 p-4"
+          style={{ borderRadius: 0 }}
         >
-          <h4 className="text-lg font-bold text-purple-400 mb-2">
+          <h4 className="text-lg font-bold text-purple mb-2">
             🏅 ACHIEVEMENTS
           </h4>
           <p className="text-sm opacity-80">No achievements unlocked yet</p>
@@ -128,12 +124,10 @@ const Profile: React.FC = () => {
       {/* Game History */}
       {isConnected && (
         <div
-          className="border border-cyan-400 bg-black/40 p-4"
-          style={{
-            borderRadius: 0, // Square corners for industrial theme
-          }}
+          className="border bg-black/40 p-4"
+          style={{ borderColor: "var(--color-cyan)", borderRadius: 0 }}
         >
-          <h4 className="text-lg font-bold text-cyan-400 mb-4">
+          <h4 className="text-lg font-bold text-cyan mb-4">
             🎮 GAME HISTORY
           </h4>
           {isLoading ? (
@@ -147,10 +141,8 @@ const Profile: React.FC = () => {
                 return (
                   <div
                     key={game.metadata.gameId.toString()}
-                    className="border border-gray-600 bg-black/20 p-2 text-xs"
-                    style={{
-                      borderRadius: 0, // Square corners for industrial theme
-                    }}
+                    className="border border-gunmetal bg-black/20 p-2 text-xs"
+                    style={{ borderRadius: 0 }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">

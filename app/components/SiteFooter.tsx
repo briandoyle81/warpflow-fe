@@ -17,21 +17,21 @@ export default function SiteFooter() {
       </span>
       <Link
         href="/privacy"
-        className="underline decoration-current/40 underline-offset-4 transition-colors hover:text-cyan-400"
+        className="underline decoration-current/40 underline-offset-4 transition-colors hover:text-cyan"
         style={{ color: "var(--color-text-muted)" }}
       >
         Privacy Policy
       </Link>
       <Link
         href="/terms"
-        className="underline decoration-current/40 underline-offset-4 transition-colors hover:text-cyan-400"
+        className="underline decoration-current/40 underline-offset-4 transition-colors hover:text-cyan"
         style={{ color: "var(--color-text-muted)" }}
       >
         Terms of Service
       </Link>
       <Link
         href="/audio-credits"
-        className="underline decoration-current/40 underline-offset-4 transition-colors hover:text-cyan-400"
+        className="underline decoration-current/40 underline-offset-4 transition-colors hover:text-cyan"
         style={{ color: "var(--color-text-muted)" }}
       >
         Audio Credits

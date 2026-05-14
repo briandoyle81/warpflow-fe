@@ -79,7 +79,7 @@ export default function Maps() {
         <div className="flex items-center gap-4">
           <button
             onClick={handleEditorCancel}
-            className="px-4 py-2 bg-gray-600 text-white rounded-none font-mono hover:bg-gray-700"
+            className="px-4 py-2 bg-steel text-text-primary rounded-none font-mono hover:bg-gunmetal"
           >
             ← Back to Maps
           </button>
@@ -104,28 +104,28 @@ export default function Maps() {
         {canCreateMaps ? (
           <button
             onClick={handleCreateMap}
-            className="px-4 py-2 bg-green-600 text-white rounded-none font-mono hover:bg-green-700"
+            className="px-4 py-2 border border-phosphor-green text-phosphor-green rounded-none font-mono hover:bg-phosphor-green/10"
           >
             Create New Map
           </button>
         ) : (
-          <div className="px-4 py-2 bg-gray-600 text-gray-400 rounded-none font-mono cursor-not-allowed">
+          <div className="px-4 py-2 bg-steel text-text-muted rounded-none font-mono cursor-not-allowed">
             Create New Map (Restricted)
           </div>
         )}
       </div>
 
-      <div className="text-sm text-gray-400">
+      <div className="text-sm text-text-muted">
         Total maps: {mapCount ? Number(mapCount) : 0}
         {!canCreateMaps && (
-          <div className="mt-2 text-yellow-400">
+          <div className="mt-2 text-amber">
             ⚠️ Map creation is currently restricted to authorized addresses only
           </div>
         )}
       </div>
 
       {maps.length === 0 ? (
-        <div className="text-center py-8 text-gray-400">
+        <div className="text-center py-8 text-text-muted">
           <p>No maps found. Create your first map to get started!</p>
         </div>
       ) : (
@@ -133,31 +133,31 @@ export default function Maps() {
           {maps.map((map) => (
             <div
               key={map.id}
-              className="bg-gray-800 rounded-none p-4 border border-gray-700"
+              className="bg-steel rounded-none p-4 border border-gunmetal"
             >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-mono text-white">Map #{map.id}</h3>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEditMap(map.id)}
-                    className="px-3 py-1 bg-blue-600 text-white rounded-none text-sm font-mono hover:bg-blue-700"
+                    className="px-3 py-1 border border-cyan text-cyan rounded-none text-sm font-mono hover:bg-cyan/10"
                   >
                     Edit
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-2 text-sm text-gray-300">
+              <div className="space-y-2 text-sm text-text-secondary">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-500 border border-gray-600"></div>
+                  <div className="w-3 h-3 bg-purple border border-gunmetal"></div>
                   <span>Blocked tiles: {map.blockedPositions.length}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 border border-gray-600"></div>
+                  <div className="w-3 h-3 bg-phosphor-green border border-gunmetal"></div>
                   <span>Scoring tiles: {map.scoringPositions.length}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-yellow-500 border border-gray-600"></div>
+                  <div className="w-3 h-3 bg-amber border border-gunmetal"></div>
                   <span>
                     Once-only tiles:{" "}
                     {map.scoringPositions.filter((p) => p.onlyOnce).length}
@@ -166,8 +166,8 @@ export default function Maps() {
               </div>
 
               {/* Mini preview */}
-              <div className="mt-3 p-2 bg-gray-900 rounded-none">
-                <div className="text-xs text-gray-400 mb-1">
+              <div className="mt-3 p-2 bg-near-black rounded-none">
+                <div className="text-xs text-text-muted mb-1">
                   Preview ({GRID_DIMENSIONS.WIDTH}x{GRID_DIMENSIONS.HEIGHT}):
                 </div>
                 <div
@@ -187,17 +187,17 @@ export default function Maps() {
                       const isScoring = scoringPos !== undefined;
                       const isOnlyOnce = scoringPos?.onlyOnce || false;
 
-                      let className = "aspect-square border border-gray-600";
+                      let className = "aspect-square border border-gunmetal";
                       if (isBlocked && isScoring) {
-                        className += " bg-red-500";
+                        className += " bg-warning-red";
                       } else if (isBlocked) {
-                        className += " bg-purple-500";
+                        className += " bg-purple";
                       } else if (isScoring) {
                         className += isOnlyOnce
-                          ? " bg-yellow-500"
-                          : " bg-green-500";
+                          ? " bg-amber"
+                          : " bg-phosphor-green";
                       } else {
-                        className += " bg-gray-900";
+                        className += " bg-near-black";
                       }
 
                       return (

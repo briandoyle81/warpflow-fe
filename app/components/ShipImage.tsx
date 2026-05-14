@@ -66,7 +66,7 @@ export function ShipImage({
   const rankStarsOverlay =
     ship.shipData.constructed && !hideRankStars ? (
       <div
-        className="pointer-events-none absolute right-[2.5%] top-[5%] z-10 leading-none text-yellow-400"
+        className="pointer-events-none absolute right-[2.5%] top-[5%] z-10 leading-none text-amber"
         style={{
           fontSize: rankStarBox,
         }}
@@ -115,12 +115,12 @@ export function ShipImage({
   if (isLoading && showLoadingState && !dataUrl) {
     return (
       <div
-        className={`flex items-center justify-center bg-gray-800/50 border border-gray-600 rounded-none ${className}`}
+        className={`flex items-center justify-center bg-steel/50 border border-gunmetal rounded-none ${className}`}
       >
-        <div className="text-gray-400 text-xs text-center p-2">
+        <div className="text-text-muted text-xs text-center p-2">
           <div className="animate-spin text-lg mb-1">⏳</div>
           <div>Loading...</div>
-          {error && <div className="text-yellow-400 text-xs mt-1">{error}</div>}
+          {error && <div className="text-amber text-xs mt-1">{error}</div>}
         </div>
       </div>
     );
@@ -131,12 +131,12 @@ export function ShipImage({
   if ((error || !dataUrl) && !dataUrl) {
     return (
       <div
-        className={`flex items-center justify-center bg-gray-800/50 border border-gray-600 rounded-none ${className}`}
+        className={`flex items-center justify-center bg-steel/50 border border-gunmetal rounded-none ${className}`}
       >
-        <div className="text-gray-400 text-xs text-center p-2">
+        <div className="text-text-muted text-xs text-center p-2">
           <div className="animate-spin text-lg mb-1">⏳</div>
           <div>Loading...</div>
-          {error && <div className="text-yellow-400 text-xs mt-1">{error}</div>}
+          {error && <div className="text-amber text-xs mt-1">{error}</div>}
         </div>
       </div>
     );

@@ -595,7 +595,7 @@ export function MapEditor({
       !editorState.scoringTiles[row] ||
       !editorState.onlyOnceTiles[row]
     ) {
-      return "w-full h-full aspect-square cursor-pointer hover:border-white transition-colors border-0 outline outline-1 outline-gray-600 bg-gray-900";
+      return "w-full h-full aspect-square cursor-pointer hover:border-white transition-colors border-0 outline outline-1 outline-gunmetal bg-near-black";
     }
 
     const isBlocked = editorState.blockedTiles[row][col];
@@ -609,19 +609,19 @@ export function MapEditor({
     if (isBlocked) {
       baseClass += " border-0 shadow-[inset_0_0_0_2px_rgb(168,85,247)]";
     } else {
-      baseClass += " border-0 outline outline-1 outline-gray-600";
+      baseClass += " border-0 outline outline-1 outline-gunmetal";
     }
 
     // Set background color based on scoring status
     if (scoreValue > 0) {
       if (isOnlyOnce) {
-        baseClass += " bg-yellow-400"; // Gold for once-only
+        baseClass += " bg-amber"; // once-only scoring
       } else {
-        baseClass += " bg-blue-400"; // Cornflower blue for reusable
+        baseClass += " bg-cyan"; // reusable scoring
       }
     } else {
       // Empty
-      baseClass += " bg-gray-900";
+      baseClass += " bg-near-black";
     }
 
     return baseClass;
@@ -631,8 +631,8 @@ export function MapEditor({
     <div className="w-full space-y-4">
       {/* Authorization Notice */}
       {!canEdit && (
-        <div className="p-4 bg-yellow-900/20 border border-yellow-400/30 rounded-none-lg">
-          <div className="flex items-center gap-2 text-yellow-400">
+        <div className="p-4 bg-amber/10 border border-amber/30">
+          <div className="flex items-center gap-2 text-amber">
             <span className="text-lg">⚠️</span>
             <span className="font-mono text-sm">
               READ-ONLY MODE: You are not authorized to edit maps. Only
@@ -643,7 +643,7 @@ export function MapEditor({
       )}
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-4 p-4 bg-gray-800 rounded-none-lg">
+      <div className="flex flex-wrap gap-4 p-4 bg-steel">
         <div className="flex gap-2">
           <button
             onClick={() =>
@@ -652,10 +652,10 @@ export function MapEditor({
             disabled={!canEdit}
             className={`px-3 py-2 rounded-none text-sm font-mono ${
               !canEdit
-                ? "bg-gray-500 text-gray-400 cursor-not-allowed"
+                ? "bg-steel text-text-muted cursor-not-allowed"
                 : editorState.selectedTool === "score"
-                ? "bg-gray-600 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                ? "bg-gunmetal text-white"
+                : "bg-steel text-text-secondary hover:bg-gunmetal"
             }`}
           >
             Set Points
@@ -667,10 +667,10 @@ export function MapEditor({
             disabled={!canEdit}
             className={`px-3 py-2 rounded-none text-sm font-mono ${
               !canEdit
-                ? "bg-gray-500 text-gray-400 cursor-not-allowed"
+                ? "bg-steel text-text-muted cursor-not-allowed"
                 : editorState.selectedTool === "block"
-                ? "bg-gray-600 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                ? "bg-gunmetal text-white"
+                : "bg-steel text-text-secondary hover:bg-gunmetal"
             }`}
           >
             Toggle Block
@@ -682,10 +682,10 @@ export function MapEditor({
             disabled={!canEdit}
             className={`px-3 py-2 rounded-none text-sm font-mono ${
               !canEdit
-                ? "bg-gray-500 text-gray-400 cursor-not-allowed"
+                ? "bg-steel text-text-muted cursor-not-allowed"
                 : editorState.selectedTool === "erase"
-                ? "bg-gray-600 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                ? "bg-gunmetal text-white"
+                : "bg-steel text-text-secondary hover:bg-gunmetal"
             }`}
           >
             Erase
@@ -693,7 +693,7 @@ export function MapEditor({
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-300">Symmetry:</label>
+          <label className="text-sm text-text-secondary">Symmetry:</label>
           <button
             onClick={() =>
               setEditorState((prev) => ({
@@ -705,10 +705,10 @@ export function MapEditor({
             disabled={!canEdit}
             className={`px-3 py-2 rounded-none text-sm font-mono ${
               !canEdit
-                ? "bg-gray-500 text-gray-400 cursor-not-allowed"
+                ? "bg-steel text-text-muted cursor-not-allowed"
                 : editorState.symmetryMode === "radial"
-                ? "bg-purple-600 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                ? "bg-purple text-white"
+                : "bg-steel text-text-secondary hover:bg-gunmetal"
             }`}
           >
             {editorState.symmetryMode === "radial" ? "Radial ON" : "Radial OFF"}
@@ -716,7 +716,7 @@ export function MapEditor({
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-300">Points:</label>
+          <label className="text-sm text-text-secondary">Points:</label>
           <input
             type="number"
             min="1"
@@ -734,11 +734,11 @@ export function MapEditor({
             disabled={!canEdit}
             className={`w-16 px-2 py-1 rounded-none text-sm ${
               !canEdit
-                ? "bg-gray-500 text-gray-400 cursor-not-allowed"
-                : "bg-gray-700 text-white"
+                ? "bg-steel text-text-muted cursor-not-allowed"
+                : "bg-steel text-white"
             }`}
           />
-          <label className="flex items-center gap-1 text-sm text-gray-300">
+          <label className="flex items-center gap-1 text-sm text-text-secondary">
             <input
               type="checkbox"
               checked={editorState.selectedOnlyOnce}
@@ -760,8 +760,8 @@ export function MapEditor({
           disabled={!canEdit}
           className={`px-3 py-2 rounded-none text-sm font-mono ${
             !canEdit
-              ? "bg-gray-500 text-gray-400 cursor-not-allowed"
-              : "bg-red-600 text-white hover:bg-red-700"
+              ? "bg-steel text-text-muted cursor-not-allowed"
+              : "bg-warning-red/20 text-warning-red border border-warning-red hover:bg-warning-red/30"
           }`}
         >
           Clear All
@@ -771,61 +771,61 @@ export function MapEditor({
       {/* Grid Info and Legend */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-cyan-400 font-mono">
+          <div className="text-sm text-cyan font-mono">
             Grid: {GRID_DIMENSIONS.WIDTH} × {GRID_DIMENSIONS.HEIGHT} tiles
           </div>
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-text-muted">
             Total: {GRID_DIMENSIONS.WIDTH * GRID_DIMENSIONS.HEIGHT} tiles
           </div>
         </div>
 
-        <div className="text-xs text-yellow-400">
+        <div className="text-xs text-amber">
           Current tool: {editorState.selectedTool} | Points:{" "}
           {editorState.selectedScoreValue} | Once only:{" "}
           {editorState.selectedOnlyOnce ? "Yes" : "No"} | Symmetry:{" "}
           {editorState.symmetryMode === "radial" ? "Radial" : "None"}
         </div>
 
-        <div className="flex flex-wrap gap-4 text-xs text-gray-300">
+        <div className="flex flex-wrap gap-4 text-xs text-text-secondary">
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-gray-900 border-2 border-purple-400"></div>
+            <div className="w-[20px] h-[20px] bg-near-black border-2 border-purple"></div>
             <span>Blocked (LOS) - Thick purple border</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-blue-400 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-cyan border border-gunmetal"></div>
             <span>Scoring (reusable)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-yellow-400 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-amber border border-gunmetal"></div>
             <span>Scoring (once only)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-blue-400 border-2 border-purple-400"></div>
+            <div className="w-[20px] h-[20px] bg-cyan border-2 border-purple"></div>
             <span>Blocked + Scoring</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-gray-900 border border-gray-600"></div>
+            <div className="w-[20px] h-[20px] bg-near-black border border-gunmetal"></div>
             <span>Empty</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-gray-900 border border-gray-600 relative">
+            <div className="w-[20px] h-[20px] bg-near-black border border-gunmetal relative">
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-full h-0.5 bg-blue-400"></div>
+                <div className="w-full h-0.5 bg-cyan"></div>
               </div>
             </div>
-            <span>Center lines (thick blue)</span>
+            <span>Center lines</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-[20px] h-[20px] bg-gray-900 border border-gray-600 relative">
+            <div className="w-[20px] h-[20px] bg-near-black border border-gunmetal relative">
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-full h-px bg-blue-200 opacity-60"></div>
+                <div className="w-full h-px bg-cyan/40"></div>
               </div>
             </div>
-            <span>Reference lines every 5 (faint blue)</span>
+            <span>Reference lines (faint)</span>
           </div>
         </div>
 
-        <div className="text-xs text-gray-400 space-y-1">
+        <div className="text-xs text-text-muted space-y-1">
           <div>
             <strong>Instructions:</strong>
           </div>
@@ -852,7 +852,7 @@ export function MapEditor({
       </div>
 
       {/* Grid */}
-      <div className="bg-gray-900 rounded-none-lg w-full relative flex justify-center p-1">
+      <div className="bg-near-black w-full relative flex justify-center p-1">
         <div
           key={`grid-${editorState.blockedTiles.length}-${editorState.scoringTiles.length}`}
           className="grid relative gap-0 grid-cols-[repeat(17,1fr)] grid-rows-[repeat(11,1fr)] w-full"
@@ -907,7 +907,7 @@ export function MapEditor({
           {/* Vertical reference lines */}
           {/* Center column edges (left and right of column 8) */}
           <div
-            className="absolute bg-blue-400"
+            className="absolute bg-cyan"
             style={{
               left: `${(8 / GRID_DIMENSIONS.WIDTH) * 100}%`,
               top: 0,
@@ -917,7 +917,7 @@ export function MapEditor({
             }}
           />
           <div
-            className="absolute bg-blue-400"
+            className="absolute bg-cyan"
             style={{
               left: `${(9 / GRID_DIMENSIONS.WIDTH) * 100}%`,
               top: 0,
@@ -927,7 +927,7 @@ export function MapEditor({
             }}
           />
           <div
-            className="absolute bg-blue-400"
+            className="absolute bg-cyan"
             style={{
               left: `${(13 / GRID_DIMENSIONS.WIDTH) * 100}%`,
               top: 0,
@@ -939,7 +939,7 @@ export function MapEditor({
 
           {/* Red emphasis lines - Creator/Joiner boundaries */}
           <div
-            className="absolute bg-red-400"
+            className="absolute bg-warning-red"
             style={{
               left: `${(4 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Right boundary of creator zone (after column 3, before column 4)
               top: 0,
@@ -949,7 +949,7 @@ export function MapEditor({
             }}
           />
           <div
-            className="absolute bg-red-400"
+            className="absolute bg-warning-red"
             style={{
               left: `${(13 / GRID_DIMENSIONS.WIDTH) * 100}%`, // Start of joiner zone (columns 13-16)
               top: 0,
@@ -963,7 +963,7 @@ export function MapEditor({
           {[3, 5, 11, 14].map((col) => (
             <div
               key={`v-${col}`}
-              className="absolute bg-blue-200"
+              className="absolute bg-cyan/40"
               style={{
                 left: `${(col / GRID_DIMENSIONS.WIDTH) * 100}%`,
                 top: 0,
@@ -978,7 +978,7 @@ export function MapEditor({
           {/* Horizontal reference lines */}
           {/* Center row edges (top and bottom of row 5) */}
           <div
-            className="absolute bg-blue-400"
+            className="absolute bg-cyan"
             style={{
               left: 0,
               top: `${(5 / GRID_DIMENSIONS.HEIGHT) * 100}%`,
@@ -988,7 +988,7 @@ export function MapEditor({
             }}
           />
           <div
-            className="absolute bg-blue-400"
+            className="absolute bg-cyan"
             style={{
               left: 0,
               top: `${(6 / GRID_DIMENSIONS.HEIGHT) * 100}%`,
@@ -1002,7 +1002,7 @@ export function MapEditor({
           {[1, 9].map((row) => (
             <div
               key={`h-${row}`}
-              className="absolute bg-blue-200"
+              className="absolute bg-cyan/40"
               style={{
                 left: 0,
                 top: `${(row / GRID_DIMENSIONS.HEIGHT) * 100}%`,
@@ -1026,11 +1026,11 @@ export function MapEditor({
         </button>
         <button
           onClick={downloadMap}
-          className="px-4 py-2 bg-blue-600 text-white rounded-none font-mono hover:bg-blue-700"
+          className="px-4 py-2 border border-cyan text-cyan rounded-none font-mono hover:bg-cyan/10"
         >
           Download Map
         </button>
-        <label className="px-4 py-2 bg-purple-600 text-white rounded-none font-mono hover:bg-purple-700 cursor-pointer">
+        <label className="px-4 py-2 border border-purple text-purple rounded-none font-mono hover:bg-purple/10 cursor-pointer">
           Upload Map
           <input
             type="file"
@@ -1041,7 +1041,7 @@ export function MapEditor({
         </label>
         <button
           onClick={clearAll}
-          className="px-4 py-2 bg-red-600 text-white rounded-none font-mono hover:bg-red-700"
+          className="px-4 py-2 border border-warning-red text-warning-red rounded-none font-mono hover:bg-warning-red/10"
         >
           Clear All
         </button>
@@ -1058,15 +1058,15 @@ export function MapEditor({
           disabled={!canEdit}
           className={`px-4 py-2 rounded-none font-mono ${
             !canEdit
-              ? "bg-gray-500 text-gray-400 cursor-not-allowed"
-              : "bg-green-600 text-white hover:bg-green-700"
+              ? "bg-steel text-text-muted cursor-not-allowed"
+              : "border border-phosphor-green text-phosphor-green hover:bg-phosphor-green/10"
           }`}
         >
           {isEditing ? "Update Map" : "Create Map"}
         </TransactionButton>
         <button
           onClick={onCancel}
-          className="px-4 py-2 bg-gray-600 text-white rounded-none font-mono hover:bg-gray-700"
+          className="px-4 py-2 bg-steel text-text-primary rounded-none font-mono hover:bg-gunmetal"
         >
           Cancel
         </button>
