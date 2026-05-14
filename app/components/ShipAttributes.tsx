@@ -252,13 +252,13 @@ const ShipAttributes: React.FC = () => {
               <div className="flex justify-between">
                 <span className="text-text-muted">Attributes Version:</span>
                 <span className="text-white">
-                  {currentAttributesVersion?.toString() || "Loading..."}
+                  {currentAttributesVersion?.toString() || "--"}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-text-muted">Costs Version:</span>
                 <span className="text-white">
-                  {currentCostsVersion?.toString() || "Loading..."}
+                  {currentCostsVersion?.toString() || "--"}
                 </span>
               </div>
             </div>

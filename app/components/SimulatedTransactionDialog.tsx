@@ -63,16 +63,15 @@ export function SimulatedTransactionDialog({
           <div className="bg-near-black border-2 p-6 w-full" style={{ borderColor: "var(--color-cyan)", borderRadius: 0 }}>
             <h3
               id="simulated-tx-title"
-              className="text-xl font-bold text-cyan mb-4 font-mono"
+              className="text-xl font-bold text-cyan mb-4 font-mono tracking-widest"
             >
-              [SIMULATED] Transaction Approval
+              [SIM] ACTION CONFIRMATION
             </h3>
 
             <div className="space-y-3 mb-6">
               <div className="bg-amber/10 border border-amber/50 p-3">
                 <p className="text-amber text-sm font-mono">
-                  ⚠️ This is a tutorial simulation. No real transaction will be
-                  sent.
+                  // TRAINING EXERCISE — No transaction will be executed.
                 </p>
               </div>
 
@@ -118,16 +117,16 @@ export function SimulatedTransactionDialog({
               <button
                 type="button"
                 onClick={onReject}
-                className="flex-1 px-4 py-2 bg-steel text-white rounded-none font-mono hover:bg-gunmetal transition-colors"
+                className="flex-1 px-4 py-2 bg-steel text-white rounded-none font-mono hover:bg-gunmetal transition-colors tracking-wider"
               >
-                Reject
+                DENY
               </button>
               <button
                 type="button"
                 onClick={onApprove}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-none font-mono hover:bg-green-700 transition-colors"
+                className="flex-1 px-4 py-2 bg-phosphor-green/20 text-phosphor-green border border-phosphor-green rounded-none font-mono hover:bg-phosphor-green/30 transition-colors tracking-wider font-bold"
               >
-                Approve
+                AUTHORIZE
               </button>
             </div>
           </div>

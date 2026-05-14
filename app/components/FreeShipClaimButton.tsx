@@ -93,7 +93,7 @@ export function FreeShipClaimButton({
         isDisabled ? "opacity-50 cursor-not-allowed" : ""
       }`}
       style={{
-        borderRadius: 0, // Force square corners for industrial theme
+        borderRadius: 0,
       }}
     >
       {isPending ? "[CLAIMING...]" : children}

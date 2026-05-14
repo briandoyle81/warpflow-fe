@@ -78,62 +78,67 @@ const Profile: React.FC = () => {
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div
-          className="border bg-black/40 p-4"
+          className="corner-bracket border bg-black/40 p-4"
           style={{ borderColor: "var(--color-cyan)", borderRadius: 0 }}
         >
-          <h4 className="text-lg font-bold text-cyan mb-2">
-            📊 STATISTICS
+          <h4 className="text-lg font-bold text-cyan mb-2 tracking-widest">
+            [STATISTICS]
           </h4>
           {isConnected ? (
-            <div className="space-y-1 text-sm">
-              <p className="opacity-80">
-                Wins: <span className="text-phosphor-green font-bold">{stats.wins}</span>
-              </p>
-              <p className="opacity-80">
-                Losses: <span className="text-warning-red font-bold">{stats.losses}</span>
-              </p>
-              <p className="opacity-80">
-                Win Rate: <span className="font-bold">{stats.winRate}%</span>
-              </p>
+            <div className="space-y-0 mt-2">
+              <div className="data-readout">
+                <span className="data-readout-label">Wins</span>
+                <span className="font-bold text-phosphor-green font-mono text-xs">{stats.wins}</span>
+              </div>
+              <div className="data-readout">
+                <span className="data-readout-label">Losses</span>
+                <span className="font-bold text-warning-red font-mono text-xs">{stats.losses}</span>
+              </div>
+              <div className="data-readout">
+                <span className="data-readout-label">Win Rate</span>
+                <span className="font-bold font-mono text-xs">{stats.winRate}%</span>
+              </div>
               {stats.inProgress > 0 && (
-                <p className="opacity-80">
-                  In Progress: <span className="text-amber font-bold">{stats.inProgress}</span>
-                </p>
+                <div className="data-readout">
+                  <span className="data-readout-label">In Progress</span>
+                  <span className="font-bold text-amber font-mono text-xs">{stats.inProgress}</span>
+                </div>
               )}
-              <p className="opacity-60 text-xs mt-2">
-                Total Games: {games.length}
-              </p>
+              <div className="data-readout">
+                <span className="data-readout-label">Total</span>
+                <span className="font-mono text-xs opacity-60">{games.length}</span>
+              </div>
             </div>
           ) : (
-            <p className="text-sm opacity-80">
-              Connect wallet to view statistics
+            <p className="text-sm font-mono opacity-80 tracking-wider">
+              // Connect wallet to view statistics
             </p>
           )}
         </div>
         <div
-          className="border border-purple bg-black/40 p-4"
+          className="corner-bracket corner-bracket-purple border border-purple bg-black/40 p-4"
           style={{ borderRadius: 0 }}
         >
-          <h4 className="text-lg font-bold text-purple mb-2">
-            🏅 ACHIEVEMENTS
+          <h4 className="text-lg font-bold text-purple mb-2 tracking-widest">
+            [ACHIEVEMENTS]
           </h4>
-          <p className="text-sm opacity-80">No achievements unlocked yet</p>
+          <p className="text-sm font-mono opacity-60 tracking-wider">// No achievements unlocked</p>
         </div>
       </div>
 
       {/* Game History */}
       {isConnected && (
         <div
-          className="border bg-black/40 p-4"
+          className="corner-bracket border bg-black/40 p-4"
           style={{ borderColor: "var(--color-cyan)", borderRadius: 0 }}
         >
-          <h4 className="text-lg font-bold text-cyan mb-4">
-            🎮 GAME HISTORY
+          <h4 className="text-lg font-bold text-cyan mb-4 tracking-widest">
+            [ENGAGEMENT HISTORY]
           </h4>
           {isLoading ? (
-            <p className="text-sm opacity-80">Loading games...</p>
+            <p className="text-sm font-mono text-text-muted animate-pulse tracking-widest">&gt;&gt; RETRIEVING RECORDS...</p>
           ) : sortedGames.length === 0 ? (
-            <p className="text-sm opacity-80">No games found</p>
+            <p className="text-sm font-mono text-text-muted">[NO RECORDS FOUND]</p>
           ) : (
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {sortedGames.map((game) => {

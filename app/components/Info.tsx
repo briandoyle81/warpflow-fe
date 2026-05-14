@@ -71,7 +71,7 @@ const Info: React.FC = () => {
       </p>
       {/* Hero Section - full width so its inner grid aligns with key features below */}
       <section
-        className="relative overflow-hidden border-2 bg-black/60 py-4 md:col-span-12 md:py-8"
+        className="corner-bracket relative overflow-hidden border-2 bg-black/60 py-4 md:col-span-12 md:py-8"
         style={{ borderColor: "var(--color-cyan)", borderRadius: 0 }}
         aria-labelledby="info-hero-heading"
       >
@@ -245,7 +245,7 @@ const Info: React.FC = () => {
 
       {/* Ship demo display (kept, moved below hero) */}
       <section
-        className="border-2 border-phosphor-green bg-black/40 p-2 md:col-span-12 md:p-6"
+        className="corner-bracket corner-bracket-green relative border-2 border-phosphor-green bg-black/40 p-2 md:col-span-12 md:p-6"
         style={{
           borderRadius: 0,
         }}
@@ -290,7 +290,7 @@ const Info: React.FC = () => {
       {/* Key Features - same 12-col grid so left edges align with hero */}
       {/* Feature 1: Build your Navy */}
       <article
-        className="border-2 bg-black/40 p-2 md:col-span-6 md:p-6"
+        className="corner-bracket relative border-2 bg-black/40 p-2 md:col-span-6 md:p-6"
         style={{
           borderRadius: 0,
           borderColor: "var(--color-cyan)",
@@ -331,9 +331,9 @@ const Info: React.FC = () => {
 
       {/* Feature 2: Assemble a Fleet */}
       <article
-        className="border-2 border-phosphor-green bg-black/40 p-2 md:col-span-6 md:p-6"
+        className="corner-bracket corner-bracket-green relative border-2 border-phosphor-green bg-black/40 p-2 md:col-span-6 md:p-6"
         style={{
-          borderRadius: 0, // Square corners for industrial theme
+          borderRadius: 0,
         }}
       >
         <h3
@@ -371,9 +371,9 @@ const Info: React.FC = () => {
 
       {/* Feature 3: Tactical Combat */}
       <article
-        className="border-2 border-amber bg-black/40 p-2 md:col-span-6 md:p-6"
+        className="corner-bracket corner-bracket-amber relative border-2 border-amber bg-black/40 p-2 md:col-span-6 md:p-6"
         style={{
-          borderRadius: 0, // Square corners for industrial theme
+          borderRadius: 0,
         }}
       >
         <h3
@@ -410,9 +410,9 @@ const Info: React.FC = () => {
 
       {/* Feature 4: Collect the Rewards */}
       <article
-        className="border-2 border-warning-red bg-black/40 p-2 md:col-span-6 md:p-6"
+        className="corner-bracket corner-bracket-red relative border-2 border-warning-red bg-black/40 p-2 md:col-span-6 md:p-6"
         style={{
-          borderRadius: 0, // Square corners for industrial theme
+          borderRadius: 0,
         }}
       >
         <h3
@@ -450,7 +450,7 @@ const Info: React.FC = () => {
 
       {/* Getting Started Section */}
       <section
-        className="border-2 bg-black/40 p-2 md:col-span-12 md:p-6"
+        className="corner-bracket relative border-2 bg-black/40 p-2 md:col-span-12 md:p-6"
         style={{
           borderRadius: 0,
           borderColor: "var(--color-cyan)",

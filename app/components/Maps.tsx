@@ -119,7 +119,7 @@ export default function Maps() {
         Total maps: {mapCount ? Number(mapCount) : 0}
         {!canCreateMaps && (
           <div className="mt-2 text-amber">
-            ⚠️ Map creation is currently restricted to authorized addresses only
+            [!] Map creation is currently restricted to authorized addresses only
           </div>
         )}
       </div>

@@ -633,7 +633,7 @@ export function MapEditor({
       {!canEdit && (
         <div className="p-4 bg-amber/10 border border-amber/30">
           <div className="flex items-center gap-2 text-amber">
-            <span className="text-lg">⚠️</span>
+            <span className="font-mono font-bold text-sm">[!]</span>
             <span className="font-mono text-sm">
               READ-ONLY MODE: You are not authorized to edit maps. Only
               authorized addresses can modify maps.

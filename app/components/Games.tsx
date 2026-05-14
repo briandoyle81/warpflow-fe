@@ -263,8 +263,8 @@ const Games: React.FC = () => {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-mono text-white">Games</h1>
-        <p className="text-text-muted">Loading your games...</p>
+        <h1 className="text-2xl font-mono text-white">[ENGAGEMENT LOG]</h1>
+        <div className="font-mono text-xs text-text-muted tracking-widest animate-pulse">&gt;&gt; ACQUIRING ENGAGEMENT DATA...</div>
       </div>
     );
   }
@@ -272,19 +272,19 @@ const Games: React.FC = () => {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-mono text-white">Games</h1>
-        <p className="text-warning-red">Error loading games: {error}</p>
+        <h1 className="text-2xl font-mono text-white">[ENGAGEMENT LOG]</h1>
+        <p className="text-warning-red font-mono text-sm">[ERR] Data acquisition failure: {error}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 w-full">
-      <h1 className="text-2xl font-mono text-white">Games</h1>
+      <h1 className="text-2xl font-mono text-white">[ENGAGEMENT LOG]</h1>
 
       {sortedGames.length === 0 ? (
-        <div className="text-center py-8 text-text-muted">
-          <p>No games found. Create a lobby and start playing!</p>
+        <div className="py-8 text-text-muted font-mono text-sm">
+          <span className="tracking-widest">[NO ENGAGEMENTS ON RECORD] — Deploy a fleet and enter the fray.</span>
         </div>
       ) : (
         <div className="space-y-4">
@@ -296,7 +296,7 @@ const Games: React.FC = () => {
             {sortedGames.map((game) => (
               <div
                 key={game.metadata.gameId.toString()}
-                className="border border-gunmetal bg-steel p-4 rounded-none"
+                className="corner-bracket border border-gunmetal bg-steel p-4 rounded-none"
               >
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="text-base font-mono text-white sm:text-lg">

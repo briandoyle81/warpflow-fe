@@ -2758,8 +2758,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       ? " animate-pulse ring-2 ring-amber ring-offset-2 ring-offset-[var(--color-near-black)]"
                       : ""
                   }`}
-                  loadingText="Submitting..."
-                  errorText="Error"
+                  loadingText="[SUBMITTING...]"
+                  errorText="[ERR]"
                   onTransactionSent={(hash) => {
                     setAwaitingTurnSyncAfterSubmit(true);
                     if (selectedShipId == null) return;
@@ -3038,7 +3038,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
           </button>
         </div>
         <div className="text-center py-8">
-          <p className="text-text-muted">Loading game data...</p>
+          <div className="font-mono text-xs text-text-muted tracking-widest animate-pulse">&gt;&gt; ACQUIRING GAME STATE...</div>
         </div>
       </div>
     );
@@ -3075,7 +3075,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         </div>
         <div className="text-center py-8">
           <p className="text-warning-red">
-            Error loading game data: {gameError.message}
+            [ERR] loading game data: {gameError.message}
           </p>
           <button
             onClick={() => refetchGame()}
@@ -3141,14 +3141,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
 
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
-            <div
-              className="animate-spin h-12 w-12 border-b-2 mx-auto mb-4"
-              style={{
-                borderColor: "var(--color-cyan)",
-                borderRadius: 0, // Square spinner
-              }}
-            ></div>
-            <p className="text-cyan font-mono">Loading ship data...</p>
+            <div className="font-mono text-xs text-text-muted tracking-widest animate-pulse">&gt;&gt; STANDBY...</div>
+            <div className="font-mono text-xs text-text-muted tracking-widest animate-pulse mt-2">&gt;&gt; LOADING ASSET DATA...</div>
           </div>
         </div>
       </div>
@@ -3306,7 +3300,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                         borderRadius: 0,
                       }}
                     >
-                      🎯{" "}
+                      {`[>] `}
                       {targetShip?.name ||
                         `#${target.shipId.toString()}`}
                     </button>
@@ -3935,7 +3929,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
         {isMobileFleetModalOpen ? (
           <div className="fixed inset-0 z-[310] flex flex-col bg-[rgba(4,8,15,0.98)] p-3">
             <div className="mb-3 flex items-center justify-between border border-solid px-3 py-2" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
-              <h3 className="text-sm uppercase tracking-wider text-cyan">Fleet Intel</h3>
+              <h3 className="text-sm uppercase tracking-wider text-cyan">[FLEET INTEL]</h3>
               <button
                 type="button"
                 onClick={() => setIsMobileFleetModalOpen(false)}
@@ -3955,7 +3949,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 {game.metadata.creator === address ? (
                   <>
                     {renderFleetColumn({
-                      title: readOnly ? "Creator Fleet" : "My Fleet",
+                      title: readOnly ? "Creator Fleet" : "[MY FLEET]",
                       titleColor: "var(--color-cyan)",
                       ownerAddress: game.metadata.creator,
                       shipIds: game.creatorActiveShipIds,
@@ -3963,7 +3957,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       flipShip: game.metadata.creator === address,
                     })}
                     {renderFleetColumn({
-                      title: readOnly ? "Joiner Fleet" : "Opponent's Fleet",
+                      title: readOnly ? "Joiner Fleet" : "[HOSTILE FLEET]",
                       titleColor: "var(--color-warning-red)",
                       ownerAddress: game.metadata.joiner,
                       shipIds: game.joinerActiveShipIds,
@@ -3974,7 +3968,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                 ) : (
                   <>
                     {renderFleetColumn({
-                      title: readOnly ? "Creator Fleet" : "Opponent's Fleet",
+                      title: readOnly ? "Creator Fleet" : "[HOSTILE FLEET]",
                       titleColor: "var(--color-warning-red)",
                       ownerAddress: game.metadata.creator,
                       shipIds: game.creatorActiveShipIds,
@@ -3982,7 +3976,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                       flipShip: true,
                     })}
                     {renderFleetColumn({
-                      title: readOnly ? "Joiner Fleet" : "My Fleet",
+                      title: readOnly ? "Joiner Fleet" : "[MY FLEET]",
                       titleColor: "var(--color-cyan)",
                       ownerAddress: game.metadata.joiner,
                       shipIds: game.joinerActiveShipIds,
@@ -4269,7 +4263,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             refetchGame();
                           }}
                           className="p-1 text-text-muted hover:text-cyan transition-colors"
-                          title="Refresh game state"
+                          title="Resync game state"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -4352,7 +4346,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                             refetchGame();
                           }}
                           className="p-1 text-text-muted hover:text-cyan transition-colors"
-                          title="Refresh game state"
+                          title="Resync game state"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -4958,7 +4952,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     fontSize: "18px",
                   }}
                 >
-                  {readOnly ? "Creator Fleet" : "My Fleet"}
+                  {readOnly ? "Creator Fleet" : "[MY FLEET]"}
                   <span
                     className="ml-2"
                     style={{
@@ -5036,7 +5030,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     fontSize: "18px",
                   }}
                 >
-                  {readOnly ? "Joiner Fleet" : "Opponent's Fleet"}
+                  {readOnly ? "Joiner Fleet" : "[HOSTILE FLEET]"}
                   <span
                     className="ml-2"
                     style={{
@@ -5117,7 +5111,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     fontSize: "18px",
                   }}
                 >
-                  {readOnly ? "Creator Fleet" : "Opponent's Fleet"}
+                  {readOnly ? "Creator Fleet" : "[HOSTILE FLEET]"}
                   <span
                     className="ml-2"
                     style={{
@@ -5195,7 +5189,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({
                     fontSize: "18px",
                   }}
                 >
-                  {readOnly ? "Joiner Fleet" : "My Fleet"}
+                  {readOnly ? "Joiner Fleet" : "[MY FLEET]"}
                   <span
                     className="ml-2"
                     style={{

@@ -87,10 +87,26 @@ body {
   background: var(--color-near-black);
   color: var(--color-text-primary);
   font-family: var(--font-rajdhani), "Arial Black", sans-serif;
-  /* Enable font smoothing for crisper text on WebKit/Blink */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Global CRT scanline effect — fixed overlay, covers entire viewport */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.045) 2px,
+    rgba(0, 0, 0, 0.045) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+  will-change: auto;
 }
 
 /* ============================================
@@ -602,7 +618,7 @@ body {
   border: 1px solid var(--color-gunmetal);
   border-top-color: var(--color-steel);
   border-left-color: var(--color-steel);
-  border-radius: 0; /* Square corners */
+  border-radius: 0;
 }
 
 .panel-elevated {
@@ -611,6 +627,151 @@ body {
   border-top-color: var(--color-steel);
   border-left-color: var(--color-steel);
   border-radius: 0;
+}
+
+/* ============================================
+   TACTICAL PANEL DECORATION
+   ============================================ */
+
+/*
+  Corner bracket decoration — adds angular HUD-style accent marks
+  to opposite corners using a single gradient pseudo-element.
+  Set --bracket-color on the element to control color.
+  Usage: add class "corner-bracket" to any panel that has position:relative.
+*/
+.corner-bracket {
+  position: relative;
+}
+
+.corner-bracket::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    /* top-left horizontal */
+    linear-gradient(to right, var(--bracket-color, var(--color-cyan)) 2px, transparent 2px) 0 0 / 14px 2px no-repeat,
+    /* top-left vertical */
+    linear-gradient(to bottom, var(--bracket-color, var(--color-cyan)) 2px, transparent 2px) 0 0 / 2px 14px no-repeat,
+    /* top-right horizontal */
+    linear-gradient(to left, var(--bracket-color, var(--color-cyan)) 2px, transparent 2px) 100% 0 / 14px 2px no-repeat,
+    /* top-right vertical */
+    linear-gradient(to bottom, var(--bracket-color, var(--color-cyan)) 2px, transparent 2px) 100% 0 / 2px 14px no-repeat,
+    /* bottom-left horizontal */
+    linear-gradient(to right, var(--bracket-color, var(--color-cyan)) 2px, transparent 2px) 0 100% / 14px 2px no-repeat,
+    /* bottom-left vertical */
+    linear-gradient(to top, var(--bracket-color, var(--color-cyan)) 2px, transparent 2px) 0 100% / 2px 14px no-repeat,
+    /* bottom-right horizontal */
+    linear-gradient(to left, var(--bracket-color, var(--color-cyan)) 2px, transparent 2px) 100% 100% / 14px 2px no-repeat,
+    /* bottom-right vertical */
+    linear-gradient(to top, var(--bracket-color, var(--color-cyan)) 2px, transparent 2px) 100% 100% / 2px 14px no-repeat;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+/* Color variants */
+.corner-bracket-amber  { --bracket-color: var(--color-amber); }
+.corner-bracket-green  { --bracket-color: var(--color-phosphor-green); }
+.corner-bracket-red    { --bracket-color: var(--color-warning-red); }
+.corner-bracket-purple { --bracket-color: var(--color-purple); }
+
+/*
+  Hazard border — industrial warning stripe border for danger elements.
+  Wrap the danger element in a div with this class, then nest the content
+  inside a bg-near-black div. The stripe forms the visible "border".
+*/
+.hazard-border {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-warning-red) 0px,
+    var(--color-warning-red) 3px,
+    rgba(12, 17, 23, 0.85) 3px,
+    rgba(12, 17, 23, 0.85) 10px
+  );
+  padding: 3px;
+}
+
+/* Amber/yellow hazard variant */
+.hazard-border-amber {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-amber) 0px,
+    var(--color-amber) 3px,
+    rgba(12, 17, 23, 0.85) 3px,
+    rgba(12, 17, 23, 0.85) 10px
+  );
+  padding: 3px;
+}
+
+/*
+  Data readout row — right-aligned monospace stat display.
+  Mimics FCS/DRADIS readout panels.
+*/
+.data-readout {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-jetbrains-mono), "Courier New", monospace;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-gunmetal);
+  padding: 2px 0;
+}
+
+.data-readout:last-child {
+  border-bottom: none;
+}
+
+.data-readout-label {
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.data-readout-value {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Terminal blink cursor */
+@keyframes terminal-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.terminal-cursor::after {
+  content: "_";
+  animation: terminal-blink 1s step-end infinite;
+  color: var(--color-cyan);
+  font-family: var(--font-jetbrains-mono), monospace;
+}
+
+/* Status ping — used for live connection indicators */
+@keyframes status-ping {
+  0% { transform: scale(1); opacity: 1; }
+  75%, 100% { transform: scale(2.5); opacity: 0; }
+}
+
+.status-ping::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  animation: status-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Sweep animation — rotating scan line for tactical displays */
+@keyframes radar-sweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.radar-sweep {
+  animation: radar-sweep 3s linear infinite;
+  transform-origin: center bottom;
 }
 
 /* Scanline overlay (CRT effect) */

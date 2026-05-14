@@ -276,10 +276,11 @@ export const HeroShipShowcase: React.FC<{
         className={`min-w-0 max-w-full ${flipLayout ? "order-2" : "order-1"}`}
       >
         <div
-          className={`flex min-w-0 flex-col gap-2 border-2 ${accentBorderClass} bg-black/60 p-2 sm:gap-3 sm:p-3 md:p-4`}
+          className={`corner-bracket flex min-w-0 flex-col gap-2 border-2 ${accentBorderClass} bg-black/60 p-2 sm:gap-3 sm:p-3 md:p-4`}
           style={{
-            borderRadius: 0, // Square corners for industrial theme
-          }}
+            borderRadius: 0,
+            "--bracket-color": accent,
+          } as React.CSSProperties}
         >
           {/* Ship name (left) + rank badge (upper right) */}
           <div className="mb-1.5 md:mb-2">
@@ -362,42 +363,35 @@ export const HeroShipShowcase: React.FC<{
             </div>
           </div>
 
-          {/* Combat stats: single column (matches side-by-side intel card) */}
-          <div
-            className="space-y-0.5 text-xs leading-tight sm:text-sm md:text-base"
-            style={{
-              fontFamily: "var(--font-mono), monospace",
-            }}
-          >
-            <div className="flex min-w-0 justify-between gap-2">
-              <span className="shrink-0 opacity-60">Range:</span>
-              <span className="truncate text-right font-bold text-phosphor-green">
+          {/* Combat stats */}
+          <div className="space-y-0">
+            <div className="data-readout">
+              <span className="data-readout-label">Range</span>
+              <span className="font-bold text-phosphor-green font-mono text-xs">
                 {shipAttributes.range}
               </span>
             </div>
-            <div className="flex min-w-0 justify-between gap-2">
-              <span className="shrink-0 opacity-60">Damage:</span>
-              <span className="truncate text-right font-bold text-warning-red">
+            <div className="data-readout">
+              <span className="data-readout-label">Damage</span>
+              <span className="font-bold text-warning-red font-mono text-xs">
                 {shipAttributes.gunDamage}
               </span>
             </div>
-            <div className="flex min-w-0 justify-between gap-2">
-              <span className="shrink-0 opacity-60">Hull:</span>
-              <span className="truncate text-right font-bold text-amber">
+            <div className="data-readout">
+              <span className="data-readout-label">Hull</span>
+              <span className="font-bold text-amber font-mono text-xs">
                 {shipAttributes.hullPoints}/{shipAttributes.maxHullPoints}
               </span>
             </div>
-            <div className="flex min-w-0 justify-between gap-2">
-              <span className="shrink-0 opacity-60">Move:</span>
-              <span
-                className={`truncate text-right font-bold ${side === "enemy" ? "text-warning-red" : "text-cyan"}`}
-              >
+            <div className="data-readout">
+              <span className="data-readout-label">Move</span>
+              <span className={`font-bold font-mono text-xs ${side === "enemy" ? "text-warning-red" : "text-cyan"}`}>
                 {shipAttributes.movement}
               </span>
             </div>
-            <div className="flex min-w-0 justify-between gap-2">
-              <span className="shrink-0 opacity-60">Defense:</span>
-              <span className="truncate text-right font-bold text-amber">
+            <div className="data-readout">
+              <span className="data-readout-label">Defense</span>
+              <span className="font-bold text-amber font-mono text-xs">
                 {shipAttributes.damageReduction}%
               </span>
             </div>
@@ -411,10 +405,11 @@ export const HeroShipShowcase: React.FC<{
       >
         {heroShipImage ? (
           <div
-            className={`relative flex aspect-square w-full max-w-full items-center justify-center border-2 bg-black/40 p-1.5 sm:p-2 md:p-4 ${accentSoftBorderClass}`}
+            className={`corner-bracket relative flex aspect-square w-full max-w-full items-center justify-center border-2 bg-black/40 p-1.5 sm:p-2 md:p-4 ${accentSoftBorderClass}`}
             style={{
-              borderRadius: 0, // Square corners for industrial theme
-            }}
+              borderRadius: 0,
+              "--bracket-color": accent,
+            } as React.CSSProperties}
           >
             {/* Flip wrapper matches ShipCard tooltip: art + rank stars + glow mirror together */}
             <div
@@ -456,10 +451,11 @@ export const HeroShipShowcase: React.FC<{
           </div>
         ) : (
           <div
-            className={`flex aspect-square w-full max-w-full items-center justify-center border-2 bg-black/40 ${accentSoftBorderClass}`}
+            className={`corner-bracket flex aspect-square w-full max-w-full items-center justify-center border-2 bg-black/40 ${accentSoftBorderClass}`}
             style={{
-              borderRadius: 0, // Square corners for industrial theme
-            }}
+              borderRadius: 0,
+              "--bracket-color": accent,
+            } as React.CSSProperties}
           >
             <p
               className="text-sm opacity-50 sm:text-base md:text-lg"

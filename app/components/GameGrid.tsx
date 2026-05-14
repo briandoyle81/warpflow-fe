@@ -635,7 +635,7 @@ export function GameGrid({
         damage.reactorCritical &&
         !!targetAttributes &&
         targetAttributes.reactorCriticalTimer + 1 >= 3;
-      // Same condition as label text "💀 Destroy Ship" (main gun, flak, EMP reactor stack).
+      // Same condition as label text "[DESTROY]" (main gun, flak, EMP reactor stack).
       if (willDestroyByReactor) {
         ids.add(target.shipId);
       }
@@ -1502,7 +1502,7 @@ export function GameGrid({
                               title="Disabled (0 HP)"
                             >
                               <div className="w-5 h-5 flex items-center justify-center">
-                                <span className="text-xs leading-none">🆘</span>
+                                <span className="text-xs leading-none font-mono">[KIA]</span>
                               </div>
                             </div>
                           );
@@ -2002,7 +2002,7 @@ export function GameGrid({
                                     className="font-mono leading-none"
                                     style={{ fontSize: "clamp(6px, 1.6vmin, 8px)" }}
                                   >
-                                    💀
+                                    ✕
                                   </span>
                                 </div>
                               ))}
@@ -3000,31 +3000,31 @@ export function GameGrid({
                         if (specialType === 3) {
                           // Flak special - show damage effect
                           if (willDestroyByReactor) {
-                            labelText = "💀 Destroy Ship";
+                            labelText = "[DESTROY]";
                           } else if (damage.reactorCritical) {
-                            labelText = "⚡ Reactor Critical +1";
+                            labelText = "REACTOR +1";
                           } else if (showAsKill) {
-                            labelText = `💀 ${damage.reducedDamage} DMG (DISABLE)`;
+                            labelText = `[✕] ${damage.reducedDamage} DMG`;
                           } else {
-                            labelText = `⚔️ ${damage.reducedDamage} DMG`;
+                            labelText = `${damage.reducedDamage} DMG`;
                           }
                         } else if (specialType === 1) {
                           // EMP: show reactor damage label (not repair)
                           labelText = willDestroyByReactor
-                            ? "💀 Destroy Ship"
-                            : "1 Reactor 💀";
+                            ? "[DESTROY]"
+                            : "REACTOR DMG";
                         } else {
                           // Other special abilities - show repair/heal effect
-                          labelText = `🔧 Repair ${damage.reducedDamage} HP`;
+                          labelText = `REPAIR ${damage.reducedDamage} HP`;
                         }
                       } else if (willDestroyByReactor) {
-                        labelText = "💀 Destroy Ship";
+                        labelText = "[DESTROY]";
                       } else if (damage.reactorCritical) {
-                        labelText = "⚡ Reactor Critical +1";
+                        labelText = "REACTOR +1";
                       } else if (showAsKill) {
-                        labelText = `💀 ${damage.reducedDamage} DMG (DISABLE)`;
+                        labelText = `[✕] ${damage.reducedDamage} DMG`;
                       } else {
-                        labelText = `⚔️ ${damage.reducedDamage} DMG`;
+                        labelText = `${damage.reducedDamage} DMG`;
                       }
 
                       const { cx: cellX, cellTop, cellBottom } =
@@ -3119,7 +3119,7 @@ export function GameGrid({
                               transform: labelTransform,
                             }}
                           >
-                            ⚡ Reactor Critical +1
+                            REACTOR CRITICAL +1
                           </div>
                         </>
                       );

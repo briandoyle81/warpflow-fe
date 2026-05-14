@@ -1900,7 +1900,7 @@ const Lobbies: React.FC = () => {
           style={{ borderRadius: 0 }}
         >
           <p className="text-sm font-bold uppercase tracking-wider text-cyan/90">
-            Loading your navy...
+            ACQUIRING DATA...
           </p>
           <p className="mt-2 text-xs text-text-muted">
             Checking on-chain ship ownership
@@ -2366,13 +2366,13 @@ const Lobbies: React.FC = () => {
               createForm.reservedJoiner.trim().toLowerCase() ===
                 address.toLowerCase() ? (
                 <p className="text-xs text-warning-red mt-1 font-bold">
-                  ❌ Cannot reserve a lobby for yourself! Please enter a
+                  [ERR] Cannot reserve a lobby for yourself! Please enter a
                   different player&apos;s address or leave empty for an open
                   lobby.
                 </p>
               ) : createForm.reservedJoiner ? (
                 <p className="text-xs text-amber mt-1">
-                  ⚠️ Requires 1 UTC to reserve game for this player
+                  // Requires 1 UTC to reserve game for this player
                 </p>
               ) : (
                 <p className="text-xs text-amber mt-1">
@@ -2382,7 +2382,7 @@ const Lobbies: React.FC = () => {
             </div>
             <div className="p-3 bg-steel/50 rounded-none border border-gunmetal">
               <p className="text-sm text-text-secondary">
-                <span className="text-amber">⚡ Turn Order:</span> The
+                <span className="text-amber">// Turn Order:</span> The
                 player who creates their fleet first will go first in the game.
               </p>
             </div>
@@ -2454,14 +2454,14 @@ const Lobbies: React.FC = () => {
           </button>
         </div>
         {lobbyList.isLoading ? (
-          <div className="text-center text-text-muted">Loading lobbies...</div>
+          <div className="text-center text-text-muted">ACQUIRING DATA...</div>
         ) : lobbyList.error ? (
           <div className="text-center text-warning-red">
-            Error: {lobbyList.error}
+            [ERR]: {lobbyList.error}
           </div>
         ) : lobbyList.lobbies.length === 0 ? (
           <div className="text-center text-text-muted">
-            No lobbies available. Create one to get started!
+            [NO OPEN ENGAGEMENTS]
             {lobbyCount && typeof lobbyCount === "bigint" && lobbyCount > 0n ? (
               <div className="mt-2 text-sm">
                 Total lobbies in system: {lobbyCount.toString()}
@@ -2530,7 +2530,7 @@ const Lobbies: React.FC = () => {
                     typeof lobby.players.reservedJoiner === "string" && (
                       <div className="mt-2">
                         <span className="px-2 py-1 text-xs bg-amber/20 text-amber rounded-none border border-amber/50">
-                          🔒 RESERVED
+                          [RESERVED]
                         </span>
                         <p className="text-xs text-amber mt-1">
                           Reserved for:{" "}
@@ -2647,7 +2647,7 @@ const Lobbies: React.FC = () => {
                         // Reserved for current user - show accept/reject
                         <div className="space-y-2">
                           <p className="text-sm text-amber text-center font-mono">
-                            🎮 Game reserved for you!
+                            [GAME RESERVED FOR YOU]
                           </p>
                           <div className="flex gap-2">
                             <LobbyAcceptButton
@@ -2704,7 +2704,7 @@ const Lobbies: React.FC = () => {
                         // Reserved for someone else
                         <div className="text-center">
                           <p className="text-sm text-amber font-mono mb-2">
-                            🔒 This game is reserved for another player
+                            [RESERVED] This game is reserved for another player
                           </p>
                           <p className="text-xs text-text-muted">
                             Reserved for:{" "}
@@ -3217,7 +3217,7 @@ const Lobbies: React.FC = () => {
                 )}
                 {!playerFleetId && (
                   <p className="text-sm text-amber mb-4">
-                    ⚡ Creating your fleet first will make you go first in the
+                    // Creating your fleet first will make you go first in the
                     game!
                   </p>
                 )}
@@ -3276,7 +3276,7 @@ const Lobbies: React.FC = () => {
                                 }
                                 className="mr-2"
                               />
-                              <span className="text-amber">Shiny ✨</span>
+                              <span className="text-amber">Shiny ★</span>
                             </label>
                             <label className="flex items-center">
                               <input
@@ -3920,7 +3920,7 @@ const Lobbies: React.FC = () => {
             <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[420]">
               <div className="bg-near-black border border-amber rounded-none p-6 max-w-md w-full mx-4">
                 <div className="text-center">
-                  <div className="text-amber text-4xl mb-4">⚠️</div>
+                  <div className="text-amber text-2xl font-mono font-bold mb-4 tracking-widest">[!]</div>
                   <h3 className="text-xl font-bold text-amber mb-4">
                     FLEET THREAT WARNING
                   </h3>
@@ -4038,7 +4038,7 @@ const Lobbies: React.FC = () => {
                                   : "bg-steel/20 text-text-muted border border-gunmetal/30"
                               }`}
                             >
-                              {shipData.shipData?.shiny ? "SHINY ✨" : "COMMON"}
+                              {shipData.shipData?.shiny ? "SHINY ★" : "COMMON"}
                             </span>
                             {/* Rank */}
                             {shipData.shipData?.constructed && (

@@ -1648,10 +1648,7 @@ const ManageNavy: React.FC = () => {
         <h3 className="text-2xl font-bold mb-6 tracking-wider">
           [MANAGE NAVY]
         </h3>
-        <div className="flex items-center justify-center">
-          <div className="animate-spin h-8 w-8 border-b-2 border-cyan"></div>
-          <span className="ml-3">Loading navy data...</span>
-        </div>
+        <div className="font-mono text-xs text-text-muted tracking-widest animate-pulse mt-4">&gt;&gt; ACQUIRING NAVY DATA...</div>
       </div>
     );
   }
@@ -3067,7 +3064,7 @@ const ManageNavy: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-near-black border border-warning-red rounded-none p-6 max-w-md mx-4">
             <div className="text-center">
-              <div className="text-warning-red text-4xl mb-4">☠️</div>
+              <div className="text-warning-red text-2xl font-mono font-bold mb-4 tracking-widest">[✕]</div>
               {canRecycle ? (
                 <>
                   <h3 className="text-xl font-bold text-warning-red mb-4">

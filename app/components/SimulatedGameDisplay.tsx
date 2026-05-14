@@ -3805,7 +3805,7 @@ export function SimulatedGameDisplay({
                               borderRadius: 0,
                             }}
                           >
-                            Next →
+                            NEXT &gt;&gt;
                           </button>
                         ) : (
                           <div />
@@ -4302,7 +4302,7 @@ export function SimulatedGameDisplay({
         {isMobileFleetModalOpen ? (
           <div className="fixed inset-0 z-[310] flex flex-col bg-[rgba(4,8,15,0.98)] p-3">
             <div className="mb-3 flex items-center justify-between border border-solid px-3 py-2" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-near-black)" }}>
-              <h3 className="text-sm uppercase tracking-wider text-cyan">Fleet Intel</h3>
+              <h3 className="text-sm uppercase tracking-wider text-cyan">[FLEET INTEL]</h3>
               <button
                 type="button"
                 onClick={() => setIsMobileFleetModalOpen(false)}
@@ -4320,7 +4320,7 @@ export function SimulatedGameDisplay({
             <div className="min-h-0 flex-1 overflow-y-auto border border-solid p-3" style={{ borderColor: "var(--color-gunmetal)", backgroundColor: "var(--color-slate)" }}>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="mb-2 text-xs uppercase tracking-wider text-cyan">My Fleet</h4>
+                  <h4 className="mb-2 text-xs uppercase tracking-wider text-cyan">[MY FLEET]</h4>
                   <div className="space-y-2">
                     {gameState.creatorActiveShipIds
                       .filter(() => !isMobileJoiner)
@@ -4899,7 +4899,7 @@ export function SimulatedGameDisplay({
                                   className={proposedMoveTargetBtnClass}
                                   style={targetButtonStyle}
                                 >
-                                  🎯{" "}
+                                  {`[>] `}
                                   {targetShip?.name ||
                                     `#${BigInt(target.shipId).toString()}`}
                                 </button>

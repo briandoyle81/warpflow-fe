@@ -117,9 +117,8 @@ export function ShipImage({
       <div
         className={`flex items-center justify-center bg-steel/50 border border-gunmetal rounded-none ${className}`}
       >
-        <div className="text-text-muted text-xs text-center p-2">
-          <div className="animate-spin text-lg mb-1">⏳</div>
-          <div>Loading...</div>
+        <div className="text-text-muted text-xs text-center p-2 font-mono tracking-widest animate-pulse">
+          &gt;&gt;
           {error && <div className="text-amber text-xs mt-1">{error}</div>}
         </div>
       </div>
@@ -133,9 +132,8 @@ export function ShipImage({
       <div
         className={`flex items-center justify-center bg-steel/50 border border-gunmetal rounded-none ${className}`}
       >
-        <div className="text-text-muted text-xs text-center p-2">
-          <div className="animate-spin text-lg mb-1">⏳</div>
-          <div>Loading...</div>
+        <div className="text-text-muted text-xs text-center p-2 font-mono tracking-widest animate-pulse">
+          &gt;&gt;
           {error && <div className="text-amber text-xs mt-1">{error}</div>}
         </div>
       </div>
