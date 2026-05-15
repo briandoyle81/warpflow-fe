@@ -1777,7 +1777,7 @@ const ManageNavy: React.FC = () => {
     );
 
   const fleetCompositionSelectControl = (
-    <div className="flex w-full min-w-0 flex-col gap-1">
+    <div className="flex w-full min-w-0 flex-col gap-1 md:w-auto">
       <label
         className="text-[10px] font-bold uppercase tracking-wider opacity-70"
         style={{
@@ -1958,7 +1958,7 @@ const ManageNavy: React.FC = () => {
                 type="button"
                 onClick={handleBuyNewShipsClick}
                 disabled={transactionState.isPending}
-                className="w-full justify-center px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
+                className="w-full justify-center px-6 py-3 border-2 border-cyan text-cyan hover:border-cyan/80 hover:text-cyan/80 hover:bg-cyan/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                 style={{
                   borderRadius: 0,
                 }}
@@ -2023,7 +2023,7 @@ const ManageNavy: React.FC = () => {
                   type="button"
                   onClick={handleBuyNewShipsClick}
                   disabled={transactionState.isPending}
-                  className="w-full justify-center px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
+                  className="w-full justify-center px-6 py-3 border-2 border-cyan text-cyan hover:border-cyan/80 hover:text-cyan/80 hover:bg-cyan/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                   style={{
                     borderRadius: 0,
                   }}
@@ -2043,8 +2043,8 @@ const ManageNavy: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="relative flex w-full flex-col gap-4 md:inline-flex md:w-auto md:flex-row md:items-start md:gap-4">
-            <div className="relative z-10 flex w-full shrink-0 flex-col gap-3 md:flex-row md:flex-wrap md:gap-4 md:w-auto">
+          <div className="relative flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-3">
+            <div className="relative z-10 flex w-full shrink-0 flex-col gap-3 md:flex-row md:flex-nowrap md:items-center md:gap-3 md:w-auto">
               {fleetCompositionSelectControl}
               {fleetStats.unconstructedShips > STALE_COST_SYNC_BATCH_CAP ? (
                 <ShipActionButton
@@ -2080,7 +2080,7 @@ const ManageNavy: React.FC = () => {
                 type="button"
                 onClick={handleBuyNewShipsClick}
                 disabled={transactionState.isPending}
-                className="w-full justify-center px-6 py-3 border-2 border-blue-400 text-blue-400 hover:border-blue-300 hover:text-blue-300 hover:bg-blue-400/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
+                className="w-full justify-center px-6 py-3 border-2 border-cyan text-cyan hover:border-cyan/80 hover:text-cyan/80 hover:bg-cyan/10 font-mono font-bold tracking-wider transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed md:w-auto"
                 style={{
                   borderRadius: 0,
                 }}
@@ -2269,7 +2269,7 @@ const ManageNavy: React.FC = () => {
             </div>
             <button
               onClick={() => setShowShipPurchase(false)}
-              className="self-end text-2xl font-bold text-blue-400 hover:text-blue-300 sm:self-auto"
+              className="self-end text-2xl font-bold text-text-muted hover:text-text-primary sm:self-auto"
               type="button"
               aria-label="Close ship purchasing"
             >
@@ -3082,7 +3082,7 @@ const ManageNavy: React.FC = () => {
                       </li>
                       <li>
                         •{" "}
-                        <span className="text-blue-400">
+                        <span className="text-cyan">
                           Pay out{" "}
                           {recycleReward
                             ? formatEther(recycleReward as bigint)
