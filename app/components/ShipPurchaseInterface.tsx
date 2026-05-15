@@ -223,7 +223,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
           Expand your fleet
         </h3>
         <p
-          className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300"
+          className="mt-2 max-w-2xl text-sm leading-relaxed text-text-secondary"
           style={{
             fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
           }}
@@ -358,7 +358,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
         </aside>
       </div>
       <p
-        className="mt-4 text-[11px] uppercase tracking-[0.08em] text-slate-400"
+        className="mt-4 text-[11px] uppercase tracking-[0.08em] text-text-muted"
         style={{
           fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
         }}
@@ -368,7 +368,7 @@ const ShipPurchaseInterface: React.FC<ShipPurchaseInterfaceProps> = ({
           : "Click to purchase."}
       </p>
       <p
-        className="mt-1 text-[11px] uppercase tracking-[0.08em] text-slate-400"
+        className="mt-1 text-[11px] uppercase tracking-[0.08em] text-text-muted"
         style={{
           fontFamily: "var(--font-jetbrains-mono), 'Courier New', monospace",
         }}

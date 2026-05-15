@@ -133,7 +133,7 @@ const UTCPurchaseModal: React.FC<UTCPurchaseModalProps> = ({ onClose }) => {
           >
             Choose an amount
           </h3>
-          <p className="mt-2 max-w-2xl text-xs leading-relaxed text-slate-300 font-mono">
+          <p className="mt-2 max-w-2xl text-xs leading-relaxed text-text-secondary font-mono">
             Each option is a fixed {nativeTokenSymbol} payment. You receive the
             same amount in UTC. Larger options are for convenience only, not a
             different product.
