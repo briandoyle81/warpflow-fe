@@ -267,8 +267,6 @@ const Info: React.FC = () => {
               seedOffset={0}
               align="start"
               side="allied"
-              hideRankBadgeMobile
-              hideShinyMobile
             />
           </div>
           <div
@@ -280,8 +278,6 @@ const Info: React.FC = () => {
               align="start"
               side="enemy"
               flipLayout={true}
-              hideRankBadgeMobile
-              hideShinyMobile
             />
           </div>
         </div>

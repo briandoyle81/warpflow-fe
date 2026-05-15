@@ -158,18 +158,12 @@ export const HeroShipShowcase: React.FC<{
   align?: HeroShipShowcaseAlign;
   side?: "allied" | "enemy";
   flipLayout?: boolean;
-  /** When true, hide the R{n} badge below `md` (Info Intel on narrow screens). */
-  hideRankBadgeMobile?: boolean;
-  /** When true, hide the SHINY label below `md` (Info Intel on narrow screens). */
-  hideShinyMobile?: boolean;
 }> = ({
   seedOffset = 0,
   intervalMs = 10000,
   align = "end",
   side = "allied",
   flipLayout = false,
-  hideRankBadgeMobile = false,
-  hideShinyMobile = false,
 }) => {
   // Rotate ships every N milliseconds
   const [shipIndex, setShipIndex] = useState(seedOffset);
@@ -222,45 +216,6 @@ export const HeroShipShowcase: React.FC<{
   const accentInset = side === "enemy" ? "rgba(255, 77, 77, 0.1)" : "rgba(86, 214, 255, 0.1)";
   const flipSprite = side === "allied";
 
-  const rankBadgeStyle = useMemo(() => {
-    const rank = shipRank.rank;
-    if (rank >= 6) {
-      return {
-        color: "var(--color-amber)",
-        borderColor: "var(--color-amber)",
-        backgroundColor: "rgba(255, 184, 77, 0.35)",
-      };
-    }
-    if (rank === 3) {
-      return {
-        color: accent,
-        borderColor: accent,
-        backgroundColor:
-          side === "enemy"
-            ? "rgba(255, 77, 77, 0.2)"
-            : "rgba(86, 214, 255, 0.2)",
-      };
-    }
-    if (rank === 4) {
-      return {
-        color: "#a855f7",
-        borderColor: "#a855f7",
-        backgroundColor: "rgba(168, 85, 247, 0.2)",
-      };
-    }
-    if (rank === 5) {
-      return {
-        color: "var(--color-amber)",
-        borderColor: "var(--color-amber)",
-        backgroundColor: "rgba(255, 184, 77, 0.2)",
-      };
-    }
-    return {
-      color: "var(--color-text-muted)",
-      borderColor: "var(--color-text-muted)",
-      backgroundColor: "rgba(100, 116, 139, 0.2)",
-    };
-  }, [shipRank.rank, side, accent]);
 
   /** Narrow stats column, wider art (~36% / ~64%). Flip column fr order when art is on the left. */
   const intelGridCols = flipLayout
@@ -269,63 +224,31 @@ export const HeroShipShowcase: React.FC<{
 
   return (
     <div
-      className={`grid w-full min-w-0 items-start gap-2 sm:gap-3 ${intelGridCols} ${gridPlacementClass}`}
+      className={`grid w-full min-w-0 items-stretch gap-2 sm:gap-3 ${intelGridCols} ${gridPlacementClass}`}
     >
       {/* Stats panel (left when not flipLayout; right when enemy flipLayout) */}
       <div
-        className={`min-w-0 max-w-full ${flipLayout ? "order-2" : "order-1"}`}
+        className={`flex min-w-0 max-w-full flex-col ${flipLayout ? "order-2" : "order-1"}`}
       >
         <div
-          className={`corner-bracket flex min-w-0 flex-col gap-2 border-2 ${accentBorderClass} bg-black/60 p-2 sm:gap-3 sm:p-3 md:p-4`}
+          className={`corner-bracket flex h-full min-w-0 flex-col gap-2 border-2 ${accentBorderClass} bg-black/60 p-2 sm:gap-3 sm:p-3 md:p-4`}
           style={{
             borderRadius: 0,
             "--bracket-color": accent,
           } as React.CSSProperties}
         >
-          {/* Ship name (left) + rank badge (upper right) */}
+          {/* Ship name */}
           <div className="mb-1.5 md:mb-2">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <h3
-                  className="truncate text-lg font-bold sm:text-xl md:text-2xl lg:text-3xl"
-                  style={{
-                    fontFamily:
-                      "var(--font-rajdhani), 'Arial Black', sans-serif",
-                    color: accent,
-                  }}
-                >
-                  {heroShip.name}
-                </h3>
-                {heroShip.shipData.shiny && (
-                  <div
-                    className={`mt-1.5 flex flex-wrap gap-2 ${
-                      hideShinyMobile ? "hidden md:flex" : ""
-                    }`}
-                  >
-                    <span
-                      className="border border-amber bg-amber/20 px-2 py-0.5 text-xs text-amber sm:px-2.5 sm:text-sm"
-                      style={{
-                        borderRadius: 0,
-                        fontFamily: "var(--font-mono), monospace",
-                      }}
-                    >
-                      SHINY
-                    </span>
-                  </div>
-                )}
-              </div>
-              <span
-                className={`shrink-0 items-center border px-2 py-0.5 font-mono text-xs font-bold sm:px-2.5 sm:py-1 sm:text-sm ${
-                  hideRankBadgeMobile ? "hidden md:inline-flex" : "inline-flex"
-                }`}
-                style={{
-                  borderRadius: 0,
-                  ...rankBadgeStyle,
-                }}
-              >
-                R{shipRank.rank}
-              </span>
-            </div>
+            <h3
+              className="truncate text-lg font-bold sm:text-xl md:text-2xl lg:text-3xl"
+              style={{
+                fontFamily:
+                  "var(--font-rajdhani), 'Arial Black', sans-serif",
+                color: accent,
+              }}
+            >
+              {heroShip.name}
+            </h3>
           </div>
 
           {/* Equipment */}
