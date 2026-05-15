@@ -1659,8 +1659,8 @@ const ManageNavy: React.FC = () => {
         <h3 className="text-2xl font-bold mb-6 tracking-wider">
           [MANAGE NAVY]
         </h3>
-        <p className="text-warning-red text-lg">
-          Error loading navy: {error.message}
+        <p className="text-warning-red font-mono text-sm tracking-wider">
+          [ERR] Navy data acquisition failed: {error.message}
         </p>
       </div>
     );
@@ -1669,11 +1669,8 @@ const ManageNavy: React.FC = () => {
   // Show loading state while wallet is connecting
   if (isConnecting) {
     return (
-      <div className="text-center text-cyan font-mono">
-        <div className="text-xl mb-4">Connecting to wallet...</div>
-        <div className="text-sm text-cyan/60">
-          Please wait while we establish your connection
-        </div>
+      <div className="text-center font-mono mt-8">
+        <div className="text-xs text-text-muted tracking-widest animate-pulse">&gt;&gt; ESTABLISHING SECURE LINK...</div>
       </div>
     );
   }

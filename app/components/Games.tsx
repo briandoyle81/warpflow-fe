@@ -288,122 +288,110 @@ const Games: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="text-sm text-text-muted">
-            Total games: {sortedGames.length}
+          <div className="font-mono text-xs text-text-muted tracking-widest">
+            // {sortedGames.length} ENGAGEMENT{sortedGames.length !== 1 ? "S" : ""} ON RECORD
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {sortedGames.map((game) => (
+            {sortedGames.map((game) => {
+              const isFinished = game.metadata.winner !== ZERO_ADDRESS;
+              const isVictory = isFinished && game.metadata.winner === address;
+              const accentClass = isFinished
+                ? isVictory ? "border-phosphor-green" : "border-warning-red"
+                : "border-amber";
+              const accentColor = isFinished
+                ? isVictory ? "var(--color-phosphor-green)" : "var(--color-warning-red)"
+                : "var(--color-amber)";
+              const remaining = isFinished ? 0 : calculateTimeRemaining(game);
+              return (
               <div
                 key={game.metadata.gameId.toString()}
-                className="corner-bracket border border-gunmetal bg-steel p-4 rounded-none"
+                className={`corner-bracket border-2 ${accentClass} bg-near-black p-4 rounded-none`}
+                style={{ "--bracket-color": accentColor } as React.CSSProperties}
               >
-                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h3 className="text-base font-mono text-white sm:text-lg">
-                    Game #{game.metadata.gameId.toString()}
+                {/* Card header */}
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <h3 className="font-mono font-bold tracking-wider text-text-primary">
+                    ENGAGEMENT #{game.metadata.gameId.toString()}
                   </h3>
                   <span
-                    className={`w-fit text-xs px-2 py-1 rounded-none ${
-                      game.metadata.winner ===
-                      ZERO_ADDRESS
-                        ? "bg-amber/20 text-amber border border-amber/30"
-                        : game.metadata.winner === address
-                        ? "bg-phosphor-green/20 text-phosphor-green border border-phosphor-green/30"
-                        : "bg-warning-red/20 text-warning-red border border-warning-red/30"
+                    className={`shrink-0 border px-2 py-0.5 font-mono text-xs font-bold tracking-wider rounded-none ${
+                      isFinished
+                        ? isVictory
+                          ? "border-phosphor-green/50 bg-phosphor-green/10 text-phosphor-green"
+                          : "border-warning-red/50 bg-warning-red/10 text-warning-red"
+                        : "border-amber/50 bg-amber/10 text-amber"
                     }`}
                   >
-                    {game.metadata.winner ===
-                    ZERO_ADDRESS
-                      ? "IN PROGRESS"
-                      : game.metadata.winner === address
-                      ? "VICTORY"
-                      : "DEFEAT"}
+                    {isFinished ? (isVictory ? "VICTORY" : "DEFEAT") : "IN PROGRESS"}
                   </span>
                 </div>
 
-                <div className="space-y-2 text-sm text-text-secondary">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="opacity-60">Lobby ID:</span>
-                    <span className="text-right">{game.metadata.lobbyId.toString()}</span>
+                {/* Data readouts */}
+                <div className="space-y-0">
+                  <div className="data-readout">
+                    <span className="data-readout-label">Lobby</span>
+                    <span className="font-mono text-xs">{game.metadata.lobbyId.toString()}</span>
                   </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="opacity-60">Creator:</span>
-                    <span className="font-mono text-xs text-right">
-                      {game.metadata.creator.slice(0, 6)}...
-                      {game.metadata.creator.slice(-4)}
+                  <div className="data-readout">
+                    <span className="data-readout-label">Creator</span>
+                    <span className="font-mono text-xs">
+                      {game.metadata.creator.slice(0, 6)}…{game.metadata.creator.slice(-4)}
                     </span>
                   </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="opacity-60">Joiner:</span>
-                    <span className="font-mono text-xs text-right">
-                      {game.metadata.joiner.slice(0, 6)}...
-                      {game.metadata.joiner.slice(-4)}
+                  <div className="data-readout">
+                    <span className="data-readout-label">Joiner</span>
+                    <span className="font-mono text-xs">
+                      {game.metadata.joiner.slice(0, 6)}…{game.metadata.joiner.slice(-4)}
                     </span>
                   </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="opacity-60">Started:</span>
-                    <span className="text-right">
-                      {new Date(
-                        Number(game.metadata.startedAt) * 1000
-                      ).toLocaleDateString()}
+                  <div className="data-readout">
+                    <span className="data-readout-label">Date</span>
+                    <span className="font-mono text-xs">
+                      {new Date(Number(game.metadata.startedAt) * 1000).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="opacity-60">Creator Score:</span>
-                    <span className="text-right">{game.creatorScore.toString()}</span>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="opacity-60">Joiner Score:</span>
-                    <span className="text-right">{game.joinerScore.toString()}</span>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="opacity-60">Max Score:</span>
-                    <span className="text-right">{game.maxScore.toString()}</span>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="opacity-60">Current Turn:</span>
-                    <span className="font-mono text-xs text-right">
-                      {game.turnState.currentTurn === address
-                        ? "YOU"
-                        : "OPPONENT"}
+                  <div className="data-readout">
+                    <span className="data-readout-label">Score</span>
+                    <span className="font-mono text-xs font-bold">
+                      {game.creatorScore.toString()} / {game.joinerScore.toString()}
+                      <span className="opacity-40 font-normal"> of {game.maxScore.toString()}</span>
                     </span>
                   </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="opacity-60">Time Remaining:</span>
-                    {(() => {
-                      const isFinished =
-                        game.metadata.winner !==
-                        ZERO_ADDRESS;
-                      const remaining = isFinished
-                        ? 0
-                        : calculateTimeRemaining(game);
-                      return (
-                        <span
-                          className={`font-mono text-xs ${
-                            remaining <= 10 ? "text-warning-red" : "text-text-secondary"
-                          }`}
-                        >
-                          {isFinished ? "--:--" : formatSeconds(remaining)}
+                  {!isFinished && (
+                    <>
+                      <div className="data-readout">
+                        <span className="data-readout-label">Initiative</span>
+                        <span className={`font-mono text-xs font-bold ${game.turnState.currentTurn === address ? "text-phosphor-green" : "text-warning-red"}`}>
+                          {game.turnState.currentTurn === address ? "YOURS" : "OPPONENT"}
                         </span>
-                      );
-                    })()}
-                  </div>
+                      </div>
+                      <div className="data-readout">
+                        <span className="data-readout-label">Turn Timer</span>
+                        <span className={`font-mono text-xs font-bold ${remaining <= 10 ? "text-warning-red" : ""}`}>
+                          {formatSeconds(remaining)}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                {/* Game Actions */}
+                {/* Action */}
                 <div className="mt-4 pt-3 border-t border-gunmetal">
                   <button
-                    className="w-full px-6 py-3 rounded-none border-2 border-cyan text-cyan hover:border-cyan hover:text-cyan hover:bg-cyan/10 font-mono font-bold tracking-wider transition-all duration-200"
+                    className={`w-full rounded-none border-2 py-2.5 font-mono font-bold tracking-widest transition-all duration-200 text-sm ${
+                      isFinished
+                        ? "border-gunmetal text-text-muted hover:border-cyan hover:text-cyan hover:bg-cyan/5"
+                        : "border-cyan text-cyan hover:bg-cyan/10"
+                    }`}
                     onClick={() => setSelectedGame(game)}
                   >
-                    {game.metadata.winner ===
-                    "0x0000000000000000000000000000000000000000"
-                      ? "CONTINUE GAME"
-                      : "VIEW GAME"}
+                    {isFinished ? "VIEW RECORD" : "ENTER ENGAGEMENT"}
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

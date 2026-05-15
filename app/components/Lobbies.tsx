@@ -3995,9 +3995,8 @@ const Lobbies: React.FC = () => {
 
             <div className="flex-1 overflow-y-auto">
               {fleetShipIdsLoading || fleetShipsLoading ? (
-                <div className="text-center text-text-muted py-8">
-                  <p className="text-lg mb-2">Loading Fleet...</p>
-                  <p className="text-sm">Fetching ship data...</p>
+                <div className="py-8 font-mono text-xs text-text-muted tracking-widest animate-pulse text-center">
+                  &gt;&gt; ACQUIRING FLEET DATA...
                 </div>
               ) : fleetShips &&
                 Array.isArray(fleetShips) &&

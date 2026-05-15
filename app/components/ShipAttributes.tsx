@@ -655,10 +655,10 @@ const ShipAttributes: React.FC = () => {
                       return (
                         <div key={index} className="bg-gunmetal rounded-none p-2">
                           <h5 className="text-white font-mono text-sm mb-2">
-                            {name} (Loading...)
+                            {name} ...
                           </h5>
                           <div className="text-text-muted text-xs">
-                            Loading data...
+                            &gt;&gt; acquiring...
                           </div>
                         </div>
                       );
@@ -790,10 +790,10 @@ const ShipAttributes: React.FC = () => {
                       return (
                         <div key={index} className="bg-gunmetal rounded-none p-2">
                           <h5 className="text-white font-mono text-sm mb-2">
-                            {name} (Loading...)
+                            {name} ...
                           </h5>
                           <div className="text-text-muted text-xs">
-                            Loading data...
+                            &gt;&gt; acquiring...
                           </div>
                         </div>
                       );
@@ -897,10 +897,10 @@ const ShipAttributes: React.FC = () => {
                       return (
                         <div key={index} className="bg-gunmetal rounded-none p-2">
                           <h5 className="text-white font-mono text-sm mb-2">
-                            {name} (Loading...)
+                            {name} ...
                           </h5>
                           <div className="text-text-muted text-xs">
-                            Loading data...
+                            &gt;&gt; acquiring...
                           </div>
                         </div>
                       );
@@ -1004,10 +1004,10 @@ const ShipAttributes: React.FC = () => {
                       return (
                         <div key={index} className="bg-gunmetal rounded-none p-2">
                           <h5 className="text-white font-mono text-sm mb-2">
-                            {name} (Loading...)
+                            {name} ...
                           </h5>
                           <div className="text-text-muted text-xs">
-                            Loading data...
+                            &gt;&gt; acquiring...
                           </div>
                         </div>
                       );

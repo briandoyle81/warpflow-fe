@@ -463,94 +463,53 @@ const Info: React.FC = () => {
         >
           [GETTING STARTED]
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-4">
-          <div className="text-center">
+        <div className="space-y-0 font-mono">
+          {[
+            {
+              n: "01",
+              color: "var(--color-cyan)",
+              cmd: "CONNECT_WALLET",
+              desc: "Authenticate via Web3 wallet to access fleet command",
+            },
+            {
+              n: "02",
+              color: "var(--color-amber)",
+              cmd: "ACQUIRE_FLEET",
+              desc: "Claim free ships or purchase units — configure loadout to doctrine",
+            },
+            {
+              n: "03",
+              color: "var(--color-phosphor-green)",
+              cmd: "ENTER_COMBAT",
+              desc: "Join a lobby and execute tactical operations against hostile fleets",
+            },
+          ].map(({ n, color, cmd, desc }) => (
             <div
-              className="text-3xl font-bold mb-2"
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                color: "var(--color-cyan)",
-              }}
+              key={n}
+              className="flex items-start gap-4 border-b border-gunmetal/60 py-3 last:border-b-0"
             >
-              01
+              <span
+                className="shrink-0 text-2xl font-bold leading-none tabular-nums"
+                style={{ color, fontFamily: "var(--font-mono), monospace" }}
+              >
+                {n}
+              </span>
+              <div className="min-w-0">
+                <div
+                  className="text-sm font-bold tracking-widest mb-0.5"
+                  style={{ color }}
+                >
+                  {`> ${cmd}`}
+                </div>
+                <p
+                  className="text-sm text-text-secondary"
+                  style={{ fontFamily: "var(--font-rajdhani), sans-serif" }}
+                >
+                  {desc}
+                </p>
+              </div>
             </div>
-            <h3
-              className="text-lg font-bold mb-2"
-              style={{
-                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                color: "var(--color-text-primary)",
-              }}
-            >
-              CONNECT WALLET
-            </h3>
-            <p
-              className="text-base opacity-100"
-              style={{
-                fontFamily: "var(--font-rajdhani), sans-serif",
-                color: "var(--color-text-primary)",
-              }}
-            >
-              Connect your wallet to access the game
-            </p>
-          </div>
-          <div className="text-center">
-            <div
-              className="text-3xl font-bold mb-2"
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                color: "var(--color-amber)",
-              }}
-            >
-              02
-            </div>
-            <h3
-              className="text-lg font-bold mb-2"
-              style={{
-                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                color: "var(--color-text-primary)",
-              }}
-            >
-              CLAIM FREE SHIPS
-            </h3>
-            <p
-              className="text-base opacity-100"
-              style={{
-                fontFamily: "var(--font-rajdhani), sans-serif",
-                color: "var(--color-text-primary)",
-              }}
-            >
-              Purchase or claim ships and customize a fleet to your strategy
-            </p>
-          </div>
-          <div className="text-center">
-            <div
-              className="text-3xl font-bold mb-2"
-              style={{
-                fontFamily: "var(--font-mono), monospace",
-                color: "var(--color-phosphor-green)",
-              }}
-            >
-              03
-            </div>
-            <h3
-              className="text-lg font-bold mb-2"
-              style={{
-                fontFamily: "var(--font-rajdhani), 'Arial Black', sans-serif",
-                color: "var(--color-text-primary)",
-              }}
-            >
-              BATTLE
-            </h3>
-            <p
-              className="text-base opacity-100"
-              style={{
-                fontFamily: "var(--font-rajdhani), sans-serif",
-                color: "var(--color-text-primary)",
-              }}
-            >
-              Join a lobby and engage in tactical combat against other players
-            </p>
-          </div>
+          ))}
         </div>
       </section>
 
