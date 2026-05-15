@@ -266,7 +266,9 @@ export const HeroShipShowcase: React.FC<{
                 </span>
               </div>
               <div className="flex min-w-0 justify-between gap-2">
-                <span className="shrink-0 opacity-60">Armor:</span>
+                <span className="shrink-0 opacity-60">
+                  {heroShip.equipment.shields > 0 ? "Shields:" : "Armor:"}
+                </span>
                 <span className={`min-w-0 truncate text-right ${accentTextClass}`}>
                   {heroShip.equipment.armor > 0
                     ? getArmorName(heroShip.equipment.armor)
