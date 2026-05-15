@@ -45,7 +45,7 @@ export function FleeSafetySwitch({
 
   return (
     <div className="hazard-border">
-      <div className="flex h-full min-h-0 w-full min-w-0 items-stretch gap-3 bg-near-black px-4 py-2">
+      <div className="flex h-full min-h-0 w-full min-w-0 items-stretch gap-3 bg-near-black px-4 py-3">
         {/* Safety lever */}
         <div className="flex min-h-0 min-w-0 shrink-0 flex-col items-center justify-between self-stretch leading-none">
           <button
@@ -70,7 +70,7 @@ export function FleeSafetySwitch({
             <div
               className={`h-3 w-3 rounded-none transition-all duration-300 ${
                 isLeverOpen
-                  ? "translate-x-5 bg-red-200"
+                  ? "translate-x-5 bg-warning-red"
                   : "translate-x-0.5 bg-text-muted"
               }`}
             />
@@ -91,7 +91,7 @@ export function FleeSafetySwitch({
               : "cursor-not-allowed border-steel bg-steel text-text-muted"
           }`}
         >
-          EMERGENCY DISENGAGE
+          RETREAT
         </button>
 
         {/* Confirm modal */}
@@ -103,7 +103,7 @@ export function FleeSafetySwitch({
                   <span className="text-[10px] font-mono text-text-muted tracking-widest">// CONFIRMATION REQUIRED //</span>
                 </div>
                 <h2 className="text-warning-red font-mono text-xl font-bold mb-4 text-center tracking-widest">
-                  [EMERGENCY DISENGAGE]
+                  [RETREAT]
                 </h2>
                 <p className="text-text-secondary font-mono text-sm mb-2 text-center">
                   Tactical withdrawal from active engagement.

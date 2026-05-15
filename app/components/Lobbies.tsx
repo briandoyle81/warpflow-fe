@@ -2083,7 +2083,7 @@ const Lobbies: React.FC = () => {
           }}
         >
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h4 className="text-lg font-bold text-purple-400">CREATE LOBBY</h4>
+            <h4 className="text-lg font-bold text-purple tracking-widest">[CREATE LOBBY]</h4>
             <button
               type="button"
               onClick={() => setShowCreateForm(false)}

@@ -1080,7 +1080,7 @@ export function GameGrid({
                       if (isProposedMoveOriginal || isProposedMovePreview) {
                         // Add blue background, but still need to handle other conditions
                         const baseBg = canMoveShip
-                          ? "bg-blue-900 ring-2 ring-inset ring-blue-400"
+                          ? "bg-cyan/20 ring-2 ring-inset ring-cyan"
                           : "bg-purple-900 ring-2 ring-inset ring-purple-400";
 
                         // Moved ships: base tile only; grey veil is an absolute layer (z-10) below tutorial (z-11).
@@ -1101,7 +1101,7 @@ export function GameGrid({
                           return selectedWeaponType === "special"
                             ? specialType === 3 // Flak
                               ? "bg-red-900 ring-2 ring-inset ring-warning-red"
-                              : "bg-blue-900 ring-2 ring-inset ring-blue-400"
+                              : "bg-cyan/20 ring-2 ring-inset ring-cyan"
                             : "bg-red-900 ring-2 ring-inset ring-warning-red";
                         }
                         // Return blue background for from/to positions
@@ -1111,7 +1111,7 @@ export function GameGrid({
                       // Otherwise, apply normal selected styling
                       if (isSelected) {
                         return canMoveShip
-                          ? "bg-blue-900 ring-2 ring-inset ring-blue-400"
+                          ? "bg-cyan/20 ring-2 ring-inset ring-cyan"
                           : "bg-purple-900 ring-2 ring-inset ring-purple-400";
                       }
 
@@ -1142,7 +1142,7 @@ export function GameGrid({
                               return selectedWeaponType === "special"
                                 ? specialType === 3 // Flak
                                   ? "bg-red-900 ring-2 ring-inset ring-warning-red" // Flak uses red highlighting like regular weapons
-                                  : "bg-blue-900 ring-2 ring-inset ring-blue-400" // Other specials use blue
+                                  : "bg-cyan/20 ring-2 ring-inset ring-cyan" // Other specials use blue
                                 : "bg-red-900 ring-2 ring-inset ring-warning-red";
                             })()
                           : isValidTarget

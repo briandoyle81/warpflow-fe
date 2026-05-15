@@ -291,7 +291,7 @@ const ShipAttributes: React.FC = () => {
               }
               setEditingCosts(!editingCosts);
             }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-none font-mono hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 border border-cyan text-cyan rounded-none font-mono hover:bg-cyan/10 transition-colors"
           >
             {editingCosts ? "Cancel" : "Edit Costs"}
           </button>
@@ -429,7 +429,7 @@ const ShipAttributes: React.FC = () => {
                       version: costs.version + 1,
                     },
                   ]}
-                  className="px-4 py-2 bg-green-600 text-white rounded-none font-mono hover:bg-green-700 transition-colors"
+                  className="px-4 py-2 border border-phosphor-green text-phosphor-green rounded-none font-mono hover:bg-phosphor-green/10 transition-colors"
                   onSuccess={() => {
                     toast.success("Costs updated successfully!");
                     setEditingCosts(false);
@@ -475,7 +475,7 @@ const ShipAttributes: React.FC = () => {
               }
               setEditingAttributes(!editingAttributes);
             }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-none font-mono hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 border border-cyan text-cyan rounded-none font-mono hover:bg-cyan/10 transition-colors"
           >
             {editingAttributes ? "Cancel" : "Edit Attributes"}
           </button>
@@ -1173,7 +1173,7 @@ const ShipAttributes: React.FC = () => {
                       newAttributesVersion.baseHull ?? baseData[1],
                       newAttributesVersion.baseSpeed ?? baseData[2],
                     ]}
-                    className="px-4 py-2 bg-green-600 text-white rounded-none font-mono hover:bg-green-700 transition-colors"
+                    className="px-4 py-2 border border-phosphor-green text-phosphor-green rounded-none font-mono hover:bg-phosphor-green/10 transition-colors"
                     onSuccess={() => {
                       toast.success("Base attributes updated successfully!");
                       setEditingAttributes(false);
@@ -1453,7 +1453,7 @@ const ShipAttributes: React.FC = () => {
                           ? newEngineSpeeds
                           : [0, 1, 2],
                       ]}
-                      className="px-4 py-2 bg-green-600 text-white rounded-none font-mono hover:bg-green-700 transition-colors"
+                      className="px-4 py-2 border border-phosphor-green text-phosphor-green rounded-none font-mono hover:bg-phosphor-green/10 transition-colors"
                       onSuccess={() => {
                         toast.success("All attributes updated successfully!");
                         setGlobalArraysAtEditStart(null);

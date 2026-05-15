@@ -2692,8 +2692,8 @@ const ManageNavy: React.FC = () => {
                                         }
                                         className={`px-2 py-0.5 text-[11px] uppercase tracking-wide border ${
                                           isSelected
-                                            ? "border-emerald-300 bg-emerald-500/20 text-emerald-100"
-                                            : "border-gunmetal text-secondary hover:border-emerald-400 hover:text-emerald-200"
+                                            ? "border-phosphor-green bg-phosphor-green/20 text-phosphor-green"
+                                            : "border-gunmetal text-text-secondary hover:border-phosphor-green/50 hover:text-phosphor-green"
                                         }`}
                                         style={{
                                           fontFamily:

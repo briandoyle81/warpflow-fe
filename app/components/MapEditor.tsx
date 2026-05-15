@@ -1020,7 +1020,7 @@ export function MapEditor({
       <div className="flex flex-wrap gap-2">
         <button
           onClick={clearSavedState}
-          className="px-4 py-2 bg-yellow-600 text-white rounded-none font-mono hover:bg-yellow-700"
+          className="px-4 py-2 border border-amber text-amber rounded-none font-mono hover:bg-amber/10"
         >
           Clear Saved
         </button>
