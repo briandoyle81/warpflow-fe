@@ -1967,7 +1967,7 @@ const ManageNavy: React.FC = () => {
               </button>
               <div className="shrink-0">{claimFreeShipControls}</div>
               <div
-                className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-slate-950/85 md:block"
+                className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-near-black/85 md:block"
                 aria-hidden="true"
               />
             </div>
@@ -2006,7 +2006,7 @@ const ManageNavy: React.FC = () => {
               )}
               {staleCostBulkButton}
               <div
-                className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-slate-950/85 md:block"
+                className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-near-black/85 md:block"
                 aria-hidden="true"
               />
             </div>
@@ -2036,7 +2036,7 @@ const ManageNavy: React.FC = () => {
               <div className="relative">
                 {claimFreeShipControls}
                 <div
-                  className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-slate-950/85 md:block"
+                  className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-near-black/85 md:block"
                   aria-hidden="true"
                 />
               </div>
@@ -2090,7 +2090,7 @@ const ManageNavy: React.FC = () => {
 
               {showDroneFactoryTutorial && (
                 <div
-                  className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-slate-950/85 md:block"
+                  className="pointer-events-auto absolute inset-0 z-20 hidden rounded-none bg-near-black/85 md:block"
                   aria-hidden="true"
                 />
               )}
@@ -2194,7 +2194,7 @@ const ManageNavy: React.FC = () => {
                 {`[RECYCLE ${recyclableShips.length} SHIPS]`}
               </ShipActionButton>
             ) : (
-              <div className="w-full px-4 py-3 text-center text-sm font-mono font-bold tracking-wider text-orange-400 opacity-50 sm:px-6 md:w-auto rounded-none border-2 border-orange-400">
+              <div className="w-full px-4 py-3 text-center text-sm font-mono font-bold tracking-wider text-amber opacity-50 sm:px-6 md:w-auto rounded-none border-2 border-amber">
                 [SELECTED SHIPS ARE IN FLEETS - CANNOT RECYCLE]
               </div>
             );

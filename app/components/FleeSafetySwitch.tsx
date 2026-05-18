@@ -45,7 +45,7 @@ export function FleeSafetySwitch({
 
   return (
     <div className="hazard-border">
-      <div className="flex h-full min-h-0 w-full min-w-0 items-stretch gap-3 bg-near-black px-4 py-3">
+      <div className="flex h-full min-h-0 w-full min-w-0 items-stretch gap-4 bg-near-black px-4 py-4">
         {/* Safety lever */}
         <div className="flex min-h-0 min-w-0 shrink-0 flex-col items-center justify-between self-stretch leading-none">
           <button

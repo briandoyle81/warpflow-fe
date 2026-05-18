@@ -4436,8 +4436,8 @@ export function SimulatedGameDisplay({
       <div
         className={
           chromeOnSide
-            ? "flex min-h-0 min-w-0 flex-row items-stretch gap-4"
-            : "flex flex-col gap-6"
+            ? "flex min-h-0 min-w-0 flex-row items-stretch gap-4 pt-3"
+            : "flex flex-col gap-6 pt-3"
         }
       >
         {/* Header: back + game/round/turn + score + (optional) proposed move + Flee locked */}

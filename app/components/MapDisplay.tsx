@@ -573,7 +573,7 @@ export function MapDisplay({
             {[2, 5, 11, 14].map((col) => (
               <div
                 key={`v-${col}`}
-                className="absolute bg-blue-200"
+                className="absolute bg-cyan/40"
                 style={{
                   left: `${(col / GRID_DIMENSIONS.WIDTH) * 100}%`,
                   top: 0,
@@ -612,7 +612,7 @@ export function MapDisplay({
             {[1, 9].map((row) => (
               <div
                 key={`h-${row}`}
-                className="absolute bg-blue-200"
+                className="absolute bg-cyan/40"
                 style={{
                   left: 0,
                   top: `${(row / GRID_DIMENSIONS.HEIGHT) * 100}%`,

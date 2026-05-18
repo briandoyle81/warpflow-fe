@@ -1081,7 +1081,7 @@ export function GameGrid({
                         // Add blue background, but still need to handle other conditions
                         const baseBg = canMoveShip
                           ? "bg-cyan/20 ring-2 ring-inset ring-cyan"
-                          : "bg-purple-900 ring-2 ring-inset ring-purple-400";
+                          : "bg-purple/20 ring-2 ring-inset ring-purple";
 
                         // Moved ships: base tile only; grey veil is an absolute layer (z-10) below tutorial (z-11).
                         if (hasShipMoved) {
@@ -1096,13 +1096,13 @@ export function GameGrid({
                               (target) => target.shipId === cell.shipId,
                             );
                           if (isAssistAction) {
-                            return "bg-cyan-900 ring-2 ring-inset ring-cyan";
+                            return "bg-cyan/20 ring-2 ring-inset ring-cyan";
                           }
                           return selectedWeaponType === "special"
                             ? specialType === 3 // Flak
-                              ? "bg-red-900 ring-2 ring-inset ring-warning-red"
+                              ? "bg-warning-red/20 ring-2 ring-inset ring-warning-red"
                               : "bg-cyan/20 ring-2 ring-inset ring-cyan"
-                            : "bg-red-900 ring-2 ring-inset ring-warning-red";
+                            : "bg-warning-red/20 ring-2 ring-inset ring-warning-red";
                         }
                         // Return blue background for from/to positions
                         return baseBg;
@@ -1112,7 +1112,7 @@ export function GameGrid({
                       if (isSelected) {
                         return canMoveShip
                           ? "bg-cyan/20 ring-2 ring-inset ring-cyan"
-                          : "bg-purple-900 ring-2 ring-inset ring-purple-400";
+                          : "bg-purple/20 ring-2 ring-inset ring-purple";
                       }
 
                       // Default styling chain - gray for any ship that has moved this round (both players see it)
@@ -1136,25 +1136,25 @@ export function GameGrid({
                                   (target) => target.shipId === cell.shipId,
                                 );
                               if (isAssistAction) {
-                                return "bg-cyan-900 ring-2 ring-inset ring-cyan";
+                                return "bg-cyan/20 ring-2 ring-inset ring-cyan";
                               }
                               // Otherwise use weapon-based styling
                               return selectedWeaponType === "special"
                                 ? specialType === 3 // Flak
-                                  ? "bg-red-900 ring-2 ring-inset ring-warning-red" // Flak uses red highlighting like regular weapons
+                                  ? "bg-warning-red/20 ring-2 ring-inset ring-warning-red" // Flak uses red highlighting like regular weapons
                                   : "bg-cyan/20 ring-2 ring-inset ring-cyan" // Other specials use blue
-                                : "bg-red-900 ring-2 ring-inset ring-warning-red";
+                                : "bg-warning-red/20 ring-2 ring-inset ring-warning-red";
                             })()
                           : isValidTarget
                             ? selectedWeaponType === "special"
                               ? specialType === 3 // Flak
-                                ? "bg-red-900/50 ring-1 ring-inset ring-warning-red" // Flak uses red highlighting like regular weapons
-                                : "bg-blue-900/50 ring-1 ring-inset ring-blue-400" // Other specials use blue
-                              : "bg-orange-900/50 ring-1 ring-inset ring-orange-400"
+                                ? "bg-warning-red/10 ring-1 ring-inset ring-warning-red" // Flak
+                                : "bg-cyan/10 ring-1 ring-inset ring-cyan" // Other specials
+                              : "bg-amber/10 ring-1 ring-inset ring-amber"
                             : isAssistableTarget
-                              ? "bg-cyan-900/50 ring-1 ring-inset ring-cyan"
+                              ? "bg-cyan/10 ring-1 ring-inset ring-cyan"
                               : isMovementTile
-                                ? "bg-green-900/50"
+                                ? "bg-phosphor-green/10"
                                 : "bg-near-black";
                     })()}`}
                     onClick={handleCellClick}
@@ -1305,7 +1305,7 @@ export function GameGrid({
 
                     {/* Shooting range highlight */}
                     {isShootingTile && (
-                      <div className="absolute inset-0 z-[3] border-1 border-orange-400/50 bg-orange-500/10 pointer-events-none" />
+                      <div className="absolute inset-0 z-[3] border-1 border-amber/50 bg-amber/10 pointer-events-none" />
                     )}
 
                     {/* Drag range highlight - show range from drag position */}
@@ -1314,7 +1314,7 @@ export function GameGrid({
                         {dragShootingRange.some(
                           (pos) => pos.row === rowIndex && pos.col === colIndex,
                         ) && (
-                          <div className="absolute inset-0 z-[3] border-1 border-orange-400/50 bg-orange-500/10 pointer-events-none" />
+                          <div className="absolute inset-0 z-[3] border-1 border-amber/50 bg-amber/10 pointer-events-none" />
                         )}
                         {/* Green outline on the cell being dragged over */}
                         {dragOverCell.row === rowIndex &&
@@ -1343,7 +1343,7 @@ export function GameGrid({
                         <div
                           className={`absolute inset-0 ring-4 border-2 border-dashed rounded-sm pointer-events-none z-20 ${
                             lastMoveIsCurrentPlayer === true
-                              ? "ring-blue-400 border-blue-400 bg-blue-500/20"
+                              ? "ring-cyan border-cyan bg-cyan/20"
                               : lastMoveIsCurrentPlayer === false
                                 ? "ring-warning-red border-warning-red bg-warning-red/20"
                                 : "ring-amber border-amber bg-amber/20"
@@ -1742,8 +1742,8 @@ export function GameGrid({
                                 : "bottom-0 left-0"
                             } ${
                               isShipOwnedByCurrentPlayer(cell.shipId)
-                                ? "bg-blue-700/80"
-                                : "bg-red-700/80"
+                                ? "bg-cyan/60"
+                                : "bg-warning-red/60"
                             }`}
                             style={{
                               width: "clamp(8px, 14cqw, 12px)",
@@ -1799,8 +1799,8 @@ export function GameGrid({
                             <div
                               className={`shrink-0 rounded-full ${
                                 isShipOwnedByCurrentPlayer(cell.shipId)
-                                  ? "bg-blue-500"
-                                  : "bg-red-500"
+                                  ? "bg-cyan"
+                                  : "bg-warning-red"
                               }`}
                               style={{
                                 width: "clamp(4px, 7cqw, 8px)",
@@ -1936,11 +1936,11 @@ export function GameGrid({
                             ? !address
                               ? "border-amber"
                               : isShipOwnedByCurrentPlayer(cell.shipId)
-                                ? "border-blue-400"
+                                ? "border-cyan"
                                 : "border-warning-red"
                             : isLastMoveCell
                               ? lastMoveIsCurrentPlayer === true
-                                ? "border-blue-400"
+                                ? "border-cyan"
                                 : lastMoveIsCurrentPlayer === false
                                   ? "border-warning-red"
                                   : "border-amber"
@@ -3059,11 +3059,11 @@ export function GameGrid({
                           } ${
                             selectedWeaponType === "special"
                               ? specialType === 3 // Flak
-                                ? "bg-orange-900 border border-orange-500" // Orange for flak
+                                ? "bg-amber/20 border border-amber" // Flak
                                 : specialType === 1 // EMP
-                                  ? "bg-red-900 border border-warning-red" // Red for EMP reactor damage
-                                  : "bg-blue-900 border border-blue-500" // Blue for other specials
-                              : "bg-red-900 border border-warning-red"
+                                  ? "bg-warning-red/20 border border-warning-red" // EMP reactor damage
+                                  : "bg-cyan/20 border border-cyan" // Other specials
+                              : "bg-warning-red/20 border border-warning-red"
                           }`}
                           style={{
                             left: `${cellX}px`,
@@ -3100,7 +3100,7 @@ export function GameGrid({
                       return (
                         <>
                           <div
-                            className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-cyan-100 whitespace-nowrap border border-cyan-500 bg-cyan-900"
+                            className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-cyan whitespace-nowrap border border-cyan bg-cyan/15"
                             style={{
                               left: `${cellX}px`,
                               top: `${labelTopPx}px`,
@@ -3112,7 +3112,7 @@ export function GameGrid({
                             Ramming Speed
                           </div>
                           <div
-                            className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-white whitespace-nowrap border border-warning-red bg-red-900"
+                            className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-white whitespace-nowrap border border-warning-red bg-warning-red/20"
                             style={{
                               left: `${cellX}px`,
                               top: `${labelTopPx}px`,
@@ -3159,7 +3159,7 @@ export function GameGrid({
                         : "translate(-50%, -100%)";
                       return (
                         <div
-                          className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-yellow-100 whitespace-nowrap border border-yellow-500 bg-yellow-900"
+                          className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-amber whitespace-nowrap border border-amber bg-amber/10"
                           style={{
                             left: `${cellX}px`,
                             top: `${labelTopPx}px`,
@@ -3251,7 +3251,7 @@ export function GameGrid({
                     return (
                       <div
                         key={`tutorial-click-${p.row}-${p.col}-${i}`}
-                        className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-white whitespace-nowrap bg-yellow-900 border border-amber"
+                        className="absolute rounded-none px-2 py-1 text-xs font-mono text-center text-amber whitespace-nowrap bg-amber/10 border border-amber"
                         style={{
                           left: `${cellX}px`,
                           top: `${tutorialTopPx}px`,
